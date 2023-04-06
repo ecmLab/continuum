@@ -89,10 +89,10 @@ ADIsoTropicHyperViscoSwellingBase::ADIsoTropicHyperViscoSwellingBase(const Input
     _identity_two(ADRankTwoTensor::initIdentity),
     _identity_symmetric_four(ADRankFourTensor::initIdentitySymmetricFour),
     _deviatoric_projection_four(_identity_symmetric_four -
-                                _identity_two.outerProduct(_identity_two) / 3.0),
-    _II(_identity_two.mixedProductIkJl(_identity_two) 
-                          + _identity_two.mixedProductIlJk(_identity_two)),
-    _II2(_identity_two.outerProduct(_identity_two))
+                                _identity_two.outerProduct(_identity_two) / 3.0)
+//    _II(_identity_two.mixedProductIkJl(_identity_two) 
+//                          + _identity_two.mixedProductIlJk(_identity_two)),
+//    _II2(_identity_two.outerProduct(_identity_two))
         
 {
     if (_isotropic_swelling)

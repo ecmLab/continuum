@@ -135,8 +135,8 @@ protected:
    */
   const ADRankFourTensor _deviatoric_projection_four;
   
-  const ADRankFourTensor _II;
-  
-  const ADRankFourTensor _II2;
+//  const ADRankFourTensor _II;
+//  
+//  const ADRankFourTensor _II2;
   
 };
