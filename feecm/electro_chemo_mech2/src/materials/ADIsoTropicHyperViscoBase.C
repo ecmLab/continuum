@@ -58,10 +58,10 @@ ADIsoTropicHyperViscoBase::ADIsoTropicHyperViscoBase(
     _identity_two(ADRankTwoTensor::initIdentity),
     _identity_symmetric_four(ADRankFourTensor::initIdentitySymmetricFour),
     _deviatoric_projection_four(_identity_symmetric_four -
-                                _identity_two.outerProduct(_identity_two) / 3.0),
-    _II(_identity_two.mixedProductIkJl(_identity_two) 
-                          + _identity_two.mixedProductIlJk(_identity_two)),
-    _II2(_identity_two.outerProduct(_identity_two))
+                                _identity_two.outerProduct(_identity_two) / 3.0)
+//    _II(_identity_two.mixedProductIkJl(_identity_two) 
+//                          + _identity_two.mixedProductIlJk(_identity_two)),
+//    _II2(_identity_two.outerProduct(_identity_two))
         
 {
 //    _mandel_stress[_qp].zero();
@@ -126,7 +126,8 @@ ADIsoTropicHyperViscoBase::updateState(
 
 // Mandel Stress trial
 // _II is the symmetric part of the fourth-rank identity tensor * 2   
-    ADRankTwoTensor Me_tr = (mu * _II + (bulk - 2.0/3.0 * mu ) * _II2) * Ee_tr;
+    ADRankTwoTensor Me_tr = elasticity_tensor * Ee_tr;
+//    ADRankTwoTensor Me_tr = (mu * _II + (bulk - 2.0/3.0 * mu ) * _II2) * Ee_tr;
     ADRankTwoTensor deviatoric_trial_stress = Me_tr.deviatoric();   
     
 // compute the effective trial stress

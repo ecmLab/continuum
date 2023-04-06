@@ -79,7 +79,8 @@ ADIsotropicElasticSwelling::updateState(
 //    // This has to be done because the trace of the logarithmic elasticity tensor 
 //    // is the new one. 
 //    ADRankTwoTensor Me_tr = 2.0 * mu * Ee_tr.deviatoric() + bulk * trE0 * _identity_two;
-  ADRankTwoTensor Me_tau = (mu * _II + (bulk - 2.0/3.0 * mu ) * _II2) * Ee_tr;  
+//  ADRankTwoTensor Me_tau = (mu * _II + (bulk - 2.0/3.0 * mu ) * _II2) * Ee_tr;
+    ADRankTwoTensor Me_tau = elasticity_tensor * Ee_tr; 
   
   _logarithmic_elastic_strain[_qp] = Ee_tr;
   _mandel_stress[_qp] = Me_tau;
