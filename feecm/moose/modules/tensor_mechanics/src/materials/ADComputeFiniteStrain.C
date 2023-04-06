@@ -63,6 +63,8 @@ ADComputeFiniteStrainTempl<R2, R4>::computeProperties()
     auto Fbar = ADRankTwoTensor::initializeFromRows(
         (*_grad_disp_old[0])[_qp], (*_grad_disp_old[1])[_qp], (*_grad_disp_old[2])[_qp]);
 
+    _deformation_gradient[_qp] = A;
+    _deformation_gradient[_qp].addIa(1.0); // Gauss point deformation gradient
     // A = gradU - gradUold
     A -= Fbar;
 

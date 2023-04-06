@@ -17,6 +17,7 @@
   using ADComputeIncrementalStrainBaseTempl<R2>::_strain_rate;                                     \
   using ADComputeIncrementalStrainBaseTempl<R2>::_strain_increment;                                \
   using ADComputeIncrementalStrainBaseTempl<R2>::_rotation_increment;                              \
+  using ADComputeIncrementalStrainBaseTempl<R2>::_deformation_gradient;                            \
   using ADComputeIncrementalStrainBaseTempl<R2>::_mechanical_strain_old;                           \
   using ADComputeIncrementalStrainBaseTempl<R2>::_total_strain_old;                                \
   using ADComputeIncrementalStrainBaseTempl<R2>::_eigenstrains_old
@@ -47,6 +48,8 @@ protected:
   ADMaterialProperty<R2> & _strain_rate;
   ADMaterialProperty<R2> & _strain_increment;
   ADMaterialProperty<RankTwoTensor> & _rotation_increment;
+
+  ADMaterialProperty<RankTwoTensor> & _deformation_gradient;
 
   const MaterialProperty<R2> & _mechanical_strain_old;
   const MaterialProperty<R2> & _total_strain_old;

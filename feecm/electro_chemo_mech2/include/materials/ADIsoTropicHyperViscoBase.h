@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "ADRadialReturnStressUpdate.h"
+#include "RadialReturnStressUpdate.h"
 
 /**
  * This class uses the Discrete material in a radial return isotropic plasticity
@@ -49,7 +49,9 @@ protected:
                            ADRankTwoTensor & stress_new,
                            const RankTwoTensor & stress_old,
                            const ADRankFourTensor & elasticity_tensor,
-                           const RankTwoTensor & elastic_strain_old) override;
+                           const RankTwoTensor & elastic_strain_old, 
+                           bool compute_full_tangent_operator,
+                           RankFourTensor & tangent_operator) override;
   
   virtual void initQpStatefulProperties() override;
   virtual void propagateQpStatefulProperties() override;
@@ -133,8 +135,8 @@ protected:
    */
   const ADRankFourTensor _deviatoric_projection_four;
   
-  const ADRankFourTensor _II;
-  
-  const ADRankFourTensor _II2;
+//  const ADRankFourTensor _II;
+//  
+//  const ADRankFourTensor _II2;
   
 };

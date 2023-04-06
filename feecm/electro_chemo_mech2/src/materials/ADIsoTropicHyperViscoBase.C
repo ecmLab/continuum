@@ -22,7 +22,7 @@ ADIsoTropicHyperViscoBase::validParams()
 	params.addClassDescription("Large strain Logarithmic strain based Istotropic Viscoplastic model "
 	                               "Based on Weber and Anand (1990) Computer Methods in App mech and engr"
 	                               "Hardening a function of strain rate");
-	        params.addDeprecatedParam<std::string>(
+	params.addDeprecatedParam<std::string>(
 	        "plastic_prepend",
 	        "",
 	        "String that is prepended to the plastic_strain Material Property",
@@ -58,17 +58,14 @@ ADIsoTropicHyperViscoBase::ADIsoTropicHyperViscoBase(
     _identity_two(ADRankTwoTensor::initIdentity),
     _identity_symmetric_four(ADRankFourTensor::initIdentitySymmetricFour),
     _deviatoric_projection_four(_identity_symmetric_four -
-                                _identity_two.outerProduct(_identity_two) / 3.0),
-    _II(_identity_two.mixedProductIkJl(_identity_two) 
-                          + _identity_two.mixedProductIlJk(_identity_two)),
-    _II2(_identity_two.outerProduct(_identity_two))
+                                _identity_two.outerProduct(_identity_two) / 3.0)
+//    _II(_identity_two.mixedProductIkJl(_identity_two) 
+//                          + _identity_two.mixedProductIlJk(_identity_two)),
+//    _II2(_identity_two.outerProduct(_identity_two))
         
 {
 //    _mandel_stress[_qp].zero();
-//    _Fp[_qp].zero();
-//    _Fp[_qp].addIa(1.0);
 }
-
 
 ADReal
 ADIsoTropicHyperViscoBase::minimumPermissibleValue(
@@ -89,8 +86,7 @@ ADIsoTropicHyperViscoBase::initQpStatefulProperties()
 {
   _plastic_strain[_qp].zero();
   _Fp[_qp].zero();
-  _Fp[_qp].addIa(1.0);
-  
+  _Fp[_qp].addIa(1.0); 
   _logarithmic_elastic_strain[_qp].zero();
   _plastic_strain_rate[_qp] = 0.0;
   _effective_plastic_strain[_qp] = 0.0;
@@ -107,7 +103,6 @@ ADIsoTropicHyperViscoBase::propagateQpStatefulProperties()
   propagateQpStatefulPropertiesRadialReturn();
 }
 
-
 void
 ADIsoTropicHyperViscoBase::updateState(
     ADRankTwoTensor & strain_increment,
@@ -116,72 +111,74 @@ ADIsoTropicHyperViscoBase::updateState(
     ADRankTwoTensor & stress_new,
     const RankTwoTensor & /*stress_old*/,
     const ADRankFourTensor & elasticity_tensor,
-    const RankTwoTensor & elastic_strain_old)
-{
-    
-   // compute the deviatoric trial stress and trial strain from the current intermediate
-  // configuration
+    const RankTwoTensor & elastic_strain_old, 
+    bool /*compute_full_tangent_operator = false*/,
+    RankFourTensor & /*tangent_operator = _identityTensor*/)
+{    
+// compute the deviatoric trial stress and trial strain from the current intermediate configuration
    
-    const ADReal mu = ElasticityTensorTools::getIsotropicShearModulus(elasticity_tensor);
-    const ADReal bulk  = ElasticityTensorTools::getIsotropicBulkModulus(elasticity_tensor);
+    const ADReal mu   = ElasticityTensorTools::getIsotropicShearModulus(elasticity_tensor);
+    const ADReal bulk = ElasticityTensorTools::getIsotropicBulkModulus(elasticity_tensor);
           
     ADRankTwoTensor Ee_tr, R_tr, Fp;
-//    Fp = _Fp_old[_qp];
+// compute the logorithmic elastic strain tensor and the rotation tensor
     performKinematics(R_tr, Ee_tr, false);
 
-    // Mandel Stress trial
-    ADRankTwoTensor Me_tr = (mu * _II + (bulk - 2.0/3.0 * mu ) * _II2) * Ee_tr;
+// Mandel Stress trial
+// _II is the symmetric part of the fourth-rank identity tensor * 2   
+    ADRankTwoTensor Me_tr = elasticity_tensor * Ee_tr;
+//    ADRankTwoTensor Me_tr = (mu * _II + (bulk - 2.0/3.0 * mu ) * _II2) * Ee_tr;
     ADRankTwoTensor deviatoric_trial_stress = Me_tr.deviatoric();   
     
-//  // compute the effective trial stress
-  ADReal dev_trial_stress_squared =
+// compute the effective trial stress
+    ADReal dev_trial_stress_squared =
       deviatoric_trial_stress.doubleContraction(deviatoric_trial_stress);
   
-  ADReal norm_dev_trial_stress = MooseUtils::absoluteFuzzyEqual(dev_trial_stress_squared, 0.0)
+    ADReal norm_dev_trial_stress = MooseUtils::absoluteFuzzyEqual(dev_trial_stress_squared, 0.0)
                                       ? 0.0
                                       : std::sqrt(dev_trial_stress_squared);
-  ADReal effective_trial_stress = MooseUtils::absoluteFuzzyEqual(dev_trial_stress_squared, 0.0)
+// This effective stress is the equivalent shear stress under pure shear, 
+// which is sqrt(3) times lower than the equivalent tensile stress under simple tension
+    ADReal effective_trial_stress = MooseUtils::absoluteFuzzyEqual(dev_trial_stress_squared, 0.0)
                                       ? 0.0
                                       : std::sqrt(1.0 / 2.0 * dev_trial_stress_squared);
 
-
     ADRankTwoTensor flow_direction(ADRankTwoTensor::initIdentity);
 
-  // Set the value of 3 * shear modulus for use as a reference residual value
-  _three_shear_modulus = 3.0 * ElasticityTensorTools::getIsotropicShearModulus(elasticity_tensor);
+// Set the value of 3 * shear modulus for use as a reference residual value
+    _three_shear_modulus = 3.0 * ElasticityTensorTools::getIsotropicShearModulus(elasticity_tensor);
 
-  computeStressInitialize(effective_trial_stress, elasticity_tensor);
+    computeStressInitialize(effective_trial_stress, elasticity_tensor);
 
-  // Use Newton iteration to determine the scalar effective inelastic strain increment
-  ADReal scalar_effective_inelastic_strain = 0.0;
-  if (!MooseUtils::absoluteFuzzyEqual(effective_trial_stress, 0.0))
-  {
-    flow_direction = deviatoric_trial_stress / (std::sqrt(2.0) * effective_trial_stress);
-    returnMappingSolve(effective_trial_stress, scalar_effective_inelastic_strain, _console);
-    if (scalar_effective_inelastic_strain != 0.0)
-      inelastic_strain_increment = std::sqrt(1.0/2.0) * scalar_effective_inelastic_strain * 
+// Use Newton iteration to determine the scalar effective inelastic strain increment
+    ADReal scalar_effective_inelastic_strain = 0.0;
+    if (!MooseUtils::absoluteFuzzyEqual(effective_trial_stress, 0.0))
+    {
+      flow_direction = deviatoric_trial_stress / (std::sqrt(2.0) * effective_trial_stress);
+      returnMappingSolve(effective_trial_stress, scalar_effective_inelastic_strain, _console);
+      if (scalar_effective_inelastic_strain != 0.0)
+        inelastic_strain_increment = std::sqrt(1.0/2.0) * scalar_effective_inelastic_strain * 
               flow_direction;
+      else
+        inelastic_strain_increment.zero();
+    }
     else
       inelastic_strain_increment.zero();
-  }
-  else
-    inelastic_strain_increment.zero();
-  ADRankTwoTensor dpt = inelastic_strain_increment * _dt;
 
+    ADRankTwoTensor dpt = inelastic_strain_increment * _dt;
 
     strain_increment -= inelastic_strain_increment;
-  // Use the old elastic strain here because we require tensors used by this class
-  // to be isotropic and this method natively allows for changing in time
-  // elasticity tensors
-  if (scalar_effective_inelastic_strain > 0.0) 
-  {
-    _plastic_strain_rate[_qp] = scalar_effective_inelastic_strain;
-    _effective_inelastic_strain[_qp] =
+// Use the old elastic strain here because we require tensors used by this class to be 
+// isotropic and this method natively allows for changing in time elasticity tensors
+    if (scalar_effective_inelastic_strain > 0.0) 
+    {
+      _plastic_strain_rate[_qp] = scalar_effective_inelastic_strain;
+      _effective_inelastic_strain[_qp] =
       _effective_inelastic_strain_old[_qp] + _dt * 
           scalar_effective_inelastic_strain / std::sqrt(3.0);
-    _effective_plastic_strain[_qp]  = _effective_plastic_strain_old[_qp] +   
+      _effective_plastic_strain[_qp]  = _effective_plastic_strain_old[_qp] +   
             _dt * scalar_effective_inelastic_strain / std::sqrt(3.0);
-  //  // Compute new Cauchy stress
+// Compute new Cauchy stress
     std::vector<ADReal> e_value(3);
     ADRankTwoTensor e_vector, N1, N2, N3;
 
@@ -215,7 +212,6 @@ ADIsoTropicHyperViscoBase::updateState(
   _mandel_stress[_qp] = Me_tau;
   stress_new = R_tr * (Me_tau * R_tr.transpose()) / _deformation_gradient[_qp].det();
   
-  
 //  stress_new = elasticity_tensor * (elastic_strain_old + strain_increment);
 
   computeStressFinalize(inelastic_strain_increment);
@@ -248,6 +244,7 @@ ADIsoTropicHyperViscoBase::performKinematics(ADRankTwoTensor & R,
 {
     ADRankTwoTensor Fe;
     ADRankTwoTensor Fi;
+// old_new = true: updating new Kinematics
     if (old_new)
     {
         Fi = _Fp[_qp];
@@ -256,7 +253,6 @@ ADIsoTropicHyperViscoBase::performKinematics(ADRankTwoTensor & R,
     {
         Fi = _Fp_old[_qp];
     }
-    
     
 //    if ( Fi.det() <= 0)
 //    {
