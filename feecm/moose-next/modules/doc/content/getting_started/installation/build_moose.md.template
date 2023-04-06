@@ -1,6 +1,0 @@
-To build MOOSE run the following commands:
-
-```bash
-cd {{PATH}}/moose/test
-make -j 6
-```

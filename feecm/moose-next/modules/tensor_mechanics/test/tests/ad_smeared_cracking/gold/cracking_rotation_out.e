@@ -1,1 +1,0 @@
-../../smeared_cracking/gold/cracking_rotation_out.e

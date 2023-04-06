@@ -1,1 +1,0 @@
-../../constant_point_source/gold/2d_out.e

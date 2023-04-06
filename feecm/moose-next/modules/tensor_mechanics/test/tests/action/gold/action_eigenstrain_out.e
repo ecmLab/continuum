@@ -1,1 +1,0 @@
-../../thermal_expansion/gold/constant_expansion_coeff_out.e

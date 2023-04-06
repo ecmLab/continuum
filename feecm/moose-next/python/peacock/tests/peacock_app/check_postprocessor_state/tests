@@ -1,8 +1,0 @@
-[Tests]
-  [test]
-    type = PythonUnitTest
-    input = test_postprocessor_state.py
-    separate = True
-    display_required = true
-  []
-[]

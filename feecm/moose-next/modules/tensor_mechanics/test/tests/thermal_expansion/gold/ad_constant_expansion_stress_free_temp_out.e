@@ -1,1 +1,0 @@
-constant_expansion_stress_free_temp_out.e

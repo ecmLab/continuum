@@ -1,1 +1,0 @@
-gravity-object_out.e

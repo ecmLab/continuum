@@ -1,9 +1,0 @@
-# ElementIntegralArrayVariablePostprocessor
-
-!syntax description /Postprocessors/ElementIntegralArrayVariablePostprocessor
-
-!syntax parameters /Postprocessors/ElementIntegralArrayVariablePostprocessor
-
-!syntax inputs /Postprocessors/ElementIntegralArrayVariablePostprocessor
-
-!syntax children /Postprocessors/ElementIntegralArrayVariablePostprocessor

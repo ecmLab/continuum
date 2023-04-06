@@ -1,1 +1,0 @@
-RZ_cone_by_parts_out.e

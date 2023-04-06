@@ -1,6 +1,0 @@
-[Tests]
-  [./exception_transient]
-    type = RunApp
-    input = exception_transient.i
-  [../]
-[]
