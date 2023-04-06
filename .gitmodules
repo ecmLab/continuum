@@ -1,0 +1,3 @@
+[submodule "electro_chemo_mech2"]
+	path = electro_chemo_mech2
+	url = https://gitlab.com/srinathcs/electro_chemo_mech2.git
