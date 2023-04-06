@@ -1,0 +1,72 @@
+[Tests]
+  design = 'Constraints/index.md'
+  issues = '#13080 #20773'
+  [soft]
+    requirement = 'The system shall be able to compute a soft block bouncing on a soft plank problem '
+                  'on a first order 2D mesh using tensor mechanics and mortar contact'
+    [small]
+      detail = 'using the small strain formulation.'
+      type = 'CSVDiff'
+      input = 'small.i'
+      csvdiff = 'small.csv'
+      heavy = true
+    []
+    [finite]
+      detail = 'using the finite strain formulation.'
+      type = 'CSVDiff'
+      input = 'finite.i'
+      csvdiff = 'finite.csv'
+      heavy = true
+    []
+    [finite_short]
+      detail = 'using the finite strain formulation for a limited time simulation.'
+      type = 'CSVDiff'
+      input = 'finite.i'
+      csvdiff = 'finite_short.csv'
+      cli_args = 'name=finite_short Executioner/num_steps=10'
+    []
+    [finite_scaling]
+      detail = 'using the finite strain formulation with automatic scaling.'
+      type = 'CSVDiff'
+      input = 'finite.i'
+      cli_args = 'Executioner/automatic_scaling=true Executioner/compute_scaling_once=false '
+                 'name=finite_scaling'
+      csvdiff = 'finite_scaling.csv'
+      heavy = true
+    []
+    [finite_rr]
+      detail = 'using the finite strain formulation and reference residual.'
+      type = 'CSVDiff'
+      input = 'finite_rr.i'
+      csvdiff = 'finite_rr.csv'
+      heavy = true
+    []
+    [finite_rr_full]
+      detail = 'using the finite strain formulation and reference residual with extra_vector_tags passed to the constraints.'
+      type = 'CSVDiff'
+      input = 'finite_rr.i'
+      csvdiff = 'finite_rr_full.csv'
+      cli_args = 'Contact/frictionless/extra_vector_tags=ref name=finite_rr_full Executioner/num_steps=10'
+    []
+  []
+  [stiff]
+    requirement = 'The system shall be able to compute a block bouncing on a plank problem on a '
+                  'first order 2D mesh using tensor mechanics and mortar contact and finite strain'
+    [stiff_stiff]
+      detail = 'using with a stiff block and a stiff plank.'
+      type = 'CSVDiff'
+      input = 'finite.i'
+      csvdiff = 'stiff_stiff.csv'
+      cli_args = 'E_block=1e9 E_plank=1e9 name=stiff_stiff'
+      heavy = true
+    []
+    [soft_stiff]
+      detail = 'using with a soft block and a stiff plank.'
+      type = 'CSVDiff'
+      input = 'finite.i'
+      csvdiff = 'soft_stiff.csv'
+      cli_args = 'E_block=1e7 E_plank=1e9 name=soft_stiff'
+      heavy = true
+    []
+  []
+[]

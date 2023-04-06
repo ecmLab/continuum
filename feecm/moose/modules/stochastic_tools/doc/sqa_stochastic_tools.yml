@@ -1,0 +1,8 @@
+directories:
+    - ${MOOSE_DIR}/modules/stochastic_tools/test/tests
+specs:
+    - tests
+dependencies:
+    - framework
+repo: moose
+reports: !include ${MOOSE_DIR}/modules/stochastic_tools/doc/sqa_reports.yml

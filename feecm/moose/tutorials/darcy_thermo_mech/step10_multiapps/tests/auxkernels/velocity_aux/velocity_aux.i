@@ -1,0 +1,1 @@
+../../../../step09_mechanics/tests/auxkernels/velocity_aux/velocity_aux.i

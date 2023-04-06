@@ -1,0 +1,28 @@
+[Tests]
+  issues = '#3492 #12658'
+  design = '/kernels/Kernel.md'
+  [./test]
+    type = 'Exodiff'
+    input = 'kernel_precompute_test.i'
+    exodiff = 'out.e'
+    scale_refine = 5
+    requirement = 'The system shall provide optimized kernels for residuals with the test function or its gradient factored out.'
+  [../]
+  [./adtest]
+    type = 'Exodiff'
+    input = 'adkernel_precompute_test.i'
+    exodiff = 'out.e'
+    prereq = 'test'
+    scale_refine = 5
+    requirement = 'The system shall provide optimized kernels for residuals with the test function or its gradient factored out in the automatic differentiation system.'
+    allow_test_objects = true
+  [../]
+  [./adtest-jac]
+    type = 'PetscJacobianTester'
+    input = 'adkernel_precompute_test.i'
+    prereq = 'adtest'
+    run_sim = 'True'
+    requirement = 'The system shall calculate perfect Jacobians for the automatic differentiation precompute problem.'
+    allow_test_objects = true
+  [../]
+[]

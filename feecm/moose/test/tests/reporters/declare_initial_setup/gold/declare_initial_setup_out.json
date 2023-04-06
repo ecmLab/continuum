@@ -1,0 +1,21 @@
+{
+    "reporters": {
+        "initialSetup": {
+            "type": "TestDeclareInitialSetupReporter",
+            "values": {
+                "value": {
+                    "type": "double"
+                }
+            }
+        }
+    },
+    "time_steps": [
+        {
+            "initialSetup": {
+                "value": 1980.0
+            },
+            "time": 2.0,
+            "time_step": 2
+        }
+    ]
+}

@@ -1,0 +1,104 @@
+[Tests]
+  design = "Restartable.md DataIO.md"
+  issues = "#563"
+
+  [uniform_refine]
+    requirement = "The system shall support outputting a mesh from a simulation"
+
+    [test_1]
+      type = 'Exodiff'
+      input = 'exodus_refined_restart_1_test.i'
+      exodiff = 'exodus_refined_restart_1.e'
+      recover = false
+
+      detail = "with uniform refinement to ExodusII format,"
+
+    []
+
+    [test_2]
+      type = 'Exodiff'
+      input = 'exodus_refined_restart_2_test.i'
+      exodiff = 'exodus_refined_restart_2.e'
+      prereq = 'uniform_refine/test_1'
+
+      # Note: This test is not strictly a "restart" capability. However reading solution information is related to restart.
+      detail = "start a new simulation that adds additional refinement,"
+    []
+
+    [test_3]
+      type = 'Exodiff'
+      input = 'exodus_refined_refined_restart_2_test.i'
+      exodiff = 'exodus_refined_refined_restart_2.e'
+      prereq = 'uniform_refine/test_2'
+
+      # Note: This test is not strictly a "restart" capability. However reading solution information is related to restart.
+      detail = "which can be used in an third simulation."
+    []
+  []
+
+  [steady_1]
+    type = 'Exodiff'
+    input = 'restart_diffusion_test_steady.i'
+    exodiff = 'steady_out.e'
+
+    requirement = "The system shall support outputting a mesh to checkpoint format for restart "
+                  "testing."
+  []
+
+  [trans_from_steady]
+    type = 'Exodiff'
+    input = 'restart_diffusion_test_transient.i'
+    exodiff = 'out.e'
+    prereq = 'steady_1'
+
+    # Note: This test is not strictly a "restart" capability. However reading solution information is related to restart.
+    requirement = "The system shall support starting a transient simulation from a steady simulation "
+                  "result."
+  []
+
+  [restart_with_variable_rename]
+    type = 'Exodiff'
+    input = 'restart_diffusion_test_transient_new_name.i'
+    exodiff = 'restart_diffusion_test_transient_new_name_out.e'
+    prereq = 'steady_1'
+
+    issues = "#4965"
+    requirement = "The system shall support renaming a variable read from a solution file upon "
+                  "restart."
+  []
+
+  # Restart using "LAST"
+  [restart_use_end_part1]
+    type = 'RunApp'
+    input = 'restart_diffusion_from_end_part1.i'
+
+    issues = "#5748"
+    requirement = "The system shall support writing out several timesteps to a solution file to test "
+                  "reading from a specific point."
+  []
+
+  [restart_use_end_part2]
+    type = 'Exodiff'
+    input = 'restart_diffusion_from_end_part2.i'
+    exodiff = 'restart_diffusion_from_end_part2_out.e'
+    prereq = 'restart_use_end_part1'
+
+    issues = "#5748"
+    requirement = "The system shall support restarting from the last timestep using the keyword "
+                  "\"LATEST\"."
+  []
+
+  [restart_use_end_error_check]
+    type = 'RunException'
+    input = 'restart_diffusion_from_end_part2.i'
+    expect_err = 'Invalid value passed as "initial_from_file_timestep". Expected "LATEST" or a valid '
+                 'integer between \d+ and \d+ inclusive, received \d+'
+
+    cli_args = 'Variables/u/initial_from_file_timestep=8'
+    prereq = 'restart_use_end_part2'
+
+    issues = "#5748"
+    requirement = "The system shall issue a useful error message stating the valid options when a "
+                  "user requests an invalid time step number or keyword."
+  []
+[]

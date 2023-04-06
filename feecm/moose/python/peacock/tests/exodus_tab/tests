@@ -1,0 +1,93 @@
+[Tests]
+  [VTKWindowPlugin]
+    type = PythonUnitTest
+    input = test_VTKWindowPlugin.py
+    separate = True
+    display_required = true
+  []
+  [FilePlugin]
+    type = PythonUnitTest
+    input = test_FilePlugin.py
+    separate = True
+    display_required = true
+  []
+  [GoldDiffPlugin]
+    type = PythonUnitTest
+    input = test_GoldDiffPlugin.py
+    separate = True
+    display_required = true
+    platform = LINUX
+  []
+  [ColorbarPlugin]
+    type = PythonUnitTest
+    input = test_ColorbarPlugin.py
+    separate = True
+    display_required = true
+  []
+  [BackgroundPlugin]
+    type = PythonUnitTest
+    input = test_BackgroundPlugin.py
+    separate = True
+    display_required = true
+  []
+  [ClipPlugin]
+    type = PythonUnitTest
+    input = test_ClipPlugin.py
+    separate = True
+    display_required = true
+  []
+  [ContourPlugin]
+    type = PythonUnitTest
+    input = test_ContourPlugin.py
+    separate = True
+    display_required = true
+  []
+  [BlockPlugin]
+    type = PythonUnitTest
+    input = test_BlockPlugin.py
+    separate = True
+    display_required = true
+  []
+  [MeshPlugin]
+    type = PythonUnitTest
+    input = test_MeshPlugin.py
+    separate = True
+    display_required = true
+  []
+  [MediaControlPlugin]
+    type = PythonUnitTest
+    input = test_MediaControlPlugin.py
+    separate = True
+    display_required = true
+  []
+  [CameraPlugin]
+    type = PythonUnitTest
+    input = test_CameraPlugin.py
+    separate = True
+    display_required = true
+  []
+  [OutputPlugin]
+    type = PythonUnitTest
+    input = test_OutputPlugin.py
+    separate = True
+    display_required = true
+  []
+  [ExodusPluginManager]
+    type = PythonUnitTest
+    input = test_ExodusPluginManager.py
+    separate = True
+    display_required = true
+  []
+  [ExodusViewer]
+    type = PythonUnitTest
+    input = test_ExodusViewer.py
+    separate = True
+    display_required = true
+  []
+  [ExodusViewer2]
+    type = PythonUnitTest
+    input = test_ExodusViewer2.py
+    separate = True
+    display_required = true
+  []
+[]

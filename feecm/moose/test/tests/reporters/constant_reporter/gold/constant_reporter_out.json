@@ -1,0 +1,91 @@
+{
+    "reporters": {
+        "constant": {
+            "type": "ConstantReporter",
+            "values": {
+                "dofid_1": {
+                    "type": "unsigned long long"
+                },
+                "dofid_2": {
+                    "type": "unsigned long long"
+                },
+                "dofid_3": {
+                    "type": "unsigned long long"
+                },
+                "dofid_vec": {
+                    "type": "std::vector<unsigned long long>"
+                },
+                "int_1": {
+                    "type": "int"
+                },
+                "int_2": {
+                    "type": "int"
+                },
+                "int_3": {
+                    "type": "int"
+                },
+                "int_vec": {
+                    "type": "std::vector<int>"
+                },
+                "num_1": {
+                    "type": "double"
+                },
+                "num_2": {
+                    "type": "double"
+                },
+                "str": {
+                    "type": "std::string"
+                },
+                "str_vec": {
+                    "type": "std::vector<std::string>"
+                },
+                "vec_1": {
+                    "type": "std::vector<double>"
+                },
+                "vec_2": {
+                    "type": "std::vector<double>"
+                }
+            }
+        }
+    },
+    "time_steps": [
+        {
+            "constant": {
+                "dofid_1": 1,
+                "dofid_2": 2,
+                "dofid_3": 3,
+                "dofid_vec": [
+                    7,
+                    3
+                ],
+                "int_1": 1,
+                "int_2": 2,
+                "int_3": -3,
+                "int_vec": [
+                    7,
+                    8
+                ],
+                "num_1": 4.0,
+                "num_2": 5.0,
+                "str": "six",
+                "str_vec": [
+                    "ten",
+                    "eleven",
+                    "twelve",
+                    "thirteen"
+                ],
+                "vec_1": [
+                    8.0,
+                    80.0,
+                    800.0
+                ],
+                "vec_2": [
+                    9.0,
+                    90.0
+                ]
+            },
+            "time": 1.0,
+            "time_step": 1
+        }
+    ]
+}

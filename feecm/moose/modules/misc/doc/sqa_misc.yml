@@ -1,0 +1,8 @@
+directories:
+    - ${MOOSE_DIR}/modules/misc/test/tests
+dependencies:
+    - framework
+specs:
+    - tests
+repo: moose
+reports: !include ${MOOSE_DIR}/modules/misc/doc/sqa_reports.yml

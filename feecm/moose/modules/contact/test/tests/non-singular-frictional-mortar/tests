@@ -1,0 +1,13 @@
+[Tests]
+  [nonsingular]
+    type = Exodiff
+    input = frictional-mortar.i
+    exodiff = frictional-mortar_exodus.e
+    design = 'ComputeFrictionalForceLMMechanicalContact.md'
+    issues = '#17495'
+    requirement = 'The system shall not generate singular Jacobians in frictional mortar contact.'
+    expect_out = '0 of 42 singular values'
+    absent_out = '[1-9]+[0-9]* of 42 singular values'
+    mesh_mode = 'REPLICATED'
+  []
+[]

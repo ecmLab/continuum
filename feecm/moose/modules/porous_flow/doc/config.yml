@@ -1,0 +1,37 @@
+Content:
+    - framework/doc/content
+    - modules/porous_flow/doc/content
+    - modules/tensor_mechanics/doc/content
+    - modules/fluid_properties/doc/content
+    - modules/chemical_reactions/doc/content
+
+Renderer:
+    type: MooseDocs.base.MaterializeRenderer
+
+Extensions:
+    MooseDocs.extensions.navigation:
+        name: MOOSE PorousFlow Module
+        repo: https://github.com/idaholab/moose
+        home: /modules/porous_flow/index.md
+    MooseDocs.extensions.appsyntax:
+        executable: ${MOOSE_DIR}/modules/porous_flow
+        remove:
+            framework: !include framework/doc/remove.yml
+        unregister:
+            framework: !include framework/doc/unregister.yml
+        includes:
+            - framework/include
+            - modules/porous_flow/include
+            - modules/tensor_mechanics/include
+            - modules/fluid_properties/include
+            - modules/chemical_reactions/include
+    MooseDocs.extensions.common:
+        shortcuts: !include framework/doc/globals.yml
+    MooseDocs.extensions.acronym:
+        acronyms: !include framework/doc/acronyms.yml
+    MooseDocs.extensions.sqa:
+        active: True
+        reports: !include modules/porous_flow/doc/sqa_reports.yml
+        categories:
+            framework: !include framework/doc/sqa_framework.yml
+            porous_flow: !include modules/porous_flow/doc/sqa_porous_flow.yml

@@ -1,0 +1,46 @@
+[Tests]
+  [generate_extra_nodeset]
+    type = 'Exodiff'
+    input = 'generate_extra_nodeset.i'
+    cli_args = '--mesh-only'
+    exodiff = 'generate_extra_nodeset_in.e'
+    recover = false
+
+    requirement = 'The system shall have the ability to add extra mesh node sets based on existing node IDs.'
+    design = 'meshgenerators/ExtraNodesetGenerator.md'
+    issues = '#11640'
+  []
+  [generate_extra_nodeset_coord]
+    type = 'Exodiff'
+    input = 'generate_extra_nodeset_coord.i'
+    cli_args = '--mesh-only'
+    exodiff = 'generate_extra_nodeset_coord_in.e'
+    recover = false
+
+    requirement = 'The system shall have the ability to add extra mesh node sets based on node coordinates.'
+    design = 'meshgenerators/ExtraNodesetGenerator.md'
+    issues = '#11640'
+  []
+  [generate_extra_nodeset_multiple_coord]
+    type = 'Exodiff'
+    input = 'generate_extra_nodeset_multiple_coord.i'
+    cli_args = '--mesh-only'
+    exodiff = 'generate_extra_nodeset_multiple_coord_in.e'
+    recover = false
+
+    requirement = 'The system shall have the ability to add extra mesh node sets based on multiple node coordinates.'
+    design = 'meshgenerators/ExtraNodesetGenerator.md'
+    issues = '#14936'
+  []
+  [test_bad_coord]
+    type = 'RunException'
+    input = 'generate_extra_nodeset_coord.i'
+    expect_err = "Unable to locate the following point within the domain"
+    cli_args = "--mesh-only Mesh/extra_nodeset/coord='0.5 10'"
+    mesh_mode = REPLICATED
+
+    requirement = "The system shall error on assigning boundary identifiers if the supplied location is outside of the domain."
+    design = 'meshgenerators/ExtraNodesetGenerator.md'
+    issues = '#13814'
+  []
+[]

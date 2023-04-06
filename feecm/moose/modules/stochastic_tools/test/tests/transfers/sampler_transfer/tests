@@ -1,0 +1,28 @@
+[Tests]
+  issues = '#8065'
+  design = 'SamplerParameterTransfer.md'
+  [transfer]
+    requirement = "The system shall be capable of transferring scalar data to sub-applications for "
+                  "each row of the stochastic data"
+
+    [monte_carlo]
+      type = CSVDiff
+      input = monte_carlo.i
+      csvdiff = 'monte_carlo_out_sub0.csv monte_carlo_out_sub1.csv monte_carlo_out_sub2.csv '
+                'monte_carlo_out_sub3.csv monte_carlo_out_sub4.csv'
+
+      detail = 'using a Monte Carlo and'
+    []
+    [sobol]
+      type = CSVDiff
+      input = sobol.i
+      csvdiff = 'sobol_out_sub00.csv sobol_out_sub01.csv sobol_out_sub02.csv sobol_out_sub03.csv '
+                'sobol_out_sub04.csv sobol_out_sub05.csv sobol_out_sub06.csv sobol_out_sub07.csv '
+                'sobol_out_sub08.csv sobol_out_sub09.csv sobol_out_sub10.csv sobol_out_sub11.csv '
+                'sobol_out_sub12.csv sobol_out_sub13.csv sobol_out_sub14.csv sobol_out_sub15.csv '
+                'sobol_out_sub16.csv sobol_out_sub17.csv'
+
+      detail = 'Sobol sampling scheme.'
+    []
+  []
+[]

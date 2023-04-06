@@ -1,0 +1,23 @@
+[Tests]
+  [replicated]
+    type = 'CSVDiff'
+    input = 'statistics.i'
+    csvdiff = 'statistics_out_stats_0001.csv'
+    allow_test_objects = true
+    allow_deprecated = true
+    no_error_deprecated = true
+    deprecated = true # SQA
+  []
+
+  [distributed]
+    type = 'CSVDiff'
+    input = 'statistics_distributed.i'
+    csvdiff = 'statistics_distributed_out_stats_0001.csv'
+    min_parallel = 3
+    max_parallel = 3
+    allow_test_objects = true
+    allow_deprecated = true
+    no_error_deprecated = true
+    deprecated = true # SQA
+  []
+[]

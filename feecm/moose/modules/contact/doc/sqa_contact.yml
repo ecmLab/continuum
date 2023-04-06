@@ -1,0 +1,9 @@
+directories:
+    - ${MOOSE_DIR}/modules/contact/test/tests
+specs:
+    - tests
+dependencies:
+    - framework
+    - tensor_mechanics
+repo: moose
+reports: !include ${MOOSE_DIR}/modules/contact/doc/sqa_reports.yml

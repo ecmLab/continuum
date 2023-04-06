@@ -1,0 +1,13 @@
+[Tests]
+  [./test]
+    type = 'CSVDiff'
+    input = 'internal_side_jump.i'
+    csvdiff = 'internal_side_jump_out.csv'
+    max_parallel = 16
+    max_threads = 16
+
+    issues = '#9390'
+    design = 'MooseVariableFE.md'
+    requirement = 'The system shall support retrieving solution values from neighboring elements for use in internal side calculations.'
+  [../]
+[]

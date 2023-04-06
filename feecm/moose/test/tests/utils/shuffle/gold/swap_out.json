@@ -1,0 +1,32 @@
+{
+    "reporters": {
+        "test": {
+            "type": "TestShuffle",
+            "values": {
+                "data": {
+                    "type": "std::vector<int>"
+                }
+            }
+        }
+    },
+    "time_steps": [
+        {
+            "test": {
+                "data": [
+                    5,
+                    2,
+                    1,
+                    9,
+                    4,
+                    0,
+                    6,
+                    8,
+                    7,
+                    3
+                ]
+            },
+            "time": 2.0,
+            "time_step": 2
+        }
+    ]
+}

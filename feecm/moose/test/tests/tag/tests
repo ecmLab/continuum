@@ -1,0 +1,212 @@
+[Tests]
+  issues = '#9669'
+  design = 'interfaces/TaggingInterface.md'
+
+  [general]
+    requirement = 'The system shall support the ability for a specific calculation to fill a labeled '
+                  'or "tagged"'
+
+    [tag_vector]
+      type = 'Exodiff'
+      input = '2d_diffusion_tag_vector.i'
+      exodiff = 'tag_vector_out.e'
+
+      detail = 'numeric vector,'
+    []
+
+    [tag_vector_no_scale]
+      type = 'Exodiff'
+      input = '2d_diffusion_tag_vector.i'
+      exodiff = 'tag_vector_out.e'
+      cli_args = 'Executioner/automatic_scaling=true AuxKernels/TagVectorAux1/scaled=false AuxKernels/TagVectorAux2/scaled=false'
+
+      detail = 'numeric vector (without the variable scaling),'
+    []
+
+    [tag_matrix]
+      type = 'Exodiff'
+      input = '2d_diffusion_tag_matrix.i'
+      exodiff = 'tag_matrix_out.e'
+
+      detail = 'numeric matrix,'
+    []
+
+    [tag_matrix_no_scale]
+      type = 'Exodiff'
+      input = '2d_diffusion_tag_matrix.i'
+      exodiff = 'tag_matrix_no_scale_out.e'
+      cli_args = 'Outputs/file_base=tag_matrix_no_scale_out Variables/u/scaling=10 AuxKernels/TagMatrixAux1/scaled=false AuxKernels/TagMatrixAux2/scaled=false'
+
+      detail = 'numeric matrix (without the variable scaling),'
+    []
+
+    [tag_multiple_vectors]
+      type = 'Exodiff'
+      input = '2d_diffusion_vector_tag_test.i'
+      exodiff = 'vector_tag_test_out.e'
+
+      detail = 'multiple numeric vectors simultaneously, or'
+    []
+
+    [tag_multiple_matrices]
+      type = 'Exodiff'
+      input = '2d_diffusion_matrix_tag_test.i'
+      exodiff = 'matrix_tag_test_out.e'
+
+      detail = 'multiple numeric matrices simultaneously.'
+    []
+  []
+  [tag_vector_error]
+    type = 'RunException'
+    input = '2d_diffusion_tag_vector.i'
+    expect_err = 'The AuxVariable this AuxKernel is acting on has to have the same order and family '
+                 'as the variable \'v\''
+    cli_args = 'Mesh/square/second=true Variables/u/order=SECOND'
+    requirement = 'The system shall throw an error when the variable orders and families for the '
+                  'tagged and the auxiliary output variables do not match.'
+  []
+
+  [systems]
+    requirement = 'The system shall support filling in labeled or "tagged" vectors or matrices from:'
+
+    [test_tag_scalar_kernels]
+      type = 'CSVDiff'
+      input = 'scalar_tag_vector.i'
+      csvdiff = 'scalar_tag_vector_out.csv'
+      # System of equations has one dof only
+      # so that we do not need to run the test
+      # in parallel
+      max_parallel = 1
+
+      detail = 'the scalar kernel system,'
+    []
+
+    [test_tag_scalar_kernels_no_scale]
+      type = 'CSVDiff'
+      input = 'scalar_tag_vector.i'
+      csvdiff = 'scalar_tag_vector_out.csv'
+      cli_args = 'Variables/n/scaling=10 AuxScalarKernels/TagVectorAux/scaled=false AuxScalarKernels/TagVectorAux2/scaled=false AuxScalarKernels/TagMatrixAux2/scaled=false'
+      # System of equations has one dof only
+      # so that we do not need to run the test
+      # in parallel
+      max_parallel = 1
+      # csv file contains more rows
+      recover = false
+
+      detail = 'the scalar kernel system (without the variable scaling),'
+    []
+
+    [test_tag_DG_kernels]
+      type = 'Exodiff'
+      input = '2d_diffusion_dg_tag.i'
+      exodiff = '2d_diffusion_dg_tag_out.e'
+
+      detail = 'the discontinous Galerkin system,'
+    []
+
+    [test_tag_itegratedBCs]
+      type = 'Exodiff'
+      input = 'tag_neumann.i'
+      exodiff = 'tag_neumann_out.e'
+
+      detail = 'integrated boundary conditions,'
+    []
+
+    [test_tag_interface_kernels]
+      type = 'Exodiff'
+      input = 'tag_interface_kernels.i'
+      exodiff = 'tag_interface_kernels_out.e'
+
+      detail = 'the interface kernels system,'
+    []
+
+    [test_tag_dirac_kernels]
+      type = 'Exodiff'
+      input = 'tag_dirac_kernels.i'
+      exodiff = 'tag_dirac_kernels_out.e'
+
+      detail = 'the Dirac kernel system,'
+    []
+
+    [test_tag_nodal_kernels]
+      type = 'Exodiff'
+      input = 'tag_nodal_kernels.i'
+      exodiff = 'tag_nodal_kernels_out.e'
+
+      detail = 'the nodal kernel system, and'
+    []
+
+    [test_eigen]
+      type = 'Exodiff'
+      input = 'eigen_tag.i'
+      exodiff = 'eigen_tag_out.e'
+      slepc_version = '>=3.8.0'
+      detail = 'the eigen system.'
+    []
+  []
+
+  [controls-tagging]
+    type = 'Exodiff'
+    input = 'controls-tagging.i'
+    exodiff = 'controls-tagging_out.e'
+    requirement = 'Cached Active object state will be maintained correctly even when objects\' '
+                  'active state changes during runtime.'
+    issues = '#15515'
+  []
+  [array]
+    type = 'Exodiff'
+    input = 'tag-array-var.i'
+    issues = '#20586'
+    requirement = 'The system shall be able to populate auxiliary variables using the residual components of nonlinear array variables.'
+    exodiff = 'tag-array-var_out.e'
+    design = 'TagVectorArrayVariableAux.md'
+  []
+  [array_value]
+    type = 'Exodiff'
+    input = 'tag-array-var.i'
+    issues = '#21839'
+    requirement = 'The system shall be able to populate auxiliary variable values using the residual components of nonlinear array variables.'
+    exodiff = 'tag-array-var_out.e'
+    cli_args = 'AuxKernels/u_tag/type=TagVectorArrayVariableValueAux'
+    design = 'TagVectorArrayVariableValueAux.md'
+  []
+  [array_value_size_error]
+    type = 'RunException'
+    input = 'tag-array-var.i'
+    issues = '#21839'
+    requirement = 'An error will be thrown when the different number of array components are used in the aux and coupled varibles.'
+    cli_args = 'AuxKernels/u_tag/type=TagVectorArrayVariableValueAux AuxVariables/u_tag/components=3'
+    design = 'TagVectorArrayVariableValueAux.md'
+    expect_err = 'The AuxVariable this AuxKernel is acting on has to have the same number of components as the variable'
+  []
+  [array_value_fe_type_error]
+    type = 'RunException'
+    input = 'tag-array-var.i'
+    issues = '#21839'
+    requirement = 'An error will be thrown when the different FE family are used in the aux and coupled varibles.'
+    cli_args = 'AuxKernels/u_tag/type=TagVectorArrayVariableValueAux AuxVariables/u_tag/family=HERMITE'
+    design = 'TagVectorArrayVariableValueAux.md'
+    expect_err = 'The AuxVariable this AuxKernel is acting on has to have the same order and family as the variable'
+  []
+  [array_grad]
+    type = 'Exodiff'
+    input = 'tag-array-grad.i'
+    issues = '#21839'
+    requirement = 'The system shall be able to populate auxiliary variable values using the residual components of nonlinear array variable gradient.'
+    exodiff = 'tag-array-grad_out.e'
+    abs_zero = 1e-08
+  []
+  [multiple_component_tag_interface]
+    type = 'Exodiff'
+    input = 2d_diffusion_tag_vector.i
+    exodiff = multiple_component_tag_interface.e
+    requirement = 'The system shall be able to retrieve tagged vector values for multiple coupled variables using a single interface.'
+    cli_args = "AuxKernels/active='on_the_fly TagVectorAux2' Outputs/file_base=multiple_component_tag_interface"
+  []
+  [fv]
+    type = 'Exodiff'
+    input = tag-fv.i
+    exodiff = tag-fv_out.e
+    requirement = 'The system shall be able to index solution vectors and residual vectors using the degree of freedom indices of a finite volume variable.'
+  []
+[]

@@ -1,0 +1,31 @@
+Content:
+    - framework/doc/content
+    - modules/level_set/doc/content
+
+Renderer:
+    type: MooseDocs.base.MaterializeRenderer
+
+Extensions:
+    MooseDocs.extensions.navigation:
+        name: MOOSE Level Set Module
+        repo: https://github.com/idaholab/moose
+        home: /modules/level_set/index.md
+    MooseDocs.extensions.appsyntax:
+        executable: ${MOOSE_DIR}/modules/level_set
+        remove:
+            framework: !include framework/doc/remove.yml
+        unregister:
+            framework: !include framework/doc/unregister.yml
+        includes:
+            - framework/include
+            - modules/level_set/include
+    MooseDocs.extensions.common:
+        shortcuts: !include framework/doc/globals.yml
+    MooseDocs.extensions.acronym:
+        acronyms: !include framework/doc/acronyms.yml
+    MooseDocs.extensions.sqa:
+        active: True
+        reports: !include modules/level_set/doc/sqa_reports.yml
+        categories:
+            framework: !include framework/doc/sqa_framework.yml
+            level_set: !include modules/level_set/doc/sqa_level_set.yml

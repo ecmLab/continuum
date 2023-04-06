@@ -1,0 +1,12 @@
+[Tests]
+  design = 'WCNSFVMassFluxBC.md PWCNSFVMomentumFluxBC.md WCNSFVEnergyFluxBC.md NSFVAction.md'
+  [from_mdot_action]
+    type = 'Exodiff'
+    input = flux_bcs_mdot-action.i
+    exodiff = flux_bcs_mdot-action_out.e
+    abs_zero = 1e-9
+    recover = false # see #19126
+    issues = '#22038'
+    requirement = 'The system shall be able to model a momentum inlet condition based on mass flow rate for porous weakly-compressible flow.'
+  []
+[]

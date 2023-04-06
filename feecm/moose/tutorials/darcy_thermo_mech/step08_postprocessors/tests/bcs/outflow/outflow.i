@@ -1,0 +1,1 @@
+../../../../step07_adaptivity/tests/bcs/outflow/outflow.i

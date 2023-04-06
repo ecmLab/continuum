@@ -1,0 +1,37 @@
+[Tests]
+  [ExeLauncher]
+    type = PythonUnitTest
+    input = test_ExeLauncher.py
+    display_required = true
+  []
+  [RecentlyUsedMenu]
+    type = PythonUnitTest
+    input = test_RecentlyUsedMenu.py
+    display_required = true
+  []
+  [ExeFinder]
+    type = PythonUnitTest
+    input = test_ExeFinder.py
+    display_required = true
+  []
+  [FileCache]
+    type = PythonUnitTest
+    input = test_FileCache.py
+    display_required = true
+  []
+  [TerminalUtils]
+    type = PythonUnitTest
+    input = test_TerminalUtils.py
+    display_required = true
+  []
+  [Widgetutils]
+    type = PythonUnitTest
+    input = test_WidgetUtils.py
+    display_required = true
+  []
+  [loadstore]
+    type = PythonUnitTest
+    input = test_StoreLoadWidgetState.py
+    display_required = true
+  []
+[]

@@ -1,0 +1,11 @@
+[Tests]
+  [./test]
+    type = 'Exodiff'
+    input = 'multiple_materials_test.i'
+    exodiff = 'out.e'
+
+    issues = '#1405'
+    design = 'syntax/Materials/index.md'
+    requirement = 'The system shall support having multiple materials supplying multiple unique material properties on the same subdomains of the mesh.'
+  [../]
+[]

@@ -1,0 +1,88 @@
+[Tests]
+  issues = '#1737'
+  design = 'MultiAppPostprocessorInterpolationTransfer.md'
+
+  [basis]
+    requirement = "The system shall support the transfer of scalars to a field variable between an "
+                  "application and sub-applications:"
+
+    [test]
+      type = 'Exodiff'
+      input = 'parent.i'
+      exodiff = 'parent_out.e'
+
+      detail = "using a inverse distance algorithm,"
+    []
+
+    [test_constant_monomial]
+      type = 'Exodiff'
+      input = 'parent.i'
+      exodiff = 'constant_monomial.e'
+      cli_args = 'AuxVariables/from_sub/order=CONSTANT AuxVariables/from_sub/family=MONOMIAL Outputs/file_base=constant_monomial'
+      detail = "if the destination variable is CONSTANT MONOMIAL,"
+    []
+
+    [radial_basis]
+      type = 'Exodiff'
+      input = 'radial_parent.i'
+      exodiff = 'radial_parent_out.e'
+
+      detail = "using a radial basis algorithm,"
+    []
+
+    [multilevel]
+      type = 'Exodiff'
+      input = 'multilevel_parent.i'
+      exodiff = 'multilevel_parent_out.e multilevel_parent_out_sub0.e '
+                'multilevel_parent_out_sub0_sub0.e multilevel_parent_out_sub0_sub1.e '
+                'multilevel_parent_out_sub1.e multilevel_parent_out_sub1_sub0.e '
+                'multilevel_parent_out_sub1_sub1.e'
+
+      detail = "with multi-level sub-applications,"
+    []
+
+    [from_sub_to_parent]
+      type = 'Exodiff'
+      input = 'parent_quad.i'
+      exodiff = 'parent_quad_out.e'
+
+      detail = "with multiple sub-application files, and"
+    []
+
+    [from_sub_to_parent_single_sub_file]
+      type = 'Exodiff'
+      input = 'parent2_quad.i'
+      exodiff = 'parent2_quad_out.e'
+
+      detail = "with a single sub-application file."
+    []
+  []
+
+  [test_error]
+    type = 'RunException'
+    input = 'parent.i'
+    expect_err = 'Unknown variable \w+'
+    cli_args = 'Transfers/pp_transfer/variable=invalid Outputs/exodus=false Outputs/active='
+    prereq = basis/test
+
+    requirement = "The system shall report an error if a data transfer is requested for a data "
+                  "variable that is not defined."
+  []
+
+  [fetype_error]
+    type = 'RunException'
+    input = 'parent.i'
+    expect_err = 'Must be either CONSTANT MONOMIAL or FIRST LAGRANGE'
+    prereq = basis/test
+    cli_args = 'AuxVariables/from_sub/order=FIRST AuxVariables/from_sub/family=MONOMIAL Outputs/exodus=false'
+    requirement = "The system shall report an error if a variable is specified that is not LINEAR LAGRANGE or CONSTANT MONOMIAL"
+  []
+
+  [direction_error]
+    type = 'RunException'
+    input = 'parent.i'
+    expect_err = "only from-MultiApp transfers are implemented"
+    cli_args = 'Transfers/pp_transfer/to_multi_app=sub'
+    requirement = "The system shall report an error if parameters for an unsupported direction are provided for the transfer between sub-app scalars and a main app field variablea."
+  []
+[]
