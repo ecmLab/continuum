@@ -1,7 +1,0 @@
-[Tests]
-  [reader]
-    type = PythonUnitTest
-    input = test_ExodusReader.py
-    display_required = true
-  []
-[]

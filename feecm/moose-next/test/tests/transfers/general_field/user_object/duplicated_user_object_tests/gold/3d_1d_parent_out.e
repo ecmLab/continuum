@@ -1,1 +1,0 @@
-../../../../multiapp_userobject_transfer/gold/3d_1d_parent_out.e

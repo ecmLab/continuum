@@ -1,6 +1,0 @@
-[Tests]
-  [./always_ok]
-    type = RunApp
-    input = good.i
-  [../]
-[]

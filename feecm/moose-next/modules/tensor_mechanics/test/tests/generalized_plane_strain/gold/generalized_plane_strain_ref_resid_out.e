@@ -1,1 +1,0 @@
-generalized_plane_strain_small_out.e

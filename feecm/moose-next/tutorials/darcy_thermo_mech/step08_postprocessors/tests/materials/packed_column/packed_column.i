@@ -1,1 +1,0 @@
-../../../../step07_adaptivity/tests/materials/packed_column/packed_column.i

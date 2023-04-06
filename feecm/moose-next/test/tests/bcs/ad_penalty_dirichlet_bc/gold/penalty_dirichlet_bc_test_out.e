@@ -1,1 +1,0 @@
-../../penalty_dirichlet_bc/gold/penalty_dirichlet_bc_test_out.e

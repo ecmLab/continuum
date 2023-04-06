@@ -1,1 +1,0 @@
-../../bc_preset_nodal/gold/bc_func_out.e

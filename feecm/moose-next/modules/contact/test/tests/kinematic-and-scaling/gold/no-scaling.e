@@ -1,1 +1,0 @@
-bouncing-block-kinematic_exo.e

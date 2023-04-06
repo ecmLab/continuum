@@ -1,7 +1,0 @@
-[Tests]
-  [ExecuteOptionsPlugin]
-    type = PythonUnitTest
-    input = test_ExecuteOptionsPlugin.py
-    display_required = true
-  []
-[]

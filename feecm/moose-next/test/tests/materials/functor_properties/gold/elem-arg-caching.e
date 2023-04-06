@@ -1,1 +1,0 @@
-1d_dirichlet_out.e

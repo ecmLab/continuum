@@ -1,1 +1,0 @@
-elastic_temperature_steps_out.e
