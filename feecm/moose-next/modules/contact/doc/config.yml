@@ -1,0 +1,39 @@
+Content:
+    - framework/doc/content
+    - modules/contact/doc/content
+    - modules/tensor_mechanics/doc/content
+    - utility:
+        root_dir: ${MOOSE_DIR}/modules/doc/content
+        content:
+            - help/finite_element_concepts/nodal_patch_recovery.md            
+Renderer:
+    type: MooseDocs.base.MaterializeRenderer
+
+Extensions:
+    MooseDocs.extensions.navigation:
+        name: MOOSE Contact Module
+        repo: https://github.com/idaholab/moose
+        home: /modules/contact/index.md
+    MooseDocs.extensions.appsyntax:
+        executable: ${MOOSE_DIR}/modules/contact
+        remove:
+            framework: !include framework/doc/remove.yml
+        unregister:
+            framework: !include framework/doc/unregister.yml
+        includes:
+            - framework/include
+            - modules/contact/include
+            - modules/tensor_mechanics/include
+    MooseDocs.extensions.common:
+        shortcuts: !include framework/doc/globals.yml
+    MooseDocs.extensions.acronym:
+        acronyms: !include framework/doc/acronyms.yml
+    MooseDocs.extensions.template:
+        active: True
+    MooseDocs.extensions.sqa:
+        active: True
+        reports: !include modules/contact/doc/sqa_reports.yml
+        categories:
+            framework: !include framework/doc/sqa_framework.yml
+            contact: !include modules/contact/doc/sqa_contact.yml
+            tensor_mechanics: !include modules/tensor_mechanics/doc/sqa_tensor_mechanics.yml

@@ -1,0 +1,66 @@
+Content:
+    workshop:
+        root_dir: ${MOOSE_DIR}/tutorials/darcy_thermo_mech/doc/content
+    moose:
+        root_dir: ${MOOSE_DIR}/framework/doc/content
+        content:
+            - large_media/tutorials/darcy_thermo_mech/*
+            - large_media/testing/*
+            - large_media/tutorials/INL_Hex_Light_Presentation_Background_Thin.png
+            - large_media/contact/ironing_gallery.mp4
+            - large_media/gallery/dipole_antenna.mp4
+            - large_media/ray_tracing/cone_ray_study_u.png
+            - large_media/ray_tracing/cone_ray_study_rays.png
+            - contrib/**
+            - css/**
+            - js/**
+            - bib/**
+            - syntax/Outputs/output_types.md
+    chemical_reactions:
+        root_dir: ${MOOSE_DIR}/modules/chemical_reactions/doc/content
+        content:
+            - bib/**
+    fet:
+        root_dir: ${MOOSE_DIR}/modules/functional_expansion_tools/doc/content
+        content:
+            - bib/**
+
+Executioner:
+    type: MooseDocs.base.Serial
+
+Renderer:
+    type: MooseDocs.base.RevealRenderer
+    theme: simple
+
+Extensions:
+    disable_defaults: True
+    MooseDocs.extensions.comment: default
+    MooseDocs.extensions.command: default
+    MooseDocs.extensions.core: default
+    MooseDocs.extensions.config: default
+    MooseDocs.extensions.media: default
+    MooseDocs.extensions.floats: default
+    MooseDocs.extensions.include: default
+    MooseDocs.extensions.bibtex:
+        duplicates: !include modules/doc/duplicate_bibs.yml # necessary when building with main site
+    MooseDocs.extensions.katex:
+        macros:
+            \vec: "\\bar" # TODO: \vec doesn't render
+            \pf: "\\frac{\\partial #1}{\\partial #2}"
+    MooseDocs.extensions.style: default
+    MooseDocs.extensions.autolink: default
+    MooseDocs.extensions.materialicon: default
+    MooseDocs.extensions.heading: default
+    MooseDocs.extensions.shortcut: default
+    MooseDocs.extensions.table: default
+    MooseDocs.extensions.layout: default
+    MooseDocs.extensions.content: default
+    MooseDocs.extensions.modal: default
+    MooseDocs.extensions.acronym:
+        acronyms: !include framework/doc/acronyms.yml
+    MooseDocs.extensions.listing:
+        modal-link: False
+    MooseDocs.extensions.reveal:
+        translate: workshop/index.md
+        background_image: INL_Hex_Light_Presentation_Background_Thin.png
+    MooseDocs.extensions.datetime: default

@@ -1,0 +1,48 @@
+[Tests]
+  issues = '#2340'
+  design = 'MultiAppPostprocessorToAuxScalarTransfer.md'
+
+  [transfer]
+    requirement = "The system shall support the transfer of data between a parent and "
+                  "sub-applications for scalar unknowns and postprocessing data:"
+    [parent_to_sub]
+      type = 'Exodiff'
+      input = 'parent.i'
+      exodiff = 'parent_out_pp_sub0.e parent_out_pp_sub1.e'
+      max_threads = 1 # Diffs with threads
+
+      detail = "from the parent application to the sub-applications and"
+    []
+
+    [sub_to_parent]
+      type = 'Exodiff'
+      input = 'parent2.i'
+      exodiff = 'parent2_out.e'
+      max_threads = 1 # Diffs with threads
+
+      detail = "to the parent application from the sub-applications."
+    []
+  []
+
+  [error]
+    requirement = "The system shall error during the transfer of scalar variable and postprocessor "
+                  "data if the number of sub-applications differs from the order of the scalar "
+                  "variable if"
+    [sub_to_parent_wrong_order]
+      type = 'RunException'
+      input = 'parent2_wrong_order.i'
+      expect_err = "The number of sub apps \(3\) must be equal to the order of the scalar "
+                   "AuxVariable \(4\)"
+
+      detail = "the order is too large and"
+    []
+    [sub_to_parent_wrong_positions]
+      type = 'RunException'
+      input = 'parent2_wrong_positions.i'
+      expect_err = "The number of sub apps \(1\) must be equal to the order of the scalar "
+                   "AuxVariable \(3\)"
+
+      detail = "the order is too small."
+    []
+  []
+[]

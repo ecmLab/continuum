@@ -1,0 +1,64 @@
+[Tests]
+  design = "Coupleable.md"
+  [test]
+    type = 'Exodiff'
+    input = 'ad_coupled_value.i'
+    exodiff = 'ad_coupled_value_out.e'
+    requirement = "Coupled variable value Jacobian entries generated with AD shall be accurate"
+    issues = "#5658"
+  []
+  [test_coupled_aux]
+    type = 'Exodiff'
+    input = 'ad_aux_coupled_value.i'
+    exodiff = 'ad_aux_coupled_value_out.e'
+    requirement = "We shall be able to get aux variable values through adCoupledValue with the knowledge that the derivatives will always be zero"
+    issues = "#12852"
+    max_parallel = 4
+  []
+  [test_coupled_aux_jac]
+    type = 'PetscJacobianTester'
+    input = 'ad_aux_coupled_value.i'
+    run_sim = True
+    ratio_tol = 1e-8
+    difference_tol = 1e-7
+    max_parallel = 4
+    cli_args = 'Outputs/exodus=false'
+    requirement = "Getting a *constant* aux variable through adCoupledValue shall not destroy our Jacobian"
+    issues = "#12852"
+  []
+  [test_coupled_dot_aux]
+    type = 'Exodiff'
+    input = 'ad_aux_coupled_time_value.i'
+    exodiff = 'ad_aux_coupled_time_value_out.e'
+    requirement = "We shall be able to get dot aux variable values through adCoupledValue with the knowledge that the time derivatives will always be zero"
+    issues = "#12996"
+    max_parallel = 4
+  []
+  [no_mallocs_pjfnk]
+    type = Exodiff
+    prereq = 'test'
+    input = 'ad_coupled_value.i'
+    exodiff = 'pjfnk.e'
+    cli_args = 'Outputs/file_base=pjfnk Executioner/solve_type=PJFNK Executioner/nl_max_its=3 Executioner/l_tol=1e-5'
+    issues = '#16396'
+    requirement = 'The system shall automatically generate a full coupling matrix when doing global AD indexing such that there are no new matrix memory allocations.'
+  []
+  [perfect_jac_pjfnk_global_ad]
+    type = PetscJacobianTester
+    input = 'ad_coupled_value.i'
+    cli_args = 'Executioner/solve_type=PJFNK Executioner/nl_max_its=3 Executioner/l_tol=1e-5'
+    run_sim = True
+    ratio_tol = 1e-7
+    difference_tol = 1e-6
+    issues = '#16396'
+    requirement = 'The system shall automatically generate a full coupling matrix when doing global AD indexing, resulting in a perfect Jacobian even when the user has not requested full coupling.'
+  []
+  [trust_user_and_then_error]
+    type = RunException
+    input = 'ad_coupled_value.i'
+    cli_args = "Outputs/exodus=false Executioner/solve_type=PJFNK Preconditioning/active='smp' Preconditioning/smp/trust_my_coupling=true"
+    issues = '#16396'
+    requirement = 'The system shall allow the user to override the automated generation of a full coupling matrix when doing global AD indexing, which for this test results in a new nonzero allocation because there is off-diagonal coupling.'
+    expect_err = 'New nonzero.*caused a malloc'
+  []
+[]

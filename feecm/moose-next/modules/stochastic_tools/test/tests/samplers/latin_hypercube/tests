@@ -1,0 +1,83 @@
+[Tests]
+  design = LatinHypercubeSampler.md
+  issues = '#14830'
+
+  [modes]
+    requirement = "The system shall support the ability to sample data using the Latin Hypercube "
+                  "method that can operate"
+    [global]
+      type = CSVDiff
+      input = 'latin_hypercube.i'
+      cli_args = 'VectorPostprocessors/data/sampler_method=get_global_samples'
+      csvdiff = 'latin_hypercube_out_data_0000.csv latin_hypercube_out_data_0001.csv'
+
+      detail = "using global matrix,"
+    []
+
+    [local]
+      type = CSVDiff
+      input = 'latin_hypercube.i'
+      cli_args = 'VectorPostprocessors/data/sampler_method=get_local_samples'
+      csvdiff = 'latin_hypercube_out_data_0000.csv latin_hypercube_out_data_0001.csv'
+
+      detail = "a local matrix,"
+    []
+
+    [row]
+      type = CSVDiff
+      input = 'latin_hypercube.i'
+      cli_args = 'VectorPostprocessors/data/sampler_method=get_next_local_row'
+      csvdiff = 'latin_hypercube_out_data_0000.csv latin_hypercube_out_data_0001.csv'
+
+      detail = "or row-by-row."
+    []
+  []
+
+  [more_procs]
+    requirement = "The system shall support the ability to sample data using the Latin Hypercube "
+                  "method with more processors than rows that can operate"
+    [global]
+      type = CSVDiff
+      input = 'latin_hypercube.i'
+      cli_args = 'VectorPostprocessors/data/sampler_method=get_global_samples Samplers/sample/num_rows=2
+                  Outputs/file_base=latin_hypercube_small'
+      csvdiff = 'latin_hypercube_small_data_0000.csv latin_hypercube_small_data_0001.csv'
+      min_parallel = 4
+
+      detail = "using global matrix,"
+    []
+
+    [local]
+      type = CSVDiff
+      input = 'latin_hypercube.i'
+      cli_args = 'VectorPostprocessors/data/sampler_method=get_local_samples Samplers/sample/num_rows=2
+                  Outputs/file_base=latin_hypercube_small'
+      csvdiff = 'latin_hypercube_small_data_0000.csv latin_hypercube_small_data_0001.csv'
+      min_parallel = 4
+
+      detail = "a local matrix,"
+    []
+
+    [row]
+      type = CSVDiff
+      input = 'latin_hypercube.i'
+      cli_args = 'VectorPostprocessors/data/sampler_method=get_next_local_row Samplers/sample/num_rows=2
+                  Outputs/file_base=latin_hypercube_small'
+      csvdiff = 'latin_hypercube_small_data_0000.csv latin_hypercube_small_data_0001.csv'
+      min_parallel = 4
+
+      detail = "or row-by-row."
+    []
+  []
+
+  [visualize]
+    type = CheckFiles
+    command = "./latin_hypercube.py"
+    check_files = latin_hypercube.pdf
+    required_python_packages = 'pandas numpy matplotlib'
+    valgrind = NONE
+
+    requirement = "The system shall include a utility that visually displays results of plotting "
+                  "Latin Hypercube test."
+  []
+[]

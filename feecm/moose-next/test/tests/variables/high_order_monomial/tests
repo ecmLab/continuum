@@ -1,0 +1,11 @@
+[Tests]
+  design = 'syntax/Variables/index.md'
+  issues = '#3293'
+
+  [./test]
+    type = 'Exodiff'
+    input = 'high_order_monomial.i'
+    exodiff = 'high_order_monomial_out.e'
+    requirement = "The system shall support second and third order Monomial family of shape functions."
+  [../]
+[]

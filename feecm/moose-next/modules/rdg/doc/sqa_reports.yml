@@ -1,0 +1,28 @@
+Applications:
+    rdg:
+        exe_directory: ${MOOSE_DIR}/modules/rdg
+        app_types:
+            - RdgApp
+        content_directory: ${MOOSE_DIR}/modules/rdg/doc/content
+        unregister:
+            - ${MOOSE_DIR}/framework/doc/unregister.yml
+        remove:
+            - ${MOOSE_DIR}/framework/doc/remove.yml
+
+Documents:
+    software_requirements_specification: sqa/rdg_srs.md
+    software_design_description: sqa/rdg_sdd.md
+    software_test_plan: sqa/rdg_stp.md
+    requirements_traceablity_matrix: sqa/rdg_rtm.md
+    verification_validation_plan: sqa/rdg_vvr.md
+    failure_analysis_report: sqa/rdg_far.md
+    software_library_list: sqa/rdg_sll.md
+    communication_and_contact_information: sqa/framework_cci.md
+    software_coding_standards: sqa/framework_scs.md
+    log_default: WARNING
+    show_warning: false
+
+Requirements:
+    rdg:
+        directories:
+            - ${MOOSE_DIR}/modules/rdg

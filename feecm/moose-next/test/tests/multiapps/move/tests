@@ -1,0 +1,26 @@
+[Tests]
+  issues = '#1971'
+  design = 'syntax/MultiApps/index.md'
+
+  [group]
+    requirement = "The system shall support the ability to re-position sub-applications at a specified time"
+
+    [test]
+      type = 'Exodiff'
+      input = 'parent.i'
+      exodiff = 'parent_out_sub0.e parent_out_sub0.e-s002'
+      recover = false
+
+      detail = "for single and"
+    []
+
+    [multilevel]
+      type = 'Exodiff'
+      input = 'multilevel_parent.i'
+      exodiff = 'multilevel_parent_out_sub0.e multilevel_parent_out_sub0.e-s002 multilevel_parent_out_sub0_sub0.e multilevel_parent_out_sub0_sub0.e-s002'
+      recover = false
+
+      detail = "multi-level sub-applications."
+    []
+  []
+[]

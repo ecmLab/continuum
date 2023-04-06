@@ -1,0 +1,34 @@
+[Tests]
+  [default]
+    type = ImageDiff
+    command = line_sample_default.py
+    imagediff = 'line_sample_default.png'
+    allowed = 0.94
+    display_required = true
+  []
+
+  [line_sample]
+    type = ImageDiff
+    command = line_sample.py
+    imagediff = 'line_sample.png'
+    expect_out = '0.049\d*\s0.400' # Test the the sampled values are present
+    allowed = 0.92
+    display_required = true
+  []
+
+  [line_sample_elem]
+    type = ImageDiff
+    command = line_sample_elem.py
+    imagediff = 'line_sample_elem.png'
+    allowed = 0.96
+    display_required = true
+  []
+
+  [line_sample_error]
+    type = RunApp
+    command = line_sample_error.py
+    expect_out = "Unable to locate the variable, invalid_name, in the supplied source data."
+    errors = "zzzzzzz" # Supress default error checking
+    display_required = true
+  []
+[]

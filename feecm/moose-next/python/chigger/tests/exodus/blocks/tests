@@ -1,0 +1,92 @@
+[Tests]
+  issues = '#7451'
+  design = 'python/chigger/index.md'
+
+  [exodus]
+    requirement = "The system shall include a graphical scripting language that includes the ability to display ExodusII file data with"
+    [default]
+      type = ImageDiff
+      command = default.py
+      imagediff = 'default.png'
+      display_required = true
+
+      detail = "default settings;"
+    []
+    [blocks]
+      type = ImageDiff
+      command = blocks.py
+      imagediff = 'blocks.png'
+      display_required = true
+
+      detail = "defined subdomains;"
+    []
+    [all_boundary]
+      type = ImageDiff
+      command = all_boundary.py
+      imagediff = 'all_boundary.png'
+      allowed_linux = 0.95
+      display_required = true
+
+      detail = "all boundaries;"
+    []
+    [boundary]
+      type = ImageDiff
+      command = boundary.py
+      imagediff = 'boundary.png'
+      display_required = true
+
+      detail = "defined boundaries by name;"
+    []
+    [boundary_numeric]
+      type = ImageDiff
+      command = boundary_numeric.py
+      imagediff = 'boundary_numeric.png'
+      display_required = true
+
+      detail = "defined boundaries by number;"
+    []
+    [nodesets]
+      type = ImageDiff
+      command = nodesets.py
+      imagediff = 'nodesets.png'
+      allowed = 0.96
+      display_required = true
+
+      detail = "defined nodesets;"
+    []
+    [all_nodesets]
+      type = ImageDiff
+      command = all_nodesets.py
+      imagediff = 'all_nodesets.png'
+      allowed = 0.86
+      display_required = true
+
+      detail = "all nodesets;"
+    []
+    [none]
+      type = ImageDiff
+      command = none.py
+      imagediff = 'none.png'
+      display_required = true
+
+      detail = "no geometric entities selected;"
+    []
+    [combo]
+      type = ImageDiff
+      command = combo.py
+      imagediff = 'combo.png'
+      allowed = 0.94
+      display_required = true
+
+      detail = "subdomains, boundaries, and nodesets specified; and"
+    []
+    [partial]
+      type = ImageDiff
+      command = partial.py
+      imagediff = 'partial.png'
+      display_required = true
+
+      detail = "data only defined on a subset of subdomains."
+    []
+  []
+[]

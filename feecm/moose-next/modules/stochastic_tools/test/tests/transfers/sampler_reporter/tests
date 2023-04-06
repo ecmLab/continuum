@@ -1,0 +1,48 @@
+[Tests]
+  issues = '#16166'
+  design = 'SamplerReporterTransfer.md'
+
+  [transfer]
+    requirement = "The system shall support the ability to transfer reporter data from each sub-application for a set of stochastic data "
+    [normal]
+      type = JSONDiff
+      input = main.i
+      jsondiff = main_out.json
+
+      detail = "in normal mode, "
+    []
+    [batch]
+      type = JSONDiff
+      input = main_batch.i
+      jsondiff = 'main_batch_out.json'
+
+      detail = 'in batch mode, '
+    []
+    [distributed]
+      type = JSONDiff
+      input = main.i
+      cli_args = 'Reporters/storage/parallel_type=DISTRIBUTED Outputs/file_base=main_parallel'
+      jsondiff = 'main_parallel.json main_parallel.json.1 main_parallel.json.2 main_parallel.json.3'
+      min_parallel = 4
+      max_parallel = 4
+
+      detail = 'with distributed output, '
+    []
+    [more_cpus]
+      type = JSONDiff
+      input = main_small.i
+      jsondiff = 'main_small_out.json'
+      min_parallel = 4
+
+      detail = 'with more processors than samples, '
+    []
+    [invalid_type]
+      type = RunException
+      input = main.i
+      cli_args = "Transfers/data/from_reporter='mesh/sidesets'"
+      expect_err = 'Reporter value mesh/sidesets is of unsupported type'
+
+      detail = 'and error if transferring unsupported type.'
+    []
+  []
+[]

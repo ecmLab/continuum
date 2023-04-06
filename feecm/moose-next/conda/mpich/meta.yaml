@@ -1,0 +1,85 @@
+# Making a Change to this package?
+# REMEMBER TO UPDATE the .yaml files for the following packages:
+#   petsc/
+#   libmesh-vtk/
+#   libmesh/
+#   template/
+#   moose/
+{% set build = 7 %}
+{% set strbuild = "build_" + build|string %}
+{% set version = "4.0.2" %}
+
+package:
+  name: moose-mpich
+  version: {{ version }}
+
+source:
+  - path: .
+
+build:
+  number: {{ build }}
+  string: {{ strbuild }}
+  skip: True                    # [win]
+  pin_depends: strict
+  run_exports:
+    - {{ pin_subpackage('moose-mpich', max_pin='x.x') }}
+
+requirements:
+  build:
+    - {{ base_mpich }}
+    - {{ base_mpicc }}
+    - {{ base_mpicxx }}
+    - {{ base_mpifort }}
+    - {{ moose_libgfortran }}
+    - {{ moose_libgfortran5 }}
+    - {{ moose_hdf5 }}
+    - {{ moose_ld64 }}          # [osx]
+    - make
+    - libtool
+    - autoconf
+    - automake 1.16.1
+    - m4
+  host: []
+  run:
+    - {{ base_mpich }}
+    - {{ base_mpicc }}
+    - {{ base_mpicxx }}
+    - {{ base_mpifort }}
+    - {{ moose_libgfortran }}
+    - {{ moose_libgfortran5 }}
+    - {{ moose_hdf5 }}
+    - {{ moose_ld64 }}          # [osx]
+    - cmake
+    - make
+    - libtool
+    - autoconf
+    - automake 1.16.1
+    - m4
+    - {{ moose_libxt }}         # [linux]
+    - {{ moose_libsm }}         # [linux]
+    - {{ moose_libx11 }}        # [linux]
+    - {{ moose_libice }}        # [linux]
+    - {{ moose_libxext }}       # [linux]
+    - {{ moose_mesa_libgl }}    # [linux]
+    - {{ moose_xorg_x11 }}      # [linux]
+    - {{ moose_libglu }}        # [linux]
+    - {{ moose_mesalib }}       # [linux]
+    - mpi 1.0 mpich
+
+test:
+  commands:
+    - test -f $PREFIX/etc/conda/activate.d/activate_moose-mpich.sh
+
+about:
+  home: https://mooseframework.org/
+  license: LGPL 2.1
+  summary: 'A top-level package designed to control environment variables related to conda-forge provided MPICH'
+  description: |
+    MPICH is a high performance and widely portable implementation of the
+    Message Passing Interface (MPI) standard.
+  doc_url: http://www.mpich.org/documentation/guides
+  dev_url: https://wiki.mpich.org/mpich/index.php/Main_Page
+
+extra:
+  recipe-maintainers:
+    - milljm

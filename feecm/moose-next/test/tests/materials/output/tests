@@ -1,0 +1,119 @@
+[Tests]
+  design = 'syntax/Materials/index.md syntax/Outputs/index.md'
+  issues = '#1189 #3538'
+
+  [group]
+    requirement = "The system shall support the output of material data as field variables including"
+
+    [all]
+      type = 'Exodiff'
+      input = 'output.i'
+      exodiff = 'output_out.e'
+
+      detail = 'outputting all properties within a material definition;'
+    []
+    [all_via_outputs]
+      # Test the ability for Output objects to enable all material property output
+      type = 'Exodiff'
+      input = 'output_via_outputs.i'
+      exodiff = 'output_via_outputs_out.e'
+
+      detail = 'outputting all properties from the output definition;'
+    []
+    [limit_via_outputs]
+      # Test the ability for Output objects to enable specific material property outputs
+      type = 'Exodiff'
+      input = 'limited_via_outputs.i'
+      exodiff = 'limited_via_outputs_out.e'
+
+      detail = 'outputting certain properties within a material definition;'
+    []
+    [block_via_outputs]
+      # Test the ability for Output objects to enable specific material property outputs across blocks
+      type = 'Exodiff'
+      input = 'block_via_outputs.i'
+      exodiff = 'block_via_outputs_out.e'
+
+      detail = 'outputting certain properties within the output definition on a subdomain;'
+    []
+    [block]
+      type = 'Exodiff'
+      input = 'output_block.i'
+      exodiff = 'output_block_out.e'
+
+      detail = 'outputting certain properties within the material definition on a subdomain;'
+    []
+    [block_displaced]
+      type = 'Exodiff'
+      input = 'output_block_displaced.i'
+      exodiff = 'output_block_displaced_exodus.e'
+
+      detail = 'outputting certain properties within the material definition on a subdomain with a '
+               'displaced configuration;'
+    []
+    [boundary]
+      type = 'Exodiff'
+      input = 'output_boundary.i'
+      exodiff = 'output_boundary_out.e'
+
+      detail = 'outputting certain properties within the material definition on a boundary;'
+    []
+    [multiple_files]
+      type = Exodiff
+      input = output_multiple_files.i
+      exodiff = 'output_multiple_files_exodus1.e output_multiple_files_exodus2.e'
+
+      detail = 'outputting certain properties within the material definition to different files; and'
+    []
+    [steady]
+      type = Exodiff
+      input = 'output_steady.i'
+      exodiff = 'output_steady_out.e'
+
+      detail = 'outputting properties for steady-state simulations.'
+    []
+  []
+
+  [data_types]
+    requirement = "The system shall support the output as auxiliary field variables of "
+    [ad_vector]
+      type = Exodiff
+      input = output.i
+      exodiff = 'vector_output.e'
+      cli_args = "Outputs/file_base='vector_output' Materials/active='vector' Materials/vector/type=ADGenericConstantVectorMaterial Materials/vector/prop_names='p1 p2' Materials/vector/prop_values='0 1 2 1.2 3.4 -1' Materials/vector/outputs='exodus'"
+      detail = 'automatic differentiation vector material properties'
+    []
+  []
+
+  [duplicate_variable_name]
+    type = RunException
+    input = output_steady.i
+    expect_err = "The material property output real_property has the same name as an existing variable, either use the material declare_suffix parameter to disambiguate"
+    cli_args = "AuxVariables/real_property/order=CONSTANT AuxVariables/real_property/family=MONOMIAL"
+    requirement = "The system shall error if an existing variable shares the same name as an auxiliary variable used for material output"
+  []
+  [invalid_outputs]
+    type = RunException
+    input = output.i
+    expect_err = "The output object 'garbage' is not a defined output object"
+    cli_args = 'Outputs/exodus=false Materials/test_material/outputs=garbage'
+
+    requirement = "The system shall error if the supplied output options for material data output "
+                  "are not consistent with the list of available outputs."
+  []
+  [warn_unsupported_types]
+    type = RunApp
+    input = output_warning.i
+    allow_warnings = true
+    expect_out = "The types for total 1 material properties:\n  vec\nare not supported for automatic output by MaterialOutputAction"
+    requirement = "The system shall issue warnings if material data added by materials cannot be outputted as field variables."
+  []
+  [show_added_aux_vars]
+    type = RunApp
+    input = output_warning.i
+    allow_warnings = true
+    expect_out = "The following total 103 aux variables:"
+    requirement = "The system shall show the field variable names for outputting material data added by materials."
+    prereq = warn_unsupported_types
+  []
+[]

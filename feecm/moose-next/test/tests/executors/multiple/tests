@@ -1,0 +1,29 @@
+[Tests]
+  design = 'source/executors/Executor.md'
+  issues = '#5229 #18180'
+
+  [test]
+    type = 'RunApp'
+    input = 'test.i'
+    # Need to disable perf graph live here because we rely on line breaks
+    cli_args = "--executor --disable-perf-graph-live"
+    expect_out = "BinaryTestExecutor my_first_executor BEGIN\nBinaryTestExecutor i1 BEGIN\nBinaryTestExecutor i1 END\nBinaryTestExecutor i2 BEGIN\nBinaryTestExecutor i2 END\nBinaryTestExecutor my_first_executor END"
+    requirement = "The system shall be able to utilize a modular/nested system of execution"
+  []
+
+  [cycle]
+    type = 'RunException'
+    input = 'test.i'
+    cli_args = 'Executors/i2/inner1=my_first_executor --executor'
+    expect_err = 'Executor cycle detected'
+    requirement = "The system shall error if the Executor system contains an infinite cycle"
+  []
+
+  [multi_root]
+    type = 'RunException'
+    input = 'test.i'
+    cli_args = 'Executors/i3/type=BinaryTestExecutor --executor'
+    expect_err = 'Multiple Executor roots found'
+    requirement = "The system shall only have one root node in the Executor tree"
+  []
+[]

@@ -1,0 +1,99 @@
+[Tests]
+  [./framework]
+    type = 'CSVDiff'
+    input = 'framework.i'
+    csvdiff = 'framework_out_tracer_0011.csv'
+    abs_zero = 1.0E-5
+    threading = '!pthreads'
+    requirement = "The system shall be able to solve the advection equation"
+    issues = '#12346'
+    design = 'porous_flow/numerical_diffusion.md'
+  [../]
+  [./fully_saturated_action]
+    type = 'CSVDiff'
+    input = 'fully_saturated_action.i'
+    csvdiff = 'fully_saturated_action_out_tracer_0011.csv'
+    abs_zero = 1.0E-5
+    threading = '!pthreads'
+    requirement = "PorousFlow shall be able to solve the advection of fluid species, using mass lumping and no upwinding, employing an Action"
+    issues = '#11013'
+    design = 'porous_flow/numerical_diffusion.md'
+  [../]
+  [./no_action]
+    type = 'CSVDiff'
+    input = 'no_action.i'
+    csvdiff = 'no_action_out_tracer_0011.csv'
+    abs_zero = 1.0E-5
+    threading = '!pthreads'
+    requirement = "PorousFlow shall be able to solve the advection of fluid species, using mass lumping and full upwinding, without employing an action"
+    issues = '#11013'
+    design = 'porous_flow/numerical_diffusion.md'
+  [../]
+  [./fully_saturated_upwinded]
+    type = 'CSVDiff'
+    input = 'fully_saturated_action.i'
+    cli_args = 'Outputs/file_base=no_action_out PorousFlowFullySaturated/stabilization=Full'
+    prereq = no_action
+    csvdiff = 'no_action_out_tracer_0011.csv'
+    abs_zero = 1.0E-5
+    threading = '!pthreads'
+    requirement = "PorousFlow shall be able to solve the advection of fluid species in a fully-saturated single-phase situation, using mass lumping and full upwinding, via employing an action"
+    issues = '#16841'
+    design = 'porous_flow/numerical_diffusion.md'
+  [../]
+  [./fully_saturated_KT]
+    type = 'CSVDiff'
+    input = 'fully_saturated_action.i'
+    cli_args = 'Outputs/file_base=fully_saturated_action_KT PorousFlowFullySaturated/stabilization=KT'
+    csvdiff = 'fully_saturated_action_KT_tracer_0011.csv'
+    heavy = true
+    abs_zero = 1.0E-5
+    threading = '!pthreads'
+    requirement = "PorousFlow shall be able to solve the advection of fluid species in a fully-saturated single-phase situation, using mass lumping and KT upwinding, via employing an action"
+    issues = '#16841'
+    design = 'porous_flow/numerical_diffusion.md'
+  [../]
+  [./fltvd_no_antidiffusion]
+    type = 'CSVDiff'
+    input = 'fltvd_no_antidiffusion.i'
+    csvdiff = 'fltvd_no_antidiffusion_out_tracer_0011.csv'
+    abs_zero = 1.0E-5
+    threading = '!pthreads'
+    issues = '#12370 #12118 #10426'
+    design = 'porous_flow/numerical_diffusion.md'
+    requirement = 'PorousFlow shall implement Kuzmin-Turek stabilization, but be able to use no antidiffusion'
+  [../]
+  [./fltvd]
+    type = 'CSVDiff'
+    input = 'fltvd.i'
+    csvdiff = 'fltvd_out_tracer_0101.csv'
+    abs_zero = 1.0E-5
+    threading = '!pthreads'
+    issues = '#12370 #12118 #10426'
+    design = 'porous_flow/numerical_diffusion.md'
+    requirement = 'PorousFlow shall implement Kuzmin-Turek stabilization'
+  [../]
+  [./pffltvd]
+    type = 'CSVDiff'
+    input = 'pffltvd.i'
+    csvdiff = 'pffltvd_out_tracer_0101.csv'
+    abs_zero = 1.0E-5
+    threading = '!pthreads'
+    heavy = true
+    issues = '#10426'
+    design = 'porous_flow/numerical_diffusion.md porous_flow/kt.md'
+    requirement = 'PorousFlow shall implement Kuzmin-Turek stabilization for PorousFlow simulations.  The advection via the Darcy velocity shall have the correct velocity.  With no flux-limiter the results should be the same as full upwinding.  The results for simulations involving PorousFlow Kernels and UserObjects when the Darcy velocity is constant shall be the same as the constant-velocity, non-PorousFlow case.'
+  [../]
+  [./pffltvd_action]
+    type = 'CSVDiff'
+    input = 'pffltvd_action.i'
+    csvdiff = 'pffltvd_out_tracer_0101.csv'
+    abs_zero = 1.0E-5
+    threading = '!pthreads'
+    prereq = 'pffltvd'
+    heavy = true
+    issues = '#10426'
+    design = 'porous_flow/numerical_diffusion.md porous_flow/kt.md'
+    requirement = 'PorousFlow shall implement Kuzmin-Turek stabilization for PorousFlow simulations and the user shall be able to use the PorousFlow Action system to choose the Kuzmin-Turek stabilization for single-phase, multi-component fluid flow'
+  [../]
+[]

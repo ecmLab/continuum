@@ -1,0 +1,119 @@
+[Tests]
+  [all]
+    design = 'MooseDocs/index.md'
+    issues = '#6699 #9638 #12049 #13567 #13611 #15232 #15927 #16622'
+
+    requirement = "The system shall include documentation tools that provide support for"
+    [core]
+      type = PythonUnitTest
+      input = test_core.py
+      detail = "markdown-like syntax,"
+    []
+    [special]
+      type = PythonUnitTest
+      input = test_special.py
+      detail = "special characters,"
+    []
+    [comment]
+      type = PythonUnitTest
+      input = test_comment.py
+      detail = "comments within markdown syntax,"
+    []
+    [acronym]
+      type = PythonUnitTest
+      input = test_acronym.py
+      detail = "acronyms within markdown syntax,"
+    []
+    [sqa]
+      type = PythonUnitTest
+      input = test_sqa.py
+      detail = "building software quality documents,"
+    []
+    [autolink]
+      type = PythonUnitTest
+      input = test_autolink.py
+      detail = "automatically cross-linking files,"
+    []
+    [civet]
+      type = PythonUnitTest
+      input = test_civet.py
+      detail = "linking to continuous integration testing results,"
+    []
+    [content]
+      type = PythonUnitTest
+      input = test_content.py
+      detail = "listing and linking to content within and across documents,"
+    []
+    [appsyntax]
+      type = PythonUnitTest
+      input = test_appsyntax.py
+      detail = "automatically retrieving application syntax,"
+      max_time = 400
+    []
+    [alert]
+      type = PythonUnitTest
+      input = test_alert.py
+      detail = "creating alert text boxes,"
+    []
+    [media]
+      type = PythonUnitTest
+      input = test_media.py
+      detail = "displaying images and videos,"
+    []
+    [listing]
+      type = PythonUnitTest
+      input = test_listing.py
+      detail = "creating source code listings,"
+    []
+    [gallery]
+      type = PythonUnitTest
+      input = test_gallery.py
+      detail = "displaying image galleries,"
+    []
+    [template]
+      type = PythonUnitTest
+      input = test_template.py
+      detail = "template files,"
+    []
+    [devel]
+      type = PythonUnitTest
+      input = test_devel.py
+      detail = "creating syntax examples,"
+    []
+    [ifelse]
+      type = PythonUnitTest
+      input = test_ifelse.py
+      detail = "conditional operations, "
+    []
+    [pysyntax]
+      type = PythonUnitTest
+      input = test_pysyntax.py
+      detail = "automatically retrieving python syntax,"
+    []
+    [modal]
+      type = PythonUnitTest
+      input = test_modal.py
+      detail = "create modal website content,"
+    []
+    [katex]
+      type = PythonUnitTest
+      input = test_katex.py
+      detail = "support equations,"
+    []
+    [algorithm]
+      type = PythonUnitTest
+      input = test_algorithm.py
+      detail = "displaying algorithmic pseudo-code,"
+    []
+    [datetime]
+      type = PythonUnitTest
+      input = test_datetime.py
+      detail = "include date/time operations, and"
+    []
+    [gitutils]
+      type = PythonUnitTest
+      input = test_gitutils.py
+      detail = "include git repository information."
+    []
+  []
+[]

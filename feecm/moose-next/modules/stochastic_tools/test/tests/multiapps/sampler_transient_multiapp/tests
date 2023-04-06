@@ -1,0 +1,28 @@
+[Tests]
+  design = 'SamplerTransientMultiApp.md'
+  issues = '#9923'
+
+  [transient]
+    type = CheckFiles
+    input = parent_transient.i
+    check_files = 'parent_transient_out_runner0.e parent_transient_out_runner1.e '
+                  'parent_transient_out_runner2.e parent_transient_out_runner3.e '
+                  'parent_transient_out_runner4.e'
+
+    requirement = 'The system shall provide the ability to create a transient sub-application from '
+                  'the sample data generated from distributions.'
+  []
+
+  [transient_cmdline_control]
+    type = Exodiff
+    input = parent_transient_cmd_control.i
+    exodiff = 'parent_transient_cmd_control_out_runner0.e parent_transient_cmd_control_out_runner1.e '
+              'parent_transient_cmd_control_out_runner2.e parent_transient_cmd_control_out_runner3.e '
+              'parent_transient_cmd_control_out_runner4.e'
+
+    requirement = 'The system shall provide the ability to set a transient sub-application command '
+                  'line parameters from a sample distribution.'
+
+    issues = '#17486 #17548'
+  []
+[]

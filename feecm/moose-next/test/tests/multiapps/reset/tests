@@ -1,0 +1,42 @@
+[Tests]
+  issues = '#1970'
+  design = 'syntax/MultiApps/index.md'
+
+  [group]
+    requirement = "The system shall support the ability to reset a sub-application at a specified time during the simultation"
+    [test]
+      type = 'Exodiff'
+      input = 'parent.i'
+      exodiff = 'parent_out_sub0.e-s002'
+      recover = false
+
+      detail = "for single and"
+    []
+
+    [multilevel]
+      type = 'Exodiff'
+      input = 'multilevel_parent.i'
+      exodiff = 'multilevel_parent_out.e multilevel_parent_out_sub0.e multilevel_parent_out_sub0.e-s002 multilevel_parent_out_sub0_sub0.e multilevel_parent_out_sub0_sub0.e-s002'
+      recover = false
+
+      detail = "multi-level sub-applications."
+    []
+  []
+
+  [multiple_times]
+    type = 'Exodiff'
+    input = 'parent.i'
+    cli_args = "Outputs/file_base=multiple_times MultiApps/sub/reset_time='0.021 0.022 0.075'"
+    exodiff = 'multiple_times_sub0.e-s002 multiple_times_sub0.e-s003'
+    recover = false
+    requirement = "The system shall support the ability to reset a sub-application at multiple specified times during the simultation"
+  []
+
+  [not_sorted_times]
+    type = RunException
+    input = parent.i
+    cli_args = "Outputs/file_base=multiple_times MultiApps/sub/reset_time='0.03 0.022 0.075'"
+    expect_err = 'List of reset times must be sorted in increasing order'
+    requirement = "The system shall error if the reset times specified for a multiapp are not sorted, as this likely indicates a user error in their input"
+  []
+[]

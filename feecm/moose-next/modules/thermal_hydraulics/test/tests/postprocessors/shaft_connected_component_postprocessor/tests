@@ -1,0 +1,13 @@
+[Tests]
+  design = 'ShaftConnectedComponentPostprocessor.md'
+  issues = '#20196'
+
+  [test]
+    type = 'CSVDiff'
+    input = 'shaft_connected_component_postprocessor.i'
+    csvdiff = 'shaft_connected_component_postprocessor_out.csv'
+    recover = false
+
+    requirement = 'The system shall provide a post-processor to retrieve the torque and moment of inertia from a shaft-connected component.'
+  []
+[]

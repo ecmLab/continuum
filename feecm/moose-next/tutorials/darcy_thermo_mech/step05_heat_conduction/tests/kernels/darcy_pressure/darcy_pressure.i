@@ -1,0 +1,1 @@
+../../../../step04_velocity_aux/tests/kernels/darcy_pressure/darcy_pressure.i

@@ -1,0 +1,23 @@
+[Tests]
+  issues = '#7842'
+  design = 'syntax/MultiApps/index.md'
+
+  [group]
+    requirement = "The system shall support the ability for a sub-application to adaptive modify the time step of the parent application when the sub-application operates at the"
+
+    [begin]
+      type = 'Exodiff'
+      input = 'begin.i'
+      exodiff = 'begin.e begin_dummy0.e'
+
+      detail = "beginning and"
+    []
+    [end]
+      type = 'Exodiff'
+      input = 'end.i'
+      exodiff = 'end.e end_dummy0.e'
+
+      detail = "end of a timestep."
+    []
+  []
+[]

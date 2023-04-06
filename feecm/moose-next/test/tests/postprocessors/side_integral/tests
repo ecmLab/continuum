@@ -1,0 +1,107 @@
+[Tests]
+  [fe_test]
+    type = 'Exodiff'
+    input = 'side_integral_test.i'
+    exodiff = 'out.e'
+
+    issues = '#1405'
+    design = 'SideIntegralVariablePostprocessor.md'
+    requirement = 'The system shall support computing the integral of a variable quantity over a '
+                  'side on the mesh.'
+  []
+  [fv_test]
+    type = 'Exodiff'
+    input = 'side_integral_fv_test.i'
+    exodiff = 'fv_out.e'
+
+    issues = '#1405 #16099'
+    design = 'SideIntegralVariablePostprocessor.md'
+    requirement = 'The system shall support computing the integral of a finite volume variable '
+                  'quantity over a side on the mesh.'
+  []
+
+  [side_integral_material_property]
+    issues = '#18649'
+    design = 'SideIntegralMaterialProperty.md'
+    requirement = 'The system shall support computing the integral of a material property over a '
+                  'side on the mesh.'
+    [real]
+      type = 'CSVDiff'
+      input = '../side_material.i side_integral_material_property.i'
+      csvdiff = 'side_integral_material_property_out.csv'
+      cli_args = 'Materials/active=real'
+      detail = 'if the material property is of `Real` type'
+    []
+    [realvector]
+      type = 'CSVDiff'
+      input = '../side_material.i side_integral_material_property.i'
+      csvdiff = 'side_integral_material_property_out.csv'
+      cli_args = 'Materials/active=realvector Postprocessors/integral/component="1"'
+      detail = 'if the material property is of `RealVectorValue` type'
+    []
+    [ranktwo]
+      type = 'CSVDiff'
+      input = '../side_material.i side_integral_material_property.i'
+      csvdiff = 'side_integral_material_property_out.csv'
+      cli_args = 'Materials/active=ranktwo Postprocessors/integral/component="2 2"'
+      detail = 'if the material property is of `RankTwoTensor` type'
+    []
+    [error]
+      type = 'RunException'
+      input = '../side_material.i side_integral_material_property.i'
+      expect_err = "Material property 'prop' is 1-dimensional, but an index vector of size 3 was "
+                   "supplied to select a component. It looks like you were expecting the material "
+                   "property to have a different type."
+      cli_args = 'Materials/active=realvector Postprocessors/integral/component="1 2 3"'
+      detail = 'And shall error out if the index components do not match the dimension of the '
+               'supplied property'
+    []
+  []
+
+  [functors]
+    issues = '#18086'
+    design = 'SideIntegralFunctorPostprocessor.md'
+    requirement = 'The system shall '
+    [mesh_side]
+      type = 'CSVDiff'
+      input = 'side_integral_functor.i'
+      csvdiff = 'side_integral_functor_out.csv'
+      cli_args = "Postprocessors/active='ext_u ext_v1 ext_v2 ext_m1 ext_m2'"
+
+      detail = 'support computing the integral of a functor '
+               'over one or more sides on the mesh.'
+    []
+    [domain_side]
+      type = 'CSVDiff'
+      input = 'side_integral_functor.i'
+      csvdiff = 'internal_side_integral_functor_out.csv'
+      cli_args = "Postprocessors/active='int_s1_u int_s1_v1 int_s1_f1 int_s1_m1 int_s1_m2
+                                         int_s2_v2 int_s2_f1 int_s2_m1 int_s2_m2'
+                  Outputs/file_base=internal_side_integral_functor_out"
+
+      detail = 'support computing the integral of a functor '
+               'over a functor domain boundary inside a mesh.'
+    []
+    [mesh_side_refined]
+      type = 'CSVDiff'
+      input = 'side_integral_functor.i'
+      csvdiff = 'side_integral_functor_refined_out.csv'
+      cli_args = "Mesh/inactive='' Outputs/file_base=side_integral_functor_refined_out"
+
+      detail = 'support computing the integral of a functor '
+               'over one or more evenly refined sides on the mesh.'
+    []
+    [qp_argument]
+      type = 'CSVDiff'
+      input = 'side_integral_functor.i'
+      csvdiff = 'side_integral_functor_qp_out.csv'
+      cli_args = "Outputs/file_base=side_integral_functor_qp_out
+                  AuxVariables/v2/type=MooseVariable
+                  Postprocessors/ext_u/functor_argument=qp Postprocessors/ext_v1/functor_argument=qp Postprocessors/ext_v2/functor_argument=qp Postprocessors/ext_m1/functor_argument=qp Postprocessors/ext_m2/functor_argument=qp
+                  Postprocessors/int_s1_u/functor_argument=qp Postprocessors/int_s1_v1/functor_argument=qp Postprocessors/int_s1_f1/functor_argument=qp Postprocessors/int_s1_m1/functor_argument=qp Postprocessors/int_s1_m2/functor_argument=qp
+                  Postprocessors/int_s2_v2/functor_argument=qp Postprocessors/int_s2_f1/functor_argument=qp Postprocessors/int_s2_m1/functor_argument=qp Postprocessors/int_s2_m2/functor_argument=qp"
+
+      detail = 'support computing the integral of a functor using quadrature points instead of side faces'
+    []
+  []
+[]

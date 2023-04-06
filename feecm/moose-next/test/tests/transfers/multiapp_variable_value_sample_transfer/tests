@@ -1,0 +1,113 @@
+[Tests]
+  issues = '#1737 #16099 #20816 #20913'
+  design = 'MultiAppVariableValueSampleTransfer.md'
+
+  [to_multiapp_test]
+    type = 'Exodiff'
+    input = 'parent.i'
+    exodiff = 'parent_out_sub0.e parent_out_sub1.e'
+
+    requirement = "The system shall include the ability to transfer a field variable sampled at a "
+                  "point to populate a field variable on the sub-application with the supplied "
+                  "value."
+  []
+
+  [array_test]
+    type = 'Exodiff'
+    input = 'parent_array.i'
+    exodiff = 'parent_array_out_pp_sub00.e parent_array_out_pp_sub01.e parent_array_out_pp_sub10.e parent_array_out_pp_sub11.e'
+
+    requirement = "The system shall include the ability to transfer a component of an array field variable sampled at a "
+                  "point to post processing variable on the sub-application."
+  []
+
+  [pp]
+    requirement = "The system shall include the ability to transfer a field variable sampled at a "
+                  "point to post processing variable on the sub-application"
+    [pp_test]
+      type = 'Exodiff'
+      input = 'pp_parent.i'
+      exodiff = 'pp_parent_out_pp_sub0.e pp_parent_out_pp_sub1.e'
+
+      detail = "from a linear Lagrange source variable and"
+    []
+    [monomial_to_sub_pp]
+      type = 'Exodiff'
+      input = 'parent_quad.i'
+      exodiff = 'parent_quad_out.e parent_quad_out_quad0.e parent_quad_out_quad1.e '
+                'parent_quad_out_quad2.e parent_quad_out_quad3.e'
+
+      detail = "from a constant monomial source variable and"
+    []
+    [finite_volume]
+      type = 'Exodiff'
+      input = 'parent_fv.i'
+      exodiff = 'parent_fv_out_sub0.e parent_fv_out_sub1.e '
+                'parent_fv_out_pp_sub0.e parent_fv_out_pp_sub1.e'
+
+      detail = "from a finite volume constant monomial source variable."
+    []
+  []
+
+  [silence_barriers]
+    type = 'RunApp'
+    input = 'parent.i'
+    prereq = 'to_multiapp_test'
+    absent_out = "Jobs complete:"
+
+    requirement = "The system shall support the ability to disable the use of parallel barriers when "
+                  "streaming text to the screen."
+  []
+
+  [full_domain_primary]
+    type = Exodiff
+    input = full_domain_primary.i
+    exodiff = full_domain_primary_out.e
+    requirement = "The system shall guarantee that constant monomial variables transferred via MultiAppVariableValueSamplePostprocessorTransfer to the subapp are retrieved "
+                  " unchanged when transferred back using MultiAppVariableValueSamplePostprocessorTransfer in case the CentroidMultiApp is used."
+  []
+
+  [same_distance_error]
+    type = RunException
+    input = full_domain_primary.i
+    cli_args = 'MultiApps/sub/block=1
+                Outputs/file_base=multiapp_block_restricted_primary_error_out'
+    expect_err = 'The distances of an element to more than one sub-applications are too close'
+    requirement = "The systen shall error out if more than one sub-applications are in the same distance from an element."
+  []
+
+  [from_multiapp_set_primary_var_error]
+    type = RunException
+    input = full_domain_primary.i
+    cli_args = 'Variables/to_subapp/family=MONOMIAL
+                Variables/to_subapp/order=CONSTANT
+                Transfers/primary_average/source_variable=to_subapp
+                Outputs/file_base=set_primary_var_error_out'
+    expect_err = 'Variable must be an auxiliary variable'
+    requirement = "The systen shall error out if the MultiAppVariableValueSamplePostprocessorTransfer transfers postprocessor values on sub-applications to a primary variable on the main application."
+  []
+
+  [block_restricted_primary]
+    requirement = "The systen shall allow transferring CONSTANT MONOMIAL variables from the sub-applications"
+    [multiapp]
+      type = Exodiff
+      input = full_domain_primary.i
+      exodiff = multiapp_block_restricted_primary_out.e
+      cli_args = 'Mesh/cartesian_basic_mesh/subdomain_id="1 1 2 2 1 1 2 2 1 1 2 2 1 1 2 2"
+                  MultiApps/sub/block=1
+                  Outputs/file_base=multiapp_block_restricted_primary_out'
+      detail = "using block restriction in the CentroidMultiApp and"
+    []
+    [multiapp_and_var]
+      type = Exodiff
+      input = full_domain_primary.i
+      exodiff = multiapp_and_var_block_restricted_primary_out.e
+      cli_args = 'AuxVariables/from_subapp/block=1
+                  AuxVariables/from_subapp_check/block=1
+                  AuxVariables/subapp_primary_diff/block=1
+                  AuxVariables/array_var/block=1
+                  MultiApps/sub/block=1 Outputs/file_base=multiapp_and_var_block_restricted_primary_out'
+      detail = "using block restriction in both the CentroidMultiApp and the variable."
+    []
+  []
+[]

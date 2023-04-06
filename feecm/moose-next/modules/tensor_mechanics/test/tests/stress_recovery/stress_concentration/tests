@@ -1,0 +1,12 @@
+[Tests]
+  [./stress_concentration]
+    type = 'Exodiff'
+    input = 'stress_concentration.i'
+    exodiff = 'stress_concentration_out.e'
+    custom_cmp = 'stress_concentration_out.cmp'
+    mesh_mode = replicated
+    requirement = "In areas of high concentration gradients, the Zienkiewicz-Zhu implementation shall recover the specified material property."
+    design = 'nodal_patch_recovery.md'
+    issues = '#11880'
+  [../]
+[]

@@ -1,0 +1,21 @@
+[Tests]
+  issues = '#18395'
+  design = 'syntax/Materials/index.md'
+  [functors_with_bcs]
+    requirement = 'The system shall be able to execute functor material properties in integrated boundary conditions'
+    [some_caching]
+      type = Exodiff
+      input = bc.i
+      exodiff = bc_out.e
+      detail = 'with some caching of the property evaluations'
+    []
+    [no_caching]
+      type = Exodiff
+      input = bc.i
+      exodiff = bc_out.e
+      prereq = 'functors_with_bcs/some_caching'
+      detail = 'with no caching of the property evaluations'
+      cli_args = "Materials/functor/execute_on='always'"
+    []
+  []
+[]
