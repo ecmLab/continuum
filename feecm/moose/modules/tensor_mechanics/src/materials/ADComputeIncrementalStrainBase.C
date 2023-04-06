@@ -31,6 +31,8 @@ ADComputeIncrementalStrainBaseTempl<R2>::ADComputeIncrementalStrainBaseTempl(
     _strain_increment(this->template declareADProperty<R2>(_base_name + "strain_increment")),
     _rotation_increment(
         this->template declareADProperty<RankTwoTensor>(_base_name + "rotation_increment")),
+    _deformation_gradient(
+		this->template declareADProperty<RankTwoTensor>(_base_name + "deformation_gradient")),
     _mechanical_strain_old(
         this->template getMaterialPropertyOld<R2>(_base_name + "mechanical_strain")),
     _total_strain_old(this->template getMaterialPropertyOld<R2>(_base_name + "total_strain")),
@@ -60,6 +62,7 @@ ADComputeIncrementalStrainBaseTempl<R2>::initQpStatefulProperties()
 {
   _mechanical_strain[_qp].zero();
   _total_strain[_qp].zero();
+  _deformation_gradient[_qp].setToIdentity();
 }
 
 template <typename R2>

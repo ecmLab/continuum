@@ -73,6 +73,10 @@ ADCompute2DFiniteStrain::computeProperties()
     A(_out_of_plane_direction, _out_of_plane_direction) = computeOutOfPlaneGradDisp();
     Fbar(_out_of_plane_direction, _out_of_plane_direction) = computeOutOfPlaneGradDispOld();
 
+    _deformation_gradient[_qp] = A;
+    _deformation_gradient[_qp].addIa(1.0); // Gauss point deformation gradient
+
+
     A -= Fbar; // very nearly A = gradU - gradUold
 
     Fbar.addIa(1.0); // Fbar = ( I + gradUold)
