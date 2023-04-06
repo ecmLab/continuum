@@ -1,1 +1,0 @@
-smallstrain_out.e

@@ -1,1 +1,0 @@
-../../../../../step10_multiapps/tests/bcs/outflow/gold/outflow_out.e

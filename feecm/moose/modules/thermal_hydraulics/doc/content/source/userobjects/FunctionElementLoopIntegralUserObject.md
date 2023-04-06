@@ -1,7 +1,0 @@
-!syntax description /UserObjects/FunctionElementLoopIntegralUserObject
-
-!syntax parameters /UserObjects/FunctionElementLoopIntegralUserObject
-
-!syntax inputs /UserObjects/FunctionElementLoopIntegralUserObject
-
-!syntax children /UserObjects/FunctionElementLoopIntegralUserObject

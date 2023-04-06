@@ -1,1 +1,0 @@
-!template load file=stubs/moose_object.md.template name=InterfaceDiffusionBoundaryTerm syntax=/InterfaceKernels/InterfaceDiffusionBoundaryTerm
