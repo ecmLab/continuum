@@ -1,0 +1,25 @@
+Content:
+    electro_chemo_mech2:
+        root_dir: ${ROOT_DIR}/doc/content
+    moose:
+        root_dir: ${MOOSE_DIR}/framework/doc/content
+        content:
+            - js/*
+            - css/*
+            - contrib/**
+            - media/**
+
+Renderer:
+    type: MooseDocs.base.MaterializeRenderer
+
+Extensions:
+    MooseDocs.extensions.navigation:
+        name: electro_chemo_mech2
+        repo: https://gitlab.com/srinathcs/electro_chemo_mech2
+    MooseDocs.extensions.appsyntax:
+        executable: ${ROOT_DIR}
+        hide:
+            framework: !include ${MOOSE_DIR}/framework/doc/hidden.yml
+        remove: !include ${MOOSE_DIR}/framework/doc/remove.yml
+        includes:
+            - include
