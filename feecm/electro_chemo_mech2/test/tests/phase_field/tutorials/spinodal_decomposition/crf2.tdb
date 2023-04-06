@@ -1,0 +1,87 @@
+$CRFE
+$ -----------------------------------------------------------------------------
+$ 2012.5.10
+$ 
+$ TDB file created by T.Abe, K.Hashimoto and Y.Sawada
+$
+$ Particle Simulation and Thermodynamics Group, National Institute for 
+$ Materials Science. 1-2-1 Sengen, Tsukuba, Ibaraki 305-0047, Japan
+$ 
+$ e-mail: abe.taichi @ nims.go.jp
+$
+$ Copyright (C) NIMS 2012
+$ -----------------------------------------------------------------------------
+$
+$ The parameter set is taken from
+$ Calculated phase equilibria for the Cr-Fe-Ni-Si system - 1 Ternary equiriburia,
+$ T.Chart, F.Putland, A.Dinsdale, CALPHAD 4(1980) 27-46.
+$
+$ [1970Kau] Computer calculation of phase diagrams, L.Kaufman, H.Bernstein, 
+$ Academic press, New york and London (1970).
+$ [1973Kau] L.Kaufman, H.Nesor, Z.Metallk., 64 (1973) 249.
+$ 
+$ -----------------------------------------------------------------------------
+$ Comments
+$ No liquid involved in this assessment. The Kaufman's lattice stability is used
+$ for fcc and bcc, while their original for Sigma. Magnetic contribution is not 
+$ considered separately. 
+$                                                                T.A.
+$ -----------------------------------------------------------------------------
+$
+ ELEMENT CR  BCC_A2          5.1996E+01 4.0500E+03 2.3560E+01!
+ ELEMENT FE  BCC_A2          5.5847E+01 4.4890E+03 2.7280E+01!
+$
+$--------1---------2---------3---------4---------5---------6---------7---------8
+$
+ TYPE_DEFINITION % SEQ *!
+ DEFINE_SYSTEM_DEFAULT ELEMENT 2 !
+$
+ FUNCTION GBCCCR 300 +0;                                        6000 N !
+ FUNCTION GBCCFE 300 +0;                                        6000 N !
+ FUNCTION GFCCCR 300 +10460+0.628*T;                            6000 N !
+ FUNCTION GFCCFE 300 +6110-3.462*T-7.472E-3*T**2+5.125E-6*T**3; 6000 N !
+ FUNCTION GSIGCR 300 +2530+3.640*T;                             6000 N !
+ FUNCTION GSIGFE 300 +3347+3.682*T;                             6000 N !
+$
+$ -----------------------------------------------------------------------------
+$ No liquid phase involved in the orginal paper. Thus, below is taken from 
+$ SGTE-Pure 4.4 and [1993Lee].
+$
+$ PHASE LIQUID:L % 1 1.0 !
+$  CONSTITUENT LIQUID:L :CR,FE : !
+$  PARAMETER G(LIQUID,CR;0) 300 +15483.015+146.059775*T-26.908*T*LN(T)
+$   +.00189435*T**2-1.47721E-06*T**3+139250*T**(-1)+2.37615E-21*T**7;  2180 Y
+$   -16459.984+335.616316*T-50*T*LN(T);                                6000 N !
+$  PARAMETER G(LIQUID,FE;0) 300 +13265.87+117.57557*T
+$   -23.5143*T*LN(T)-.00439752*T**2-5.8927E-08*T**3+77359*T**(-1)
+$   -3.67516E-21*T**7;                                                 1811 Y
+$   -10838.83+291.302*T-46*T*LN(T);                                    6000 N !
+$ The two parameters are taken from [1993Lee].
+$  PARAMETER G(LIQUID,CR,FE;0) 300 -17737+7.996546*T;                  6000 N !
+$  PARAMETER G(LIQUID,CR,FE;1) 300 -1331;                              6000 N !
+$
+$ -----------------------------------------------------------------------------
+ PHASE BCC_A2 % 1 1 !
+  CONSTITUENT BCC_A2 :CR%,FE% : !
+  PARAMETER G(BCC_A2,CR;0)    300 +GBCCCR;               6000 N !
+  PARAMETER G(BCC_A2,FE;0)    300 +GBCCFE;               6000 N !
+  PARAMETER G(BCC_A2,CR,FE;0) 300 +25104-11.427*T;       6000 N ! $Present Work
+  PARAMETER G(BCC_A2,CR,FE;1) 300 -1.205*T;              6000 N ! $Present Work
+$ -----------------------------------------------------------------------------
+ PHASE FCC_A1 % 1 1 !
+  CONSTITUENT FCC_A1 :CR,FE : !
+  PARAMETER G(FCC_A1,CR;0)    300 +GFCCCR;               6000 N ! $1970Kau
+  PARAMETER G(FCC_A1,FE;0)    300 +GFCCFE;               6000 N ! $1973Kau
+  PARAMETER G(FCC_A1,CR,FE;0) 300 +7406-6.276*T;         6000 N ! $Present Work
+$ -----------------------------------------------------------------------------
+ PHASE SIGMA % 1  1  !
+  CONSTITUENT SIGMA : CR,FE : !
+  PARAMETER G(SIGMA,CR;0)     300 +GSIGCR;               6000 N ! $Present Work
+  PARAMETER G(SIGMA,FE;0)     300 +GSIGFE;               6000 N ! $Present Work
+  PARAMETER G(SIGMA,CR,FE;0)  300 +8242-21.309*T;        6000 N ! $Present Work
+  PARAMETER G(SIGMA,CR,FE;1)  300 +5021;                 6000 N ! $Present Work
+$
+$ -----------------------------------------------------------------------------
+$CRFE-NIMS
+
+

@@ -1,0 +1,1085 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Kinematics of Growth Deformation
+\end_layout
+
+\begin_layout Standard
+Consider a macroscopically-homogeneous body 
+\series bold
+B
+\series default
+ with the region of space it occupies in a fixed reference configuration,
+ and denote by 
+\series bold
+X
+\series default
+ an arbitrary material point of 
+\series bold
+B
+\series default
+.
+ A motion of 
+\series bold
+B
+\series default
+ is then a smooth one-to-one mapping 
+\begin_inset Formula $\mathbf{x}=\mathbf{\mathbf{\chi}}(\mathbf{X},t)$
+\end_inset
+
+ with
+\emph on
+ deformation gradient, velocity, and velocity gradient
+\emph default
+ given by
+\begin_inset Formula 
+\begin{equation}
+\mathbf{F}=\nabla\mathbf{\chi},\mathbf{v}=\mathbf{\dot{{\mathbf{\chi}}}},\mathbf{L}=\mathrm{grad}\mathbf{v}=\mathbf{\dot{F}F^{-1}}\label{eq:def_grad_defn}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Assume that 
+\begin_inset Formula $J=\mathrm{det}\mathbf{F}>0$
+\end_inset
+
+, where 
+\begin_inset Formula $J=\frac{dV}{dV_{0}}$
+\end_inset
+
+.
+ Following modern developments in large-deformation plasticity and growth
+ we regard the growth of an interphase layer on the multiplicative decomposition
+ of the deformation gradient, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathbf{F=F^{e}F^{p}F^{g}}\label{eq:def_grad_decomp}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Here
+\end_layout
+
+\begin_layout Enumerate
+\begin_inset Formula $\mathbf{F^{g}(X},t)$
+\end_inset
+
+ represents the local distortion of the material neighborhood of 
+\begin_inset Formula $\mathbf{X}$
+\end_inset
+
+ due to growth by deposition of Li metal;
+\end_layout
+
+\begin_layout Enumerate
+\begin_inset Formula $\mathbf{F^{p}(X},t)$
+\end_inset
+
+ represents the constant volume plastic (viscoplastic) deformation of the
+ deposited Li;
+\end_layout
+
+\begin_layout Enumerate
+\begin_inset Formula $\mathbf{F^{e}(X},t)$
+\end_inset
+
+ represents the elastic distortion that occurs due to the subsequent stretching
+ and rotation.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $J$
+\end_inset
+
+ now follows the multiplicative decomposition of the deformation gradient
+ according to 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+J=J^{e}J^{p}J^{g}\label{eq:J_decomp}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $J^{e}=\mathrm{det}\mathbf{F}^{e}>0$
+\end_inset
+
+, 
+\begin_inset Formula $J^{p}=\mathrm{det}\mathbf{F}^{p}=1$
+\end_inset
+
+ (constant volume deformation), and 
+\begin_inset Formula $J^{g}=\mathrm{det}\mathbf{F}^{g}>0$
+\end_inset
+
+ .
+ We further define the elastic, plastic and growth stretch and spin tensors
+ through 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\begin{array}{cc}
+\mathbf{D}^{e}=\mathrm{symm}\mathbf{L}^{e}, & \mathbf{W}^{e}=\mathrm{skew}\mathbf{L}^{e}\\
+\mathbf{D}^{p}=\mathrm{symm}\mathbf{L}^{p}, & \mathbf{W}^{p}=\mathrm{skew}\mathbf{L}^{p}\\
+\mathbf{D}^{g}=\mathrm{symm}\mathbf{L}^{g}, & \mathbf{W}^{g}=\mathrm{skew}\mathbf{L}^{g}
+\end{array}\label{eq:stretch_spin_tensors_defn}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $\mathbf{L=L}^{e}+\mathbf{F}^{e}\mathbf{L}^{p}\mathbf{F}^{e-1}+(\mathbf{F}^{e}\mathbf{F}^{p})\mathbf{L}^{g}(\mathbf{F}^{e}\mathbf{F}^{p})^{-1}$
+\end_inset
+
+and 
+\begin_inset Formula $\mathbf{L}^{e}=\mathbf{F}^{e}\mathbf{F}^{e-1},$
+\end_inset
+
+
+\begin_inset Formula $\mathbf{L}^{p}=\mathbf{F}^{p}\mathbf{F}^{p-1}$
+\end_inset
+
+, 
+\begin_inset Formula $\mathbf{L}^{g}=\mathbf{F}^{g}\mathbf{F}^{g-1}$
+\end_inset
+
+.
+ We further assume that the plastic spin and growth spin tensors are identically
+ zero.
+ 
+\end_layout
+
+\begin_layout Section
+Growth Deformation 
+\end_layout
+
+\begin_layout Standard
+We introduce a set of orthonormal unit vectors
+\begin_inset Formula $\{\mathbf{m}_{Ri}\vert i=1,2,3\}$
+\end_inset
+
+ in the reference body and consider a particular class of growth tensors
+ 
+\begin_inset Formula $\mathbf{F}^{g}$
+\end_inset
+
+ defined by 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathbf{F}^{g}=\sum_{i=1}^{3}\lambda_{i}^{g}(\mathbf{m}_{Ri}\otimes\mathbf{m}_{Ri})\label{eq:Fg_defn}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $\{\lambda_{i}^{g}>0\vert i=1,2,3\}$
+\end_inset
+
+ are the corresponding growth stretches which satisfy 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\prod_{i=1}^{3}\lambda_{i}^{g}=J^{g}\label{eq:Jg_defn}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Since the growth is assumed to have no spin we can define from 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:Fg_defn"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\begin{aligned}\dot{\mathbf{F}^{g}=}\sum_{i=1}^{3}\lambda_{i}^{g}(\mathbf{m}_{Ri}\otimes\mathbf{m}_{Ri}),\mathrm{and} & \mathbf{F}^{g-1}=\sum_{i=1}^{3}\lambda_{i}^{g-1}(\mathbf{m}_{Ri}\otimes\mathbf{m}_{Ri})\end{aligned}
+\label{eq:growth_def_grad_rate}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+From 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:growth_def_grad_rate"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ we can now define the growth stretch rate as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\begin{split}\begin{split}\mathbf{D}^{g}=\sum_{i=1}^{3}\dot{\epsilon_{i}^{g}} & (\mathbf{m}_{Ri}\otimes\mathbf{m}_{Ri})\end{split}
+\mathrm{and} & \mathbf{W}^{g}=0\end{split}
+\label{eq:growth_stretch_rate_defn}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $\dot{\epsilon}_{i}^{g}=\dot{\lambda_{i}^{g}\lambda_{i}^{g}}$
+\end_inset
+
+ and 
+\begin_inset Formula $\mathrm{tr}\mathbf{D}^{g}=\dot{\epsilon^{g}}=\sum_{i=1}^{3}\dot{\epsilon_{i}^{g}}=\dot{J^{g}J^{g-1}}$
+\end_inset
+
+.
+ Here 
+\begin_inset Formula $\dot{\epsilon^{g}}$
+\end_inset
+
+is a volumetric growth strain rate and volumetric growth strain is then
+ given by 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\epsilon_{g}=\ln J^{g}\label{eq:vol_growth_strain}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+If 
+\begin_inset Formula $\dot{\epsilon^{g}}>0$
+\end_inset
+
+ material growth or Li is deposited and 
+\begin_inset Formula $\dot{\epsilon^{g}<0}$
+\end_inset
+
+ materials shrinks or Li is stripped.
+ 
+\end_layout
+
+\begin_layout Standard
+To allow for differential rates along the preferred directions 
+\begin_inset Formula $\{\mathbf{m}_{Ri}\vert i=1,2,3\}$
+\end_inset
+
+ we introduce a triplet of parameters
+\begin_inset Formula $\{\alpha_{i}\in[0,1]\vert i=1,2,3\}$
+\end_inset
+
+ and assume that the growth strain rate in each direction is a fraction
+ of the volumetric growth strain rate 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\dot{\epsilon}_{i}^{g}=\alpha_{i}\dot{\epsilon}_{i}^{g}\label{eq:growth_weights_defn}
+\end{equation}
+
+\end_inset
+
+The growth weigths 
+\begin_inset Formula $\alpha_{i}$
+\end_inset
+
+ must satisfy the constraint 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\sum_{i=1}^{3}\alpha_{i}=1\label{eq:growth_weight_constraint}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Now using the above equations we note that 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\dot{\lambda}_{i}^{g}\lambda_{i}^{g-1}=\alpha_{i}\dot{J}^{g}J^{g-1}\label{eq:growth_weight_Jg}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+which can now be integrated to give 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\lambda_{i}^{g}=\left(J^{g}\right)^{\alpha_{i}}\label{eq:individual_growth_strethc}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Finally, all the above arguments can now be condensed to the rate form for
+ the evolution of 
+\begin_inset Formula $\mathbf{F}^{g}$
+\end_inset
+
+ as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\dot{\mathbf{F}}^{g}=\mathbf{D}^{g}\mathbf{F}^{g}\label{eq:Fg_evolution}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+with 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathbf{D}^{g}=\dot{\epsilon}^{g}\mathbf{S}^{g}\label{eq:Dg_eqn}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $\mathbf{S}^{g}$
+\end_inset
+
+ is the principal growth tensor and defined as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathbf{S}^{g}=\sum_{i=1}^{3}\alpha_{i}(\mathbf{m}_{Ri}\otimes\mathbf{m}_{Ri})\label{eq:Sg_reference}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Non-fixed reference vector
+\end_layout
+
+\begin_layout Standard
+We can now extend this analysis to a non-fixed reference vector defined
+ in the intermediate configuration of 
+\begin_inset Formula $\mathbf{F}^{g}$
+\end_inset
+
+.
+ We replace 
+\begin_inset Formula $\mathbf{m}_{Ri}$
+\end_inset
+
+ the reference vector by 
+\begin_inset Formula $\mathbf{m}_{i}^{g}$
+\end_inset
+
+ which are orthonormal unit vectors in the intermediate space of 
+\begin_inset Formula $\boldsymbol{F}_{g}$
+\end_inset
+
+.
+ Thus the principal growth tensor in 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:Sg_reference"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ is now defined in the intermediate space as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathbf{S}^{g}=\sum_{i=1}^{3}\alpha_{i}(\mathbf{m}_{i}^{g}\otimes\mathbf{m}_{i}^{g})\label{eq:principal_growth_tensor_interme}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Description
+Warning: With a non-fixed reference vector the direct formulation for 
+\begin_inset Formula $\mathrm{\boldsymbol{F}}_{g}$
+\end_inset
+
+ 
+\begin_inset CommandInset ref
+LatexCommand formatted
+reference "eq:Fg_defn"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ cannot be used any longer and we have to rely on the incremental formulation.
+ 
+\end_layout
+
+\begin_layout Subsubsection*
+Axial (Fiber) growth
+\begin_inset CommandInset label
+LatexCommand label
+name "subsec:Axial-(Fiber)-growth"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This is a specialization of the equation for growth along a particular axis.
+ Instead of defining all three principal directions, we define a single
+ principal (fiber) direction 
+\begin_inset Formula $\mathrm{\boldsymbol{m}}_{1}$
+\end_inset
+
+ along which growth occurs.
+ For this form of growth, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{aligned}\alpha_{1}=1, & \alpha_{2}=\alpha_{3}=0,\end{aligned}
+\mathrm{so\;that}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathbf{S}^{g}=\left(\mathrm{\boldsymbol{m}}_{1}\otimes\mathrm{\boldsymbol{m}}_{1}\right)\label{eq:axial_Sg_fiber_direction}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Areal growth (Growth perpendicular to a single principal direction)
+\end_layout
+
+\begin_layout Standard
+A similar specilization to the previous section 
+\begin_inset CommandInset ref
+LatexCommand formatted
+reference "subsec:Axial-(Fiber)-growth"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ can be applied to growth perpendicular to a single principal direction
+ 
+\begin_inset Formula $\mathrm{\boldsymbol{m}}_{1}$
+\end_inset
+
+.
+ For this form of growth, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\begin{aligned}\alpha_{1}=0, & \alpha_{2}=\alpha_{3}=\frac{1}{2}\end{aligned}
+,\mathrm{so\;that}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathrm{\boldsymbol{S}}_{g}=(\boldsymbol{1}-\mathrm{\boldsymbol{m}_{1}}\otimes\mathrm{\boldsymbol{m}_{1}})\label{eq:Sg_area_growth}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In order to solve for the evolution of 
+\begin_inset Formula $\mathrm{\boldsymbol{F}}_{g}$
+\end_inset
+
+ 
+\begin_inset CommandInset ref
+LatexCommand formatted
+reference "eq:Fg_evolution"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ we assume that at the start of deformation the initial condition for 
+\begin_inset Formula $\mathrm{\boldsymbol{F}}_{g}(\mathrm{\boldsymbol{X}},t=0)=\mathrm{\boldsymbol{1}}$
+\end_inset
+
+.
+ Therefore, 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathrm{\boldsymbol{F}_{g}(t+\Delta t})=\exp(\mathrm{\boldsymbol{D}_{g}\Delta t})\mathrm{\boldsymbol{F}_{g}(t)}\label{eq:F_g_actual_equation}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Constitutive equation for swelling 
+\end_layout
+
+\begin_layout Standard
+The swelling volume change 
+\begin_inset Formula $J^{g}$
+\end_inset
+
+ is related to the Li concentration in the interphase layer through a linear
+ constitutive equation 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+J^{g}=1+\Omega(c_{R}-c_{R0})\label{eq:Jg_constitutive}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $c_{R}$
+\end_inset
+
+is the concentration, 
+\begin_inset Formula $c_{R0}$
+\end_inset
+
+ is a reference concentration, with 
+\begin_inset Formula $\Omega>0$
+\end_inset
+
+ representing the 
+\emph on
+molar volume of Li.
+ 
+\emph default
+From 
+\begin_inset CommandInset ref
+LatexCommand formatted
+reference "eq:vol_growth_strain"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset ref
+LatexCommand formatted
+reference "eq:Jg_constitutive"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ we now have 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\dot{J}^{g}J^{g}=\Theta(c_{R})\dot{c}_{R}\label{eq:Jg_evolution_const}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\Theta(c_{R})=\frac{\Omega}{1+\Omega c_{R}}\label{eq:theta_const}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+we obtain the volumetric growth strain rate as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\dot{\epsilon}^{g}=\Theta(c_{R})\dot{c}_{R}\label{eq:vol_sgrowth_train_rate_const}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+From 
+\begin_inset CommandInset ref
+LatexCommand formatted
+reference "eq:vol_sgrowth_train_rate_const"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset ref
+LatexCommand formatted
+reference "eq:theta_const"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ the growth stretch rate of 
+\begin_inset CommandInset ref
+LatexCommand formatted
+reference "eq:Dg_eqn"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ can now be written as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathrm{\boldsymbol{D}}^{g}=\Theta(c_{R})\dot{c}_{R}\mathrm{\boldsymbol{S}_{g}}\label{eq:Dg_const_defn}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Li Flux
+\end_layout
+
+\begin_layout Standard
+The Li flux in the reference fram is presumed to obey the constitutive equation
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathrm{\boldsymbol{j}_{R}}=-\left[\sum_{i=1}^{3}m_{i}(c_{R})\mathrm{\boldsymbol{m}}_{Ri}\otimes\mathrm{\boldsymbol{m}}_{Ri}\right]\nabla\mu\label{eq:reference_Li_flux}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $m_{i}$
+\end_inset
+
+ is a scalar mobility of Li in the 
+\begin_inset Formula $\mathrm{\boldsymbol{m}}_{R}$
+\end_inset
+
+-direction.
+ The spatial flux is related to the reference flux by 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathrm{\boldsymbol{j}}_{R}=J\mathrm{\boldsymbol{F}}^{-1}\mathrm{\boldsymbol{j}}\label{eq:ref_flux_spatial_flux}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+and 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\nabla\mu=\mathrm{\boldsymbol{F}}^{T}\mathrm{grad}\mu\label{eq:gradient_chem_pot_ref_spat}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+From 
+\begin_inset CommandInset ref
+LatexCommand formatted
+reference "eq:reference_Li_flux"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+, 
+\begin_inset CommandInset ref
+LatexCommand formatted
+reference "eq:ref_flux_spatial_flux"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset ref
+LatexCommand formatted
+reference "eq:gradient_chem_pot_ref_spat"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ we can now write the spatial flux as 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathrm{\boldsymbol{j}}=-\left[J^{-1}\sum_{i=1}^{3}m_{i}(c_{R})\mathrm{\boldsymbol{m}}_{i}\otimes\mathrm{\boldsymbol{m}}_{i}\right]\mathrm{grad}\mu\label{eq:spatial_flux}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+with 
+\begin_inset Formula $\mathrm{\boldsymbol{m}}_{i}=\mathrm{\boldsymbol{F}}\mathrm{\boldsymbol{m}}_{Ri}$
+\end_inset
+
+ and 
+\begin_inset Formula $\mu$
+\end_inset
+
+ is the chemical potential.
+ 
+\end_layout
+
+\begin_layout Standard
+The chemical potential can take many forms 
+\end_layout
+
+\begin_layout Enumerate
+\begin_inset Formula $\mu=\mu_{0}+R\vartheta\log\left(\frac{\gamma c_{R}}{c_{R0}}\right)+\Omega(\frac{1}{2}\mathrm{\boldsymbol{E}}^{e}:\mathcal{C}\mathrm{\boldsymbol{E}}^{e})-\omega$
+\end_inset
+
+, where 
+\begin_inset Formula $\mathrm{\boldsymbol{E}^{e}}$
+\end_inset
+
+ is the logarithmic elastic strain, 
+\begin_inset Formula $\mathcal{C}$
+\end_inset
+
+ is the isotropic elasticity tensor, 
+\begin_inset Formula $\vartheta$
+\end_inset
+
+ is the temperature, 
+\begin_inset Formula $\gamma$
+\end_inset
+
+ is the activity coefficient, 
+\begin_inset Formula $R$
+\end_inset
+
+ is the universal gas constant, and 
+\begin_inset Formula $\omega$
+\end_inset
+
+ is the growth chemical potential 
+\end_layout
+
+\begin_layout Enumerate
+\begin_inset Formula $\mu=R\vartheta\ln\left(\frac{\bar{c}}{1-\bar{c}}\right)+\Omega(\frac{1}{2}\mathrm{\boldsymbol{E}}^{e}:\mathcal{C}\mathrm{\boldsymbol{E}}^{e})-\omega$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+For the model described above 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\omega=\Omega\mathrm{\boldsymbol{M}^{g}:\mathrm{\boldsymbol{S}}^{g}}\label{eq:growth_chemical_potential}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathrm{\boldsymbol{M}}^{g}=\mathrm{\boldsymbol{F}}^{pT}\mathrm{\boldsymbol{M}}^{e}\mathrm{\boldsymbol{F}}^{p-T}\label{eq:growth_stress_eqn}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+and 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathrm{\boldsymbol{M}}^{e}=J^{e}\mathrm{\boldsymbol{R}}^{eT}\mathrm{\boldsymbol{\sigma}}\mathrm{\boldsymbol{R}}^{e}\label{eq:Mandel_cauchy_stress_rel}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+is the Mandel stress.
+ The description of these quantities and the thermodynamic derivation of
+ these quantities is beyond the scope of this document.
+ 
+\end_layout
+
+\begin_layout Standard
+In Li dominated problems under small stress limits, the growth stress and
+ the elastic stresses are expected to be small, so both the growth and the
+ elastic terms can be ignored for the chemical potential.
+ 
+\end_layout
+
+\begin_layout Standard
+
+\end_layout
+
+\end_body
+\end_document
