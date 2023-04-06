@@ -1,0 +1,52 @@
+[Tests]
+  issues = "#8863"
+  design = "SamplerPostprocessorTransfer.md SamplerFullSolveMultiApp.md"
+  [normal]
+    type = CSVDiff
+    input = parent_full_solve.i
+    csvdiff = parent_full_solve_out_storage_0002.csv
+    cli_args = MultiApps/runner/mode=normal
+    requirement = "The system shall support pulling postprocessor data from a sub-application for "
+                  "each row of sampled data."
+  []
+
+  [batch]
+    type = CheckFiles
+    input = parent_full_solve.i
+    check_files = 'parent_full_solve_out_runner0.e parent_full_solve_out_runner1.e parent_full_solve_out_runner2.e parent_full_solve_out_runner3.e parent_full_solve_out_runner4.e'
+    requirement = "The system shall support running sub-applications in batches."
+  []
+
+  [batch_csv]
+    requirement = "The stochastic tools module shall support pulling postprocessor data from a "
+                  "single sub-application running a batch of sampled data"
+
+    [n1]
+      type = CSVDiff
+      input = parent_full_solve.i
+      csvdiff = parent_full_solve_out_storage_0002.csv
+      max_parallel = 1
+
+      detail = 'on a single processor,'
+    []
+    [n2]
+      type = CSVDiff
+      input = parent_full_solve.i
+      csvdiff = parent_full_solve_out_storage_0002.csv
+      max_parallel = 2
+      min_parallel = 2
+
+      detail = 'on multiple processors, and'
+    []
+    [n2_restore]
+      type = CSVDiff
+      input = parent_full_solve.i
+      csvdiff = parent_full_solve_out_storage_0002.csv
+      max_parallel = 2
+      min_parallel = 2
+      cli_args = "MultiApps/runner/mode=batch-restore"
+
+      detail = 'on multiple processors using in-memory backup.'
+    []
+  []
+[]

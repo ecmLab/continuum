@@ -1,0 +1,11 @@
+[Tests]
+  [./interface_kernels]
+    type = Exodiff
+    input = 'interface_kernels.i'
+    exodiff = 'interface_kernels_out.e'
+
+    issues = '#10492'
+    design = 'syntax/Variables/index.md'
+    requirement = 'The system shall ensure that coupled second derivative calculations are only performed when requested and are only performed on the minimum required fields.'
+  [../]
+[]

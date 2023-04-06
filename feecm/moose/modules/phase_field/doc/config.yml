@@ -1,0 +1,33 @@
+Content:
+    - framework/doc/content
+    - modules/phase_field/doc/content
+
+Renderer:
+    type: MooseDocs.base.MaterializeRenderer
+
+Extensions:
+    MooseDocs.extensions.navigation:
+        name: MOOSE Phase Field Module
+        repo: https://github.com/idaholab/moose
+        home: /modules/phase_field/index.md
+    MooseDocs.extensions.appsyntax:
+        executable: ${MOOSE_DIR}/modules/phase_field
+        remove:
+            framework: !include framework/doc/remove.yml
+        unregister:
+            framework: !include framework/doc/unregister.yml
+        includes:
+            - framework/include
+            - modules/phase_field/include
+    MooseDocs.extensions.common:
+        shortcuts: !include framework/doc/globals.yml
+    MooseDocs.extensions.acronym:
+        acronyms: !include framework/doc/acronyms.yml
+    MooseDocs.extensions.template:
+        active: True
+    MooseDocs.extensions.sqa:
+        active: True
+        reports: !include modules/phase_field/doc/sqa_reports.yml
+        categories:
+            framework: !include framework/doc/sqa_framework.yml
+            phase_field: !include modules/phase_field/doc/sqa_phase_field.yml

@@ -1,0 +1,51 @@
+[Tests]
+  issues = '#1695 #1696 #16033 #23442'
+  design = 'syntax/DiracKernels/index.md'
+
+  [dim]
+    requirement = "The system shall support a constant point source implemented as a Dirac function:"
+    [1D]
+      type = 'Exodiff'
+      input = '1d_point_source.i'
+      exodiff = '1d_out.e'
+
+      detail = 'in 1D,'
+    []
+
+    [2D]
+      type = 'Exodiff'
+      input = '2d_point_source.i'
+      exodiff = '2d_out.e'
+
+      detail = 'in 2D,'
+    []
+
+    [3D]
+      type = 'Exodiff'
+      input = '3d_point_source.i'
+      exodiff = '3d_out.e'
+
+      detail = 'in 3D,'
+    []
+
+    [1Dfv]
+      type = 'Exodiff'
+      input = '1d_point_source_fv.i'
+      exodiff = '1d_fv_out.e'
+
+      detail = 'with finite volume variables'
+    []
+    [vector2D]
+      type = 'Exodiff'
+      input = 'vector_2d_point_source.i'
+      exodiff = 'vector_2d_out.e'
+      detail = 'with vector variables in 2D'
+    []
+    [vector3D]
+      type = 'Exodiff'
+      input = 'vector_3d_point_source.i'
+      exodiff = 'vector_3d_out.e'
+      detail = 'with vector variables in 3D'
+    []
+  []
+[]

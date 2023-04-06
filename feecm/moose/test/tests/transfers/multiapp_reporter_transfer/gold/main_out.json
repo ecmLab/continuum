@@ -1,0 +1,123 @@
+{
+    "reporters": {
+        "from_main_rep": {
+            "type": "ConstantReporter",
+            "values": {
+                "int": {
+                    "type": "int"
+                },
+                "num": {
+                    "type": "double"
+                },
+                "str": {
+                    "type": "std::string"
+                },
+                "vec": {
+                    "type": "std::vector<double>"
+                }
+            }
+        },
+        "from_main_vpp": {
+            "values": {
+                "a": {
+                    "type": "std::vector<double>"
+                },
+                "b": {
+                    "type": "std::vector<double>"
+                },
+                "c": {
+                    "type": "std::vector<double>"
+                }
+            }
+        },
+        "to_main_rep": {
+            "type": "ConstantReporter",
+            "values": {
+                "int": {
+                    "type": "int"
+                },
+                "num": {
+                    "type": "double"
+                },
+                "str": {
+                    "type": "std::string"
+                },
+                "vec": {
+                    "type": "std::vector<double>"
+                }
+            }
+        },
+        "to_main_vpp": {
+            "values": {
+                "a": {
+                    "type": "std::vector<double>"
+                },
+                "b": {
+                    "type": "std::vector<double>"
+                },
+                "c": {
+                    "type": "std::vector<double>"
+                }
+            }
+        }
+    },
+    "time_steps": [
+        {
+            "from_main_rep": {
+                "int": 1,
+                "num": 2.0,
+                "str": "five",
+                "vec": [
+                    3.0,
+                    4.0
+                ]
+            },
+            "from_main_vpp": {
+                "a": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "b": [
+                    2.0,
+                    2.0,
+                    2.0
+                ],
+                "c": [
+                    3.0,
+                    3.0,
+                    3.0
+                ]
+            },
+            "time": 1.0,
+            "time_step": 1,
+            "to_main_rep": {
+                "int": 10,
+                "num": 3.1415926,
+                "str": "twenty",
+                "vec": [
+                    30.0,
+                    30.0,
+                    30.0
+                ]
+            },
+            "to_main_vpp": {
+                "a": [
+                    30.0,
+                    30.0,
+                    30.0
+                ],
+                "b": [
+                    40.0,
+                    40.0,
+                    40.0
+                ],
+                "c": [
+                    6.0,
+                    6.0,
+                    6.0
+                ]
+            }
+        }
+    ]
+}

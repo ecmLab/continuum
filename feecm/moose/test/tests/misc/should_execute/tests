@@ -1,0 +1,32 @@
+[Tests]
+  issues = '#7215'
+  design = 'framework_stp.md'
+
+  [./execute]
+    type = 'RunApp'
+    input = 'should_execute.i'
+
+    requirement = 'The test system shall have the ability to execute a specific input file.'
+  [../]
+  [./dont]
+    type = 'Exodiff'
+    input = 'should_execute.i'
+    exodiff = 'should_execute_out.e'
+
+    # Setting this will mean that if this actually does execute
+    # it will generate a different solution and cause a diff
+    cli_args = 'BCs/right/value=2'
+
+    prereq = execute
+    delete_output_before_running = false
+
+    should_execute = false
+
+    # The queue scheduler creates a new directory to run in, which
+    # means the output file will not be present for postProcessing
+    # (which is any 'should_execute = false' tests)
+
+    requirement = 'The test system shall have the ability to run a test that neither clears expected outputs or runs '
+                  'the expected executeable for multiple output testing.'
+  [../]
+[]

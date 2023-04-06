@@ -1,0 +1,116 @@
+[Tests]
+  design = 'GapConductanceConstraint.md'
+  issues = '#17252'
+  parallel_scheduling = true
+  [thermomechanical_mortar]
+    requirement = 'The system shall be able to solve two-dimensional thermomechanical contact with finite-strain tensor mechanics and heat conduction physics with'
+    [first_low_k]
+      type = CSVDiff
+      input = finite.i
+      csvdiff = first_low_k.csv
+      heavy = true
+      detail = 'low conductivity in the gap and first order variables'
+      cli_args = 'name=first_low_k'
+    []
+    [first_low_k_rr]
+      type = CSVDiff
+      input = finite_rr.i
+      csvdiff = first_low_k_rr.csv
+      heavy = true
+      detail = 'low conductivity in the gap and first order variables using ReferenceResidualProblem'
+      cli_args = 'name=first_low_k_rr'
+    []
+    [first_high_k]
+      type = CSVDiff
+      input = finite.i
+      csvdiff = first_high_k.csv
+      heavy = true
+      detail = 'high conductivity in the gap and first order variables'
+      cli_args = 'name=first_high_k Constraints/thermal_contact/k=100'
+    []
+    [second_low_k]
+      type = CSVDiff
+      input = finite.i
+      csvdiff = second_low_k.csv
+      heavy = true
+      detail = 'low conductivity in the gap and second order variables'
+      cli_args = 'name=second_low_k Mesh/second_order=true order=SECOND'
+      min_ad_size = '73'
+    []
+    [second_high_k]
+      type = CSVDiff
+      input = finite.i
+      csvdiff = second_high_k.csv
+      heavy = true
+      detail = 'high conductivity in the gap and second order variables'
+      cli_args = 'name=second_high_k Mesh/second_order=true order=SECOND Constraints/thermal_contact/k=100'
+      min_ad_size = '73'
+    []
+  []
+  [thermomechanical_mortar_action]
+    requirement = 'The system shall be able to solve two-dimensional thermomechanical contact with finite-strain tensor mechanics and heat conduction physics using the mortar mechanical and thermal contact actions with'
+    [first_low_k_action]
+      type = CSVDiff
+      input = finite_action.i
+      csvdiff = first_low_k_action.csv
+      heavy = true
+      detail = 'low conductivity in the gap and first order variables'
+      cli_args = 'name=first_low_k_action'
+    []
+    [first_low_k_action_rr]
+      type = CSVDiff
+      input = finite_action_rr.i
+      csvdiff = first_low_k_action_rr.csv
+      heavy = true
+      detail = 'low conductivity in the gap and first order variables using ReferenceResidualProblem'
+      cli_args = 'name=first_low_k_action_rr'
+    []
+    [first_high_k_action]
+      type = CSVDiff
+      input = finite_action.i
+      csvdiff = first_high_k_action.csv
+      heavy = true
+      detail = 'high conductivity in the gap and first order variables'
+      cli_args = 'name=first_high_k_action MortarGapHeatTransfer/mortar_heat_transfer/gap_conductivity=100'
+    []
+    [second_low_k_action]
+      type = CSVDiff
+      input = finite_action.i
+      csvdiff = second_low_k_action.csv
+      heavy = true
+      detail = 'low conductivity in the gap and second order variables'
+      cli_args = 'name=second_low_k_action Mesh/second_order=true order=SECOND'
+      min_ad_size = '73'
+    []
+    [second_high_k_action]
+      type = CSVDiff
+      input = finite_action.i
+      csvdiff = second_high_k_action.csv
+      heavy = true
+      detail = 'high conductivity in the gap and second order variables'
+      cli_args = 'name=second_high_k_action Mesh/second_order=true order=SECOND MortarGapHeatTransfer/mortar_heat_transfer/gap_conductivity=100'
+      min_ad_size = '73'
+    []
+  []
+
+  [pressure_dependent_thermal_contact]
+    design = 'GapFluxModelPressureDependentConduction.md'
+    issues = '#20658'
+    requirement = 'The system shall solve a 2D thermomechanical contact problem, '
+                  'accounting for mechanical pressure-dependent thermal contact'
+    [closed_gap_thermomechanical_mortar_contact]
+      type = CSVDiff
+      input = 'closed_gap_thermomechanical_mortar_contact.i'
+      csvdiff = 'closed_gap_thermomechanical_mortar_contact_out.csv'
+      heavy = true
+      detail = 'with frictionaless contact, finite strain, and thermal expansion.'
+    []
+    [varied_pressure_thermomechanical_mortar]
+      type = CSVDiff
+      input = 'varied_pressure_thermomechanical_mortar.i'
+      csvdiff = 'varied_pressure_thermomechanical_mortar_out.csv'
+      heavy = true
+      detail = 'under a contact pressure gradient across the contact interface.'
+    []
+  []
+[]

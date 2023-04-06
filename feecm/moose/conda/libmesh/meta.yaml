@@ -1,0 +1,59 @@
+# Making a Change to this package?
+# REMEMBER TO UPDATE the .yaml files for the following packages:
+#   template/
+#   moose/
+{% set build = 1 %}
+{% set strbuild = "build_" + build|string %}
+{% set version = "2023.03.29" %}
+{% set vtk_friendly_version = "9.2" %}
+
+package:
+  name: moose-libmesh
+  version: {{ version }}
+
+source:
+  - path: ../../libmesh
+  - path: ../../scripts/configure_libmesh.sh
+
+build:
+  number: {{ build }}
+  string: {{ strbuild }}
+  skip: true                                            # [win]
+  script_env:
+    - MOOSE_JOBS
+    - vtk_friendly_version={{ vtk_friendly_version }}
+
+requirements:
+  build:
+    - {{ moose_mpich }}
+    - {{ moose_petsc }}
+    - {{ moose_libmesh_vtk }}
+    - pkg-config
+    - libpng
+  run:
+    - {{ moose_mpich }}
+    - {{ moose_petsc }}
+    - {{ moose_libmesh_vtk }}
+    - pkg-config
+    - packaging
+    - setuptools <60
+
+test:
+  commands:
+    - test -f $PREFIX/libmesh/lib/libmesh_opt.dylib     # [osx]
+    - test -f $PREFIX/libmesh/lib/libmesh_opt.so        # [linux]
+    - test -f $PREFIX/libmesh/lib/libmetaphysicl.dylib  # [osx]
+    - test -f $PREFIX/libmesh/lib/libmetaphysicl.so     # [linux]
+    - test -f $PREFIX/libmesh/lib/libtimpi_opt.dylib    # [osx]
+    - test -f $PREFIX/libmesh/lib/libtimpi_opt.so       # [linux]
+
+about:
+  home: http://libmesh.github.io/
+  license: LGPL
+  summary: >
+    The libMesh library provides a framework for the numerical simulation of partial differential
+    equations using arbitrary unstructured discretizations on serial and parallel platforms
+
+extra:
+  recipe-maintainers:
+    - milljm

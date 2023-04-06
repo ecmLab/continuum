@@ -1,0 +1,64 @@
+[Tests]
+  issues = '#13320'
+  design = 'SamplerTransientMultiApp.md'
+
+  [transient]
+    requirement = "The system shall support running sub-applications with input parameters varying "
+                  "at each time step"
+
+    [normal]
+      type = CSVDiff
+      input = parent_transient.i
+      cli_args = MultiApps/runner/mode=normal
+      csvdiff = 'parent_transient_out_storage_0000.csv parent_transient_out_storage_0001.csv '
+                'parent_transient_out_storage_0002.csv parent_transient_out_storage_0003.csv'
+
+      detail = 'with individual sub-applications,'
+    []
+    [batch]
+      type = CSVDiff
+      input = parent_transient.i
+      csvdiff = 'parent_transient_out_storage_0000.csv parent_transient_out_storage_0001.csv '
+                'parent_transient_out_storage_0002.csv parent_transient_out_storage_0003.csv'
+      prereq = transient/normal
+      max_parallel = 5
+
+      detail = 'with sub-applications batches using in-memory restore functionality.'
+    []
+  []
+  [mode_error]
+    type = RunException
+    input = parent_transient.i
+    cli_args = MultiApps/runner/mode=batch-reset
+    expect_err = "The supplied mode, 'batch-reset', currently"
+    requirement = "The SamplerTransientMultiApp object shall error if the 'batch-reset' mode is "
+                  "supplied."
+  []
+
+  [file_output]
+    requirement = "The system shall support outputting results from sub-applications with input parameters varying "
+                  "at each time step using "
+    [normal]
+      type = CSVDiff
+      input = parent_transient.i
+      cli_args = 'MultiApps/runner/mode=normal runner:Outputs/csv=true'
+      csvdiff = 'parent_transient_out_runner0.csv
+                 parent_transient_out_runner1.csv
+                 parent_transient_out_runner2.csv
+                 parent_transient_out_runner3.csv
+                 parent_transient_out_runner4.csv'
+      detail = 'individual sub-applications;'
+    []
+    [batch]
+      type = CSVDiff
+      input = parent_transient.i
+      cli_args = 'MultiApps/runner/mode=batch-restore runner:Outputs/csv=true'
+      csvdiff = 'parent_transient_out_runner0.csv
+                 parent_transient_out_runner1.csv
+                 parent_transient_out_runner2.csv
+                 parent_transient_out_runner3.csv
+                 parent_transient_out_runner4.csv'
+      detail = 'sub-application batches;'
+    []
+  []
+[]

@@ -1,0 +1,29 @@
+[Tests]
+  issues = '#6699'
+  design = 'MooseDocs/index.md'
+  [./base]
+    type = PythonUnitTest
+    input = test_base.py
+    requirement = "The system shall include a tree node object with arbitrary property creation."
+  [../]
+  [./tokens]
+    type = PythonUnitTest
+    input = test_tokens.py
+    requirement = "The system shall include tree object suitable for abstract syntax trees."
+  [../]
+  [./html]
+    type = PythonUnitTest
+    input = test_html.py
+    requirement = "The system shall include tree object suitable for HTML."
+  [../]
+  [./latex]
+    type = PythonUnitTest
+    input = test_latex.py
+    requirement = "The system shall include tree object suitable for latex."
+  [../]
+  [./page]
+    type = PythonUnitTest
+    input = test_page.py
+    requirement = "The system shall include tree object suitable for file structures."
+  [../]
+[]

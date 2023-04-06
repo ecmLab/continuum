@@ -1,0 +1,69 @@
+[Tests]
+  design = "Restartable.md DataIO.md"
+  issues = "#563 #13438"
+  [tests]
+    requirement = "The system shall support executing a"
+
+    [steady]
+      type = 'Exodiff'
+      input = 'steady.i'
+      exodiff = 'steady_out.e'
+      recover = false
+
+      detail = "a steady-state problem"
+    []
+
+    [restart_trans_from_steady]
+      type = 'Exodiff'
+      input = 'restart_from_steady.i'
+      exodiff = 'restart_from_steady_out.e'
+      prereq = 'tests/steady'
+
+      detail = "and restarting a transient simulation from the previous solution."
+    []
+  []
+  [steady_with_sub]
+    type = 'Exodiff'
+    input = 'steady_with_sub.i'
+    exodiff = 'steady_with_sub_out.e steady_with_sub_out_sub0.e'
+    recover = false
+
+    issues = "#13438"
+    requirement = "The system shall support generating checkpoint files for restart testing with sub "
+                  "apps."
+  []
+
+  [restart_trans_from_steady_with_sub]
+    type = 'Exodiff'
+    input = 'restart_trans_with_sub.i'
+    exodiff = 'restart_trans_with_sub_out.e restart_trans_with_sub_out_sub0.e'
+    prereq = 'steady_with_sub'
+
+    issues = "#13438"
+    requirement = "The system shall support restarting a transient simulation from a steady solution "
+                  "file with sub apps."
+  []
+
+  [steady_with_2subs]
+    type = 'Exodiff'
+    input = 'steady_with_2subs.i'
+    exodiff = 'steady_with_2subs_out.e steady_with_2subs_out_sub0.e steady_with_2subs_out_sub1.e'
+    recover = false
+
+    issues = "#15287"
+    requirement = "The system shall support generating checkpoint files for restart testing with "
+                  "multiple sub apps."
+  []
+
+  [restart_trans_from_steady_with_2subs]
+    type = 'Exodiff'
+    input = 'restart_trans_with_2subs.i'
+    exodiff = 'restart_trans_with_2subs_out.e restart_trans_with_2subs_out_sub0.e '
+              'restart_trans_with_2subs_out_sub1.e'
+    prereq = 'steady_with_2subs'
+
+    issues = "#15287"
+    requirement = "The system shall support restarting a transient simulation from a steady solution "
+                  "file with multiple sub apps."
+  []
+[]

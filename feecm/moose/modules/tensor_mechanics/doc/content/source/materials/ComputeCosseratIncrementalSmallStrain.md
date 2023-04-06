@@ -1,0 +1,1 @@
+!template load file=stubs/moose_object.md.template name=ComputeCosseratIncrementalSmallStrain syntax=/Materials/ComputeCosseratIncrementalSmallStrain

@@ -1,0 +1,34 @@
+[Tests]
+  design = 'fv_design.md'
+  issues = '#14549'
+  [var_except]
+    type = RunException
+    input = transient-adapt.i
+    expect_err = 'fv_variable is null in diff. Did you forget to set fv = true in the Variables block'
+    requirement = 'The system shall suggest that the user add a finite volume variable if a finite volume object cannot retrieve one'
+  []
+  [adapt]
+    type = Exodiff
+    input = transient-adapt.i
+    exodiff = 'transient-adapt_out.e transient-adapt_out.e-s002'
+    requirement = 'The system shall be able to perform finite volume simulations with adaptivity and give correct results'
+    cli_args = 'Variables/u/fv=true'
+  []
+  [steady-coarse]
+    type = Exodiff
+    input = steady-adapt.i
+    exodiff = steady-adapt_out.e
+    requirement = 'The system shall be able to combat a singular solve, resulting from two term boundary expansion during gradient computation, by reverting to a one term boundary expansion.'
+    issues = '#16822'
+  []
+  [steady-mms]
+    type = PythonUnitTest
+    input = 'steady-adapt-run-and-plot.py'
+    test_case = TestSteadyAdapt
+    requirement = 'The system shall display second order convergence when there is some skewness due to mismatch between cell levels.'
+    method = '!dbg'
+    min_parallel = 16
+    required_python_packages = 'pandas matplotlib'
+    heavy = true
+  []
+[]

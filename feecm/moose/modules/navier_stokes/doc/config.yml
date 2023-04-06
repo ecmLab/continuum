@@ -1,0 +1,37 @@
+Content:
+    - framework/doc/content
+    - modules/navier_stokes/doc/content
+    - modules/fluid_properties/doc/content
+    - modules/heat_conduction/doc/content
+    - modules/ray_tracing/doc/content
+
+Renderer:
+    type: MooseDocs.base.MaterializeRenderer
+
+Extensions:
+    MooseDocs.extensions.navigation:
+        name: MOOSE Navier Stokes Module
+        repo: https://github.com/idaholab/moose
+        home: /modules/navier_stokes/index.md
+    MooseDocs.extensions.appsyntax:
+        executable: ${MOOSE_DIR}/modules/navier_stokes
+        remove:
+            framework: !include framework/doc/remove.yml
+        unregister:
+            framework: !include framework/doc/unregister.yml
+        includes:
+            - framework/include
+            - modules/navier_stokes/include
+            - modules/fluid_properties/include
+            - modules/heat_conduction/include
+            - modules/ray_tracing/include
+    MooseDocs.extensions.common:
+        shortcuts: !include framework/doc/globals.yml
+    MooseDocs.extensions.acronym:
+        acronyms: !include framework/doc/acronyms.yml
+    MooseDocs.extensions.sqa:
+        active: True
+        reports: !include modules/navier_stokes/doc/sqa_reports.yml
+        categories:
+            framework: !include framework/doc/sqa_framework.yml
+            navier_stokes: !include modules/navier_stokes/doc/sqa_navier_stokes.yml

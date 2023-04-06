@@ -1,0 +1,34 @@
+Applications:
+    stochastic_tools:
+        exe_directory: ${MOOSE_DIR}/modules/stochastic_tools
+        content_directory: ${MOOSE_DIR}/modules/stochastic_tools/doc/content
+        unregister:
+            - ${MOOSE_DIR}/framework/doc/unregister.yml
+        remove:
+            - ${MOOSE_DIR}/framework/doc/remove.yml
+            - ${MOOSE_DIR}/modules/stochastic_tools/doc/remove.yml
+
+Documents:
+    software_quality_plan: sqa/inl_records.md#software_quality_plan
+    enterprise_architecture_entry: sqa/inl_records.md#enterprise_architecture_entry
+    safety_software_determination: sqa/inl_records.md#safety_software_determination
+    quality_level_determination: sqa/inl_records.md#quality_level_determination
+    configuration_management_plan: sqa/inl_records.md#configuration_management_plan
+    asset_management_plan: sqa/inl_records.md#asset_management_plan
+    verification_validation_plan: sqa/inl_records.md#verification_and_validation_plan
+    software_requirements_specification: sqa/stochastic_tools_srs.md
+    software_design_description: sqa/stochastic_tools_sdd.md
+    software_test_plan: sqa/stochastic_tools_stp.md
+    requirements_traceablity_matrix: sqa/stochastic_tools_rtm.md
+    verification_validation_report: sqa/stochastic_tools_vvr.md
+    failure_analysis_report: sqa/stochastic_tools_far.md
+    software_library_list: sqa/stochastic_tools_sll.md
+    communication_and_contact_information: sqa/framework_cci.md
+    software_coding_standards: sqa/framework_scs.md
+    user_manual: modules/stochastic_tools/index.md
+    theory_manual: modules/stochastic_tools/index.md
+
+Requirements:
+    stochastic_tools:
+        directories:
+            - ${MOOSE_DIR}/modules/stochastic_tools

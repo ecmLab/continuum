@@ -1,0 +1,40 @@
+Content:
+    - ${ROOT_DIR}/framework/doc/content
+    - ${ROOT_DIR}/test/doc/content
+    - modules:
+        root_dir: ${ROOT_DIR}/modules/doc/content
+        content:
+            - application_usage/restart_recover.md
+Renderer:
+    type: MooseDocs.base.MaterializeRenderer
+
+Extensions:
+    MooseDocs.extensions.navigation:
+        active: False
+    MooseDocs.extensions.appsyntax:
+        executable: ${ROOT_DIR}/test
+        remove:
+            framework: !include ${ROOT_DIR}/framework/doc/remove.yml
+            moose_test: !include ${ROOT_DIR}/test/doc/remove.yml
+        includes:
+            - framework/include
+    MooseDocs.extensions.common:
+        shortcuts: !include ${ROOT_DIR}/framework/doc/globals.yml
+    MooseDocs.extensions.acronym:
+        acronyms: !include ${ROOT_DIR}/framework/doc/acronyms.yml
+    MooseDocs.extensions.civet:
+        test_results_cache: '/tmp/civet/jobs'
+        remotes:
+            moose:
+                url: https://civet.inl.gov
+                repo: idaholab/moose
+    MooseDocs.extensions.template:
+        active: True
+    MooseDocs.extensions.sqa:
+        active: True
+        reports: !include ${ROOT_DIR}/framework/doc/sqa_reports.yml
+        categories:
+            framework: !include ${ROOT_DIR}/framework/doc/sqa_framework.yml
+        requirement-groups:
+            dgkernels: DGKernel Objects
+            interfacekernels: InterfaceKernel Objects

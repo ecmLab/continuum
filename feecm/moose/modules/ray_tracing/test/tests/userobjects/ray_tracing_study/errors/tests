@@ -1,0 +1,278 @@
+[Tests]
+  design = 'RayTracingStudy.md'
+  issues = '#16028'
+
+  parallel_scheduling = true
+
+  [tests]
+    requirement = 'The RayTracingStudy shall return a useful error when'
+    [duplicate_ray]
+      type = 'RunException'
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/add_duplicate_ray=true'
+      allow_test_objects = true
+      expect_err = 'Multiple shared_ptrs were found that point to the same Ray'
+      detail = 'the same ray is added to be traced multiple times,'
+    []
+    [local_non_unique_id]
+      type = 'RunException'
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/add_local_non_unique_id_ray=true
+                  Mesh/gmg/nx=50'
+      allow_test_objects = true
+      expect_err = 'Multiple Rays exist with ID 0 on processor'
+      detail = 'when local rays that have the same ID are added to be traced,'
+    []
+    [global_non_unique_id]
+      type = 'RunException'
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/add_global_non_unique_id_ray=true
+                  Mesh/gmg/nx=50'
+      allow_test_objects = true
+      min_parallel = 2
+      expect_err = 'Ray with ID 0 exists on ranks'
+      detail = 'when rays that have the same ID on different processors are added to be traced,'
+    []
+    [ray_kernel_coverage_check]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/ray_kernel_coverage_check=true'
+      expect_err = 'Subdomains { 0 } do not have RayKernels defined!'
+      allow_test_objects = true
+      detail = 'when the domain is not covered with ray kernels,'
+    []
+    [unneeded_rays]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'RayKernels/null/type=NullRayKernel RayKernels/null/rays=dummy'
+      expect_err = 'Rays cannot be supplied when the study does not require Ray registration'
+      allow_test_objects = true
+      detail = 'when ray names are provided to a ray tracing object and the study does not register ray names,'
+    []
+    [ray_not_found]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/active=repeatable
+                  RayKernels/null/type=NullRayKernel
+                  RayKernels/null/rays=dummy'
+      expect_err = 'Supplied ray \'dummy\' is not a registered Ray'
+      allow_test_objects = true
+      detail = 'when a ray name is provided to a ray tracing object and said name is not registered to a ray,'
+    []
+    [mixed_pre_kernel_execute]
+      type = RunException
+      input = 'errors.i'
+      cli_args = "UserObjects/study/execute_on='INITIAL PRE_KERNELS'"
+      expect_err = 'PRE_KERNELS cannot be mixed with any other execution flag.'
+      allow_test_objects = true
+      detail = 'when the study is set to execute with residual kernels and non-residual kernels,'
+    []
+    [eigenvalue]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/execute_on=PRE_KERNELS
+                  Executioner/type=Eigenvalue'
+      expect_err = 'is not supported for an eigenvalue solve.'
+      allow_test_objects = true
+      slepc = true
+      detail = 'when the study is set to execute with residual kernels and an eigenvalue executioner,'
+    []
+    [error_if_tracing]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/ray_error_if_tracing=true'
+      expect_err = 'Cannot use Ray::clearStartingInfo\(\) after it has started tracing'
+      allow_test_objects = true
+      detail = 'when the trajectory of a ray is changed after it has started tracing,'
+    []
+    [reset_counters]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/ray_reset_counters=true'
+      expect_err = 'Ray::resetCounters\(\) can only be used during generateRays()'
+      allow_test_objects = true
+      detail = 'when a ray\'s counters are reset when not generating rays'
+    []
+    [adapt_bad_type]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'Mesh/gmg/elem_type=EDGE3
+                  Adaptivity/steps=1
+                  Adaptivity/marker=uniform
+                  Adaptivity/max_h_level=2
+                  Adaptivity/initial_steps=1
+                  Adaptivity/Markers/uniform/type=UniformMarker
+                  Adaptivity/Markers/uniform/mark=refine'
+      allow_test_objects = true
+      expect_err = 'Element type EDGE3 is not supported in ray tracing with adaptivity'
+      detail = 'when tracing in a mesh with adaptivity and an unsupported element type'
+    []
+    [hmax_vary]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'Mesh/active=2d
+                  Mesh/2d/type=GeneratedMeshGenerator
+                  Mesh/2d/dim=2
+                  Mesh/2d/xmax=1000'
+      allow_test_objects = true
+      expect_err = 'Element hmin varies significantly from subdomain hmax.'
+      detail = 'when tracing in a mesh when the average subdomain hmax is a poor approximation due to stretched elements'
+    []
+    [register_ray_data_late]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/register_ray_data_late=true'
+      expect_err = 'Cannot register Ray data after initialSetup()'
+      allow_test_objects = true
+      detail = 'when ray data is registered too late'
+    []
+    [register_ray_data_same_name]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/register_ray_data_same_name=true'
+      expect_err = 'Cannot register Ray aux data with name foo because Ray \(non-aux\) data already exists with said name.'
+      allow_test_objects = true
+      detail = 'when ray data is registered with the same name across systems'
+    []
+    [ray_data_index_bad_name]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/ray_data_index_bad_name=true'
+      expect_err = 'Unknown Ray data with name foo'
+      allow_test_objects = true
+      detail = 'when requesting a ray data index for an invalid name'
+    []
+    [ray_data_name_bad_index]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/ray_data_name_bad_index=true'
+      expect_err = 'Unknown Ray data with index 123'
+      allow_test_objects = true
+      detail = 'when requesting a ray data name for an invalid index'
+    []
+    [get_ray_kernels_early]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/get_ray_kernels_early=true'
+      expect_err = 'Should not call getRayKernels\(\) before initialSetup\(\)'
+      allow_test_objects = true
+      detail = 'when requesting ray kernels before they are setup'
+    []
+    [get_ray_bcs_early]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/get_ray_bcs_early=true'
+      expect_err = 'Should not call getRayBCs\(\) before initialSetup\(\)'
+      allow_test_objects = true
+      detail = 'when requesting ray bcs before they are setup'
+    []
+    [get_bank_disabled]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/type=RayTracingStudyNoBankingTest'
+      expect_err = 'The Ray bank is not available because the private parameter \'_bank_rays_on_completion\' is set to false.'
+      allow_test_objects = true
+      detail = 'when obtaining the ray bank when banking is disabled'
+    []
+    [get_bank_bad]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/get_ray_bank_generating=true'
+      expect_err = 'Cannot get the Ray bank during generation or propagation.'
+      allow_test_objects = true
+      detail = 'when obtaining the ray bank when it is not available'
+    []
+    [register_ray_no_registration]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/register_ray_no_registration=true'
+      expect_err = 'Cannot use registerRay\(\) with Ray registration disabled'
+      allow_test_objects = true
+      detail = 'when registering a ray when ray registration is disabled'
+    []
+    [registered_ray_id_no_registration]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/registered_ray_id_no_registration=true'
+      expect_err = 'Should not use registeredRayID\(\) with Ray registration disabled'
+      allow_test_objects = true
+      detail = 'when getting a registered ray ID when ray registration is disabled'
+    []
+    [registered_ray_name_no_registration]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/registered_ray_name_no_registration=true'
+      expect_err = 'Should not use registeredRayName\(\) with Ray registration disabled'
+      allow_test_objects = true
+      detail = 'when getting a registered ray name when ray registration is disabled'
+    []
+    [registered_ray_id_missing]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/type=RayTracingStudyWithRegistrationTest
+                  UserObjects/study/registered_ray_id_missing=true'
+      expect_err = 'Attempted to obtain ID of registered Ray foo, but a Ray with said name is not registered.'
+      allow_test_objects = true
+      detail = 'when requesting a registered ray ID for a ray that is not registered'
+    []
+    [registered_ray_name_missing]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/type=RayTracingStudyWithRegistrationTest
+                  UserObjects/study/registered_ray_name_missing=true'
+      expect_err = 'Attempted to obtain name of registered Ray with ID 0, but a Ray with said ID is not registered.'
+      allow_test_objects = true
+      detail = 'when requesting a registered ray name for a ray that is not registered'
+    []
+    [reserve_bad]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/reserve_bad=true'
+      expect_err = 'Can only reserve in Ray buffer during generateRays\(\)'
+      allow_test_objects = true
+      detail = 'when reserving space in the ray buffer outside of registration, and'
+    []
+    [subdomain_hmax_missing]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/subdomain_hmax_missing=true'
+      expect_err = 'Subdomain 1337 not found in subdomain hmax map'
+      allow_test_objects = true
+      detail = 'when requesting a subdomain hmax for an invalid subdomain'
+    []
+    [elem_extrema_build_edge]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/elem_extrema_build_edge=true'
+      expect_err = 'Element does not contain vertices in ElemExtrema'
+      allow_test_objects = true
+      # will hit assertions before the error outside of opt
+      method = opt
+      detail = 'building an element extrema edge for invalid vertices'
+    []
+    [get_elem_normals_unimplemented]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/get_elem_normals_unimplemented=true'
+      expect_err = 'Unimplemented element normal caching in RayTracingStudyTest::getElemNormals\(\)'
+      allow_test_objects = true
+      detail = 'requesting cached element normals when element normal caching has not been setup'
+    []
+    [ray_data_index_other_exists]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/ray_data_index_other_exists=true'
+      expect_err = 'However, Ray aux data with said name was found.'
+      allow_test_objects = true
+      detail = 'getting the index of ray data when aux data with the same name exists'
+    []
+    [ray_data_aux_index_other_exists]
+      type = RunException
+      input = 'errors.i'
+      cli_args = 'UserObjects/study/ray_data_aux_index_other_exists=true'
+      expect_err = 'However, Ray non-aux data with said name was found.'
+      allow_test_objects = true
+      detail = 'getting the index of ray aux data when data with the same name exists'
+    []
+  []
+[]

@@ -1,0 +1,42 @@
+[Tests]
+  design = 'syntax/Variables/index.md'
+  issues = '#1636'
+
+  [constant_monomial]
+    requirement = 'The system shall support the constant Monomial family of shape functions on mesh '
+                  'elements:'
+
+    [test_monomial_constant_1d]
+      type = 'Exodiff'
+      input = 'monomial-const-1d.i'
+      exodiff = 'monomial-const-1d_out.e'
+
+      detail = 'in one dimension,'
+    []
+
+    [test_monomial_constant_3d]
+      type = 'Exodiff'
+      input = 'monomial-const-3d.i'
+      exodiff = 'monomial-const-3d_out.e'
+
+      detail = 'in two dimensions, and'
+    []
+
+    [test_monomial_constant_2d]
+      type = 'Exodiff'
+      input = 'monomial-const-2d.i'
+      exodiff = 'monomial-const-2d_out.e'
+
+      detail = 'in three dimensions.'
+    []
+  []
+
+  [bad_order]
+    type = 'RunException'
+    input = 'monomial-const-1d.i'
+    expect_err = "This type is only meant for a CONSTANT MONOMIAL finite element basis\. You have requested a MONOMIAL family and order FIRST"
+    cli_args = "Variables/u/type=MooseVariableConstMonomial Variables/u/order=FIRST"
+    issues = '#9836'
+    requirement = 'The system shall error if a user requests a constant monomial finite element variable type with either a non-monomial family or non-constant order.'
+  []
+[]

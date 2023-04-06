@@ -1,0 +1,24 @@
+[Tests]
+  [points]
+    type = ImageDiff
+    command = points.py
+    imagediff = 'points.png'
+    allowed = 0.96
+    display_required = true
+  []
+
+  [cells]
+    type = ImageDiff
+    command = cells.py
+    imagediff = 'cells.png'
+    allowed = 0.96
+    display_required = true
+  []
+
+  [variable]
+    type = ImageDiff
+    command = variable.py
+    imagediff = 'variable.png'
+    display_required = true
+  []
+[]

@@ -1,0 +1,1 @@
+../../../../../step08_postprocessors/tests/kernels/simple_diffusion/gold/simple_diffusion_out.e

@@ -1,0 +1,18 @@
+[Tests]
+  design = 'MooseVariableFV.md'
+  issues = '#18009'
+
+  [cell_gradient_caching]
+    type = 'Exodiff'
+    input = 'fv_caching.i'
+    exodiff = 'fv_caching_out.e'
+    requirement = 'The system shall be able to solve a finite volume problem while caching variable gradients at cell centers.'
+  []
+  [no_caching]
+    type = 'Exodiff'
+    input = 'fv_caching.i'
+    exodiff = 'no_caching.e'
+    requirement = 'The system shall be able to solve a finite volume problem without caching any solution-related quantities.'
+    cli_args = 'Outputs/file_base=no_caching GlobalParams/cache_cell_gradients=false'
+  []
+[]

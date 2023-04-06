@@ -1,0 +1,34 @@
+[Tests]
+  issues = '#1736'
+  design = 'TransientMultiApp.md'
+
+  [group]
+    requirement = "The system shall support the execution of sub-applications:"
+
+    [dt_from_multi]
+      type = 'Exodiff'
+      input = 'dt_from_multi.i'
+      exodiff = 'dt_from_multi_out_sub_app0.e dt_from_multi_out_sub_app1.e dt_from_multi_out_sub_app2.e dt_from_multi_out_sub_app3.e'
+
+      detail = "with a time step governed by the sub-application and"
+    []
+
+    [dt_from_parent]
+      type = 'Exodiff'
+      input = 'dt_from_parent.i'
+      exodiff = 'dt_from_parent_out_sub_app0.e dt_from_parent_out_sub_app1.e dt_from_parent_out_sub_app2.e dt_from_parent_out_sub_app3.e'
+
+      detail = "with a time step governed by the parent application."
+    []
+  []
+
+  [test_negative_time]
+    # test that not sub-cycling with negative times does not make the main and sub-app out-of-sync
+    type = 'Exodiff'
+    input = 'dt_from_parent.i'
+    exodiff = 'main_negative.e main_negative_sub_app0.e main_negative_sub_app1.e main_negative_sub_app2.e main_negative_sub_app3.e'
+    cli_args = 'Executioner/start_time=-1 sub_app:Executioner/start_time=-1 Outputs/file_base=main_negative'
+    issues = '#15802'
+    requirement = "The system shall support negative times by particularly ensuring that the sub-app properly updates its time without sub-cycling."
+  []
+[]

@@ -1,0 +1,159 @@
+[Tests]
+  issues = '#1927 #8278 #4268 #5658 #3277 #3414 #808 #8450 #13972 #15956'
+  design = 'syntax/Materials/index.md'
+
+  [stateful_old]
+    requirement = 'The system shall be able to generate up to three states of material properties '
+                  'for use in other calculations: current, old and older'
+    [exodiff_old]
+      type = 'Exodiff'
+      input = 'stateful_prop_test.i'
+      exodiff = 'out.e'
+
+      detail = 'where properties are stored in auxiliary spatial fields, and'
+    []
+    [csvdiff_old]
+      type = 'CSVDiff'
+      input = 'stateful_prop_test.i'
+      csvdiff = 'out.csv'
+
+      prereq = 'stateful_old/exodiff_old'
+      delete_output_before_running = false
+      should_execute = false
+
+      detail = 'when those properties are averaged and output to a comma-separated value file.'
+    []
+  []
+
+  [stateful_older]
+    requirement = 'The system shall verify that the oldest material property (older) can be coupled '
+                  'to other objects for use in another calculation:'
+    [exodiff_older]
+      type = 'Exodiff'
+      input = 'stateful_prop_test_older.i'
+      exodiff = 'out_older.e'
+
+      detail = 'where properties are stored in auxiliary spatial fields, and'
+    []
+    [csvdiff_older]
+      type = 'CSVDiff'
+      input = 'stateful_prop_test_older.i'
+      csvdiff = 'out_older.csv'
+
+      prereq = 'stateful_older/exodiff_older'
+      delete_output_before_running = false
+      should_execute = false
+
+      detail = 'when those properties are averaged and output to a comma-separated value file.'
+    []
+  []
+
+  [implicit_stateful]
+    type = 'Exodiff'
+    input = 'implicit_stateful.i'
+    exodiff = 'implicit_stateful_out.e'
+    allow_warnings = true
+
+    requirement = 'The system shall be able to promote normal material properties to stateful when '
+                  'old/older properties are requested.'
+  []
+
+  [computing_initial_residual_test]
+    type = 'Exodiff'
+    input = 'computing_initial_residual_test.i'
+    exodiff = 'computing_initial_residual_test_out.e'
+
+    requirement = 'The system shall make material property calculations available during the '
+                  'computation of the initial Residual vector.'
+  []
+
+  [storage]
+    requirement = 'The system shall store stateful properties that vary at every calculation point '
+                  '(quadrature point) similarly to a normal field variable even though they are not '
+                  'interpolatory:'
+
+    [spatial_test]
+      type = 'Exodiff'
+      input = 'stateful_prop_spatial_test.i'
+      exodiff = 'out_spatial.e'
+
+      detail = 'on blocks, and'
+    []
+
+    [spatial_bnd_only]
+      type = 'Exodiff'
+      input = 'stateful_prop_on_bnd_only.i'
+      exodiff = 'out_bnd_only.e'
+      allow_warnings = true
+
+      detail = 'on boundaries.'
+    []
+  []
+
+  [stateful_copy]
+    type = 'Exodiff'
+    input = 'stateful_prop_copy_test.i'
+    exodiff = 'out_stateful_copy.e'
+    max_parallel = 1
+
+    requirement = 'The system shall support the ability to copy stored stateful data from one '
+                  'element to another element.'
+  []
+
+  [adaptivity]
+    requirement = 'The system shall handle storing stateful properties related to elements on the '
+                  'mesh as the mesh is adapting:'
+    [spatially_const]
+      type = 'Exodiff'
+      input = 'stateful_prop_adaptivity_test.i'
+      exodiff = 'stateful_prop_adaptivity_test_out.e-s004'
+
+      detail = 'when properties are spatially constant, and'
+    []
+
+    [spatially_varying]
+      type = 'Exodiff'
+      input = 'spatial_adaptivity_test.i'
+      exodiff = 'spatial_adaptivity_test_out.e-s004'
+
+      detail = 'when properties vary spatially.'
+    []
+  []
+
+  [many_stateful_props]
+    type = 'Exodiff'
+    input = 'many_stateful_props.i'
+    exodiff = 'many_stateful_props_out.e'
+
+    requirement = 'The system shall not store any stateful material properties that are declared but '
+                  'never used.'
+  []
+
+  [ad]
+    requirement = 'The system shall be able to correctly handle stateful materials'
+    [reg]
+      type = 'Exodiff'
+      input = 'stateful_reg.i'
+      exodiff = 'stateful_reg_out.e'
+      detail = 'when using a regular material property.'
+    []
+    [ad]
+      type = 'Exodiff'
+      input = 'stateful_ad.i'
+      exodiff = 'stateful_ad_out.e'
+      detail = 'when using an AD material property.'
+    []
+    [template_reg]
+      type = 'Exodiff'
+      input = 'stateful_reg_template.i'
+      exodiff = 'stateful_reg_template_out.e'
+      detail = 'when using a regular material property using templated methods.'
+    []
+    [template_ad]
+      type = 'Exodiff'
+      input = 'stateful_ad_template.i'
+      exodiff = 'stateful_ad_template_out.e'
+      detail = 'when using an AD material property using templated methods.'
+    []
+  []
+[]

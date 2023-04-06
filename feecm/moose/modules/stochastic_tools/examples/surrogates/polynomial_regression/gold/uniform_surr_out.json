@@ -1,0 +1,94 @@
+{
+    "reporters": {
+        "pc_max_res": {
+            "type": "EvaluateSurrogate",
+            "values": {
+                "pc_max": {
+                    "row_begin": 0,
+                    "row_end": 5,
+                    "type": "std::vector<double>"
+                }
+            }
+        },
+        "pc_max_stats": {
+            "type": "PolynomialChaosReporter",
+            "values": {
+                "pc_max_MEAN": {
+                    "stat": "MEAN",
+                    "type": "std::pair<double, std::vector<double> >"
+                },
+                "pc_max_STDDEV": {
+                    "stat": "STDDEV",
+                    "type": "std::pair<double, std::vector<double> >"
+                }
+            }
+        },
+        "pr_max_res": {
+            "type": "EvaluateSurrogate",
+            "values": {
+                "pr_max": {
+                    "row_begin": 0,
+                    "row_end": 5,
+                    "type": "std::vector<double>"
+                }
+            }
+        },
+        "pr_max_stats": {
+            "type": "StatisticsReporter",
+            "values": {
+                "pr_max_res_pr_max_MEAN": {
+                    "stat": "MEAN",
+                    "type": "std::pair<double, std::vector<double> >"
+                },
+                "pr_max_res_pr_max_STDDEV": {
+                    "stat": "STDDEV",
+                    "type": "std::pair<double, std::vector<double> >"
+                }
+            }
+        }
+    },
+    "time_steps": [
+        {
+            "pc_max_res": {
+                "pc_max": [
+                    301.20921978639444,
+                    301.20921978639444,
+                    301.20921978639444,
+                    301.20921978639444,
+                    301.20921978639444
+                ]
+            },
+            "pc_max_stats": {
+                "pc_max_MEAN": [
+                    301.20921978639444,
+                    []
+                ],
+                "pc_max_STDDEV": [
+                    0.0,
+                    []
+                ]
+            },
+            "pr_max_res": {
+                "pr_max": [
+                    295.71995044516314,
+                    303.9902317244653,
+                    304.7564391965112,
+                    310.3367526430951,
+                    294.9091916038445
+                ]
+            },
+            "pr_max_stats": {
+                "pr_max_res_pr_max_MEAN": [
+                    301.9425131226158,
+                    []
+                ],
+                "pr_max_res_pr_max_STDDEV": [
+                    6.5338060579219945,
+                    []
+                ]
+            },
+            "time": 1.0,
+            "time_step": 1
+        }
+    ]
+}

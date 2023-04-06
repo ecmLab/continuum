@@ -1,0 +1,42 @@
+{
+    "reporters": {
+        "iteration_info": {
+            "type": "IterationInfo",
+            "values": {
+                "time": {
+                    "type": "double"
+                }
+            }
+        }
+    },
+    "time_steps": [
+        {
+            "iteration_info": {
+                "time": 0.0
+            },
+            "time": 0.0,
+            "time_step": 0
+        },
+        {
+            "iteration_info": {
+                "time": 1.0
+            },
+            "time": 1.0,
+            "time_step": 1
+        },
+        {
+            "iteration_info": {
+                "time": 2.0
+            },
+            "time": 2.0,
+            "time_step": 2
+        },
+        {
+            "iteration_info": {
+                "time": 3.0
+            },
+            "time": 3.0,
+            "time_step": 3
+        }
+    ]
+}
