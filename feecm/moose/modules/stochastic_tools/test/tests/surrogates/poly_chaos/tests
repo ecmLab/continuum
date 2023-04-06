@@ -1,0 +1,91 @@
+[Tests]
+  [coefficients]
+    issues = "#14710"
+    design = "PolynomialChaos.md"
+    requirement = 'The system shall compute polynomial chaos coefficents using '
+    [monte_carlo_integration]
+      type = CSVDiff
+      input = main_2d_mc.i
+      allow_test_objects = true
+      csvdiff = 'main_2d_mc_out_pc_samp_0002.csv'
+      detail = 'MonteCarlo sampler with Uniform distribution, '
+    []
+    [gauss_legendre_integration]
+      type = CSVDiff
+      input = main_2d_quad.i
+      allow_test_objects = true
+      csvdiff = 'main_2d_quad_out_pc_samp_0002.csv'
+      detail = 'Quadrature sampler with Uniform distribution, and '
+    []
+    [gauss_hermite]
+      type = CSVDiff
+      input = main_2dnorm_quad.i
+      allow_test_objects = true
+      csvdiff = 'main_2dnorm_quad_out_pc_samp_0002.csv'
+      detail = 'Quadrature sampler with Normal distribution.'
+    []
+  []
+  [statistics]
+    issues = '#14836'
+    design = 'PolynomialChaosReporter.md'
+    requirement = 'The system shall compute relevant statistics with polynomial chaos expansion '
+                  'including '
+    [legendre_moment_calculation]
+      type = JSONDiff
+      input = main_2d_quad_moment.i
+      allow_test_objects = true
+      jsondiff = 'main_2d_quad_moment_out.json'
+      detail = 'statistical moments with Legendre polynomials, '
+    []
+    [hermite_moment_calculation]
+      type = JSONDiff
+      input = main_2dnorm_quad_moment.i
+      allow_test_objects = true
+      jsondiff = 'main_2dnorm_quad_moment_out.json'
+      detail = 'statistical moments with Hermite polynomials, '
+    []
+    [legendre_local_sensitivity]
+      type = JSONDiff
+      input = main_2d_quad_locs.i
+      allow_test_objects = true
+      jsondiff = 'main_2d_quad_locs_out.json'
+      detail = 'sampler and user defined local sensitivities with Legendre polynomials, '
+    []
+    [hermite_local_sensitivity]
+      type = JSONDiff
+      input = main_2dnorm_quad_locs.i
+      allow_test_objects = true
+      jsondiff = 'main_2dnorm_quad_locs_out.json'
+      detail = 'sampler and user defined local sensitivities with Hermite polynomials, and '
+    []
+    [sobol]
+      type = JSONDiff
+      input = sobol.i
+      allow_test_objects = true
+      jsondiff = 'sobol_out.json'
+      detail = 'Sobol sensitivity indices.'
+    []
+  []
+  [sparse]
+    issues = "#14833"
+    design = "QuadratureSampler.md"
+    requirement = 'The system shall include the ability to use sparse grid methods to evaluate '
+                  'polynomial chaos expansion coefficients including '
+    [smolyak_sobol]
+      type = JSONDiff
+      input = sobol.i
+      allow_test_objects = true
+      cli_args = 'Samplers/sample/sparse_grid=smolyak Outputs/file_base=smolyak'
+      jsondiff = 'smolyak.json'
+      detail = 'Smolyak and '
+    []
+    [clenshaw_curtis_sobol]
+      type = JSONDiff
+      input = sobol.i
+      allow_test_objects = true
+      cli_args = 'Samplers/sample/sparse_grid=clenshaw-curtis Outputs/file_base=clenshaw_curtis'
+      jsondiff = 'clenshaw_curtis.json'
+      detail = 'Clenshaw-Curtis methods.'
+    []
+  []
+[]

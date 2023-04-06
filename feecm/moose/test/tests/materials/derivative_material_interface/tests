@@ -1,0 +1,401 @@
+[Tests]
+  design = 'DerivativeMaterialInterface.md'
+  issues = '#4299 #6360 #5055 #6901 #5039 #14975 #15207 #18402'
+
+  [analytic_derivatives]
+    requirement = 'The system shall be capable of producing analytic derivatives of material '
+                  'properties:'
+
+    [property_names]
+      type = 'RunApp'
+      input = 'test.i'
+      recover = false
+
+      detail = 'defined by function expressions,'
+    []
+
+    [material_chaining]
+      type = CSVDiff
+      input = 'material_chaining.i'
+      csvdiff = 'material_chaining_out.csv'
+
+      detail = 'involving chain rules of material properties defined by function expressions, and'
+    []
+    [parsed_material]
+      type = 'Exodiff'
+      input = 'parsed_material.i'
+      exodiff = 'parsed_material_out.e'
+
+      detail = 'for the free energy Allen-Cahn Bulk material function.'
+    []
+  []
+
+  [ordering]
+    requirement = 'The system shall support late binding of derivative material properties:'
+    [construction]
+      type = 'Exodiff'
+      input = 'construction_order.i'
+      exodiff = 'construction_order_out.e'
+
+      detail = 'so that construction order does not influence the outcome of the tests, and'
+    []
+    [ad_construction]
+      type = 'Exodiff'
+      input = 'ad_construction_order.i'
+      exodiff = 'ad_construction_order_out.e'
+
+      detail = 'so that construction order does not influence the outcome of the tests when using '
+               'automatic differentiation, and'
+    []
+
+    [execution]
+      type = 'RunApp'
+      input = 'execution_order.i'
+      recover = false
+
+      detail = 'so that they may be retrieved before being declared.'
+    []
+  []
+
+  [new_getproperty_semantics]
+    type = 'Exodiff'
+    input = 'const.i'
+    exodiff = 'const_out.e'
+    recover = false
+
+    requirement = 'The system shall support supplying a constant literal in place of a property name '
+                  'for material property derivative consumers.'
+  []
+
+  [mutliblock]
+    # Test the default property behavior of DerivativeMaterialInterface
+    type = 'RunApp'
+    input = 'multiblock.i'
+
+    requirement = 'The system shall support optional coupling where materials that do not exist are '
+                  'returned as valid objects containing zero.'
+  []
+
+  [warn]
+    type = 'RunException'
+    input = 'warn.i'
+    expect_err = "The material property 'prop' does not exist."
+    recover = false
+
+    requirement = 'The system shall issue an error when required derivative materials that are '
+                  'retrieved are never declared.'
+  []
+
+  [bad_evaluation]
+    requirement = 'The system shall handle a bad evaluation by'
+    [nan]
+      type = 'RunApp'
+      input = 'bad_evaluation.i'
+      recover = false
+      detail = 'passing a silent nan.'
+    []
+    [warning]
+      type = 'RunApp'
+      input = 'bad_evaluation.i'
+      expect_out = 'In F: DerivativeParsedMaterial function evaluation encountered an error'
+      cli_args = 'Materials/F/evalerror_behavior=nan_warning'
+      recover = false
+      detail = 'throwing a warning and passing a silent nan.'
+      allow_warnings = true
+    []
+    [error]
+      type = 'RunException'
+      input = 'bad_evaluation.i'
+      expect_err = 'In F: DerivativeParsedMaterial function evaluation encountered an error'
+      cli_args = 'Materials/F/evalerror_behavior=error'
+      recover = false
+      detail = 'throwing an error.'
+    []
+    [exception]
+      type = 'RunApp'
+      input = 'bad_evaluation.i'
+      expect_out = 'Cutting timestep'
+      cli_args = 'Materials/F/evalerror_behavior=exception'
+      recover = false
+      detail = 'throwing an exception.'
+    []
+  []
+
+  [bad_evaluation_jit]
+    requirement = 'The system shall handle a bad evaluation when using JIT by'
+    [nan]
+      type = 'RunApp'
+      cli_args = '--no-trap-fpe Materials/F/enable_jit=true'
+      input = 'bad_evaluation.i'
+      recover = false
+      detail = 'passing a silent nan.'
+    []
+    [warning]
+      type = 'RunApp'
+      input = 'bad_evaluation.i'
+      expect_out = 'In F: DerivativeParsedMaterial function evaluation encountered an error'
+      cli_args = '--no-trap-fpe Materials/F/enable_jit=true Materials/F/evalerror_behavior=nan_warning'
+      recover = false
+      detail = 'throwing a warning and passing a silent nan.'
+      allow_warnings = true
+    []
+    [error]
+      type = 'RunException'
+      input = 'bad_evaluation.i'
+      expect_err = 'In F: DerivativeParsedMaterial function evaluation encountered an error'
+      cli_args = '--no-trap-fpe Materials/F/enable_jit=true Materials/F/evalerror_behavior=error'
+      recover = false
+      detail = 'throwing an error.'
+    []
+    [exception]
+      type = 'RunApp'
+      input = 'bad_evaluation.i'
+      expect_out = 'Cutting timestep'
+      cli_args = '--no-trap-fpe Materials/F/enable_jit=true Materials/F/evalerror_behavior=exception'
+      recover = false
+      detail = 'throwing an exception.'
+    []
+  []
+
+  [postprocessor_coupling]
+    requirement = 'The system shall be capable of coupling postprocessor values in'
+    [parsed_material]
+      type = 'Exodiff'
+      input = postprocessors.i
+      exodiff = 'postprocessors_out.e'
+      detail = 'ParsedMaterial'
+    []
+    [derivative_parsed_material]
+      type = 'Exodiff'
+      input = postprocessors.i
+      exodiff = 'postprocessors_out.e'
+      cli_args = 'Materials/pp/type=DerivativeParsedMaterial'
+      detail = 'DerivativeParsedMaterialParsedMaterial'
+    []
+    [ad_parsed_material]
+      type = 'Exodiff'
+      input = postprocessors.i
+      exodiff = 'postprocessors_out.e'
+      cli_args = 'Materials/pp/type=ADParsedMaterial'
+      detail = 'ADParsedMaterial'
+    []
+    [ad_derivative_parsed_material]
+      type = 'Exodiff'
+      input = postprocessors.i
+      exodiff = 'postprocessors_out.e'
+      cli_args = 'Materials/pp/type=ADDerivativeParsedMaterial'
+      detail = 'ADDerivativeParsedMaterial'
+    []
+  []
+
+  [ad_analytic_derivatives]
+    requirement = 'The system shall be capable of producing analytic derivatives of material '
+                  'properties using dual numbers:'
+
+    [jacobian]
+      type = 'PetscJacobianTester'
+      input = 'ad_parsed_material.i'
+      ratio_tol = 1e-8
+      difference_tol = 1e-7
+      run_sim = True
+      turn_off_exodus_output = False
+      detail = 'returning an exact jacobian.'
+    []
+    [derivative_jacobian]
+      type = 'PetscJacobianTester'
+      input = 'ad_derivative_parsed_material.i'
+      ratio_tol = 1e-8
+      difference_tol = 1e-7
+      run_sim = True
+      turn_off_exodus_output = False
+      detail = 'returning an exact jacobian in derivative materials.'
+    []
+
+    [property_names]
+      type = 'RunApp'
+      input = 'ad_test.i'
+      recover = false
+
+      detail = 'defined by function expressions,'
+    []
+
+    [material_chaining]
+      type = CSVDiff
+      input = 'ad_material_chaining.i'
+      csvdiff = 'ad_material_chaining_out.csv'
+
+      detail = 'involving chain rules of material properties defined by function expressions, and'
+    []
+  []
+
+  [ad_zero_derivatives]
+    type = Exodiff
+    input = 'ad_derivative_parsed_material_zero.i'
+    exodiff = 'ad_derivative_parsed_material_zero_out.e'
+    requirement = 'The system shall create AD material properties even if the derivatives are zero'
+  []
+
+  [ad_ordering]
+    requirement = 'The system shall support late binding of derivative material properties:'
+    [execution]
+      type = 'RunApp'
+      input = 'ad_execution_order.i'
+      recover = false
+
+      detail = 'so that they may be retrieved before being declared.'
+    []
+  []
+
+  [ad_new_getproperty_semantics]
+    type = 'Exodiff'
+    input = 'ad_const.i'
+    exodiff = 'ad_const_out.e'
+    recover = false
+
+    requirement = 'The system shall support supplying a constant literal in place of a property name '
+                  'for material property derivative consumers that require dual numbers.'
+  []
+
+  [ad_mutliblock]
+    # Test the default property behavior of DerivativeMaterialInterface
+    type = 'RunApp'
+    input = 'ad_multiblock.i'
+
+    requirement = 'The system shall support optional coupling where materials that do not exist are '
+                  'returned as valid objects containing zero, supporting dual numbers.'
+  []
+
+  [ad_warn]
+    type = 'RunException'
+    input = 'ad_warn.i'
+    expect_err = "The material property 'prop' does not exist."
+    recover = false
+
+    requirement = 'The system shall issue an error when required dual number derivative materials '
+                  'that are retrieved are never declared.'
+  []
+
+  [ad_bad_evaluation]
+    requirement = 'The system shall handle a bad evaluation using dual numbers by'
+    [nan]
+      type = 'RunApp'
+      input = 'ad_bad_evaluation.i'
+      cli_args = '--no-trap-fpe'
+      recover = false
+      detail = 'passing a silent nan.'
+    []
+    [warning]
+      type = 'RunApp'
+      input = 'ad_bad_evaluation.i'
+      expect_out = 'In F: DerivativeParsedMaterial function evaluation encountered an error'
+      cli_args = '--no-trap-fpe Materials/F/evalerror_behavior=nan_warning'
+      recover = false
+      detail = 'throwing a warning and passing a silent nan.'
+      allow_warnings = true
+    []
+    [error]
+      type = 'RunException'
+      input = 'ad_bad_evaluation.i'
+      expect_err = 'In F: DerivativeParsedMaterial function evaluation encountered an error'
+      cli_args = '--no-trap-fpe Materials/F/evalerror_behavior=error'
+      recover = false
+      detail = 'throwing an error.'
+    []
+    [exception]
+      type = 'RunApp'
+      input = 'ad_bad_evaluation.i'
+      expect_out = 'Cutting timestep'
+      cli_args = '--no-trap-fpe Materials/F/evalerror_behavior=exception'
+      recover = false
+      detail = 'throwing an exception.'
+    []
+  []
+
+  [additional_derivatives]
+    requirement = "The system shall allow users to request derivatives with respect to function "
+                  "symbols other than MOOSE variables "
+    [mat_props]
+      type = 'Exodiff'
+      input = 'additional_derivatives.i'
+      exodiff = 'additional_derivatives_out.e'
+      detail = "such as derivatives w.r.t. material properties"
+    []
+    [error_unknown]
+      type = 'RunException'
+      input = 'additional_derivatives.i'
+      expect_err = "Invalid symbol name 'unknown'."
+      cli_args = "Materials/term/additional_derivative_symbols='unknown'"
+      detail = "and error out if derivatives w.r.t unknown symbols are requested"
+    []
+    [error_variable]
+      type = 'RunException'
+      input = 'additional_derivatives.i'
+      expect_err = "Symbol name 'a' is a coupled variable. Derivatives w.r.t. coupled variables are "
+                   "always taken and they must not be specified again."
+      cli_args = "Materials/term/additional_derivative_symbols='a'"
+      detail = "and error out if derivatives MOOSE variables are requested in "
+               "additional_derivative_symbols (as they are requested by default)"
+    []
+    [error_duplicate]
+      type = 'RunException'
+      input = 'additional_derivatives.i'
+      expect_err = "Symbol name 'e' was given more than once."
+      cli_args = "Materials/term/additional_derivative_symbols='e d e'"
+      detail = "and error out if any symbols are supplied more than once"
+    []
+  []
+
+  [required_property]
+    requirement = 'The system shall require explicitly coupled properties to exist'
+    issues = '#18917'
+    [parsed_material]
+      type = RunException
+      input = required_property.i
+      cli_args = 'Materials/prime/type=ParsedMaterial Materials/prime/material_property_names=Q'
+      expect_err = 'Material property \'Q\', requested by \'prime\' is not defined on block 0'
+      detail = 'for regular properties in ParsedMaterials'
+    []
+    [parsed_material_requested_non_existing_derivative]
+      type = RunException
+      input = required_property.i
+      cli_args = 'Materials/prime/type=ParsedMaterial '
+                 'Materials/prime/material_property_names="Q:=D[S,c,c]"'
+      expect_err = 'Material property \'d\^2S/dc\^2\', requested by \'prime\' is not defined on '
+                   'block 0'
+      detail = 'and error out for non-existing for explicitly requested derivatives in '
+               'ParsedMaterials'
+    []
+    [parsed_material_requested_existing_derivative]
+      type = RunApp
+      input = required_property.i
+      cli_args = 'Materials/prime/type=ParsedMaterial '
+                 'Materials/prime/material_property_names="Q:=D[S,c]"'
+      detail = 'for explicitly requested derivatives in ParsedMaterials'
+    []
+    [parsed_material_requested_optimized_out_derivative]
+      type = RunException
+      input = required_property.i
+      cli_args = 'Materials/prime/type=ParsedMaterial Materials/second/function=1 '
+                 'Materials/prime/material_property_names="Q:=D[S,c]"'
+      expect_err = 'Material property \'dS/dc\', requested by \'prime\' is not defined on block 0'
+      detail = 'for explicitly requested derivatives but optimized out derivatives in '
+               'ParsedMaterials'
+    []
+    [allow_override]
+      type = RunApp
+      input = required_property.i
+      cli_args = 'Materials/prime/type=ParsedMaterial Materials/second/function=1 '
+                 'Materials/prime/error_on_missing_material_properties=false '
+                 'Materials/prime/material_property_names="Q:=D[S,c]"'
+      detail = 'but provide for a user override to default non-existing properties to zero'
+    []
+    [derivative_parsed_material]
+      type = RunException
+      input = required_property.i
+      cli_args = 'Materials/prime/type=DerivativeParsedMaterial '
+                 'Materials/prime/material_property_names=Q'
+      expect_err = 'Material property \'Q\', requested by \'prime\' is not defined on block 0'
+      detail = 'in DerivativeParsedMaterials'
+    []
+  []
+[]

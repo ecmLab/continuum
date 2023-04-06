@@ -1,0 +1,29 @@
+[Tests]
+  issues = '#10950'
+  design = 'Constraints/index.md'
+  [ranfs-ping-pong]
+    type = RunException
+    expect_err = 'Solve failed and timestep already at or below dtmin, cannot continue!'
+    expect_out = 'Time Step 12'
+    input = ranfs-ping-pong.i
+    requirement = 'The node-face discretization with a RANFS formulation for frictionless mechanical contact shall be susceptible to ping-ponging, specifically in this case to a secondary node oscillating back and forth between different primary faces'
+    heavy = True
+  []
+  [kinematic-ping-pong]
+    type = RunException
+    expect_err = 'Solve failed and timestep already at or below dtmin, cannot continue!'
+    expect_out = 'Time Step 12'
+    input = kinematic-ping-pong.i
+    requirement = 'The node-face discretization with a kinematic formulation for frictionless mechanical contact shall be susceptible to ping-ponging, specifically in this case to a secondary node oscillating back and forth between different primary faces'
+    heavy = True
+  []
+  [mortar-no-ping-pong_weighted]
+    type = 'Exodiff'
+    input = 'mortar-no-ping-pong_weighted.i'
+    exodiff = 'mortar-no-ping-pong_weighted_exo.e'
+    requirement = 'A variational consistent mortar formulation with dual bases for frictionless mechanical contact shall not show any ping-ponging behavior'
+    heavy = True
+    rel_err = 6e-5
+    abs_zero = 5e-9
+  []
+[]

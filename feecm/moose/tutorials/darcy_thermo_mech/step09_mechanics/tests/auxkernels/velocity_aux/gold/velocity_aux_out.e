@@ -1,0 +1,1 @@
+../../../../../step08_postprocessors/tests/auxkernels/velocity_aux/gold/velocity_aux_out.e

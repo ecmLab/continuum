@@ -1,0 +1,14 @@
+[Tests]
+  [phy:standalone]
+    type = Exodiff
+    input = 'phy.standalone.i'
+    exodiff = 'phy.standalone_out.e'
+  []
+
+  [err:2d_mesh]
+    type = RunException
+    input = 'phy.standalone.i'
+    cli_args = 'Components/blk/file=square.e'
+    expect_err = "blk: File '(.+)square\.e' does not contain a 3D mesh\."
+  []
+[]

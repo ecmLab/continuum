@@ -1,0 +1,34 @@
+Content:
+    - framework/doc/content
+    - modules/stochastic_tools/doc/content
+
+Renderer:
+    type: MooseDocs.base.MaterializeRenderer
+
+Extensions:
+    MooseDocs.extensions.navigation:
+        name: MOOSE Stochastic Tools Module
+        repo: https://github.com/idaholab/moose
+        home: /modules/stochastic_tools/index.md
+    MooseDocs.extensions.appsyntax:
+        executable: ${MOOSE_DIR}/modules/stochastic_tools
+        remove:
+            framework: !include framework/doc/remove.yml
+            stochastic_tools: !include modules/stochastic_tools/doc/remove.yml
+        unregister:
+            framework: !include framework/doc/unregister.yml
+        includes:
+            - framework/include
+            - modules/stochastic_tools/include
+    MooseDocs.extensions.common:
+        shortcuts: !include framework/doc/globals.yml
+    MooseDocs.extensions.acronym:
+        acronyms: !include framework/doc/acronyms.yml
+    MooseDocs.extensions.template:
+        active: True
+    MooseDocs.extensions.sqa:
+        active: True
+        reports: !include modules/stochastic_tools/doc/sqa_reports.yml
+        categories:
+            framework: !include framework/doc/sqa_framework.yml
+            stochastic_tools: !include modules/stochastic_tools/doc/sqa_stochastic_tools.yml

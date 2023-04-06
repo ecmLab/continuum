@@ -1,0 +1,28 @@
+[Tests]
+  design = 'BlockRestrictable.md'
+  issues = '#2411'
+
+  [errors]
+    requirement = "The system shall error if an object restricted to subdomains is created without "
+                  "valid data"
+
+    [fe_problem_null]
+      type = 'RunException'
+      input = 'check_error.i'
+      cli_args = "Kernels/diff/test=fe_problem_null"
+      expect_err = "Parameter _fe_problem_base is NULL"
+
+      detail = "regarding the problem being solved or"
+
+    []
+
+    [mesh_null]
+      type = 'RunException'
+      input = 'check_error.i'
+      cli_args = "Kernels/diff/test=mesh_null"
+      expect_err = "Parameter _fe_problem_base is NULL"
+
+      detail = "information regarding the finite element mesh."
+    []
+  []
+[]

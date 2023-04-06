@@ -1,0 +1,98 @@
+[Tests]
+  [./test]
+    type = 'Exodiff'
+    input = 'file_mesh_generator.i'
+    cli_args = '--mesh-only'
+    exodiff = 'file_mesh_generator_in.e'
+    mesh_mode = 'REPLICATED'
+    recover = false
+
+    requirement = 'The system shall have the ability to generate a mesh by reading it from a file.'
+    design = 'meshgenerators/FileMeshGenerator.md'
+    issues = '#11640'
+  [../]
+  [./extra_integer_test]
+    type = 'Exodiff'
+    input = 'exodus_file_mesh_with_id.i'
+    exodiff = 'exodus_file_mesh_with_id_out.e'
+    recover = false
+
+    requirement = 'The system shall have the ability to assign element extra integers with elemental variables in an Exodus mesh file.'
+    design = 'meshgenerators/FileMeshGenerator.md'
+    issues = '#14916'
+  [../]
+
+  [./exodus_iga_test]
+    type = XMLDiff
+    input = '2d_diffusion_iga.i'
+    expect_out = 'Solve Converged'
+    recover = false
+    exodus_version = '>=8.0'
+    # Set to >=9.0 once #21449 is resolved
+    vtk_version = '>=9.1'
+    max_parallel = 1
+    vtk = true
+    xmldiff = '2d_diffusion_iga_out_002.pvtu 2d_diffusion_iga_out_002_0.vtu'
+
+    requirement = 'The system shall have the ability to read IsoGeometric Analysis meshes with rational bases in ExodusII format.'
+    design = 'meshgenerators/FileMeshGenerator.md'
+    issues = '#18768'
+  []
+
+  [./exodus_iga_nosplines_test]
+    type = XMLDiff
+    input = '2d_diffusion_iga_nosplines.i'
+    expect_out = 'Solve Converged'
+    recover = false
+    exodus_version = '>=8.0'
+    # Set to >=9.0 once #21449 is resolved
+    vtk_version = '>=9.1'
+    max_parallel = 1
+    vtk = true
+    xmldiff = '2d_diffusion_iga_nosplines_out_002.pvtu 2d_diffusion_iga_nosplines_out_002_0.vtu'
+
+    requirement = 'The system shall have the ability to remove spline nodes from IsoGeometric Analysis meshes.'
+    design = 'meshgenerators/FileMeshGenerator.md'
+    issues = '#18768'
+  []
+
+  [./exodus_pseudoiga_test]
+    type = XMLDiff
+    input = '3d_steady_diffusion_iga.i'
+    expect_out = 'Solve Converged'
+    recover = false
+    exodus_version = '>=8.0'
+    # Set to >=9.0 once #21449 is resolved
+    vtk_version = '>=9.1'
+    max_parallel = 1
+    vtk = true
+    xmldiff = '3d_steady_diffusion_iga_out_001.pvtu 3d_steady_diffusion_iga_out_001_0.vtu'
+
+    requirement = 'The system shall have the ability to read IsoGeometric Analysis meshes with 3D elements and sidesets in ExodusII format.'
+    design = 'meshgenerators/FileMeshGenerator.md'
+    issues = '#18768'
+  []
+
+  [./pre_checkpoint_load_test]
+    type = 'RunApp'
+    input = '2d_diffusion_test.i'
+    expect_out = 'Solve Converged'
+    cli_args = 'Outputs/checkpoint=true'
+    recover = false
+    requirement = 'The system shall have the ability to output checkpoint files along with the mesh meta data.'
+    design = 'meshgenerators/FileMeshGenerator.md'
+    issues = '#16192'
+  []
+
+  [./checkpoint_load_test]
+    type = 'Exodiff'
+    input = '2d_diffusion_test.i'
+    exodiff = '2d_diffusion_test_out.e'
+    cli_args = 'Mesh/inactive=square Mesh/fmg/type=FileMeshGenerator Mesh/fmg/file=2d_diffusion_test_out_cp/0001_mesh.cpr'
+    recover = false
+    prereq = pre_checkpoint_load_test
+    requirement = 'The system shall have the ability to load the mesh from checkpoint files.'
+    design = 'meshgenerators/FileMeshGenerator.md'
+    issues = '#16192'
+  []
+[]

@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+import sys, os
+import signal
+
+# Without this, CTRL-C in the terminal will cause peacock to abort with
+# an annoying dialog box on Mac.
+# With this it will just quit immediately (and cleanly).
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+def main(args):
+    # these might not work until the path is set
+    from peacock.CheckRequirements import has_requirements
+    if has_requirements():
+        from PyQt5.QtWidgets import QApplication
+        from peacock.PeacockApp import PeacockApp
+        qapp = QApplication(args)
+        app = PeacockApp(args[1:], qapp)
+        return app.run(qapp)
+
+def run_peacock():
+    peacock_dir = os.path.dirname(os.path.realpath(__file__))
+    moose_dir = os.environ.get("MOOSE_DIR", None)
+    chigger_dir = os.path.dirname(peacock_dir)
+    if moose_dir == None:
+        moose_dir = os.path.join(os.path.dirname(chigger_dir), "moose")
+    sys.path.insert(1, os.path.join(moose_dir, "python"))
+    sys.path.insert(2, chigger_dir)
+    sys.exit(main(sys.argv))
+
+if __name__ == '__main__':
+
+    if sys.version_info < (3, 6):
+        print('"peacock" requires python version 3.6 or greater, version {}.{} is being used.' \
+              .format(sys.version_info[0], sys.version_info[1]))
+        sys.exit(1)
+    run_peacock()

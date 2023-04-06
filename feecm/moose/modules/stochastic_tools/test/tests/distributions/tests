@@ -1,0 +1,179 @@
+[Tests]
+  issues = '#12688'
+  [distributions]
+    requirement = 'The system shall provide distribution function including'
+    design = 'Uniform.md Weibull.md Normal.md TruncatedNormal.md '
+             'Gamma.md Beta.md FDistribution.md StudentT.md '
+             'JohnsonSB.md Logistic.md'
+    issues = '#12720'
+
+    [uniform]
+      type = CSVDiff
+      input = uniform.i
+      csvdiff = 'uniform_out.csv'
+      allow_test_objects = true
+
+      detail = 'uniform,'
+    []
+    [weibull]
+      type = CSVDiff
+      input = weibull.i
+      csvdiff = 'weibull_out.csv'
+      allow_test_objects = true
+
+      detail = 'Weibull (3 parameter),'
+    []
+
+    [kernel1d_gaussian]
+      type = CSVDiff
+      input = kernel_density_1d_gaussian.i
+      csvdiff = 'kernel_density_1d_gaussian_out.csv'
+      allow_test_objects = true
+      abs_zero = 5e-7
+      rel_err = 1e-3
+
+      detail = 'Kernel Density 1D with a Gaussian kernel and data file as input,'
+    []
+
+    [kernel1d_uniform]
+      type = CSVDiff
+      input = kernel_density_1d_uniform.i
+      csvdiff = 'kernel_density_1d_uniform_out.csv'
+      allow_test_objects = true
+      abs_zero = 5e-7
+      rel_err = 1e-3
+
+      detail = 'Kernel Density 1D with a Uniform kernel and data file as input,'
+    []
+
+    [kernel1d_datvec]
+      type = CSVDiff
+      input = kernel_density_1d_datvec.i
+      csvdiff = 'kernel_density_1d_datvec_out.csv'
+      allow_test_objects = true
+      abs_zero = 5e-7
+      rel_err = 1e-3
+
+      detail = 'Kernel Density 1D with a Gaussian kernel and data vector as input,'
+    []
+
+    [kernel1d_userbw]
+      type = CSVDiff
+      input = kernel_density_1d_userbw.i
+      csvdiff = 'kernel_density_1d_userbw_out.csv'
+      allow_test_objects = true
+      abs_zero = 5e-7
+      rel_err = 1e-3
+
+      detail = 'Kernel Density 1D with a Gaussian kernel and user defined bandwidth,'
+    []
+
+    [kernel1d_sdbw]
+      type = CSVDiff
+      input = kernel_density_1d_sdbw.i
+      csvdiff = 'kernel_density_1d_sdbw_out.csv'
+      allow_test_objects = true
+      abs_zero = 5e-7
+      rel_err = 1e-3
+
+      detail = 'Kernel Density 1D with a Gaussian kernel and standard deviation as bandwidth,'
+    []
+
+    [normal]
+      type = CSVDiff
+      input = normal.i
+      csvdiff = 'normal_out.csv'
+      allow_test_objects = true
+
+      detail = 'normal,'
+    []
+    [truncated_normal]
+      type = CSVDiff
+      input = truncated_normal.i
+      csvdiff = 'truncated_normal_out.csv'
+      allow_test_objects = true
+
+      detail = 'truncated normal,'
+    []
+    [lognormal]
+      type = CSVDiff
+      input = lognormal.i
+      csvdiff = 'lognormal_out.csv'
+      allow_test_objects = true
+
+      detail = 'lognormal,'
+    []
+
+    [gamma]
+      type = CSVDiff
+      input = gamma.i
+      csvdiff = 'gamma_out.csv'
+      allow_test_objects = true
+
+      detail = 'gamma,'
+    []
+    [beta]
+      type = CSVDiff
+      input = beta.i
+      csvdiff = 'beta_out.csv'
+      allow_test_objects = true
+
+      detail = 'beta,'
+    []
+    [fdist]
+      type = CSVDiff
+      input = fdist.i
+      csvdiff = 'fdist_out.csv'
+      allow_test_objects = true
+
+      detail = 'F,'
+    []
+    [studentt]
+      type = CSVDiff
+      input = studentt.i
+      csvdiff = 'studentt_out.csv'
+      allow_test_objects = true
+
+      detail = 'student t,'
+    []
+
+    [johnsonsb]
+      type = CSVDiff
+      input = johnsonsb.i
+      csvdiff = 'johnsonsb_out.csv'
+      allow_test_objects = true
+
+      detail = 'Johnson Special Bounded (SB), and'
+    []
+    [logistic]
+      type = CSVDiff
+      input = logistic.i
+      csvdiff = 'logistic_out.csv'
+      allow_test_objects = true
+
+      detail = 'logistic distributions.'
+    []
+  []
+
+  [normal_direct]
+    type = CSVDiff
+    input = normal_direct.i
+    csvdiff = 'normal_direct_out.csv'
+    allow_test_objects = true
+    requirement = 'The system shall provide a normal distribution with the ability to directly call '
+                  'methods with distribution inputs.'
+    design = 'Normal.md'
+    issues = '#12720'
+  []
+  [normal_direct_type_error]
+    type = RunException
+    input = normal_direct_type_error.i
+    allow_test_objects = true
+    expect_err = "The 'cdf' object failed to retrieve 'this_is_the_wrong_type' distribution with the "
+                 "desired type."
+    requirement = 'The system shall produce an error if a distribution is retrieved with the '
+                  'differing type than supplied.'
+    design = 'Normal.md'
+    issues = '#12720'
+  []
+[]

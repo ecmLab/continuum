@@ -1,0 +1,7 @@
+[Tests]
+  [test]
+    type = Exodiff
+    input = 'phy.parent.i'
+    exodiff = 'phy.parent_out.e phy.parent_out_thm0.e'
+  []
+[]

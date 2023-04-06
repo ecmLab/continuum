@@ -1,0 +1,16 @@
+[Tests]
+  design = PolynomialRegressionTrainer.md
+  issues = '#15361'
+
+  [errors]
+    requirement = "The system shall throw an error when "
+
+    [wrong_sampler]
+      type = RunException
+      input = error.i
+      allow_test_objects = true
+      expect_err = "Reporter value values/g_values of size [0-9]{3,4} does not match sampler size \([0-9]{2,3}\)."
+      detail = "the number of samples does not match the number of results."
+    []
+  []
+[]
