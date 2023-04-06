@@ -1,0 +1,44 @@
+[Tests]
+  design = 'interfaces/TaggingInterface.md'
+
+  [tagged_residual]
+    issues = '#9669'
+    requirement = 'The system shall provide a capability to solve a problem iteratively with a tagged residual vector for'
+
+    [diffusion]
+      type = 'Exodiff'
+      input = '2d_diffusion_fixed_point.i'
+      exodiff = '2d_diffusion_fixed_point_out.e'
+
+      detail = "linear and"
+    []
+    [nonlinear]
+      type = 'Exodiff'
+      input = 'nonlinear_fixed_point.i'
+      exodiff = 'nonlinear_fixed_point_out.e'
+
+      detail = "nonlinear problems."
+      rel_err = 7e-6
+    []
+  []
+
+  [tagged_solution_vector]
+    issues = '#17586'
+    requirement = 'The system shall provide a capability to solve a problem iteratively with a tagged solution vector being coupled in '
+
+    [var]
+      type = 'Exodiff'
+      input = '2d_diffusion_fixed_point_toggle.i'
+      exodiff = '2d_diffusion_fixed_point_toggle_out.e'
+
+      detail = "kernels and/or"
+    []
+    [material]
+      type = 'Exodiff'
+      input = '2d_diffusion_fixed_point_toggle_mat.i'
+      exodiff = '2d_diffusion_fixed_point_toggle_mat_out.e'
+
+      detail = "materials."
+    []
+  []
+[]

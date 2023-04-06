@@ -1,0 +1,1 @@
+../../../../../step01_diffusion/tests/kernels/simple_diffusion/gold/simple_diffusion_out.e

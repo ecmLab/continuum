@@ -1,0 +1,56 @@
+[Tests]
+  design = 'SimplePredictor.md'
+  issues = '#2282 #6506 #16796'
+
+  [test]
+    type = 'CSVDiff'
+    input = 'predictor_test.i'
+    csvdiff = 'predictor_test_out.csv'
+
+    requirement = "The system shall include a means for predicting future solution based on previous "
+                  "solutions."
+  []
+  [output]
+    type = 'RunApp'
+    input = 'predictor_reference_residual_test.i'
+    expect_out = 'Applying predictor with scale factor = 1e-10'
+
+    requirement = "The system shall include a means for predicting future solution based on previous "
+                  "solutions and print the scale factor to the output stream."
+  []
+
+  [skip]
+    requirement = "The system shall support the ability to skip performing solution predictions"
+    [test_skip]
+      type = 'CSVDiff'
+      input = 'predictor_skip_test.i'
+      csvdiff = 'predictor_skip_test_out.csv'
+
+      detail = "using solution times or"
+    []
+    [test_skip_old]
+      type = 'CSVDiff'
+      input = 'predictor_skip_old_test.i'
+      csvdiff = 'predictor_skip_old_test_out.csv'
+
+      detail = "previous solution times."
+    []
+  []
+
+  [skip_after_failed_timestep]
+    requirement = "The system shall support the ability to skip a prediction after a failed time step"
+    input = 'predictor_test_skip_after_failed_tstep.i'
+    type = 'CSVDiff'
+    csvdiff = 'predictor_test_skip_after_failed_tstep_out.csv'
+  []
+
+  [timestep_tolerance]
+    requirement = "The system shall support the ability to use the Execitioner timestep tolerance to "
+                  "determine if a prediction should be peformed."
+    type = 'CSVDiff'
+    input = 'predictor_skip_test.i'
+    csvdiff = 'predictor_skip_test_out.csv'  # use gold file from above
+    cli_args = 'Executioner/Predictor/skip_times=0.9999999999 Executioner/timestep_tolerance=1e-9'
+    prereq = 'skip/test_skip'
+  []
+[]

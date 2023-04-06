@@ -1,0 +1,25 @@
+[Tests]
+  design = 'GlobalStrain/index.md'
+  issues = '#11314'
+  [./strain]
+    type = RunApp
+    input = 'global_strain_pfm.i'
+    # The actual input file solves on a 50x50 mesh.  For checking the
+    # input we can run on something much smaller...
+    cli_args = 'Mesh/gen/nx=2 Mesh/gen/ny=2'
+    check_input = True
+    fparser_jit = True
+    requirement = "This shall correctly compute the deformation behavior using
+                   the globalstrain system for a multiphysics problem in 2D."
+  [../]
+  [./strain_3D]
+    type = RunApp
+    input = 'global_strain_pfm_3D.i'
+    # Checking input on smaller mesh
+    cli_args = 'Mesh/gen/nx=2 Mesh/gen/ny=2 Mesh/gen/nz=2'
+    check_input = True
+    fparser_jit = True
+    requirement = "This shall correctly compute the deformation behavior using
+                   the globalstrain system for a multiphysics problem in 3D."
+  [../]
+[]

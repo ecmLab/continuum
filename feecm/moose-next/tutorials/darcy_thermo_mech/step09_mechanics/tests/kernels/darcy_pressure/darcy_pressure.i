@@ -1,0 +1,1 @@
+../../../../step08_postprocessors/tests/kernels/darcy_pressure/darcy_pressure.i

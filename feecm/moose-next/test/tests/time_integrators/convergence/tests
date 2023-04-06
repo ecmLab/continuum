@@ -1,0 +1,287 @@
+[Tests]
+  design = 'TimeIntegrator/index.md'
+  issues = '#1929'
+
+  [explicit_heun]
+    requirement = "The system shall include explicit time integration using the Heun method and converge at the theoretical rate with"
+
+    [level0]
+      type = Exodiff
+      input = 'explicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=Heun Executioner/dt=0.00390625 Outputs/file_base=heun_0'
+      exodiff = 'heun_0.e'
+
+      detail = "a full timestep,"
+    []
+
+    [level1]
+      type = Exodiff
+      input = 'explicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=Heun Executioner/dt=0.001953125 Outputs/file_base=heun_1'
+      exodiff = 'heun_1.e'
+
+      detail = "a half timestep, and"
+    []
+
+    [level2]
+      type = Exodiff
+      input = 'explicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=Heun Executioner/dt=0.0009765625 Outputs/file_base=heun_2'
+      exodiff = 'heun_2.e'
+
+      detail = "a quarter timestep."
+    []
+  []
+
+  [explicit_ralston]
+    requirement = "The system shall include explicit time integration using the Ralston method and converge at the theoretical rate with"
+
+    [level0]
+      type = Exodiff
+      input = 'explicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=Ralston Executioner/dt=0.00390625 Outputs/file_base=ralston_0'
+      exodiff = 'ralston_0.e'
+
+      detail = "a full timestep,"
+    []
+
+    [level1]
+      type = Exodiff
+      input = 'explicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=Ralston Executioner/dt=0.001953125 Outputs/file_base=ralston_1'
+      exodiff = 'ralston_1.e'
+
+      detail = "a half timestep, and"
+    []
+
+    [level2]
+      type = Exodiff
+      input = 'explicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=Ralston Executioner/dt=0.0009765625 Outputs/file_base=ralston_2'
+      exodiff = 'ralston_2.e'
+
+      detail = "a quarter timestep."
+    []
+  []
+
+  [explicit_midpoint]
+    requirement = "The system shall include explicit time integration using the midpoint method and converge at the theoretical rate with"
+
+    [level0]
+      type = Exodiff
+      input = 'explicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=ExplicitMidpoint Executioner/dt=0.00390625 Outputs/file_base=explicitmidpoint_0'
+      exodiff = 'explicitmidpoint_0.e'
+
+      detail = "a full timestep,"
+    []
+
+    [level1]
+      type = Exodiff
+      input = 'explicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=ExplicitMidpoint Executioner/dt=0.001953125 Outputs/file_base=explicitmidpoint_1'
+      exodiff = 'explicitmidpoint_1.e'
+
+      detail = "a half timestep, and"
+    []
+
+    [level2]
+      type = Exodiff
+      input = 'explicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=ExplicitMidpoint Executioner/dt=0.0009765625 Outputs/file_base=explicitmidpoint_2'
+      exodiff = 'explicitmidpoint_2.e'
+
+      detail = "a quarter timestep."
+    []
+  []
+
+  [explicit_euler]
+    requirement = "The system shall include explicit time integration using the Euler method and converge at the theoretical rate with"
+
+    [level0]
+      type = Exodiff
+      input = 'explicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=ExplicitEuler Executioner/dt=0.00390625 Outputs/file_base=expliciteuler_0'
+      exodiff = 'expliciteuler_0.e'
+
+      detail = "a full timestep,"
+    []
+
+    [level1]
+      type = Exodiff
+      input = 'explicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=ExplicitEuler Executioner/dt=0.001953125 Outputs/file_base=expliciteuler_1'
+      exodiff = 'expliciteuler_1.e'
+
+      detail = "a half timestep, and"
+    []
+
+    [level2]
+      type = Exodiff
+      input = 'explicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=ExplicitEuler Executioner/dt=0.0009765625 Outputs/file_base=expliciteuler_2'
+      exodiff = 'expliciteuler_2.e'
+
+      detail = "a quarter timestep."
+    []
+  []
+
+  [implicit_midpoint]
+    requirement = "The system shall include implicit time integration using the Midpoint method and converge at the theoretical rate with"
+
+    [level0]
+      type = Exodiff
+      input = 'implicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=ImplicitMidpoint Executioner/dt=0.0625 Outputs/file_base=implicitmidpoint_0'
+      exodiff = 'implicitmidpoint_0.e'
+
+      detail = "a full timestep,"
+    []
+
+    [level1]
+      type = Exodiff
+      input = 'implicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=ImplicitMidpoint Executioner/dt=0.03125 Outputs/file_base=implicitmidpoint_1'
+      exodiff = 'implicitmidpoint_1.e'
+
+      detail = "a half timestep, and"
+    []
+
+    [level2]
+      type = Exodiff
+      input = 'implicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=ImplicitMidpoint Executioner/dt=0.015625  Outputs/file_base=implicitmidpoint_2'
+      exodiff = 'implicitmidpoint_2.e'
+
+      detail = "a quarter timestep."
+    []
+  []
+
+  [implicit_lstabledirk3]
+    requirement = "The system shall include implicit time integration using the L-stable DIRK3 method and converge at the theoretical rate with"
+
+    [level0]
+      type = Exodiff
+      input = 'implicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=LStableDirk3 Executioner/dt=0.0625 Outputs/file_base=lstabledirk3_0'
+      exodiff = 'lstabledirk3_0.e'
+
+      detail = "a full timestep,"
+    []
+
+    [level1]
+      type = Exodiff
+      input = 'implicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=LStableDirk3 Executioner/dt=0.03125 Outputs/file_base=lstabledirk3_1'
+      exodiff = 'lstabledirk3_1.e'
+
+      detail = "a half timestep, and"
+    []
+
+    [level2]
+      type = Exodiff
+      input = 'implicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=LStableDirk3 Executioner/dt=0.015625 Outputs/file_base=lstabledirk3_2'
+      exodiff = 'lstabledirk3_2.e'
+
+      detail = "a quarter timestep."
+    []
+  []
+
+  [implicit_lstabledirk4]
+    requirement = "The system shall include implicit time integration using the L-stable DIRK4 method and converge at the theoretical rate with"
+
+    [level0]
+      type = Exodiff
+      input = 'implicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=LStableDirk4 Executioner/dt=0.5 Outputs/file_base=lstabledirk4_0'
+      exodiff = 'lstabledirk4_0.e'
+
+      detail = "a full timestep,"
+    []
+
+    [level1]
+      type = Exodiff
+      input = 'implicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=LStableDirk4 Executioner/dt=0.25 Outputs/file_base=lstabledirk4_1'
+      exodiff = 'lstabledirk4_1.e'
+
+      detail = "a half timestep, and"
+    []
+
+    [level2]
+      type = Exodiff
+      input = 'implicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=LStableDirk4 Executioner/dt=0.125 Outputs/file_base=lstabledirk4_2'
+      exodiff = 'lstabledirk4_2.e'
+
+      detail = "a quarter timestep."
+    []
+  []
+
+  [implicit_astabledirk4]
+    requirement = "The system shall include implicit time integration using the A-stable DIRK4 method and converge at the theoretical rate with"
+
+    [level0]
+      type = Exodiff
+      input = 'implicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=AStableDirk4 Executioner/dt=0.0625 Executioner/TimeIntegrator/safe_start=False Outputs/file_base=astabledirk4_0'
+      exodiff = 'astabledirk4_0.e'
+
+      detail = "a full timestep,"
+    []
+
+    [level1]
+      type = Exodiff
+      input = 'implicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=AStableDirk4 Executioner/dt=0.03125 Executioner/TimeIntegrator/safe_start=False Outputs/file_base=astabledirk4_1'
+      exodiff = 'astabledirk4_1.e'
+
+      detail = "a half timestep, and"
+    []
+
+    [level2]
+      type = Exodiff
+      input = 'implicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=AStableDirk4 Executioner/dt=0.015625 Executioner/TimeIntegrator/safe_start=False Outputs/file_base=astabledirk4_2'
+      exodiff = 'astabledirk4_2.e'
+
+      detail = "a quarter timestep."
+    []
+  []
+
+  [implicit_astabledirk4_bootstrap]
+    # Test the AStableDirk4 time integration method "bootstrapped" with LStableDirk4.  This is the
+    # default behavior for the AStableDirk4 TimeIntegrator.  We use relatively large timesteps here,
+    # since there is not much difference in the final results of AStableDirk4 and bootstrapped
+    # AStableDirk4 as dt->0.
+    requirement = "The system shall include implicit time integration using the A-stable DIRK4 method (bootstrapped with L-stable DIRK) and converge at the theoretical rate with"
+
+    [level0]
+      type = Exodiff
+      input = 'implicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=AStableDirk4 Executioner/dt=0.5 Outputs/file_base=astabledirk4_bootstrap_0'
+      exodiff = 'astabledirk4_bootstrap_0.e'
+
+      detail = "a full timestep,"
+    []
+
+    [level1]
+      type = Exodiff
+      input = 'implicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=AStableDirk4 Executioner/dt=0.25 Outputs/file_base=astabledirk4_bootstrap_1'
+      exodiff = 'astabledirk4_bootstrap_1.e'
+
+      detail = "a half timestep, and"
+    []
+
+    [level2]
+      type = Exodiff
+      input = 'implicit_convergence.i'
+      cli_args = 'Executioner/TimeIntegrator/type=AStableDirk4 Executioner/dt=0.125 Outputs/file_base=astabledirk4_bootstrap_2'
+      exodiff = 'astabledirk4_bootstrap_2.e'
+
+      detail = "a quarter timestep."
+    []
+  []
+[]

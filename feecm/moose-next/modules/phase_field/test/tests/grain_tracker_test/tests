@@ -1,0 +1,406 @@
+[Tests]
+  [./test_nodal]
+    type = 'Exodiff'
+    input = 'grain_tracker_nodal.i'
+    exodiff = 'grain_tracker_nodal_out.e'
+
+    # integer based maps can shift slightly in parallel
+    max_parallel = 1
+    valgrind = 'HEAVY'
+    max_time = 500
+
+    requirement = 'The system shall properly create and track grains when using the Nodal mode of the GrainTracker algorithm.'
+    issues = '#4765'
+    design = 'GrainTracker.md'
+  [../]
+
+  [./test_elemental]
+    type = 'Exodiff'
+    input = 'grain_tracker_test_elemental.i'
+    exodiff = 'grain_tracker_test_elemental_out.e-s002'
+    method = '!DBG' # slow test
+    valgrind = 'HEAVY'
+    max_time = 500
+
+    requirement = 'The system shall properly create and track grains when using the Elemental mode of the GrainTracker algorithm.'
+    issues = '#4881'
+    design = 'GrainTracker.md'
+  [../]
+
+  [./test_advanced_op_assignment]
+    type = 'CSVDiff'
+    input = 'grain_tracker_advanced_op.i'
+    csvdiff = 'grain_tracker_advanced_op_out.csv'
+    recover = false # No solve
+    max_parallel = 1
+
+    requirement = "The PolycrystalVoronoi object shall create a valid coloring for a given number of grains and order parameters."
+    issues = '#7005 #9018'
+    design = "GrainTracker.md"
+  [../]
+
+  [./test_advanced_op_assignment_bt_error]
+    type = 'RunException'
+    input = 'grain_tracker_advanced_op.i'
+    expect_err = "Unable to find a valid grain to op coloring"
+    recover = false # No solve
+    cli_args = 'GlobalParams/op_num=4 Outputs/csv=false'
+
+    requirement = "The PolycrystalUserObject base class shall error when a valid coloring cannot be found "
+                  "when using the simple back-tracking algorithm."
+    issues = '#7005 #8804'
+    design = "PolycrystalICs.md"
+  [../]
+
+  [./test_advanced_op_assignment_petsc_error]
+    type = 'RunException'
+    input = 'grain_tracker_advanced_op.i'
+    expect_err = "Unable to find a valid grain to op coloring"
+    recover = false # No solve
+    cli_args = 'UserObjects/voronoi/coloring_algorithm=jp GlobalParams/op_num=6 Outputs/csv=false'
+
+    requirement = "The PolycrystalUserObject base class shall error when a valid coloring cannot be found "
+                  "when using the built-in PETSc based stochastic algorithms."
+    issues = '#7005 #8804'
+    design = "PolycrystalICs.md"
+  [../]
+
+  [./test_halo_periodic_bc]
+    type = 'Exodiff'
+    input = 'grain_halo_over_bc.i'
+    exodiff = 'grain_halo_over_bc_out.e'
+    method = '!DBG' # slow test
+    valgrind = 'HEAVY'
+    max_parallel = 1
+
+    requirement = "The GrainTracker/PolycrystalUserObject base class shall support having only a grain halo bleeding over a periodic edge."
+    issues = '#6713 #8926'
+    design = "GrainTracker.md"
+    abs_zero = 1e-7
+    rel_err = 4e-5
+  [../]
+
+  [./test_remapping_serial]
+    type = 'CSVDiff'
+    input = 'grain_tracker_remapping_test.i'
+    csvdiff = 'grain_tracker_remapping_test_out.csv'
+    method = '!DBG' # slow test
+    valgrind = 'NONE' # Exact same test used elsewhere
+
+    requirement = "The GrainTracker object shall support remapping order parameter values."
+    issues = '#1298'
+    design = "GrainTracker.md"
+  [../]
+
+  [./test_remapping_parallel]
+    type = 'CSVDiff'
+    input = 'grain_tracker_remapping_test.i'
+    csvdiff = 'grain_tracker_remapping_test_out.csv'
+
+    method = '!DBG' # slow test
+    valgrind = 'HEAVY'
+    prereq = 'test_remapping_serial'
+
+    min_parallel = 8 # Test distributed merge work with grain tracker
+
+    requirement = "The FeatureFloodCount object shall distribute the merging of features when the processor count exceeds "
+                  "number of order parameters for efficiency."
+    issues = '#11805'
+    design = "GrainTracker.md"
+  [../]
+
+  [./test_recovery_serial_part1]
+    type = 'RunApp'
+    input = 'grain_tracker_remapping_test.i'
+    cli_args = 'Outputs/file_base=gt_recover_serial_out Outputs/checkpoint=true --half-transient'
+
+    method = '!DBG'
+    valgrind = 'NONE'
+
+    requirement = "The GrainTracker object shall properly checkpoint unique grain information in serial."
+    issues = "#6713 #12427"
+    design = "GrainTracker.md"
+  [../]
+
+  [./test_recovery_serial_part2]
+    type = 'CSVDiff'
+    input = 'grain_tracker_remapping_test.i'
+    csvdiff = 'gt_recover_serial_out.csv'
+    cli_args = 'Outputs/file_base=gt_recover_serial_out --recover'
+    prereq = 'test_recovery_serial_part1'
+    delete_output_before_running = false
+
+    method = '!DBG'
+    valgrind = 'NONE'
+
+    requirement = "The GrainTracker object shall properly recover unique grain information in serial."
+    issues = "#6713 #12427"
+    design = "GrainTracker.md"
+  [../]
+
+  [./test_recovery_parallel_part1]
+    type = 'RunApp'
+    input = 'grain_tracker_remapping_test.i'
+    cli_args = 'Outputs/file_base=gt_recover_parallel_out Outputs/checkpoint=true --half-transient'
+
+    min_parallel = 8 # Test distributed merge work with grain tracker
+
+    method = '!DBG'
+    valgrind = 'NONE'
+
+    requirement = "The GrainTracker object shall properly checkpoint unique grain information in parallel."
+    issues = "#6713 #12427"
+    design = "GrainTracker.md"
+  [../]
+
+  [./test_recovery_parallel_part2]
+    type = 'CSVDiff'
+    input = 'grain_tracker_remapping_test.i'
+    csvdiff = 'gt_recover_parallel_out.csv'
+    cli_args = 'Outputs/file_base=gt_recover_parallel_out --recover'
+    prereq = 'test_recovery_parallel_part1'
+    delete_output_before_running = false
+
+    min_parallel = 8 # Test distributed merge work with grain tracker
+
+    method = '!DBG'
+    valgrind = 'NONE'
+
+    requirement = "The GrainTracker object shall properly recover unique grain information in parallel."
+    issues = "#6713 #12427"
+    design = "GrainTracker.md"
+  [../]
+
+  [./test_poly_ic_handoff]
+    type = 'CSVDiff'
+    input = 'grain_tracker_remapping_test.i'
+    csvdiff = 'test_poly_ic_handoff_out.csv'
+
+    cli_args = 'Executioner/Adaptivity/initial_adaptivity=1 Executioner/Adaptivity/refine_fraction=0.7 Executioner/Adaptivity/max_h_level=2 Executioner/num_steps=1 Outputs/file_base=test_poly_ic_handoff_out'
+
+    method = '!DBG' # slow test
+    valgrind = 'NONE' # Exact same test used elsewhere
+
+    requirement = "The GrainTracker shall support reusing the data structures from the PolycrystalUserObjectBase after the "
+                  " initial condition for efficiency."
+    issues = '#8810'
+    design = "PolycrystalICs.md"
+  [../]
+
+  [./remapping_with_reserve]
+    type = 'Exodiff'
+    input = 'grain_tracker_reserve.i'
+    exodiff = 'grain_tracker_reserve_out.e'
+    abs_zero = 1e-6 # Remapping can cause more significant diffs
+    method = '!DBG' # slow test
+    valgrind = 'HEAVY'
+
+    requirement = "The GrainTracker shall support maintaining reserve order parameters for simulations where new grains can form."
+    issues = '#7605'
+    design = "GrainTracker.md"
+  [../]
+
+  [./start_with_zero_grains]
+    type = 'Exodiff'
+    input = 'grain_tracker_reserve.i'
+    exodiff = 'start_with_zero_grains_out.e'
+    abs_zero = 1e-6
+    cli_args = 'ICs/inactive=gr0 Outputs/file_base=start_with_zero_grains_out'
+
+    method = '!DBG' # slow test
+    valgrind = 'HEAVY'
+
+    requirement = "The GrainTracker shall support beginning a simulation with no active grain structure."
+    issues = "#12200"
+    design = "GrainTracker.md"
+  [../]
+
+  [./ebsd]
+    requirement = "The GrainTracker shall support reading EBSD data to create initial conditions where IDs in the data:"
+    issues = '#5067 #9060'
+    design = "PolycrystalICs.md"
+
+    [./test_ebsd]
+      type = 'Exodiff'
+      input = 'grain_tracker_ebsd.i'
+      exodiff = 'grain_tracker_ebsd_out.e'
+
+      detail = 'are contigious starting at zero,'
+    [../]
+
+    [./test_ebsd_no_zero_id]
+      type = 'Exodiff'
+      input = 'grain_tracker_ebsd.i'
+      exodiff = 'grain_tracker_ebsd_9_no_zero_out.e'
+      cli_args = 'Mesh/ebsd_mesh/filename=ebsd_9_no_zero.txt Outputs/file_base=grain_tracker_ebsd_9_no_zero_out'
+
+      detail = 'are contigious starting not starting at zero,'
+    [../]
+
+    [./test_ebsd_gap_id]
+      type = 'Exodiff'
+      input = 'grain_tracker_ebsd.i'
+      exodiff = 'grain_tracker_ebsd_8_with_gap_out.e'
+      cli_args = 'Mesh/ebsd_mesh/filename=ebsd_8_with_gap.txt Outputs/file_base=grain_tracker_ebsd_8_with_gap_out'
+
+      detail = 'and arbitrary with gaps.'
+    [../]
+  [../]
+
+  [./test_ebsd_adapt]
+    type = 'Exodiff'
+    input = 'grain_tracker_ebsd.i'
+    exodiff = 'grain_tracker_ebsd_adapt_out.e'
+    cli_args = 'Executioner/Adaptivity/initial_adaptivity=1 Executioner/Adaptivity/refine_fraction=0.7 Executioner/Adaptivity/max_h_level=1 Outputs/file_base=grain_tracker_ebsd_adapt_out'
+
+    requirement = "The GrainTracker shall support reading EBSD data to create initial conditions while supporting initial condition refinement."
+    issues = '#5067 #9060'
+    design = "PolycrystalICs.md"
+  [../]
+
+  [./split_grain]
+    type = 'CSVDiff'
+    # Make sure that this simulation hits the "split grain" logic branch
+    expect_out = 'Split Grain Detected'
+    input = 'split_grain.i'
+    csvdiff = 'split_grain_out.csv'
+    max_time = 500
+    method = '!DBG' # slow test
+    valgrind ='HEAVY'
+
+    requirement = "The GrainTracker shall support handling the splitting of a grain during a simulation."
+    issues = '#7875'
+    design = "GrainTracker.md"
+
+  [../]
+
+  [./changing_avg_volume]
+    type = 'CSVDiff'
+    input = 'grain_tracker_volume_changing.i'
+    csvdiff = 'grain_tracker_volume_changing_out.csv'
+    rel_err = 1e-4
+    method = '!DBG' # slow test
+    valgrind = 'HEAVY'
+
+    requirement = "The AverageFeatureVolume Postprocessor shall calculate the average volume of each active grain in a simulation."
+    issues = '#11822'
+    design = "GrainTracker.md"
+  [../]
+
+  [./tolerate_remap_failure]
+    type = 'RunApp'
+    input = 'grain_tracker_remapping_test.i'
+    cli_args = 'UserObjects/grain_tracker/tolerate_failure=true UserObjects/voronoi/grain_num=16 Executioner/num_steps=6 UserObjects/voronoi/coloring_algorithm=bt Outputs/exodus=false Outputs/csv=false'
+    expect_out = "Unable to find any suitable order parameters for remapping"
+    allow_warnings = true
+    valgrind = 'NONE'
+    method = '!DBG' # slow test
+    min_parallel = 2
+
+    requirement = "The GrainTracker shall support a mode where it can continue even when it fails to remap for post-modern analysis and debugging."
+    issues = '#11843'
+    design = "GrainTracker.md"
+  [../]
+
+  [./distributed_poly_ic]
+    type = 'CSVDiff'
+    input = 'distributed_poly_ic.i'
+    csvdiff = 'distributed_poly_ic_out.csv'
+
+    allow_test_objects = true
+
+    requirement = 'The system shall properly create PolycrystalICs with halo extensions (elements) when using DistributedMesh.'
+    issues = '#12216'
+    design = 'PolycrystalICs.md'
+  [../]
+
+  [./one_grain]
+    type = 'CSVDiff'
+    input = 'one_grain.i'
+    csvdiff = 'one_grain_out.csv'
+    recover = false # no solve
+
+    requirement = 'The system shall properly handle a single feature or grain taking up the entire domain.'
+    issues = '#12216'
+    design = 'GrainTracker.md'
+  [../]
+
+  ###################################################
+  # Faux grain tracker
+  ###################################################
+  [./test_faux_nodal]
+    type = 'Exodiff'
+    input = 'grain_tracker_nodal.i'
+    cli_args = 'Outputs/file_base=gt_faux_nodal_out UserObjects/grain_tracker/type=FauxGrainTracker'
+
+    exodiff = 'gt_faux_nodal_out.e'
+    valgrind = 'HEAVY'
+    max_time = 500
+
+    requirement = "The system shall grain tracking behavior even when the number of grains equals the number "
+                  "of order parameters when using mode Nodal."
+    issues = '#5453'
+    design = 'GrainTracker.md'
+  [../]
+
+  [./test_faux_element]
+    type = 'Exodiff'
+    input = 'grain_tracker_test_elemental.i'
+    cli_args = 'Outputs/file_base=gt_faux_elemental_out UserObjects/grain_tracker/type=FauxGrainTracker'
+
+    exodiff = 'gt_faux_elemental_out.e-s002'
+    method = '!DBG' # slow test
+    valgrind = 'HEAVY'
+    max_time = 500
+
+    requirement = "The system shall grain tracking behavior even when the number of grains equals the number "
+                  "of order parameters when using mode Elemental."
+    issues = '#5453'
+    design = 'GrainTracker.md'
+  [../]
+
+  [./grain_tracker_volume]
+    type = 'CSVDiff'
+    input = 'grain_tracker_volume.i'
+    csvdiff = 'grain_tracker_volume_out_grain_volumes_0000.csv grain_tracker_volume_out.csv'
+    rel_err = 1.e-3
+
+    # Lots of adaptivity, slower test
+    min_parallel = 6
+
+    requirement = "The system shall output individual grain tracker volumes."
+    issues = '#7769'
+    design = 'GrainTracker.md'
+  [../]
+
+  [./grain_tracker_volume_single]
+    type = 'CSVDiff'
+    input = 'grain_tracker_volume_single.i'
+    csvdiff = 'grain_tracker_volume_single_out_grain_volumes_0000.csv'
+    rel_err = 1.e-3
+
+    # Lots of adaptivity, slower test
+    min_parallel = 6
+
+    requirement = "The system shall output individual grain tracker volumes assigning each element to only one grain (conservative)."
+    issues = '#7769'
+    design = 'GrainTracker.md'
+  [../]
+
+  # This test should work the same with the FeatureFloodCount object
+  [./feature_flood_volume]
+    type = 'CSVDiff'
+    input = 'grain_tracker_volume.i'
+    cli_args = 'Postprocessors/grain_tracker/type=FeatureFloodCount'
+    csvdiff = 'grain_tracker_volume_out_grain_volumes_0000.csv grain_tracker_volume_out.csv'
+    prereq = grain_tracker_volume
+    rel_err = 1.e-3
+
+    # Lots of adaptivity, slower test
+    min_parallel = 6
+
+    requirement = "The system shall output individual grain tracker volumes when the number of order parameters equals the number of grains."
+    issues = '#5453'
+    design = 'GrainTracker.md'
+  [../]
+[]

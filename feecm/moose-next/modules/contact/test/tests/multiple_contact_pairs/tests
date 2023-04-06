@@ -1,0 +1,34 @@
+[Tests]
+  issues = '#18022'
+  design = 'syntax/Contact/index.md MechanicalContactConstraint.md ContactPressureAux.md'
+  [multiple_pairs]
+    type = Exodiff
+    input = 'multiple_pairs.i'
+    exodiff = 'multiple_pairs_out.e'
+    abs_zero = 1.0e-8
+    rel_err = 1.0e-5
+    cli_args = "Postprocessors/active=''"
+    requirement = 'The system shall set up node-face interactions between multiple surface pairs '
+                  'using the Contact action.'
+  []
+  [three_hexagons_coarse]
+    type = 'Exodiff'
+    input = 'three_hexagons_coarse.i'
+    exodiff = 'three_hexagons_coarse_out.e'
+    requirement = 'The system shall assign and accumulate a single contact pressure auxiliary '
+                  'variable for all contact pairs supplied to a single contact action object.'
+    abs_zero = 1.0e-4
+    rel_err = 1.0e-4
+    allow_warnings = true
+  []
+  [three_hexagons_coarse_various_actions]
+    type = 'Exodiff'
+    input = 'three_hexagons_coarse_various_actions.i'
+    exodiff = 'three_hexagons_coarse_various_actions_out.e'
+    requirement = 'The system shall assign and accumulate a single contact pressure auxiliary '
+                  'variable for all contact pairs supplied to a distinct contact action object.'
+    abs_zero = 1.0e-4
+    rel_err = 1.0e-4
+    allow_warnings = true
+  []
+[]

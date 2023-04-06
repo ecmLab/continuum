@@ -1,0 +1,32 @@
+[Tests]
+  [perf]
+    requirement = "The system shall output a performance log information for sub-applications"
+    design = 'PerfGraphOutput.md'
+    issues = '#11551 #11453 #12186'
+
+    [with_multi]
+      type = 'RunApp'
+      input = 'parent.i'
+      expect_out = 'MooseTestApp (sub_app0)'
+      match_literal = true
+
+      detail = "that are transient,"
+    []
+    [with_sub_cycle]
+      type = 'RunApp'
+      input = 'parent_sub_cycle.i'
+      expect_out = 'MooseTestApp (sub_app0)'
+      match_literal = true
+
+      detail = 'use differing time steps from the main, and'
+    []
+    [with_full]
+      type = 'RunApp'
+      input = 'parent_full.i'
+      expect_out = 'MooseTestApp (full_solve0)'
+      match_literal = true
+
+      detail = 'execute an entire simulation.'
+    []
+  []
+[]

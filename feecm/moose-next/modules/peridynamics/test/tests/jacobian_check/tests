@@ -1,0 +1,389 @@
+[Tests]
+  [./2D_heat_conduction_BPD]
+    type = 'PetscJacobianTester'
+    input = '2D_heat_conduction_BPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'HeatConductionBPD shall provide the accurate residual and
+                   jacobian for bond-based peridynamic heat conduction model.'
+    design = 'modules/peridynamics/HeatConductionBPD.md'
+    issues = '#11561'
+  [../]
+  [./2D_heat_conduction_free_node_BPD]
+    type = 'PetscJacobianTester'
+    input = '2D_heat_conduction_BPD.i'
+    cli_args = 'UserObjects/breakbonds/type=ZeroBondStatusUserObjectPD UserObjects/breakbonds/bond_ids_list="0 1 2 3 4 5 6 7 8 9"'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    allow_test_objects = true
+    requirement = 'HeatConductionBPD shall provide the accurate residual and
+                   jacobian for bond-based peridynamic heat conduction model with arbitrarily broken bonds.'
+    design = 'modules/peridynamics/HeatConductionBPD.md'
+    issues = '#15393'
+  [../]
+  [./2D_mechanics_BPD]
+    type = 'PetscJacobianTester'
+    input = '2D_mechanics_BPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'MechanicsBPD shall provide the accurate residual and jacobian
+                   for bond-based peridynamic mechanics model.'
+    design = 'modules/peridynamics/MechanicsBPD.md'
+    issues = '#11561'
+  [../]
+  [./2D_mechanics_free_node_BPD]
+    type = 'PetscJacobianTester'
+    input = '2D_mechanics_BPD.i'
+    cli_args = 'UserObjects/breakbonds/type=ZeroBondStatusUserObjectPD UserObjects/breakbonds/bond_ids_list="0 1 2 3 4 5 6 7 8 9"'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    allow_test_objects = true
+    requirement = 'MechanicsBPD shall provide the accurate residual and jacobian
+                   for bond-based peridynamic mechanics model with arbitrarily broken bonds.'
+    design = 'modules/peridynamics/MechanicsBPD.md'
+    issues = '#15393'
+  [../]
+  [./2D_thermomechanics_BPD]
+    type = 'PetscJacobianTester'
+    input = '2D_thermomechanics_BPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'MechanicsBPD and HeatConductionBPD shall provide the accurate
+                   residual and jacobian for bond-based peridynamic thermomechanics model.'
+    design = 'modules/peridynamics/MechanicsBPD.md'
+    issues = '#11561'
+  [../]
+  [./2D_thermomechanics_free_node_BPD]
+    type = 'PetscJacobianTester'
+    input = '2D_thermomechanics_BPD.i'
+    cli_args = 'UserObjects/breakbonds/type=ZeroBondStatusUserObjectPD UserObjects/breakbonds/bond_ids_list="0 1 2 3 4 5 6 7 8 9"'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    allow_test_objects = true
+    requirement = 'MechanicsBPD and HeatConductionBPD shall provide the accurate
+                   residual and jacobian for bond-based peridynamic thermomechanics model with arbitrarily broken bonds.'
+    design = 'modules/peridynamics/MechanicsBPD.md'
+    issues = '#15393'
+  [../]
+  [./2D_mechanics_OSPD]
+    type = 'PetscJacobianTester'
+    input = '2D_mechanics_OSPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'MechanicsOSPD shall provide the accurate residual and jacobian
+                   for ordinary state-based peridynamic mechanics model.'
+    design = 'modules/peridynamics/MechanicsOSPD.md'
+    issues = '#11561'
+  [../]
+  [./2D_mechanics_free_node_OSPD]
+    type = 'PetscJacobianTester'
+    input = '2D_mechanics_OSPD.i'
+    cli_args = 'UserObjects/breakbonds/type=ZeroBondStatusUserObjectPD UserObjects/breakbonds/bond_ids_list="0 1 2 3 4 5 6 7 8 9"'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    allow_test_objects = true
+    requirement = 'MechanicsOSPD shall provide the accurate residual and jacobian
+                   for ordinary state-based peridynamic mechanics model with arbitrarily broken bonds.'
+    design = 'modules/peridynamics/MechanicsOSPD.md'
+    issues = '#15393'
+  [../]
+  [./2D_thermomechanics_OSPD]
+    type = 'PetscJacobianTester'
+    input = '2D_thermomechanics_OSPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'MechanicsOSPD and HeatConductionBPD shall provide the accurate
+                   residual and jacobian for ordinary state-based peridynamic thermomechanics model.'
+    design = 'modules/peridynamics/MechanicsOSPD.md'
+    issues = '#11561'
+  [../]
+  [./2D_thermomechanics_free_node_OSPD]
+    type = 'PetscJacobianTester'
+    input = '2D_thermomechanics_OSPD.i'
+    cli_args = 'UserObjects/breakbonds/type=ZeroBondStatusUserObjectPD UserObjects/breakbonds/bond_ids_list="0 1 2 3 4 5 6 7 8 9"'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    allow_test_objects = true
+    requirement = 'MechanicsOSPD and HeatConductionBPD shall provide the accurate
+                   residual and jacobian for ordinary state-based peridynamic thermomechanics model with arbitrarily broken bonds.'
+    design = 'modules/peridynamics/MechanicsOSPD.md'
+    issues = '#15393'
+  [../]
+  [./2D_mechanics_FNOSPD]
+    type = 'PetscJacobianTester'
+    input = '2D_mechanics_FNOSPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'ForceStabilizedSmallStrainMechanicsNOSPD shall provide the
+                   accurate residual and jacobian for force stabilized peridynamic
+                   correspondence model under small strain assumptions.'
+    design = 'modules/peridynamics/ForceStabilizedSmallStrainMechanicsNOSPD.md'
+    issues = '#11561'
+  [../]
+  [./2D_mechanics_free_node_FNOSPD]
+    type = 'PetscJacobianTester'
+    input = '2D_mechanics_FNOSPD.i'
+    cli_args = 'UserObjects/breakbonds/type=ZeroBondStatusUserObjectPD UserObjects/breakbonds/bond_ids_list="0 1 2 3 4 5 6 7 8 9"'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    allow_test_objects = true
+    requirement = 'ForceStabilizedSmallStrainMechanicsNOSPD shall provide the
+                   accurate residual and jacobian for force-stabilized small-strain
+                   non-ordinary state-based peridynamic mechanics model with arbitrarily broken bonds.'
+    design = 'modules/peridynamics/ForceStabilizedSmallStrainMechanicsNOSPD.md'
+    issues = '#15393'
+  [../]
+  [./2D_thermomechanics_FNOSPD]
+    type = 'PetscJacobianTester'
+    input = '2D_thermomechanics_FNOSPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'ForceStabilizedSmallStrainMechanicsNOSPD and HeatConductionBPD
+                   shall provide the accurate residual and jacobian for thermomechanics problems
+                   based on force stabilized correspondence model and bond-based heat conduction model
+                   under small strain assumptions.'
+    design = 'modules/peridynamics/ForceStabilizedSmallStrainMechanicsNOSPD.md'
+    issues = '#11561'
+  [../]
+  [./2D_thermomechanics_free_node_FNOSPD]
+    type = 'PetscJacobianTester'
+    input = '2D_thermomechanics_FNOSPD.i'
+    cli_args = 'UserObjects/breakbonds/type=ZeroBondStatusUserObjectPD UserObjects/breakbonds/bond_ids_list="0 1 2 3 4 5 6 7 8 9"'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    allow_test_objects = true
+    requirement = 'ForceStabilizedSmallStrainMechanicsNOSPD and HeatConductionBPD
+                   shall provide the accurate residual and jacobian for force-stabilized
+                   small-strain non-ordinary state-based peridynamic thermomechanics model with arbitrarily broken bonds.'
+    design = 'modules/peridynamics/ForceStabilizedSmallStrainMechanicsNOSPD.md'
+    issues = '#15393'
+  [../]
+  [./2D_mechanics_smallstrain_H1NOSPD]
+    type = 'PetscJacobianTester'
+    input = '2D_mechanics_smallstrain_H1NOSPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'HorizonStabilizedFormISmallStrainMechanicsNOSPD shall provide the accurate residual
+                   and jacobian for Form I of the horizon stabilized peridynamic correspondence model
+                   under small strain assumptions.'
+    design = 'modules/peridynamics/HorizonStabilizedFormISmallStrainMechanicsNOSPD.md'
+    issues = '#11561'
+  [../]
+  [./2D_mechanics_smallstrain_free_node_H1NOSPD]
+    type = 'PetscJacobianTester'
+    input = '2D_mechanics_smallstrain_H1NOSPD.i'
+    cli_args = 'UserObjects/breakbonds/type=ZeroBondStatusUserObjectPD UserObjects/breakbonds/bond_ids_list="0 1 2 3 4 5 6 7 8 9"'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    allow_test_objects = true
+    requirement = 'HorizonStabilizedFormISmallStrainMechanicsNOSPD shall provide the accurate residual
+                   and jacobian for horizon-stabilized small-strain non-ordinary state-based
+                   peridynamic mechanics model with arbitrarily broken bonds.'
+    design = 'modules/peridynamics/HorizonStabilizedFormISmallStrainMechanicsNOSPD.md'
+    issues = '#15393'
+  [../]
+  [./2D_mechanics_smallstrain_H2NOSPD]
+    type = 'PetscJacobianTester'
+    input = '2D_mechanics_smallstrain_H2NOSPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'HorizonStabilizedFormIISmallStrainMechanicsNOSPD shall provide the accurate residual
+                   and jacobian for Form II of the horizon stabilized peridynamic correspondence model
+                   under small strain assumptions.'
+    design = 'modules/peridynamics/HorizonStabilizedFormIISmallStrainMechanicsNOSPD.md'
+    issues = '#11561'
+  [../]
+  [./2D_thermomechanics_smallstrain_free_node_H1NOSPD]
+    type = 'PetscJacobianTester'
+    input = '2D_thermomechanics_smallstrain_H1NOSPD.i'
+    cli_args = 'UserObjects/breakbonds/type=ZeroBondStatusUserObjectPD UserObjects/breakbonds/bond_ids_list="0 1 2 3 4 5 6 7 8 9"'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    allow_test_objects = true
+    requirement = 'HorizonStabilizedFormISmallStrainMechanicsNOSPD and HeatConductionBPD shall provide
+                   the accurate residual and jacobian for horizon-stabilized small-strain
+                   non-ordinary state-based peridynamic thermomechanics model with arbitrarily broken bonds.'
+    design = 'modules/peridynamics/HorizonStabilizedFormISmallStrainMechanicsNOSPD.md'
+    issues = '#15393'
+  [../]
+  [./2D_thermomechanics_smallstrain_H1NOSPD]
+    type = 'PetscJacobianTester'
+    input = '2D_thermomechanics_smallstrain_H1NOSPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'HorizonStabilizedFormISmallStrainMechanicsNOSPD and HeatConductionBPD shall provide
+                   the accurate residual and jacobian for thermomechanics problems based on Form I
+                   of the horizon stabilized peridynamic correspondence model and the bond-based heat conduction model
+                   under small strain assumptions.'
+    design = 'modules/peridynamics/HorizonStabilizedFormISmallStrainMechanicsNOSPD.md'
+    issues = '#11561'
+  [../]
+  [./2D_thermomechanics_smallstrain_H2NOSPD]
+    type = 'PetscJacobianTester'
+    input = '2D_thermomechanics_smallstrain_H2NOSPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'HorizonStabilizedFormIISmallStrainMechanicsNOSPD and HeatConductionBPD shall provide
+                   the accurate residual and jacobian for thermomechanics problems based on Form II
+                   of the horizon stabilized peridynamic correspondence model and the bond-based heat conduction model
+                   under small strain assumptions.'
+    design = 'modules/peridynamics/HorizonStabilizedFormIISmallStrainMechanicsNOSPD.md'
+    issues = '#11561'
+  [../]
+  [./3D_mechanics_smallstrain_H1NOSPD]
+    type = 'PetscJacobianTester'
+    input = '3D_mechanics_smallstrain_H1NOSPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'HorizonStabilizedFormISmallStrainMechanicsNOSPD shall provide the accurate residual
+                   and jacobian for Form I of the horizon stabilized peridynamic correspondence model
+                   under small strain assumptions.'
+    design = 'modules/peridynamics/HorizonStabilizedFormISmallStrainMechanicsNOSPD.md'
+    issues = '#11561'
+  [../]
+  [./3D_mechanics_smallstrain_H2NOSPD]
+    type = 'PetscJacobianTester'
+    input = '3D_mechanics_smallstrain_H2NOSPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'HorizonStabilizedFormIISmallStrainMechanicsNOSPD shall provide the accurate residual
+                   and jacobian for Form II of the horizon stabilized peridynamic correspondence model
+                   under small strain assumptions.'
+    design = 'modules/peridynamics/HorizonStabilizedFormIISmallStrainMechanicsNOSPD.md'
+    issues = '#11561'
+  [../]
+  [./3D_mechanics_smallstrain_free_node_H1NOSPD]
+    type = 'PetscJacobianTester'
+    input = '3D_mechanics_smallstrain_H1NOSPD.i'
+    cli_args = 'UserObjects/breakbonds/type=ZeroBondStatusUserObjectPD UserObjects/breakbonds/bond_ids_list="0 1 2 3 4 5 6 7 8 9"'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    allow_test_objects = true
+    max_parallel = 1
+    requirement = 'HorizonStabilizedFormISmallStrainMechanicsNOSPD shall provide the accurate residual
+                   and jacobian for horizon-stabilized small-strain non-ordinary
+                   state-based peridynamic mechanics model with arbitrarily broken bonds.'
+    design = 'modules/peridynamics/HorizonStabilizedFormISmallStrainMechanicsNOSPD.md'
+    issues = '#15393'
+  [../]
+  [./gps_OSPD]
+    type = 'PetscJacobianTester'
+    input = 'generalized_planestrain_OSPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'GeneralizedPlaneStrainOffDiagOSPD shall provide the off-diagonal
+                   jacobian for coupling between scalar variable and displacement variables
+                   for the ordinary state-based peridynamic generalized plane strain model.'
+    design = 'modules/peridynamics/GeneralizedPlaneStrainOffDiagOSPD.md'
+    issues = '#11561'
+  [../]
+  [./gps_free_node_OSPD]
+    type = 'PetscJacobianTester'
+    input = 'generalized_planestrain_OSPD.i'
+    cli_args = 'UserObjects/breakbonds/type=ZeroBondStatusUserObjectPD UserObjects/breakbonds/bond_ids_list="0 1 2 3 4 5 6 7 8 9"'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    allow_test_objects = true
+    requirement = 'GeneralizedPlaneStrainOffDiagOSPD shall provide the off-diagonal
+                   jacobian for coupling between scalar variable and displacement variables
+                   for ordinary state-based peridynamic generalized plane strain model with arbitrarily broken bonds.'
+    design = 'modules/peridynamics/GeneralizedPlaneStrainOffDiagOSPD.md'
+    issues = '#15393'
+  [../]
+  [./gps_thermomechanics_OSPD]
+    type = 'PetscJacobianTester'
+    input = 'generalized_planestrain_thermomechanics_OSPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'GeneralizedPlaneStrainOffDiagOSPD shall provide the off-diagonal
+                   jacobian for coupling between scalar variable and field variables (disp and temp)
+                   for the ordinary state-based peridynamic generalized plane strain model.'
+    design = 'modules/peridynamics/GeneralizedPlaneStrainOffDiagOSPD.md'
+    issues = '#11561'
+  [../]
+  [./gps_thermomechanics_free_node_OSPD]
+    type = 'PetscJacobianTester'
+    input = 'generalized_planestrain_thermomechanics_OSPD.i'
+    cli_args = 'UserObjects/breakbonds/type=ZeroBondStatusUserObjectPD UserObjects/breakbonds/bond_ids_list="0 1 2 3 4 5 6 7 8 9"'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    allow_test_objects = true
+    requirement = 'GeneralizedPlaneStrainOffDiagOSPD shall provide the off-diagonal
+                   jacobian for coupling between scalar variable and field variables (disp and temp)
+                   for ordinary state-based peridynamic generalized plane strain model with arbitrarily broken bonds.'
+    design = 'modules/peridynamics/GeneralizedPlaneStrainOffDiagOSPD.md'
+    issues = '#15393'
+  [../]
+  [./gps_H1NOSPD]
+    type = 'PetscJacobianTester'
+    input = 'generalized_planestrain_smallstrain_H1NOSPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'GeneralizedPlaneStrainOffDiagNOSPD shall provide the off-diagonal
+                   jacobian for coupling between scalar variable and displacement variables
+                   for Form I of the horizon stabilized peridynamic correspondence model based
+                   generalized plane strain model.'
+    design = 'modules/peridynamics/GeneralizedPlaneStrainOffDiagNOSPD.md'
+    issues = '#11561'
+  [../]
+  [./gps_free_node_H1NOSPD]
+    type = 'PetscJacobianTester'
+    input = 'generalized_planestrain_smallstrain_H1NOSPD.i'
+    cli_args = 'UserObjects/breakbonds/type=ZeroBondStatusUserObjectPD UserObjects/breakbonds/bond_ids_list="0 1 2 3 4 5 6 7 8 9"'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    allow_test_objects = true
+    requirement = 'GeneralizedPlaneStrainOffDiagHNOSPD shall provide the off-diagonal
+                   jacobian for coupling between scalar variable and displacement variables
+                   for non-ordinary state-based peridynamic generalized plane strain model with arbitrarily broken bonds.'
+    design = 'modules/peridynamics/GeneralizedPlaneStrainOffDiagHNOSPD.md'
+    issues = '#15393'
+  [../]
+  [./gps_thermomechanics_smallstrain_H1NOSPD]
+    type = 'PetscJacobianTester'
+    input = 'generalized_planestrain_thermomechanics_smallstrain_H1NOSPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'GeneralizedPlaneStrainOffDiagNOSPD shall provide the off-diagonal
+                   jacobian for coupling between scalar variable and field variables (disp and temp)
+                   for Form I of the horizon stabilized peridynamic correspondence model based
+                   generalized plane strain model.'
+    design = 'modules/peridynamics/GeneralizedPlaneStrainOffDiagNOSPD.md'
+    issues = '#11561'
+  [../]
+  [./gps_thermomechanics_smallstrain_free_node_H1NOSPD]
+    type = 'PetscJacobianTester'
+    input = 'generalized_planestrain_thermomechanics_smallstrain_H1NOSPD.i'
+    cli_args = 'UserObjects/breakbonds/type=ZeroBondStatusUserObjectPD UserObjects/breakbonds/bond_ids_list="0 1 2 3 4 5 6 7 8 9"'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    allow_test_objects = true
+    requirement = 'GeneralizedPlaneStrainOffDiagHNOSPD shall provide the off-diagonal
+                   jacobian for coupling between scalar variable and field variables (disp and temp)
+                   for ordinary state-based peridynamic generalized plane strain model with arbitrarily broken bonds.'
+    design = 'modules/peridynamics/GeneralizedPlaneStrainOffDiagHNOSPD.md'
+    issues = '#15393'
+  [../]
+  [./weak_planestress_thermomechanics_smallstrain_H1NOSPD]
+    type = 'PetscJacobianTester'
+    input = 'weak_planestress_thermomechanics_smallstrain_H1NOSPD.i'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    requirement = 'WeakPlaneStressNOSPD shall provide the accurate residual and
+                   jacobian for the coupled peridynamic weak plane stress model.'
+    design = 'modules/peridynamics/WeakPlaneStressNOSPD.md'
+    issues = '#11561'
+  [../]
+  [./weak_planestress_thermomechanics_smallstrain_free_node_H1NOSPD]
+    type = 'PetscJacobianTester'
+    input = 'weak_planestress_thermomechanics_smallstrain_H1NOSPD.i'
+    cli_args = 'UserObjects/breakbonds/type=ZeroBondStatusUserObjectPD UserObjects/breakbonds/bond_ids_list="0 1 2 3 4 5 6 7 8 9"'
+    ratio_tol = 1E-7
+    difference_tol = 1E10
+    allow_test_objects = true
+    requirement = 'WeakPlaneStressHNOSPD shall provide the accurate residual and
+                   jacobian for coupled peridynamic weak plane stress model with arbitrarily broken bonds.'
+    design = 'modules/peridynamics/WeakPlaneStressHNOSPD.md'
+    issues = '#15393'
+  [../]
+[]

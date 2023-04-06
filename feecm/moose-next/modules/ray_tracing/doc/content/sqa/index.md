@@ -1,0 +1,1 @@
+!template load file=sqa/app_index.md.template app=Ray Tracing category=ray_tracing

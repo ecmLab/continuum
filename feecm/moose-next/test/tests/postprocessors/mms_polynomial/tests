@@ -1,0 +1,12 @@
+[Tests]
+  [./test]
+    type = 'Exodiff'
+    input = 'mms_polynomial_test.i'
+    exodiff = 'out.e'
+    valgrind = 'HEAVY'
+
+    requirement = 'The system shall verify calculations using the method of manufactured solutions using a higher order polynomial function for linear elements.'
+    issues = '#1405'
+    design = 'ElementL2Error.md'
+  [../]
+[]

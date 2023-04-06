@@ -1,0 +1,121 @@
+[Tests]
+  [test]
+    type = 'Exodiff'
+    input = 'nearest_point_layered_average.i'
+    cli_args = "UserObjects/npla/points='0.25 0 0.25 0.75 0 0.25 0.25 0 0.75 0.75 0 0.75'"
+    exodiff = 'nearest_point_layered_average_out.e'
+    requirement = 'The system shall compute layered averages that computed from the closest values for a list of points that are explicitly specified in an input file'
+    design = 'NearestPointLayeredAverage.md'
+    issues = '#1878'
+  []
+
+  [from_file]
+    type = 'Exodiff'
+    input = 'nearest_point_layered_average.i'
+    cli_args = "UserObjects/npla/points_file='points.txt'"
+    exodiff = 'nearest_point_layered_average_out.e'
+    requirement = 'The system shall compute layered averages that computed from the closest values for a list of points that are specified in an external file'
+    design = 'NearestPointLayeredAverage.md'
+    issues = '#12356'
+    prereq = test
+  []
+
+  [error_missing_point_spec]
+    type = RunException
+    input = 'nearest_point_layered_average.i'
+    expect_err = "npla: You need to supply either 'points' or 'points_file' parameter\."
+    prereq = test
+    requirement = 'The system shall report an error when points are not specified in an input file nor an external file when computing nearest point layered averages'
+    design = 'NearestPointLayeredAverage.md'
+    issues = '#12356'
+  []
+
+  [error_conflicting_point_spec]
+    type = RunException
+    input = 'nearest_point_layered_average.i'
+    cli_args = "UserObjects/npla/points='0.25 0 0.25' UserObjects/npla/points_file='points.txt'"
+    expect_err = "npla: Both 'points' and 'points_file' cannot be specified simultaneously\."
+    prereq = test
+    requirement = 'The system shall report an error when points are specified both in an input file and an external file when computing nearest point layered averages'
+    design = 'NearestPointLayeredAverage.md'
+    issues = '#12356'
+  []
+
+  [error_not_enough_points_in_a_file]
+    type = RunException
+    input = 'nearest_point_layered_average.i'
+    cli_args = "UserObjects/npla/points_file='bad_points.txt'"
+    expect_err = "Each point in file"
+    prereq = test
+    requirement = 'The system shall report an error when there is not enough coordinates specified in an external file specifing the point for computing nearest point layered averages'
+    design = 'NearestPointLayeredAverage.md'
+    issues = '#12356'
+  []
+
+  [nearest_radius]
+    type = 'Exodiff'
+    input = 'nearest_radius_layered_average.i'
+    exodiff = 'nearest_radius_layered_average_out.e'
+    requirement = 'The system shall compute layered averages for concentric cylindrical rings with equal thickness for a list of points that correspond to the average radius of each ring'
+    design = 'NearestRadiusLayeredAverage.md'
+    issues = '#16829'
+  []
+
+  [points_from_uo]
+    type = 'CSVDiff'
+    input = 'points_from_uo.i'
+    csvdiff = 'points_from_uo_out_spatial_from_uo_0002.csv'
+    requirement = 'The system shall compute layered averages computed from the closest values for a list of points and output to a spatial vector postprocessor with one point per unique nearest point and layer'
+    design = 'NearestPointLayeredAverage.md'
+    issues = '#18931'
+  []
+
+  [radius_points_from_uo]
+    type = 'CSVDiff'
+    input = 'radius_points_from_uo.i'
+    csvdiff = 'radius_points_from_uo_out_spatial_from_uo_0002.csv'
+    requirement = 'The system shall compute radial layered averages computed from the closest values for a list of points and output to a spatial vector postprocessor with one point per unique nearest point and layer'
+    design = 'NearestRadiusLayeredAverage.md'
+    issues = '#18931'
+  []
+
+  [error_duplicate_block_specs]
+    type = RunException
+    input = 'nearest_point_layered_average.i'
+    cli_args = "UserObjects/npla/points='0.25 0 0.25' UserObjects/npla/layer_bounding_block='0' UserObjects/npla/direction_min=0.0 UserObjects/npla/direction_max=1.0"
+    expect_err = "Only one of 'layer_bounding_block' and the pair 'direction_max' and 'direction_min' can be provided"
+    requirement = 'The system shall error if user-set direction bounds conflict with block-type bound specifications'
+    design = 'NearestPointLayeredAverage.md'
+    issues = '#19122'
+  []
+
+  [error_missing_bound]
+    type = RunException
+    input = 'nearest_point_layered_average.i'
+    cli_args = "UserObjects/npla/points='0.25 0 0.25' UserObjects/npla/direction_max=1.0"
+    expect_err = "If providing the layer max/min directions, both 'direction_max' and 'direction_min' must be specified"
+    requirement = 'The system shall error if a direction bound is missing'
+    design = 'NearestPointLayeredAverage.md'
+    issues = '#19122'
+  []
+
+  [error_invalid_bounds]
+    type = RunException
+    input = 'nearest_point_layered_average.i'
+    cli_args = "UserObjects/npla/points='0.25 0 0.25' UserObjects/npla/direction_max=0.0 UserObjects/npla/direction_min=1.0"
+    expect_err = "'direction_max' must be larger than 'direction_min'"
+    requirement = 'The system shall error if the maximum bound is lower than the minimum bound'
+    design = 'NearestPointLayeredAverage.md'
+    issues = '#19122'
+  []
+
+  [test_with_automatic_bounds]
+    type = 'Exodiff'
+    input = 'nearest_point_layered_average.i'
+    cli_args = "UserObjects/npla/points='0.25 0 0.25 0.75 0 0.25 0.25 0 0.75 0.75 0 0.75' UserObjects/npla/direction_min=0.0 UserObjects/npla/direction_max=1.0"
+    exodiff = 'nearest_point_layered_average_out.e'
+    requirement = 'The system shall allow specification of direction bounds to skip bounding box calculation'
+    design = 'NearestPointLayeredAverage.md'
+    issues = '#1878'
+  []
+[]

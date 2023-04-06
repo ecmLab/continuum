@@ -1,0 +1,10 @@
+[Tests]
+  issues = '#9923'
+  design = 'Transfers/index.md'
+  [transfer_on_final]
+    type = Exodiff
+    input = parent.i
+    exodiff = 'parent_final.e parent_out.e parent_out_sub0_final.e'
+    requirement = "The Transfer system shall support execution with the EXEC_FINAL flag."
+  []
+[]

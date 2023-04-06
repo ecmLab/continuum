@@ -1,0 +1,49 @@
+[Tests]
+  [./parsed_generate_sideset_test]
+    type = 'Exodiff'
+    input = 'parsed_generate_sideset.i'
+    cli_args = '--mesh-only'
+    exodiff = 'parsed_generate_sideset_in.e'
+    mesh_mode = 'REPLICATED'
+    recover = false
+
+    requirement = 'The system shall have the ability to assign mesh side sets based on parsed spatial functions.'
+    design = 'meshgenerators/ParsedGenerateSideset.md'
+    issues = '#11640'
+  [../]
+
+  [./parsed_generate_sideset_neighbor_sub_id_test]
+    type = 'Exodiff'
+    input = 'parsed_generate_sideset_neighbor_sub_id.i'
+    cli_args = '--mesh-only'
+    exodiff = 'parsed_generate_sideset_neighbor_sub_id_in.e'
+    mesh_mode = 'REPLICATED'
+    recover = false
+
+    requirement = 'The system shall have the ability to filter by neighboring subdomain id in ParsedGenerateSideset.'
+    design = 'meshgenerators/ParsedGenerateSideset.md'
+    issues = '#15651'
+  [../]
+
+  [invalid_included_subdomains]
+    type = RunException
+    input = parsed_generate_sideset.i
+    cli_args = 'Mesh/sideset/included_subdomains="missing"'
+    expect_err = "The block 'missing' was not found in the mesh"
+    requirement = 'The system shall error if one of the included subdomains does not exist in the mesh.'
+    mesh_mode = 'REPLICATED'
+    design = 'meshgenerators/ParsedGenerateSideset.md'
+    issues = '#22117'
+  []
+
+  [invalid_included_neighbors]
+    type = RunException
+    input = parsed_generate_sideset.i
+    cli_args = 'Mesh/sideset/included_neighbors="missing"'
+    expect_err = "The block 'missing' was not found in the mesh"
+    requirement = 'The system shall error if one of the included neighbors does not exist in the mesh.'
+    mesh_mode = 'REPLICATED'
+    design = 'meshgenerators/ParsedGenerateSideset.md'
+    issues = '#22117'
+  []
+[]

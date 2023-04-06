@@ -1,0 +1,53 @@
+[Tests]
+  design = 'LayeredIntegral.md'
+  issues = '#1289 #16099 #19220 #19480'
+
+  [group]
+    requirement = 'The system shall include the ability to computes volume integrals of a variable '
+                  'storing partial sums for the specified number of intervals in a direction (x,y,z)'
+
+    [test]
+      type = 'Exodiff'
+      input = 'layered_integral_test.i'
+      exodiff = 'out.e'
+      detail = 'using 3 layers with'
+    []
+
+    [unique_points]
+      type = 'CSVDiff'
+      input = 'layered_integral_test.i'
+      csvdiff = 'out_int_0001.csv'
+      detail = 'automatic specification of points to output unique values and'
+    []
+
+    [cumulative]
+      type = 'Exodiff'
+      input = 'cumulative_layered_integral.i'
+      exodiff = 'cumulative_layered_integral_out.e'
+      detail = 'as a cumulative calculation and'
+    []
+
+    [cumulative_negative]
+      type = 'Exodiff'
+      input = 'cumulative_layered_integral.i'
+      exodiff = 'cumulative_layered_integral_reverse.e'
+      cli_args = 'Outputs/file_base=cumulative_layered_integral_reverse UserObjects/layered_integral/positive_cumulative_direction=false'
+      detail = 'as a cumulative calculation in the negative direction and'
+    []
+
+    [average_sample]
+      type = 'Exodiff'
+      input = 'average_sample.i'
+      exodiff = 'average_sample_out.e'
+      detail = 'as an average calculation,'
+    []
+
+    [fv_test]
+      type = 'Exodiff'
+      input = 'layered_integral_fv_test.i'
+      exodiff = 'fv_out.e'
+      detail = 'and using finite volume variables.'
+    []
+  []
+
+[]

@@ -1,0 +1,38 @@
+[Tests]
+  issues = '#7887 #11640 #22117'
+  design = 'meshgenerators/BreakBoundaryOnSubdomainGenerator.md'
+
+  [boundary_type]
+    requirement = 'The system shall be capable of splitting existing mesh boundary sets where their '
+                  'underlying subdomain changes'
+    [external]
+      type = 'Exodiff'
+      input = 'break_boundary_on_subdomain.i'
+      cli_args = '--mesh-only'
+      exodiff = 'break_boundary_on_subdomain_in.e'
+      mesh_mode = 'REPLICATED'
+      recover = false
+
+      detail = 'on external boundaries, and'
+    []
+
+    [internal]
+      type = 'Exodiff'
+      input = 'break_bottom_interface_on_subdomain.i'
+      cli_args = '--mesh-only'
+      exodiff = 'break_bottom_interface_on_subdomain_in.e'
+      mesh_mode = 'REPLICATED'
+      recover = false
+
+      detail = 'on internal boundaries, and'
+    []
+
+    [invalid_boundary]
+      type = RunException
+      input = break_boundary_on_subdomain.i
+      cli_args = 'Mesh/break_boundary/boundaries="missing"'
+      expect_err = "The boundary 'missing' was not found in the mesh"
+      detail = 'error when the boundary does not exist in the mesh.'
+    []
+  []
+[]
