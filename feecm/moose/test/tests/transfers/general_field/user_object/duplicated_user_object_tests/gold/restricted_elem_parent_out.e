@@ -1,1 +1,0 @@
-../../../../multiapp_userobject_transfer/gold/restricted_elem_parent_out.e

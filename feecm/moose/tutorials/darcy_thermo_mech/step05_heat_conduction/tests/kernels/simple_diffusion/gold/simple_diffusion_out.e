@@ -1,1 +1,0 @@
-../../../../../step04_velocity_aux/tests/kernels/simple_diffusion/gold/simple_diffusion_out.e

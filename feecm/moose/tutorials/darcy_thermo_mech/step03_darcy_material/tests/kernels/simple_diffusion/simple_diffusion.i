@@ -1,1 +1,0 @@
-../../../../step02_darcy_pressure/tests/kernels/simple_diffusion/simple_diffusion.i

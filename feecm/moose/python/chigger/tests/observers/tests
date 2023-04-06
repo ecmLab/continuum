@@ -1,8 +1,0 @@
-[Tests]
-  [timer]
-    type = RunApp
-    command = timer.py
-    expect_out = "count = 3"
-    display_required = true
-  []
-[]

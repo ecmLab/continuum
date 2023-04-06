@@ -1,1 +1,0 @@
-../../../../step08_postprocessors/tests/kernels/simple_diffusion/simple_diffusion.i

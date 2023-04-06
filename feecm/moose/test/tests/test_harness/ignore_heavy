@@ -1,7 +1,0 @@
-[Tests]
-  [./ignore_heavy]
-    type = RunApp
-    input = good.i
-    heavy = true
-  [../]
-[]

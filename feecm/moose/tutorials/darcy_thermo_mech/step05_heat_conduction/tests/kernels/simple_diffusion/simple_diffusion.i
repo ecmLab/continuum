@@ -1,1 +1,0 @@
-../../../../step04_velocity_aux/tests/kernels/simple_diffusion/simple_diffusion.i

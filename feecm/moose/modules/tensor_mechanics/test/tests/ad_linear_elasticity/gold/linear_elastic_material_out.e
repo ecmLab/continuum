@@ -1,1 +1,0 @@
-../../../../../combined/test/tests/linear_elasticity/gold/linear_elastic_material_out.e

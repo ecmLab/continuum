@@ -1,3 +1,0 @@
-# Chemistry test descriptions
-
-TODO

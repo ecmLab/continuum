@@ -1,1 +1,0 @@
-../../../../multiapp_nearest_node_transfer/gold/to_multiple_boundaries_parent_out_sub0.e

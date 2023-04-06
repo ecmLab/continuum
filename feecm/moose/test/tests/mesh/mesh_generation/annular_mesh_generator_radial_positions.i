@@ -1,1 +1,0 @@
-../../meshgenerators/annular_mesh_generator/annular_mesh_generator_radial_positions.i

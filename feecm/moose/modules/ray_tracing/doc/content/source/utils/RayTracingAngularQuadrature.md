@@ -1,3 +1,0 @@
-# RayTracingAngularQuadrature
-
-!alert construction

@@ -1,1 +1,0 @@
-!template load file=stubs/moose_system.md.template name=Tricrystal2CircleGrainsIC syntax=/ICs/PolycrystalICs/Tricrystal2CircleGrainsIC

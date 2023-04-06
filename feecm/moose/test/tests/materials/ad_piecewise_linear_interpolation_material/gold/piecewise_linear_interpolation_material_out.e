@@ -1,1 +1,0 @@
-../../piecewise_linear_interpolation_material/gold/piecewise_linear_interpolation_material_out.e

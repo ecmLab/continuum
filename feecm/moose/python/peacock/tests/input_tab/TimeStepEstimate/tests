@@ -1,7 +1,0 @@
-[Tests]
-  [TimeStepEstimate]
-    type = PythonUnitTest
-    input = test_TimeStepEstimate.py
-    display_required = true
-  []
-[]

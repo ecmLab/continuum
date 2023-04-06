@@ -1,1 +1,0 @@
-small_elastic_out.e
