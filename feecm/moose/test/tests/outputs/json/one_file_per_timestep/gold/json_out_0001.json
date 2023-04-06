@@ -1,0 +1,21 @@
+{
+    "reporters": {
+        "test": {
+            "type": "ConstantReporter",
+            "values": {
+                "year": {
+                    "type": "int"
+                }
+            }
+        }
+    },
+    "time_steps": [
+        {
+            "test": {
+                "year": 1980
+            },
+            "time": 1.0,
+            "time_step": 1
+        }
+    ]
+}

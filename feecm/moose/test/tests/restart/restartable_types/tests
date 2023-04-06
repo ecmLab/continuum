@@ -1,0 +1,47 @@
+[Tests]
+  design = 'Restartable.md'
+  issues = '#1169 #2218'
+
+  [serial]
+    requirement = "The system shall be capable, on a single process, of"
+
+    [first]
+      type = 'RunApp'
+      input = 'restartable_types.i'
+      recover = false
+      detail = "writing data to a restart file"
+    []
+
+    [second]
+      # Using RunApp here because the error checking happens _in_ the app
+      type = 'RunApp'
+      input = 'restartable_types2.i'
+      prereq = serial/first
+      recover = false
+      detail = "and restarting the simulation from the restart file."
+    []
+  []
+
+  [parallel]
+    requirement = "The system shall be capable, in parallel, of"
+
+    [first]
+      type = 'RunApp'
+      input = 'restartable_types.i'
+      recover = false
+      min_parallel = 2
+      prereq = serial/second
+      detail = "writing data to a restart file"
+    []
+
+    [second]
+      # Using RunApp here because the error checking happens _in_ the app
+      type = 'RunApp'
+      input = 'restartable_types2.i'
+      prereq = parallel/first
+      min_parallel = 2
+      recover = false
+      detail = "and restarting the simulation from the restart file."
+    []
+  []
+[]

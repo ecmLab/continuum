@@ -1,0 +1,14 @@
+[Tests]
+  [nemesis]
+    type = ImageDiff
+    command = nemesis.py
+    imagediff = 'nemesis.png'
+    display_required = true
+  []
+  [explode]
+    type = ImageDiff
+    command = explode.py
+    imagediff = 'explode.png'
+    display_required = true
+  []
+[]

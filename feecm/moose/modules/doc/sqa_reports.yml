@@ -1,0 +1,492 @@
+Applications:
+    framework:
+        exe_directory: modules/combined
+        app_types:
+            - MooseApp
+        content_directory: framework/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+            - test/doc/remove.yml
+        log_stub_files: WARNING
+        show_warning: false
+
+    chemical_reactions:
+        exe_directory: modules/combined
+        app_types:
+            - ChemicalReactionsApp
+        content_directory: modules/chemical_reactions/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+        log_stub_files: WARNING
+        show_warning: false
+
+    contact:
+        exe_directory: modules/combined
+        app_types:
+            - ContactApp
+        content_directory: modules/contact/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+        log_missing_description: WARNING
+        log_missing_markdown: WARNING
+        show_warning: false
+
+    electromagnetics:
+        exe_directory: modules/combined
+        app_types:
+            - ElectromagneticsApp
+        content_directory: modules/electromagnetics/doc/content
+        show_warning: false
+
+    external_petsc_solver:
+        exe_directory: modules/combined
+        app_types:
+            - ExternalPetscApp
+        content_directory: modules/external_petsc_solver/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+
+    geochemistry:
+        exe_directory: modules/combined
+        app_types:
+            - GeochemistryApp
+        content_directory: modules/geochemistry/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+
+    fluid_properties:
+        exe_directory: modules/combined
+        app_types:
+            - FluidPropertiesApp
+        content_directory: modules/fluid_properties/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+        log_stub_files: WARNING
+        show_warning: false
+
+    fsi:
+        exe_directory: modules/combined
+        app_types:
+            - FsiApp
+        content_directory: modules/fsi/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+
+    functional_expansion_tools:
+        exe_directory: modules/combined
+        app_types:
+            - FunctionalExpansionToolsApp
+        content_directory: modules/functional_expansion_tools/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+
+    heat_conduction:
+        exe_directory: modules/combined
+        app_types:
+            - HeatConductionApp
+        content_directory: modules/heat_conduction/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+        log_stub_files: WARNING
+        log_missing_description: WARNING
+        show_warning: false
+
+    level_set:
+        exe_directory: modules/combined
+        app_types:
+            - LevelSetApp
+        content_directory: modules/level_set/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+
+    misc:
+        exe_directory: modules/combined
+        app_types:
+            - MiscApp
+        content_directory: modules/misc/doc/content
+        log_stub_files: WARNING
+        log_missing_description: WARNING
+        show_warning: false
+
+    navier_stokes:
+        exe_directory: modules/combined
+        app_types:
+            - NavierStokesApp
+        content_directory: modules/navier_stokes/doc/content
+        remove:
+            - framework/doc/remove.yml
+        unregister:
+            - framework/doc/unregister.yml
+        log_stub_files: WARNING
+        show_warning: false
+
+    optimization:
+        exe_directory: modules/combined
+        app_types:
+            - OptimizationApp
+        content_directory: modules/optimization/doc/content
+        remove:
+            - framework/doc/remove.yml
+        unregister:
+            - framework/doc/unregister.yml
+        log_stub_files: WARNING
+        show_warning: false
+
+    peridynamics:
+        exe_directory: modules/combined
+        app_types:
+            - PeridynamicsApp
+        content_directory: modules/peridynamics/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+        log_stub_files: WARNING
+        show_warning: false
+
+    phase_field:
+        exe_directory: modules/combined
+        app_types:
+            - PhaseFieldApp
+        content_directory: modules/phase_field/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+        log_stub_files: WARNING
+        log_missing_description: WARNING
+        show_warning: false
+
+    porous_flow:
+        exe_directory: modules/combined
+        app_types:
+            - PorousFlowApp
+        content_directory: modules/porous_flow/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+        log_stub_files: WARNING
+        show_warning: false
+
+    ray_tracing:
+        exe_directory: modules/combined
+        app_types:
+            - RayTracingApp
+        content_directory: modules/ray_tracing/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+
+    RDG:
+        exe_directory: modules/combined
+        content_directory: modules/rdg/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+        app_types:
+            - RdgApp
+
+    reactor:
+        exe_directory: modules/combined
+        app_types:
+            - ReactorApp
+        content_directory: modules/reactor/doc/content
+        remove:
+            - framework/doc/remove.yml
+        unregister:
+            - framework/doc/unregister.yml
+
+    scalar_transport:
+        exe_directory: modules/combined
+        app_types:
+            - ScalarTransportApp
+        content_directory: modules/scalar_transport/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+
+    solid_properties:
+        exe_directory: modules/combined
+        app_types:
+            - SolidPropertiesApp
+        content_directory: modules/solid_properties/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+
+    stochastic_tools:
+        exe_directory: modules/combined
+        app_types:
+            - StochasticToolsApp
+        content_directory: modules/stochastic_tools/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+            - modules/stochastic_tools/doc/remove.yml
+        log_stub_files: WARNING
+        show_warning: false
+
+    tensor_mechanics:
+        exe_directory: modules/combined
+        app_types:
+            - TensorMechanicsApp
+        content_directory: modules/tensor_mechanics/doc/content
+        remove:
+            - framework/doc/remove.yml
+        unregister:
+            - framework/doc/unregister.yml
+        log_stub_files: WARNING
+        log_missing_description: WARNING
+        show_warning: false
+
+    THM:
+        exe_directory: modules/combined
+        app_types:
+            - ThermalHydraulicsApp
+        content_directory: modules/thermal_hydraulics/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+        log_stub_files: WARNING
+        log_missing_description: WARNING
+        log_missing_markdown: WARNING
+        show_warning: false
+
+    XFEM:
+        exe_directory: modules/combined
+        app_types:
+            - XFEMApp
+        content_directory: modules/xfem/doc/content
+        unregister:
+            - framework/doc/unregister.yml
+        remove:
+            - framework/doc/remove.yml
+
+Documents:
+    software_quality_plan: sqa/inl_records.md#software_quality_plan
+    enterprise_architecture_entry: sqa/inl_records.md#enterprise_architecture_entry
+    safety_software_determination: sqa/inl_records.md#safety_software_determination
+    quality_level_determination: sqa/inl_records.md#quality_level_determination
+    configuration_management_plan: sqa/inl_records.md#configuration_management_plan
+    asset_management_plan: sqa/inl_records.md#asset_management_plan
+    verification_validation_plan: sqa/inl_records.md#verification_and_validation_plan
+    software_requirements_specification: sqa/moose_srs.md
+    software_design_description: sqa/moose_sdd.md
+    software_test_plan: sqa/moose_stp.md
+    requirements_traceablity_matrix: sqa/moose_rtm.md
+    verification_validation_report: sqa/moose_vvr.md
+    failure_analysis_report: sqa/moose_far.md
+    software_library_list: sqa/moose_sll.md
+    communication_and_contact_information: sqa/framework_cci.md
+    software_coding_standards: sqa/framework_scs.md
+    log_user_manual: WARNING
+    log_theory_manual: WARNING
+    show_warning: false
+
+Requirements:
+    create_diff_report: true
+    moose_test:
+        directories:
+            - test/tests
+
+    stork:
+        directories:
+            - stork
+
+    tutorials:
+        directories:
+            - tutorials
+        log_duplicate_requirement: NONE # since the steps contain the same test this is expected
+
+    scripts:
+        directories:
+            - scripts
+
+    python:
+        directories:
+            - python
+        log_missing: WARNING
+        show_warning: false
+
+    combined:
+        directories:
+            - modules/combined
+        log_missing: WARNING
+        log_missing_requirement: WARNING
+        log_top_level_detail: WARNING
+        log_issue_format: WARNING
+        log_design_files: WARNING
+        log_duplicate_requirement: WARNING
+        show_warning: false
+
+    chemical_reactions:
+        directories:
+            - modules/chemical_reactions
+        log_missing: WARNING
+        show_warning: false
+
+    contact:
+        directories:
+            - modules/contact
+        log_duplicate_requirement: WARNING
+        log_missing: WARNING
+        log_missing_requirement: WARNING
+        show_warning: false
+
+    electromagnetics:
+        directories:
+            - modules/electromagnetics
+        show_warning: false
+
+    external_petsc_solver:
+        directories:
+            - modules/external_petsc_solver
+
+    fluid_properties:
+        directories:
+            - modules/fluid_properties
+        log_missing: WARNING
+        show_warning: false
+
+    fsi:
+        directories:
+            - modules/fsi
+
+    functional_expansion_tools:
+        directories:
+            - modules/functional_expansion_tools
+
+    heat_conduction:
+        directories:
+            - modules/heat_conduction
+
+    geochemistry:
+        directories:
+            - modules/geochemistry
+
+    level_set:
+        directories:
+            - modules/level_set
+        log_missing: WARNING
+        show_warning: false
+
+    misc:
+        directories:
+            - modules/misc
+        log_duplicate_requirement: WARNING
+        log_missing: WARNING
+        show_warning: false
+
+    navier_stokes:
+        directories:
+            - modules/navier_stokes
+
+    optimization:
+        directories:
+            - modules/optimization
+
+    phase_field:
+        directories:
+            - modules/phase_field
+        log_duplicate_requirement: WARNING
+        log_missing: WARNING
+        log_empty_issues: WARNING
+        log_design_files: WARNING
+        show_warning: false
+
+    porous_flow:
+        directories:
+            - modules/porous_flow
+        log_duplicate_requirement: WARNING
+        log_missing: WARNING
+        log_issue_format: WARNING
+        log_design_files: WARNING
+        show_warning: false
+
+    peridynamics:
+        directories:
+            - modules/peridynamics
+        log_duplicate_requirement: WARNING
+        log_design_files: WARNING
+        show_warning: false
+
+    ray_tracing:
+        directories:
+            - modules/ray_tracing
+
+    rdg:
+        directories:
+            - modules/rdg
+
+    reactor:
+        directories:
+            - modules/reactor
+
+    richards:
+        directories:
+            - modules/richards
+        log_missing: NONE # deprcated module
+
+    scalar_transport:
+        directories:
+            - modules/scalar_transport
+
+    solid_properties:
+        directories:
+            - modules/solid_properties
+
+    stochastic_tools:
+        directories:
+            - modules/stochastic_tools
+        log_missing_requirement: WARNING
+        log_top_level_detail: WARNING
+        show_warning: false
+
+    tensor_mechanics:
+        directories:
+            - modules/tensor_mechanics
+        log_duplicate_requirement: WARNING
+        log_missing: WARNING
+        log_empty_issues: WARNING
+        show_warning: false
+
+    thermal_hydraulics:
+        directories:
+            - modules/thermal_hydraulics
+        log_missing: WARNING
+        log_missing_design: WARNING
+        log_missing_issues: WARNING
+        log_testable: WARNING
+        log_duplicate_requirement: WARNING
+        show_warning: false
+
+    xfem:
+        directories:
+            - modules/xfem

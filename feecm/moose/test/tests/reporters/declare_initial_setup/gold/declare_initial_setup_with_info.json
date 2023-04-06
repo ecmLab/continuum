@@ -1,0 +1,32 @@
+{
+    "reporters": {
+        "info": {
+            "type": "MeshInfo",
+            "values": {
+                "num_elements": {
+                    "type": "unsigned int"
+                }
+            }
+        },
+        "initialSetup": {
+            "type": "TestDeclareInitialSetupReporter",
+            "values": {
+                "value": {
+                    "type": "double"
+                }
+            }
+        }
+    },
+    "time_steps": [
+        {
+            "info": {
+                "num_elements": 1
+            },
+            "initialSetup": {
+                "value": 1980.0
+            },
+            "time": 2.0,
+            "time_step": 2
+        }
+    ]
+}

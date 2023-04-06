@@ -1,0 +1,8 @@
+[Tests]
+  [BasePeacockMainWindow]
+    type = PythonUnitTest
+    input = test_BasePeacockMainWindow.py
+    display_required = true
+    separate = True
+  []
+[]

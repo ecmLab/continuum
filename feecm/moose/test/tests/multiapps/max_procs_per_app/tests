@@ -1,0 +1,14 @@
+[Tests]
+  issues = '#1873'
+  design = 'syntax/MultiApps/index.md'
+
+  [./test]
+    type = 'Exodiff'
+    input = 'parent.i'
+    exodiff = 'parent_out.e parent_out_sub0.e'
+    min_parallel = 3
+    recover = false
+
+    requirement = "The system shall support limiting the number of processors for sub-applications."
+  [../]
+[]

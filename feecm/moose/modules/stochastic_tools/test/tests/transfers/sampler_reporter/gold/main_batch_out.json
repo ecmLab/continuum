@@ -1,0 +1,68 @@
+{
+    "reporters": {
+        "storage": {
+            "type": "StochasticReporter",
+            "values": {
+                "data:constant:str": {
+                    "row_begin": 0,
+                    "row_end": 10,
+                    "type": "std::vector<std::string>"
+                },
+                "data:converged": {
+                    "row_begin": 0,
+                    "row_end": 10,
+                    "type": "std::vector<bool>"
+                },
+                "data:pp:value": {
+                    "row_begin": 0,
+                    "row_end": 10,
+                    "type": "std::vector<double>"
+                }
+            }
+        }
+    },
+    "time_steps": [
+        {
+            "storage": {
+                "data:constant:str": [
+                    "this_value",
+                    "this_value",
+                    "this_value",
+                    "this_value",
+                    "this_value",
+                    "this_value",
+                    "this_value",
+                    "this_value",
+                    "this_value",
+                    "this_value"
+                ],
+                "data:converged": [
+                    true,
+                    true,
+                    true,
+                    true,
+                    true,
+                    true,
+                    true,
+                    true,
+                    true,
+                    true
+                ],
+                "data:pp:value": [
+                    0.0,
+                    0.1,
+                    0.2,
+                    0.30000000000000004,
+                    0.4,
+                    0.5,
+                    0.6000000000000001,
+                    0.7000000000000001,
+                    0.8,
+                    0.9
+                ]
+            },
+            "time": 1.0,
+            "time_step": 1
+        }
+    ]
+}

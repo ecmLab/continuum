@@ -1,0 +1,48 @@
+# Do not alter <BUILD>, <VERSION>. These are template tokens altered
+# on the fly by the generate_recipe.py script. The only modifiable
+# item in template/ is the conda_build_config.yaml file (moose_libmesh)
+{% set build = "<BUILD>" %}
+{% set version = "<VERSION>" %}
+{% set strbuild = "build_" + build|string %}
+
+package:
+  name: <PREFIX_PACKAGE_WITH><FORMATTED_APPLICATION>
+  version: {{ version }}
+
+source:
+  path: <REPO>
+
+build:
+  number: {{ build }}  # [linux,osx]
+  string: {{ strbuild }}
+  pin_depends: strict
+  skip: true # [win]
+
+requirements:
+  build:
+    - {{ moose_libmesh }}
+    - {{ moose_python }}
+    - moose-tools
+
+  run:
+    - {{ moose_libmesh }}
+    - {{ moose_python }}
+    - moose-tools
+
+test:
+  commands:
+    - <EXECUTABLE>-opt --help
+
+about:
+  home: https://mooseframework.org/
+  license: LGPL 2.1
+  summary: >
+    The Multiphysics Object-Oriented Simulation Environment (MOOSE) is a finite-element,
+    multiphysics framework primarily developed by Idaho National Laboratory. This superficial
+    module (moose) if a future placeholder for binary releases of MOOSE.'
+
+extra:
+  recipe-maintainers:
+    - milljm
+    - cticenhour
+    - loganharbour

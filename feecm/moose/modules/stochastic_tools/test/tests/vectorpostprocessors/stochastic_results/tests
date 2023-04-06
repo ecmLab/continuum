@@ -1,0 +1,49 @@
+[Tests]
+  issues = '#14410'
+  design = 'StochasticResults.md'
+
+  [parallel_type]
+    requirement = "The system shall support the collection of stochastic data that is"
+
+    [replicated]
+      type = CSVDiff
+      input = parent.i
+      cli_args = 'VectorPostprocessors/storage/parallel_type=REPLICATED Outputs/file_base=replicated_out'
+      csvdiff = replicated_out_storage_0002.csv
+
+      detail = "replicated on all processors and"
+    []
+
+    [distributed]
+      type = CSVDiff
+      input = parent.i
+      min_parallel = 3
+      max_parallel = 3
+      cli_args = 'VectorPostprocessors/storage/parallel_type=DISTRIBUTED Outputs/file_base=distributed_out'
+      csvdiff = 'distributed_out_storage_0002.csv.0 distributed_out_storage_0002.csv.1 distributed_out_storage_0002.csv.2'
+
+      detail = "distributed across many."
+    []
+  []
+
+  [prefix]
+    requirement = "The system shall support the labeling of collection of stochastic data"
+
+    [custom]
+      type = CSVDiff
+      input = parent.i
+      cli_args = 'VectorPostprocessors/storage/parallel_type=REPLICATED Outputs/file_base=prefix_out Transfers/data/prefix=prefix'
+      csvdiff = prefix_out_storage_0002.csv
+
+      detail = "with custom prefix and"
+    []
+    [none]
+      type = CSVDiff
+      input = parent.i
+      cli_args = 'VectorPostprocessors/storage/parallel_type=REPLICATED Outputs/file_base=no_prefix_out Transfers/data/prefix='''
+      csvdiff = no_prefix_out_storage_0002.csv
+
+      detail = "without a prefix."
+    []
+  []
+[]

@@ -1,0 +1,44 @@
+[Tests]
+  [git_commit_history]
+    design = 'python/index.md'
+    issues = '#5084'
+    requirement = "The system shall include a utility for generating graphs of git history that"
+
+    [contributors]
+      skip = "#15188"
+      type = CheckFiles
+      command = '../git_commit_history.py --open-source --moose-dev --unique --output=contributors.pdf'
+      check_files = 'contributors.pdf'
+      detail = "show the number of contributors and"
+    []
+    [additions]
+      skip = "#15188"
+      type = CheckFiles
+      command = '../git_commit_history.py --additions --moose-dev --days=7 --open-source --output=additions.pdf'
+      check_files = 'additions.pdf'
+      detail = "repository addition/deletion history."
+    []
+  []
+  [git_news]
+    type = PythonUnitTest
+    input = test_git_news.py
+    buffer = True
+    issues = '#11446'
+    design = 'newsletter/index.md'
+    requirement = "The system shall include a utility for determining author contributions to the repository in the previous month.."
+  []
+  [authors]
+    type = PythonUnitTest
+    input = test_authors.py
+    issues = '#16137'
+    design = 'python/index.md'
+    requirement = "The system shall include a utility for counting the number of lines for unique contributor."
+  []
+  [versioner]
+    type = PythonUnitTest
+    input = test_versioner.py
+    issues = '#20336'
+    design = 'python/index.md'
+    requirement = "The system shall include a utility for generating a unique hash for moose dependencies and moose applications"
+  []
+[]

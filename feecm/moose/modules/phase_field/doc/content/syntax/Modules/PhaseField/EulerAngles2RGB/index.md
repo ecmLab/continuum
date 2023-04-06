@@ -1,0 +1,1 @@
+!template load file=stubs/moose_system.md.template name=EulerAngles2RGB syntax=/Modules/PhaseField/EulerAngles2RGB

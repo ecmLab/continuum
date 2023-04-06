@@ -1,0 +1,228 @@
+[Tests]
+  [update_model_test]
+    type = 'Exodiff'
+    input = 'update_method_test.i'
+    exodiff = 'update_method_test_out.e'
+    issues = '#16064'
+    requirement = 'The system shall provide a StressUpdate material-based extensible crystal plasticity '
+                  'system'
+    design = '/ComputeMultipleCrystalPlasticityStress.md /CrystalPlasticityKalidindiUpdate.md'
+  []
+  [update_model_011orientation]
+    type = 'CSVDiff'
+    input = 'update_method_011orientation.i'
+    csvdiff = 'update_method_011orientation_out.csv'
+    issues = '#16064'
+    requirement = 'The material-based crystal plasticity model shall compute the lagrangian stress, '
+                  'PK2 stress, and slip for an orientation not aligned with the Cartesian coordinate '
+                  'system.'
+    design = '/ComputeMultipleCrystalPlasticityStress.md /CrystalPlasticityKalidindiUpdate.md'
+  []
+  [exception]
+    type = 'Exodiff'
+    input = 'exception.i'
+    exodiff = 'exception_out.e'
+    allow_warnings = true
+    issues = '#16064'
+    requirement = 'A constitutive failure shall trigger an exception leading to a cut time step '
+                  'rather than a failed solve using the stress-update based crystal plasticity implementation'
+    design = '/ComputeMultipleCrystalPlasticityStress.md /CrystalPlasticityKalidindiUpdate.md'
+  []
+  [substep]
+    type = 'Exodiff'
+    input = 'substep.i'
+    exodiff = 'substep_out.e'
+    allow_warnings = true
+    issues = '#6097'
+    requirement = 'The crystal plasticity system shall provide a substepping capability for improved '
+                  'convergence using the stress-update based crystal plasticity implementation'
+    design = '/ComputeMultipleCrystalPlasticityStress.md /CrystalPlasticityKalidindiUpdate.md'
+  []
+  [linesearch]
+    type = 'Exodiff'
+    input = 'linesearch.i'
+    exodiff = 'linesearch_out.e'
+    issues = '#16064'
+    requirement = 'The crystal plasticity system shall implement a line search capability for '
+                  'accelerated internal Newton solves using the stress-update based crystal plasticity implementation'
+    design = '/CrystalPlasticityKalidindiUpdate.md'
+  []
+  [orthotropic_rotation_Cijkl]
+    type = 'CSVDiff'
+    input = 'orthotropic_rotation_Cijkl.i'
+    csvdiff = 'orthotropic_rotation_Cijkl_out.csv'
+    issues = '#10629'
+    requirement = 'The crystal plasticity rotations shall correctly rotate the elasticity tensors at '
+                  'each material point using the stress-update based crystal plasticity implementation'
+    design = '/ComputeElasticityTensorConstantRotationCP.md'
+  []
+  [patch_recovery]
+    type = 'Exodiff'
+    input = 'patch_recovery.i'
+    exodiff = 'patch_recovery_out.e'
+    abs_zero = 1e-8
+    mesh_mode = replicated
+    requirement = "The Zienkiewicz-Zhu patch shall calculate the stress components at the nodes, "
+                  "with equivalent results in both serial and parallel simulations, in "
+                  "the stress-update based crystal plasticity implementation"
+    design = 'nodal_patch_recovery.md'
+    issues = '#18721'
+  []
+  [use_substep_dt]
+    type = 'CSVDiff'
+    input = 'use_substep_dt.i'
+    csvdiff = 'use_substep_dt_out.csv'
+    allow_warnings = true
+    valgrind = HEAVY
+    issues = '#17340'
+    requirement = 'The system shall apply correct boundary condition after timestep being cut during '
+                  'substepping using the stress-update based crystal plasticity implementation'
+    design = '/ComputeMultipleCrystalPlasticityStress.md'
+  []
+  [thermal_eigenstrain]
+    type = 'CSVDiff'
+    input = 'thermal_eigenstrain_test.i'
+    csvdiff = 'thermal_eigenstrain_test_out.csv'
+    allow_warnings = true
+    issues = '#17734'
+    requirement = 'The system shall produce correct thermal deformation gradient values with '
+                  'changing temperature'
+    design = '/ComputeCrystalPlasticityThermalEigenstrain.md '
+             '/ComputeMultipleCrystalPlasticityStress.md'
+  []
+  [multiple_eigenstrains]
+    type = 'CSVDiff'
+    input = 'multiple_eigenstrains_test.i'
+    csvdiff = 'multiple_eigenstrains_test_out.csv'
+    allow_warnings = true
+    issues = '#17734'
+    requirement = 'The system shall produce correct deformation gradient values for the total and '
+                  'individual eigenstrains'
+    design = '/ComputeCrystalPlasticityThermalEigenstrain.md '
+             '/ComputeMultipleCrystalPlasticityStress.md'
+  []
+  [thermal_eigenstrain_011orientation]
+    type = 'CSVDiff'
+    input = 'thermal_eigenstrain_test.i'
+    csvdiff = 'thermal_eigenstrain_test_011orientation_out.csv'
+    cli_args = 'Materials/elasticity_tensor/euler_angle_1=120.0 '
+               'Materials/elasticity_tensor/euler_angle_2=125.264 '
+               'Materials/elasticity_tensor/euler_angle_3=45.0 '
+               'Outputs/file_base=thermal_eigenstrain_test_011orientation_out '
+               'Outputs/execute_on=FINAL'
+    allow_warnings = true
+    issues = '#17734'
+    requirement = 'The system shall produce correct thermal deformation gradient values with '
+                  'changing temperature under a 011 loading orientation'
+    design = '/ComputeCrystalPlasticityThermalEigenstrain.md '
+             '/ComputeMultipleCrystalPlasticityStress.md'
+  []
+  [update_euler_angle_111_orientation]
+    type = 'CSVDiff'
+    input = 'update_euler_angle.i'
+    csvdiff = 'update_euler_angle_111_orientation_out.csv'
+    cli_args = 'Materials/elasticity_tensor/euler_angle_1=0 '
+               'Materials/elasticity_tensor/euler_angle_2=54.7 '
+               'Materials/elasticity_tensor/euler_angle_3=45 '
+               'Outputs/file_base=update_euler_angle_111_orientation_out'
+    allow_warnings = true
+    requirement = 'The system shall produce correct Euler angles during the crystal plastic '
+                  'simulation for single crystal oriented along (111).'
+    issues = '#19473'
+    design = '/ComputeUpdatedEulerAngle.md '
+             '/ComputeMultipleCrystalPlasticityStress.md'
+  []
+  [update_euler_angle_112_orientation]
+    type = 'CSVDiff'
+    input = 'update_euler_angle.i'
+    csvdiff = 'update_euler_angle_112_orientation_out.csv'
+    cli_args = 'Materials/elasticity_tensor/euler_angle_1=90 '
+               'Materials/elasticity_tensor/euler_angle_2=30 '
+               'Materials/elasticity_tensor/euler_angle_3=45 '
+               'Outputs/file_base=update_euler_angle_112_orientation_out'
+    allow_warnings = true
+    requirement = 'The system shall produce correct Euler angles during the crystal plastic '
+                  'simulation for single crystal oriented along (112).'
+    issues = '#19473'
+    design = '/ComputeUpdatedEulerAngle.md '
+             '/ComputeMultipleCrystalPlasticityStress.md'
+  []
+  [update_euler_angle_123_orientation]
+    type = 'CSVDiff'
+    input = 'update_euler_angle.i'
+    csvdiff = 'update_euler_angle_123_orientation_out.csv'
+    cli_args = 'Materials/elasticity_tensor/euler_angle_1=50 '
+               'Materials/elasticity_tensor/euler_angle_2=34 '
+               'Materials/elasticity_tensor/euler_angle_3=65 '
+               'Outputs/file_base=update_euler_angle_123_orientation_out'
+    allow_warnings = true
+    requirement = 'The system shall produce correct Euler angles during the crystal plastic '
+                  'simulation for single crystal oriented along (123). '
+    issues = '#19473'
+    design = '/ComputeUpdatedEulerAngle.md '
+             '/ComputeMultipleCrystalPlasticityStress.md'
+  []
+  [bicrystal_test]
+    type = 'CSVDiff'
+    input = 'bicrystal_test.i'
+    csvdiff = 'bicrystal_test_out.csv'
+    requirement = 'The system shall allow multiple crystal plasticity models to '
+                  'be used in a polycrystalline simulation through the use of '
+                  'the base_name input parameter.'
+    issues = '#21036'
+    design = '/ComputeMultipleCrystalPlasticityStress.md'
+  []
+  [rotation_matrix_update_euler_angle_111_orientation]
+    type = 'CSVDiff'
+    input = 'rotation_matrix_update_euler_angle_111_orientation.i'
+    csvdiff = 'rotation_matrix_update_euler_angle_111_orientation_out.csv'
+    requirement = 'The system shall produce the initial Euler angles phi1=0, psi=54.7356103, '
+                  'and phi2=45 when supplied with the associated rotation matrix and '
+                  'shall calculate a relatively higher 2nd Piola Kirchoff stress in '
+                  'agreement with the low Schmid factor for this loading orientation.'
+    issues = '#23451'
+    design = '/ComputeElasticityTensorCP.md '
+             '/ComputeUpdatedEulerAngle.md '
+  []
+  [rotation_matrix_update_euler_angle_011_orientation]
+    type = 'CSVDiff'
+    input = 'rotation_matrix_update_euler_angle_111_orientation.i'
+    csvdiff = 'rotation_matrix_update_euler_angle_011_orientation_out.csv'
+    cli_args = 'Materials/elasticity_tensor/rotation_matrix="0.5 0.5   0.707106781 -0.5 -0.5 0.707106781 0.707106781 0.0 0.0" '
+               'Outputs/file_base=rotation_matrix_update_euler_angle_011_orientation_out'
+    allow_warnings = true
+    requirement = 'The system shall produce the initial Euler angles of phi1=45, psi=90, '
+                  'and phi2=45, which shall quickly update as the crystal rotates, when '
+                  'supplied with the associated rotation matrix. The system shall calculate '
+                  'a relatively low 2nd Piola Kirchoff stress in the z-direction in agreement '
+                  'with the high Schmid factor for this loading orientation'
+    issues = '#23451'
+    design = '/ComputeElasticityTensorCP.md '
+             '/ComputeUpdatedEulerAngle.md '
+  []
+  [rotation_matrix_update_euler_angle_112_orientation]
+    type = 'CSVDiff'
+    input = 'rotation_matrix_update_euler_angle_111_orientation.i'
+    csvdiff = 'rotation_matrix_update_euler_angle_112_orientation_out.csv'
+    cli_args = 'Materials/elasticity_tensor/rotation_matrix="-0.612372436 0.707106781 0.353553391 -0.612372436 -0.707106781 0.353553391 0.5 0.0 0.866025404" '
+               'Outputs/file_base=rotation_matrix_update_euler_angle_112_orientation_out'
+    allow_warnings = true
+    requirement = 'The system shall produce the initial Euler angles of phi1=90, psi=30, '
+                  'and phi2=35, when supplied with the associated rotation matrix, and the '
+                  'updated Euler angles values as the crystal under goes rotation during deformation.'
+    issues = '#23451'
+    design = '/ComputeElasticityTensorCP.md '
+             '/ComputeUpdatedEulerAngle.md '
+  []
+  [rotation_matrix_and_euler_angles_error]
+    type = RunException
+    input = 'rotation_matrix_update_euler_angle_111_orientation.i'
+    cli_args = 'Materials/elasticity_tensor/euler_angle_2=50'
+    expect_err = 'Bunge Euler angle information and the rotation_matrix cannot both be specified. '
+                 'Provide only one type of orientation information in the input file.'
+    requirement = 'The system shall not allow specification of both the rotation matrix '
+                  'and the Bunge Euler angles within the same input file.'
+    issues ='#23451'
+    design = '/ComputeElasticityTensorCP.md'
+  []
+[]

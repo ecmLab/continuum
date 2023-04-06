@@ -1,0 +1,1 @@
+../../../../step06_coupled_darcy_heat_conduction/tests/kernels/simple_diffusion/simple_diffusion.i

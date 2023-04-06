@@ -1,0 +1,108 @@
+[Tests]
+  design = GenericFunctorMaterial.md
+  issues = '#16809'
+  [exo]
+    type = Exodiff
+    input = 1d_dirichlet.i
+    exodiff = 1d_dirichlet_out.e
+    requirement = 'The system shall be able to create material properties that can be evaluated on-the-fly provided geometric arguments.'
+  []
+  [multiple_definitions]
+    type = RunException
+    expect_err = 'No insertion for the functor material property'
+    input = 1d_dirichlet.i
+    prereq = 'exo'
+    requirement = 'The system shall error if multiple definitions are given for a functor material property on a given subdomain.'
+    cli_args = "Materials/active='functor overlapping_functor'"
+  []
+  [qp_functor]
+    requirement = 'The system shall be able to solve a diffusion problem with different diffusivities on different subdomains and obtain the same results using'
+    [regular]
+      detail = 'material properties bound to references'
+      type = Exodiff
+      input = traditional-mat-props.i
+      exodiff = traditional-mat-props_out.e
+    []
+    [functor]
+      detail = 'material properties evaluated with geometric position information'
+      type = Exodiff
+      input = functor-mat-props.i
+      exodiff = functor-mat-props_out.e
+    []
+  []
+  [vector-functor]
+    type = Exodiff
+    input = 'functor-vector-mat-props.i'
+    exodiff = 'functor-vector-mat-props_out.e'
+    design = 'FunctorVectorElementalAux.md'
+    requirement = 'The system shall be able to transfer vector material properties to an auxiliary variable, on a per-component basis.'
+  []
+  [prop_caching]
+    requirement = 'The system shall be able to evaluate, cache, and then clear functor material property evaluations'
+    [on_timestep_begin]
+      type = Exodiff
+      input = prop-caching.i
+      exodiff = prop-caching_out.e
+      detail = 'at the beginning of timesteps'
+      cli_args = "Materials/slow_prop/execute_on='timestep_begin'"
+      method = '!dbg' # stl container checking takes forever
+    []
+    [always]
+      type = Exodiff
+      input = prop-caching.i
+      exodiff = prop-caching_out.e
+      detail = 'always, so always perform evaluations'
+      prereq = 'prop_caching/on_timestep_begin'
+      method = '!dbg' # stl container checking takes forever
+    []
+    [on_nonlinear]
+      type = Exodiff
+      input = prop-caching.i
+      exodiff = prop-caching_out.e
+      detail = 'on nonlinear iterations'
+      cli_args = "Materials/slow_prop/execute_on='nonlinear'"
+      prereq = 'prop_caching/always'
+      method = '!dbg' # stl container checking takes forever
+    []
+    [on_linear]
+      type = Exodiff
+      input = prop-caching.i
+      exodiff = prop-caching_out.e
+      detail = 'on linear iterations'
+      cli_args = "Materials/slow_prop/execute_on='linear'"
+      prereq = 'prop_caching/on_nonlinear'
+      method = '!dbg' # stl container checking takes forever
+    []
+  []
+  [bad-functor-type-mixing]
+    type = RunException
+    input = wrong-type.i
+    expect_err = 'We are requesting a non-AD functor from an AD object, but the true functor is AD. This means we could be dropping important derivatives. We will not allow this'
+    requirement = 'The system shall error if an automatic differentiation (AD) object requests a non-AD functor when the functor is AD. This prevents potential dropping of derivative information.'
+    design = 'Materials/index.md'
+  []
+  [prop_name_issue]
+    type = RunException
+    input = 1d_dirichlet.i
+    expect_err = 'prop_names should not be the same as any of the prop_values'
+    requirement = 'The system shall error if a functor material property is declared with the same name as another functor.'
+    design = 'Materials/index.md'
+    cli_args = 'Materials/functor/prop_names=sink'
+  []
+  [vector_prop_name_issue]
+    type = RunException
+    input = functor-vector-mat-props.i
+    expect_err = 'prop_names should not be the same as any of the prop_values'
+    requirement = 'The system shall error if a functor vector material property is declared with the same name as another functor.'
+    design = 'Materials/index.md'
+    cli_args = "Materials/block0/prop_names='matprop mat_x' Materials/block0/prop_values='4 2 mat_x 3 4 1'"
+  []
+  [elem_arg_caching]
+    type = Exodiff
+    input = 1d_dirichlet.i
+    exodiff = elem-arg-caching.e
+    cli_args = "Materials/functor/execute_on='linear nonlinear' Outputs/file_base=elem-arg-caching"
+    requirement = 'The system shall be able to cache functor evaluations associated with cell centers.'
+    issues = '#20470'
+  []
+[]

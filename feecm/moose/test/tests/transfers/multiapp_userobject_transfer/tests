@@ -1,0 +1,129 @@
+[Tests]
+  issues = "#10313 #19056"
+  design = "MultiAppUserObjectTransfer.md"
+
+  [transfer]
+    requirement = "The system shall support an interface for transferring user-defined spatial data"
+
+    [from_sub]
+      type = 'Exodiff'
+      input = 'parent.i'
+      exodiff = 'parent_out.e parent_out_sub_app0.e parent_out_sub_app1.e'
+
+      detail = "to a parent application from sub-applications,"
+    []
+
+    [from_sub_nearest_sub_app]
+      type = 'Exodiff'
+      input = 'main_nearest_sub_app.i'
+      exodiff = 'main_nearest_sub_app_out.e'
+
+      detail = "to a parent application from the nearest sub-applications,"
+    []
+
+    [to_sub]
+      type = 'Exodiff'
+      input = 'tosub_parent.i'
+      exodiff = 'tosub_parent_out.e tosub_parent_out_sub_app0.e tosub_parent_out_sub_app1.e'
+
+      detail = "from a parent application to sub-applications,"
+    []
+    [to_sub_displaced]
+      type = 'Exodiff'
+      input = 'tosub_displaced_parent.i'
+      exodiff = 'tosub_displaced_parent_out.e tosub_displaced_parent_out_sub_app0.e'
+
+      detail = "from a parent application to sub-applications that have a deformed mesh, and"
+    []
+
+    [3d_1d]
+      type = 'Exodiff'
+      input = '3d_1d_parent.i'
+      exodiff = '3d_1d_parent_out.e 3d_1d_parent_out_sub_app0.e'
+      recover = false
+
+      detail = "between a 3D parent application and 1D sub-applications."
+    []
+  []
+
+  [restricted_node]
+    type = 'Exodiff'
+    input = 'restricted_node_parent.i'
+    exodiff = 'restricted_node_parent_out.e restricted_node_parent_out_ch00.e restricted_node_parent_out_ch10.e'
+
+    requirement = "The system shall transfer user-defined spatial data into block and boundary restricted nodal variables."
+    design = "MultiAppUserObjectTransfer.md"
+    issues = '#16241'
+  []
+
+  [restricted_elem]
+    type = 'Exodiff'
+    input = 'restricted_elem_parent.i'
+    exodiff = 'restricted_elem_parent_out.e restricted_elem_parent_out_ch00.e restricted_elem_parent_out_ch10.e'
+
+    requirement = "The system shall transfer user-defined spatial data into block and boundary restricted elemental variables."
+    design = "MultiAppUserObjectTransfer.md"
+    issues = '#16241'
+  []
+
+  [3d_1d_err]
+    type = 'RunException'
+    input = '3d_1d_parent.i'
+    cli_args = 'Transfers/layered_transfer_from_sub_app/all_master_nodes_contained_in_sub_app=true'
+    expect_err = 'MultiAppUserObjectTransfer: Parent app element with centroid at'
+    prereq = transfer/3d_1d
+
+    requirement = "MultiAppUserObjectTransfer shall generate an error if a parent node/element is "
+                  "not contained within any sub application domains."
+  []
+
+  [./two_pipes]
+    type = 'Exodiff'
+    input = 'two_pipe_parent.i'
+    exodiff = 'two_pipe_parent_out.e'
+    requirement = "MultiAppUserObjectTransfer shall allow skipping the bounding box test."
+    mesh_mode = replicated
+    issues = "#13701"
+    recover = false
+  [../]
+
+  [invalid_block_to_app]
+    type = RunException
+    input = restricted_elem_parent.i
+    cli_args = "Transfers/to_ch0/block='abc'"
+    expect_err = "The block 'abc' was not found in the mesh"
+    mesh_mode = replicated
+    issues = '#22817'
+    requirement = "The system shall error if an invalid block is specified for the to_multiapp direction."
+  []
+
+  [invalid_block_from_app]
+    type = RunException
+    input = 3d_1d_parent.i
+    cli_args = "Transfers/layered_transfer_from_sub_app/block='abc'"
+    expect_err = "The block 'abc' was not found in the mesh"
+    mesh_mode = replicated
+    issues = '#22817'
+    requirement = "The system shall error if an invalid block is specified for the from_multiapp direction."
+  []
+
+  [invalid_boundary_to_app]
+    type = RunException
+    input = 3d_1d_parent.i
+    cli_args = "Transfers/layered_transfer_to_sub_app/boundary='abc'"
+    expect_err = "The boundary 'abc' was not found in the mesh"
+    mesh_mode = replicated
+    issues = '#22817'
+    requirement = "The system shall error if an invalid boundary is specified for the to_multiapp direction."
+  []
+
+  [invalid_boundary_from_app]
+    type = RunException
+    input = restricted_elem_parent.i
+    cli_args = "Transfers/from_ch1/boundary='abc'"
+    expect_err = "The boundary 'abc' was not found in the mesh"
+    mesh_mode = replicated
+    issues = '#22817'
+    requirement = "The system shall error if an invalid boundary is specified for the from_multiapp direction."
+  []
+[]

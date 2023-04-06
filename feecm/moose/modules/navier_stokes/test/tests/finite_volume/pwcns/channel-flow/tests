@@ -1,0 +1,35 @@
+[Tests]
+  issues = '#16756 #18806 #19472'
+  design = 'PINSFVEnergyTimeDerivative.md'
+  [transient]
+    type = 'Exodiff'
+    input = 2d-transient.i
+    exodiff = 2d-transient_out.e
+    method = "!dbg"
+    abs_zero = 1e-9
+    issues = '#16756 #18806'
+    requirement = 'The system shall be able to solve transient relaxations within the weakly compressible approximation, with fluid energy diffusion, advection and convection with the solid phase in a 2D channel, modeling both fluid and solid temperature.'
+    valgrind = HEAVY
+    design = 'PINSFVEnergyTimeDerivative.md'
+    recover = false # see #19126
+  []
+  [transient-action]
+    type = 'Exodiff'
+    input = 2d-transient-action.i
+    exodiff = 2d-transient-action_out.e
+    method = "!dbg"
+    abs_zero = 1e-9
+    issues = '#19472'
+    requirement = 'The system shall be able to solve weakly compressible transient problems with the NSFV action syntax.'
+    valgrind = HEAVY
+    recover = false # see #19126
+  []
+  [transient-jac]
+    type = 'PetscJacobianTester'
+    input = 2d-transient.i
+    run_sim = True
+    difference_tol = 1.83
+    requirement = 'The system shall be able to solve transient relaxations within the weakly compressible approximation, with fluid energy diffusion, advection and convection with the solid phase in a 2D channel, modeling both fluid and solid temperature and show a perfect Jacobian.'
+    cli_args = 'Mesh/gen/nx=2 Mesh/gen/ny=2 Executioner/num_steps=1'
+  []
+[]
