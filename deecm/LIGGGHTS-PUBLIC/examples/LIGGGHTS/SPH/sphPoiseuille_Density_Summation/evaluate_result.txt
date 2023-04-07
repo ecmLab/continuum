@@ -1,2 +1,0 @@
-vy Average = 0.042300m/s
-integrity = 0.79234

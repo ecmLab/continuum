@@ -1,7 +1,0 @@
-{
-    "input":
-    {
-        "writeJSON" : true,
-        "writeHDF5" : false
-    }
-}
