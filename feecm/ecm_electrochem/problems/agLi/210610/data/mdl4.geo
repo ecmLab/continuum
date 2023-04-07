@@ -1,0 +1,109 @@
+/// Model 1: Build a model with three void vertically distributed
+///  With the first hole filled in with a thin layer of Li metal
+
+// Parameters 
+lx   = 1;  // length of the model, in unit um
+ly   = 1;  //height of the model, in unit um
+cntx = lx/2; // hole always stay at the middle
+cntR = 0.01; // Radius of the hole
+dHole = 0.02; // Distance of each hole
+cnty1 = ly - dHole - cntR; // y coordinate of the first hole center
+cnty2 = ly - 2*dHole - 3*cntR; // y coordinate of the second hole center
+cnty3 = ly - 3*dHole - 5*cntR; // y coordinate of the second hole center
+
+m1    = 0.01; // mesh characteristic length for boundary points
+m2    = 0.0005; // mesh characteristic length for interface points
+m3    = 0.00005; // mesh characteristic length for inner points
+thk   = 0.001; // Thickness of the deposited Li metal
+
+//**** Create points **/
+// Create points for the boundary
+Point(1) = {0, 0, 0, m1};   Point(2) = {lx, 0, 0, m1};
+Point(3) = {lx, ly, 0, m1}; Point(4) = {0, ly, 0, m1};
+// Create points for the interface of the first hole
+Point(5) = {cntx, cnty1, 0, m2};        Point(6) = {cntx+cntR, cnty1, 0, m2};
+Point(7) = {cntx, cnty1+cntR, 0, m2};   Point(8) = {cntx-cntR, cnty1, 0, m2};
+Point(9) = {cntx, cnty1-cntR, 0, m2};
+// Create points for the interface of the second hole
+Point(10) = {cntx, cnty2, 0, m2};        Point(11) = {cntx+cntR, cnty2, 0, m2};
+Point(12) = {cntx, cnty2+cntR, 0, m2};   Point(13) = {cntx-cntR, cnty2, 0, m2};
+Point(14) = {cntx, cnty2-cntR, 0, m2};
+// Create points for the interface of the third hole
+Point(15) = {cntx, cnty3, 0, m2};        Point(16) = {cntx+cntR, cnty3, 0, m2};
+Point(17) = {cntx, cnty3+cntR, 0, m2};   Point(18) = {cntx-cntR, cnty3, 0, m2};
+Point(19) = {cntx, cnty3-cntR, 0, m2};
+// Create points for the internal boundary of first hole
+Point(20) = {cntx+cntR-thk, cnty1, 0, m3}; Point(21) = {cntx, cnty1+cntR-thk, 0, m3};   
+Point(22) = {cntx-cntR+thk, cnty1, 0, m3}; Point(23) = {cntx, cnty1-cntR+thk, 0, m3};
+// Create points for the internal boundary of second hole
+Point(24) = {cntx+cntR-thk, cnty2, 0, m3}; Point(25) = {cntx, cnty2+cntR-thk, 0, m3};   
+Point(26) = {cntx-cntR+thk, cnty2, 0, m3}; Point(27) = {cntx, cnty2-cntR+thk, 0, m3};
+
+//***** Create lines **/
+// Creat lines for the out boundary
+Line(1) = {1, 2};  Line(2) = {2, 3};  
+Line(3) = {3, 4};  Line(4) = {4, 1};
+// Create lines for the interface of first hole
+Circle(5) = {6, 5, 7};
+Circle(6) = {7, 5, 8};
+Circle(7) = {8, 5, 9};
+Circle(8) = {9, 5, 6};
+// Create lines for the interface of the second hole
+Circle(9) = {11, 10, 12};
+Circle(10) = {12, 10, 13};
+Circle(11) = {13, 10, 14};
+Circle(12) = {14, 10, 11};
+// Create lines for the interface of the third hole
+Circle(13) = {16, 15, 17};
+Circle(14) = {17, 15, 18};
+Circle(15) = {18, 15, 19};
+Circle(16) = {19, 15, 16};
+// Create lines for the inner boundary of the first hole
+Circle(17)  = {20, 5, 21};
+Circle(18) = {21, 5, 22};
+Circle(19) = {22, 5, 23};
+Circle(20) = {23, 5, 20};
+// Create lines for the inner boundary of the second hole
+Circle(21)  = {24, 10, 25};
+Circle(22)  = {25, 10, 26};
+Circle(23)  = {26, 10, 27};
+Circle(24)  = {27, 10, 24};
+
+//*** Create loops from lines **/
+Curve Loop(25) = {1, 2, 3, 4};   // Outer boundary
+Curve Loop(26) = {6, 7, 8, 5};   // Interface of the first hole
+Curve Loop(27) = {10, 11, 12, 9};   // Interface of the second hole
+Curve Loop(28) = {14, 15, 16, 13};   // Interface of the third hole
+Curve Loop(29) = {18, 19, 20, 17};  // Inner boundary of the first hole
+Curve Loop(30) = {22, 23, 24, 21};  // Inner boundary of the second hole
+
+//*** Create blocks from lines **/
+Plane Surface(1) = {25, 26, 27, 28}; // creat block SE
+Plane Surface(2) = {26, 29}; // creat block Li1
+Plane Surface(3) = {27, 30}; // creat block Li2
+
+//*** Assign names to boundaries and blocks **/
+//+
+Physical Curve("bottom") = {1};
+//+
+Physical Curve("right") = {2};
+//+
+Physical Curve("top") = {3};
+//+
+Physical Curve("left") = {4};
+//+
+Physical Curve("interface1") = {5,6,7,8};
+//+
+Physical Curve("interface2") = {9,10,11,12};
+//+
+Physical Curve("interface3") = {13,14,15,16};
+//+
+Physical Curve("inner1") = {17,18,19,20};
+//+
+Physical Curve("inner2") = {21,22,23,24};
+//+
+Physical Surface("blockSE") = {1};
+//+
+Physical Surface("blockLi1") = {2};
+//+
+Physical Surface("blockLi2") = {3};
