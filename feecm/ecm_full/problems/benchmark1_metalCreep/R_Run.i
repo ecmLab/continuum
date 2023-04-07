@@ -36,7 +36,7 @@ strn_rt = 30e-5     # Strain rate
   [./all]
     add_variables = true
     strain = FINITE
-    use_displaced_mesh = true
+#    use_displaced_mesh = true
     volumetric_locking_correction = true
     generate_output = 'stress_yy strain_yy vonmises_stress'
     use_automatic_differentiation = true
@@ -121,12 +121,12 @@ strn_rt = 30e-5     # Strain rate
     property = yield_strength
     execute_on = 'TIMESTEP_END'
   [../]
-  [./effective_strain]
-    type = ADRankTwoScalarAux
-    rank_two_tensor = total_strain
-    variable = effstrain
-    scalar_type = EffectiveStrain
-  [../]
+#  [./effective_strain]
+#    type = ADRankTwoScalarAux
+#    rank_two_tensor = total_strain
+#    variable = effstrain
+#    scalar_type = EffectiveStrain
+#  [../]
   [./strain_rate]
     type = ADMaterialRealAux
     variable = strain_rate
@@ -232,10 +232,10 @@ strn_rt = 30e-5     # Strain rate
   [./matl_ts_min]
     type = MaterialTimeStepPostprocessor
   [../]
-  [./eff_strain]
-    type=ElementAverageValue
-    variable = effstrain
-  [../]
+#  [./eff_strain]
+#    type=ElementAverageValue
+#    variable = effstrain
+#  [../]
 
   [./strain_rate]
     type = ElementAverageValue
@@ -282,12 +282,12 @@ strn_rt = 30e-5     # Strain rate
   dtmin = 1.0e-5
   dtmax = 10.00000000000000000000
 # Solver setting
-#  solve_type = 'PJFNK'
-#  petsc_options_iname = '-pc_type -sub_pc_type -pc_asm_overlap -ksp_gmres_restart'
-#  petsc_options_value = 'asm lu 1 101'
-  solve_type = 'NEWTON'
-  petsc_options_iname = -pc_type
-  petsc_options_value = lu
+  solve_type = 'PJFNK'
+  petsc_options_iname = '-pc_type -sub_pc_type -pc_asm_overlap -ksp_gmres_restart'
+  petsc_options_value = 'asm lu 1 101'
+#  solve_type = 'NEWTON'
+#  petsc_options_iname = -pc_type
+#  petsc_options_value = lu
 
   nl_rel_tol = 1e-8
   nl_abs_tol = 1e-10
