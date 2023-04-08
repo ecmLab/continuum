@@ -1,28 +1,28 @@
 
 #include "ParamDiffusion.h"
 
-registerADMooseObject("ecmElectrochemApp", ParamDiffusion);
+registerADMooseObject("liExpulsionApp", ParamDiffusion);
 
 InputParameters
 ParamDiffusion::validParams()
 {
     InputParameters params = ADKernel::validParams();
-    params.addClassDescription("Compute the ionic/electronic conduction.");
-    params.addRequiredParam<MaterialPropertyName>("conductivity", "The conductivity, in mS/cm.");
+    params.addClassDescription("Compute the laplacian equation.");
+    params.addRequiredParam<MaterialPropertyName>("diffusivity", "The diffusivity coefficient.");
+    params.addParam<Real>("scale", 1, "The scale of the equation");
     return params;
 }
 
 ParamDiffusion::ParamDiffusion(const InputParameters & parameters)
   : ADKernel(parameters),
-    _conductivity(parameters.get<MaterialPropertyName>("conductivity")),
-    _conductivity_coef(getADMaterialProperty<Real>(_conductivity))
+    _diffusivity(getMaterialProperty<Real>("diffusivity")),
+    _scale(getParam<Real>("scale"))
 {
 }
 
 ADReal
 ParamDiffusion::computeQpResidual()
 {
-//  return 10000 * _conductivity_coef[_qp] * ADDiffusion<compute_stage>::precomputeQpResidual();
-  return 10000 * _conductivity_coef[_qp] * _grad_test[_i][_qp] * _grad_u[_qp];
+  return _scale * _diffusivity[_qp] * _grad_test[_i][_qp] * _grad_u[_qp];
 }
 
