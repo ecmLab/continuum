@@ -15,9 +15,8 @@ public:
 protected:
   virtual ADReal computeQpResidual() override;
 
-//  MaterialPropertyName _conductivity;
-  const MaterialProperty<Real> & _diffusivity;
-  const Real & _scale;
+  MaterialPropertyName _conductivity;
+  const ADMaterialProperty<Real> & _conductivity_coef;
 
 //  usingKernelMembers;
 };
