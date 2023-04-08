@@ -1,0 +1,1460 @@
+LIGGGHTS (Version LIGGGHTS-PUBLIC 3.8.0, compiled 2018-08-29-09:25:30 by howietu, git commit 28301df8853491784b1d8b90533ea89b8c6af1e8)
+#------------------General Settings for Granular Systems--------------------------------------------
+atom_style	granular
+atom_modify	map           array
+boundary	f f f
+newton		off
+communicate	single        vel       yes
+units		si
+neighbor        0.0002        bin
+neigh_modify    delay         0
+echo            both
+variable        dt            equal     1e-5
+variable        nStepsRun     equal     10.0/${dt}
+variable        nStepsRun     equal     10.0/1e-05
+variable        writeOutEvery equal     0.2/${dt}
+variable        writeOutEvery equal     0.2/1e-05
+variable        thermofreq    equal     0.01/${dt}
+variable        thermofreq    equal     0.01/1e-05
+timestep ${dt}
+timestep 1e-05
+
+#--------------------------Box Information---------------------------------------------------------
+variable       skfstl        equal     1/5000
+variable       x1y1          equal    -0.5*${skfstl}*2500
+variable       x1y1          equal    -0.5*0.0002*2500
+variable       x2y2          equal     0.5*${skfstl}*2500
+variable       x2y2          equal     0.5*0.0002*2500
+variable       z1            equal    -0.5*${skfstl}*2500
+variable       z1            equal    -0.5*0.0002*2500
+variable       z2            equal     1*${skfstl}*2500
+variable       z2            equal     1*0.0002*2500
+
+#--------------------------Model Geometry---------------------------------------------------------
+variable        r0            equal     0.02
+variable        grwth         equal     0.01                   # Overall growth of each direction
+variable        grwFq         equal     1000                    # The growth frequncy, every # of steps
+variable        grwNs         equal     20                      # The total number of growth step
+variable        grwRt         equal     ${grwth}/${grwNs}       # Growth rate at each growth step
+variable        grwRt         equal     0.01/${grwNs}       
+variable        grwRt         equal     0.01/20       
+
+#--------------------------Material Information---------------------------------------------------------
+variable        cf_pp         equal     1.0
+variable        cf_pw         equal     0.2
+variable        cf_ww         equal     0.2
+variable        cof_pp        equal     0.2
+variable        cof_pw        equal     0.1
+variable        cof_ww        equal     0.1
+variable        corf_pp       equal     0.
+variable        corf_pw       equal     0.2
+variable        corf_ww       equal     0.2
+variable        Yp            equal     1e+7
+variable        Yw            equal     5.1e+6
+
+#---------------------Generate Box----------------------------------------
+region          reg block ${x1y1} ${x2y2} ${x1y1} ${x2y2} ${z1} ${z2}  units box
+region          reg block -0.25 ${x2y2} ${x1y1} ${x2y2} ${z1} ${z2}  units box
+region          reg block -0.25 0.25 ${x1y1} ${x2y2} ${z1} ${z2}  units box
+region          reg block -0.25 0.25 -0.25 ${x2y2} ${z1} ${z2}  units box
+region          reg block -0.25 0.25 -0.25 0.25 ${z1} ${z2}  units box
+region          reg block -0.25 0.25 -0.25 0.25 -0.25 ${z2}  units box
+region          reg block -0.25 0.25 -0.25 0.25 -0.25 0.5  units box
+create_box      2 reg
+Created orthogonal box = (-0.25 -0.25 -0.25) to (0.25 0.25 0.5)
+  4 by 4 by 5 MPI processor grid
+
+#---------------------Assign Material Properties to particle and wall----------------------------------------
+fix 		m1 all property/global youngsModulus peratomtype ${Yp} ${Yw}
+fix 		m1 all property/global youngsModulus peratomtype 10000000 ${Yw}
+fix 		m1 all property/global youngsModulus peratomtype 10000000 5100000
+fix 		m2 all property/global poissonsRatio peratomtype 0.3 0.3
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 ${cf_pp} ${cf_pw} ${cf_pw} ${cf_ww}
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 1 ${cf_pw} ${cf_pw} ${cf_ww}
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 1 0.2 ${cf_pw} ${cf_ww}
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 1 0.2 0.2 ${cf_ww}
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 1 0.2 0.2 0.2
+fix             m4 all property/global coefficientFriction peratomtypepair 2 ${cof_pp} ${cof_pw} ${cof_pw} ${cof_ww}
+fix             m4 all property/global coefficientFriction peratomtypepair 2 0.2 ${cof_pw} ${cof_pw} ${cof_ww}
+fix             m4 all property/global coefficientFriction peratomtypepair 2 0.2 0.1 ${cof_pw} ${cof_ww}
+fix             m4 all property/global coefficientFriction peratomtypepair 2 0.2 0.1 0.1 ${cof_ww}
+fix             m4 all property/global coefficientFriction peratomtypepair 2 0.2 0.1 0.1 0.1
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 ${corf_pp} ${corf_pw} ${corf_pw} ${corf_ww}
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 0 ${corf_pw} ${corf_pw} ${corf_ww}
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 0 0.2 ${corf_pw} ${corf_ww}
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 0 0.2 0.2 ${corf_ww}
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 0 0.2 0.2 0.2
+fix             m6 all property/global cohesionEnergyDensity peratomtypepair 2 500 0 0 0
+
+#Define pair style
+pair_style gran model hertz tangential history cohesion sjkr #Hertzian with cohesion
+pair_coeff	* *
+
+#fix Bsphere all mesh/surface file sphere.stl type 2 scale 0.0125
+#fix wall all wall/gran model hertz tangential history rolling_friction epsd2 mesh n_meshes 1 meshes Bsphere
+
+fix xwalls1 all wall/gran model hertz tangential history primitive type 1 xplane ${x1y1}
+fix xwalls1 all wall/gran model hertz tangential history primitive type 1 xplane -0.25
+fix xwalls2 all wall/gran model hertz tangential history primitive type 1 xplane ${x2y2}
+fix xwalls2 all wall/gran model hertz tangential history primitive type 1 xplane 0.25
+fix ywalls1 all wall/gran model hertz tangential history primitive type 1 yplane ${x1y1}
+fix ywalls1 all wall/gran model hertz tangential history primitive type 1 yplane -0.25
+fix ywalls2 all wall/gran model hertz tangential history primitive type 1 yplane ${x2y2}
+fix ywalls2 all wall/gran model hertz tangential history primitive type 1 yplane 0.25
+fix zwalls2 all wall/gran model hertz tangential history primitive type 1 zplane ${z1}
+fix zwalls2 all wall/gran model hertz tangential history primitive type 1 zplane -0.25
+
+fix pts1 all particletemplate/sphere 15485863 atom_type 1 density constant 2500 radius constant ${r0}
+fix pts1 all particletemplate/sphere 15485863 atom_type 1 density constant 2500 radius constant 0.02
+fix pdd1 all particledistribution/discrete 86028157 1 pts1 1
+
+fix ins_mesh all mesh/surface/planar file ins_face.stl heal auto_remove_duplicates type 2 scale 0.0125
+fix ins all insert/stream seed 86028121 distributiontemplate pdd1                 maxattempt 200 nparticles 1800 particlerate 180 overlapcheck yes all_in yes vel constant 0 0 -2.0                 insertion_face ins_mesh extrude_length 0.2
+
+
+#apply nve integration to all particles
+fix		integr all nve/sphere
+fix		gravi all  gravity 9.81 vector 0.0 0.0 -1.0
+
+#------------------------Output Settings------------------------------------------------------
+# Output to screen
+compute        ker   all   erotate/sphere            # Compute the rotational kinetic energy of all particles
+compute        prs   all   pressure thermo_temp                  # Total pressure on ghost particles
+thermo_style	custom step atoms ke c_ker vol c_prs
+thermo		${thermofreq}
+thermo		1000
+thermo_modify	lost ignore norm no
+# Output to file
+dump              2 all custom ${writeOutEvery} post/pack.lmp id type x y z radius fx fy fz
+dump              2 all custom 20000 post/pack.lmp id type x y z radius fx fy fz
+dump_modify       2 format "%7.0g %4.0g %15.10g %15.10g %15.10g %15.10g %15.10g %15.10g %15.10g"
+#dump		dmp all custom/vtk ${writeOutEvery} post/dump*.sphere.vtk type mass x y z id vx vy vz fx fy fz omegax omegay omegaz radius
+#dump            dumpSphere all stl ${writeOutEvery} post/dump_Sphere*.stl Bsphere
+
+#------------------------Run the calculation------------------------------------------------------
+# 1. Run first period: relax the system
+run		${nStepsRun}
+run		1000000
+Setting up run at Thu Sep  6 15:44:43 2018
+
+INFO: Particle insertion ins: 18.000000 particles every 10000 steps - particle rate 180.000000, (mass rate 1.507964e+01)
+      1800 particles (mass 1.507964e+02) within 1000000 steps
+Memory usage per processor = 4.25108 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+       0        0              0              0         0.1875              0 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 1
+ - a total of 16 particle templates (mass 1.340413e+00) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+    1000       16      2.6808257              0         0.1875              0 
+    2000       16      2.7272784              0         0.1875              0 
+    3000       16      2.7800261              0         0.1875              0 
+    4000       16      2.8405855              0         0.1875              0 
+    5000       16      2.9434647              0         0.1875              0 
+    6000       16      3.0988211              0         0.1875              0 
+    7000       16      3.3047757              0         0.1875              0 
+    8000       16      3.5551165              0         0.1875              0 
+    9000       16      3.8437539              0         0.1875              0 
+   10000       16      4.1636011              0         0.1875              0 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 10001
+ - a total of 32 particle templates (mass 2.680826e+00) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+   11000       32      7.1771737              0         0.1875              0 
+   12000       32       7.561713              0         0.1875              0 
+   13000       32      7.9726505              0         0.1875              0 
+   14000       32      8.3996715              0         0.1875              0 
+   15000       32      8.8775285              0         0.1875              0 
+   16000       32      9.3969052              0         0.1875              0 
+   17000       32      9.9832191              0         0.1875              0 
+   18000       32      10.621188              0         0.1875              0 
+   19000       32      11.349845              0         0.1875              0 
+   20000       32      12.029321              0         0.1875              0 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 20001
+ - a total of 48 particle templates (mass 4.021239e+00) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+   21000       48      14.747536     0.32306857         0.1875      1.9004474 
+   22000       48        14.3162     0.34062056         0.1875              0 
+   23000       48      15.062139     0.35329513         0.1875      6.5426577 
+   24000       48      13.911234     0.45042491         0.1875      22.066974 
+   25000       48      15.461746     0.51472484         0.1875              0 
+   26000       48      15.847607     0.59534188         0.1875              0 
+   27000       48      15.832082     0.71339682         0.1875     0.80097683 
+   28000       48      15.985817     0.66865531         0.1875              0 
+   29000       48      15.792792     0.81442671         0.1875      2.4812046 
+   30000       48      16.316938     0.81184078         0.1875              0 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 30001
+ - a total of 63 particle templates (mass 5.277876e+00) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+   31000       63      19.050603     0.93815071         0.1875     0.04831053 
+   32000       63       19.04979      1.0854937         0.1875      1.4674154 
+   33000       63      19.190591      1.2569145         0.1875              0 
+   34000       63      19.696186      1.1541129         0.1875              0 
+   35000       63      19.260931      1.3868905         0.1875      21.792915 
+   36000       63       19.48938      1.5023157         0.1875  0.00018497836 
+   37000       63      19.165869      1.6957845         0.1875              0 
+   38000       63      18.397299      1.8179863         0.1875      18.703761 
+   39000       63      17.499863      2.0226739         0.1875      24.474729 
+   40000       63      17.988916      2.0586603         0.1875      1.8655257 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 40001
+ - a total of 79 particle templates (mass 6.618289e+00) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+   41000       79      20.771114      2.1220753         0.1875      1.9064587 
+   42000       79      21.045584      2.1665097         0.1875      3.8067978 
+   43000       79      21.428545      2.2265877         0.1875              0 
+   44000       79      21.297313      2.1432025         0.1875      4.5547583 
+   45000       79      21.759304      2.2015045         0.1875      1.4910682 
+   46000       79      21.207868      2.5391996         0.1875      2.6645681 
+   47000       79      21.197532      2.4596422         0.1875     0.32182257 
+   48000       79      21.527133       2.554919         0.1875      6.2789385 
+   49000       79       21.13344      2.3314086         0.1875        1.36619 
+   50000       79       20.78651      2.5732742         0.1875    0.050485924 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 50001
+ - a total of 96 particle templates (mass 8.042477e+00) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+   51000       96      23.630098      2.8402298         0.1875      5.1007805 
+   52000       96      23.137798      2.7746627         0.1875      7.7458994 
+   53000       96        22.9763      2.8300669         0.1875      1.2889433 
+   54000       96      23.042688      2.7788203         0.1875      1.4900853 
+   55000       96      23.106521      2.7127915         0.1875       9.043189 
+   56000       96      23.468984       2.731978         0.1875              0 
+   57000       96      23.388242      2.8725027         0.1875    0.074088194 
+   58000       96       23.71554      2.9517022         0.1875      10.096712 
+   59000       96      22.931398       3.087716         0.1875      25.618809 
+   60000       96      23.269348      3.0806846         0.1875      11.040561 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 60001
+ - a total of 112 particle templates (mass 9.382890e+00) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+   61000      112      26.080006      3.1444543         0.1875      29.884024 
+   62000      112      26.202956      3.1489218         0.1875      2.8317454 
+   63000      112      26.356148      3.2066395         0.1875      1.5609699 
+   64000      112      25.989195       3.199887         0.1875      15.620642 
+   65000      112      25.535685      3.3480217         0.1875      10.257175 
+   66000      112      25.769035      3.5298189         0.1875      5.1067091 
+   67000      112      25.189834      3.5836363         0.1875      1.4080863 
+   68000      112      24.631326       3.551839         0.1875      10.861074 
+   69000      112      24.646646      3.5123384         0.1875      7.2698309 
+   70000      112      24.038758      3.5626762         0.1875       4.595236 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 70001
+ - a total of 128 particle templates (mass 1.072330e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+   71000      128      26.184993      3.7238594         0.1875      13.244281 
+   72000      128      26.298376      3.6456037         0.1875      4.2351815 
+   73000      128      26.041343      3.4286783         0.1875      12.500484 
+   74000      128      25.126957      3.5158873         0.1875      6.0677433 
+   75000      128      25.091423      3.5028916         0.1875      10.659263 
+   76000      128      24.479571       3.481353         0.1875      21.286868 
+   77000      128      24.216086       3.646337         0.1875      13.301098 
+   78000      128      23.229716      3.7253608         0.1875      18.519622 
+   79000      128      23.366845      3.8044704         0.1875      15.011444 
+   80000      128      22.739232      3.6930029         0.1875      10.679801 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 80001
+ - a total of 145 particle templates (mass 1.214749e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+   81000      145      25.459204      3.5657939         0.1875      29.285005 
+   82000      145      25.597573      3.7802147         0.1875      4.5099934 
+   83000      145      25.399991      3.8747145         0.1875      4.7407395 
+   84000      145      25.292669      3.7272593         0.1875       15.61933 
+   85000      145      24.801619      3.8860058         0.1875      6.2131042 
+   86000      145       24.51258      3.8897629         0.1875       23.11394 
+   87000      145      24.782711      3.7952539         0.1875      1.8160976 
+   88000      145      24.816334      3.7775983         0.1875      4.3987967 
+   89000      145      24.733919      3.8333519         0.1875      9.3578301 
+   90000      145      24.405918      3.8482446         0.1875      19.567646 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 90001
+ - a total of 162 particle templates (mass 1.357168e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+   91000      162      27.706819      3.9549491         0.1875      15.323909 
+   92000      162      27.600967      3.9848895         0.1875      18.238329 
+   93000      162      28.043114      3.8659945         0.1875      10.737054 
+   94000      162      26.861053      3.8917889         0.1875      22.144883 
+   95000      162      25.618027      3.8234413         0.1875      33.779454 
+   96000      162      25.660257       3.703513         0.1875       32.68947 
+   97000      162      26.113233      3.7688644         0.1875      21.507412 
+   98000      162      25.846963      4.0389299         0.1875      5.4666195 
+   99000      162      25.122173      4.0901427         0.1875      26.054495 
+  100000      162      25.215859      4.0965626         0.1875      19.422963 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 100001
+ - a total of 178 particle templates (mass 1.491209e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  101000      178      27.372764      4.2432974         0.1875      37.477013 
+  102000      178      26.736608      4.3029558         0.1875      38.694179 
+  103000      178      27.352229      4.2323402         0.1875      25.463196 
+  104000      178      26.819074      4.1207457         0.1875      17.233877 
+  105000      178      26.363197      4.0634906         0.1875      31.036856 
+  106000      178      26.246222      3.9259885         0.1875      22.086167 
+  107000      178      25.357879      3.9524348         0.1875      33.611019 
+  108000      178      25.276543      3.8686388         0.1875      24.780894 
+  109000      178      25.690336      3.5817627         0.1875      3.5987648 
+  110000      178      25.063213      3.6589225         0.1875      30.469732 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 110001
+ - a total of 194 particle templates (mass 1.625251e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  111000      194      27.302459      3.7707346         0.1875      32.286122 
+  112000      194      27.153772      3.7200526         0.1875      18.688046 
+  113000      194      26.307308      3.4710541         0.1875      25.157509 
+  114000      194      25.616981      3.6640777         0.1875      16.997269 
+  115000      194      24.657785      3.8549758         0.1875      22.160086 
+  116000      194      24.837818      3.6512626         0.1875      33.063857 
+  117000      194      23.756004      3.8863489         0.1875      35.500372 
+  118000      194      23.882367      3.8238102         0.1875      23.521272 
+  119000      194      23.281972      3.8424313         0.1875      27.702326 
+  120000      194      22.522908      3.6733595         0.1875      53.823498 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 120001
+ - a total of 209 particle templates (mass 1.750914e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  121000      209      24.414106      3.7083318         0.1875      55.782098 
+  122000      209      24.120318      3.6884411         0.1875      46.281889 
+  123000      209      23.472096      3.7067116         0.1875      47.061301 
+  124000      209       23.85091      3.7551805         0.1875      39.690071 
+  125000      209      22.677776      3.5937926         0.1875      50.571845 
+  126000      209       22.72732      3.5267405         0.1875      26.820972 
+  127000      209      21.690618      3.4315118         0.1875      30.639432 
+  128000      209      21.365562      3.2976875         0.1875      25.060358 
+  129000      209      20.639817      3.2487585         0.1875       20.45926 
+  130000      209      20.491321      3.3150962         0.1875       15.00767 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 130001
+ - a total of 225 particle templates (mass 1.884956e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  131000      225      22.527566      3.1049561         0.1875      40.831635 
+  132000      225      23.120916      2.9586414         0.1875      20.299749 
+  133000      225      22.919578      2.9304979         0.1875      21.763776 
+  134000      225      22.861015       2.817433         0.1875      16.876676 
+  135000      225      22.331948      2.8903729         0.1875      33.946566 
+  136000      225      22.134931      2.7987698         0.1875      28.230231 
+  137000      225      21.159894       2.921691         0.1875      52.824449 
+  138000      225      21.087912      2.9580734         0.1875      41.234623 
+  139000      225      20.429629      2.8510043         0.1875       56.82772 
+  140000      225      19.767097      2.9771218         0.1875      52.693508 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 140001
+ - a total of 241 particle templates (mass 2.018997e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  141000      241      22.539945      3.1417172         0.1875      28.266875 
+  142000      241      22.149517      2.9221547         0.1875      28.912807 
+  143000      241      21.676477      2.8490529         0.1875      38.158414 
+  144000      241      21.045378      3.0293414         0.1875      32.233784 
+  145000      241      20.758757      2.9370481         0.1875      26.566053 
+  146000      241      19.930014      2.9899903         0.1875      34.207487 
+  147000      241      19.645926      2.9897955         0.1875      39.533893 
+  148000      241      19.913236      2.8079066         0.1875       20.58909 
+  149000      241      19.749089       2.766447         0.1875      32.977339 
+  150000      241      19.350829      2.7161984         0.1875      49.752524 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 150001
+ - a total of 257 particle templates (mass 2.153038e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  151000      257      21.848577      2.6733734         0.1875      55.339881 
+  152000      257       22.16396      2.7584953         0.1875      31.595178 
+  153000      257      21.548011      2.8639699         0.1875      33.899413 
+  154000      257      21.089189      2.7783953         0.1875       34.56437 
+  155000      257      21.197107      2.5252136         0.1875      39.787149 
+  156000      257      20.497407      2.5321667         0.1875      49.984121 
+  157000      257      20.077476      2.5212006         0.1875      36.519519 
+  158000      257       19.83261      2.5616332         0.1875      31.649654 
+  159000      257      19.697459      2.3846107         0.1875       34.46363 
+  160000      257      19.047491       2.343984         0.1875      57.817872 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 160001
+ - a total of 273 particle templates (mass 2.287079e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  161000      273      21.535557      2.3980829         0.1875      57.024854 
+  162000      273      21.676718      2.2149109         0.1875      33.843984 
+  163000      273      20.266062      2.2898103         0.1875       72.35029 
+  164000      273      20.071735      2.3398174         0.1875      53.876481 
+  165000      273      19.394446      2.4917417         0.1875      36.932197 
+  166000      273      18.659268      2.2268492         0.1875      71.802113 
+  167000      273      18.634111      2.2927686         0.1875      45.986499 
+  168000      273      18.042715      2.2724988         0.1875      41.312303 
+  169000      273      17.334564      2.3704003         0.1875      45.185077 
+  170000      273      16.870653      2.3219105         0.1875      53.979066 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 170001
+ - a total of 290 particle templates (mass 2.429498e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  171000      290      19.187387      2.3572527         0.1875      42.429335 
+  172000      290      19.099505      2.3317994         0.1875      30.124454 
+  173000      290       18.19256       2.302215         0.1875      49.944396 
+  174000      290      17.764218      2.1609583         0.1875      64.711604 
+  175000      290      17.133442      2.0443669         0.1875      79.200152 
+  176000      290       17.02974      2.0048462         0.1875      36.656338 
+  177000      290      17.014005      1.8432622         0.1875      33.070691 
+  178000      290      16.658097      1.7487661         0.1875      52.226643 
+  179000      290      16.551783      1.7950329         0.1875      39.186542 
+  180000      290      16.448463      1.7754414         0.1875      52.678396 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 180001
+ - a total of 306 particle templates (mass 2.563540e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  181000      306      18.747139      1.8367574         0.1875      54.618676 
+  182000      306      18.865078       1.929109         0.1875      37.378067 
+  183000      306      18.526751      1.9486193         0.1875      35.455171 
+  184000      306      18.407699      1.9491241         0.1875      45.055558 
+  185000      306      17.959701      1.8490275         0.1875      67.092614 
+  186000      306      17.879751      1.8625294         0.1875      49.428667 
+  187000      306      17.558608      1.8311633         0.1875      52.349884 
+  188000      306       17.51311      1.7292229         0.1875      45.172074 
+  189000      306      17.008514      1.5781168         0.1875      43.807853 
+  190000      306      16.742936      1.6283331         0.1875       43.10632 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 190001
+ - a total of 322 particle templates (mass 2.697581e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  191000      322      19.525038      1.5658178         0.1875       30.77058 
+  192000      322      18.715166       1.676857         0.1875      58.924696 
+  193000      322      18.410992      1.5133733         0.1875      66.809442 
+  194000      322      18.132372       1.597264         0.1875      40.060136 
+  195000      322      17.593573      1.7828595         0.1875        45.8904 
+  196000      322      16.604481      1.6823071         0.1875      83.212143 
+  197000      322      16.615602      1.6672957         0.1875      59.825452 
+  198000      322      15.897216      1.7221224         0.1875      58.568487 
+  199000      322      15.792798      1.7303421         0.1875      52.628183 
+  200000      322       15.46768      1.6253508         0.1875      49.598787 
+INFO: Particle insertion ins: inserted 12 particle templates (mass 1.005310e+00) at step 200001
+ - a total of 334 particle templates (mass 2.798112e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  201000      334      17.506487      1.5510856         0.1875      33.686391 
+  202000      334      17.006002      1.5441609         0.1875      51.486355 
+  203000      334      16.931012      1.4808965         0.1875      48.805115 
+  204000      334      16.140707      1.6092005         0.1875      51.531218 
+  205000      334      15.809812       1.669317         0.1875      39.465342 
+  206000      334      14.994244      1.5094948         0.1875      62.116677 
+  207000      334      14.933968      1.5628307         0.1875      42.173497 
+  208000      334      14.531014      1.5552341         0.1875      49.382022 
+  209000      334      14.203529      1.5832555         0.1875      45.852863 
+  210000      334      13.932937      1.6566068         0.1875      43.009743 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 210001
+ - a total of 351 particle templates (mass 2.940531e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  211000      351      16.595741      1.6217668         0.1875      34.668554 
+  212000      351      15.721637      1.6551367         0.1875      61.971649 
+  213000      351      15.987878      1.7341274         0.1875      49.520156 
+  214000      351      15.758998      1.7541664         0.1875      51.729452 
+  215000      351      14.780822      1.8058992         0.1875      58.584588 
+  216000      351      14.671529      1.7899786         0.1875      43.272038 
+  217000      351      14.565554      1.7288692         0.1875      41.139016 
+  218000      351      14.382898      1.5594265         0.1875      55.627277 
+  219000      351       14.43595      1.5791252         0.1875      46.229329 
+  220000      351      14.243996      1.5206838         0.1875      51.070953 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 220001
+ - a total of 368 particle templates (mass 3.082950e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  221000      368      17.277494      1.4892575         0.1875      43.538089 
+  222000      368      16.959614      1.5478321         0.1875      42.990016 
+  223000      368      17.281112      1.4426608         0.1875      58.023127 
+  224000      368      16.879101      1.5053191         0.1875      69.985515 
+  225000      368      17.037929      1.5432585         0.1875      55.578216 
+  226000      368      16.644645       1.555249         0.1875      71.480973 
+  227000      368      16.637792      1.4247828         0.1875       55.02711 
+  228000      368      16.173739        1.46731         0.1875        50.9999 
+  229000      368      15.912786      1.5423364         0.1875      59.181018 
+  230000      368      15.411227      1.4953733         0.1875      82.021644 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 230001
+ - a total of 384 particle templates (mass 3.216991e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  231000      384      17.607746       1.584726         0.1875      65.815178 
+  232000      384      17.243665      1.6892515         0.1875      51.618576 
+  233000      384      16.726416      1.6664249         0.1875      70.521294 
+  234000      384      16.064901      1.6399377         0.1875       67.32315 
+  235000      384      15.511703      1.4858154         0.1875      67.488823 
+  236000      384      15.361315      1.4512955         0.1875      62.404403 
+  237000      384      14.365779      1.4435189         0.1875      97.759771 
+  238000      384      14.647459      1.4414733         0.1875      57.692957 
+  239000      384      14.110806      1.4148808         0.1875      68.761078 
+  240000      384      14.368191      1.3957391         0.1875      66.856515 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 240001
+ - a total of 399 particle templates (mass 3.342655e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  241000      399      16.809815      1.4510516         0.1875      56.425812 
+  242000      399      16.424801       1.575611         0.1875      48.748568 
+  243000      399      15.453954       1.683203         0.1875      83.526556 
+  244000      399      15.094607      1.6007289         0.1875      83.417568 
+  245000      399      14.631365      1.6023291         0.1875       60.00633 
+  246000      399      14.178652      1.5117718         0.1875      79.688683 
+  247000      399      14.096487      1.4223604         0.1875       71.46187 
+  248000      399      13.726401      1.5084914         0.1875       74.19457 
+  249000      399      13.469391      1.6638811         0.1875      78.112911 
+  250000      399      12.790561      1.5049088         0.1875      102.13885 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 250001
+ - a total of 414 particle templates (mass 3.468318e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  251000      414       15.36193      1.6042645         0.1875      74.498451 
+  252000      414      15.031502      1.5132745         0.1875      55.549272 
+  253000      414      14.663921      1.4690288         0.1875      73.391568 
+  254000      414      14.349198      1.4607609         0.1875          57.52 
+  255000      414      13.905697      1.4054727         0.1875      82.683778 
+  256000      414      13.593051      1.4094105         0.1875       83.54839 
+  257000      414       13.45851      1.3993799         0.1875      67.812159 
+  258000      414      13.035611      1.5190508         0.1875      61.767085 
+  259000      414      12.991742      1.4160208         0.1875      59.638871 
+  260000      414      12.959032      1.3326037         0.1875      75.542954 
+INFO: Particle insertion ins: inserted 14 particle templates (mass 1.172861e+00) at step 260001
+ - a total of 428 particle templates (mass 3.585604e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  261000      428       15.45578      1.2675393         0.1875      63.492699 
+  262000      428      14.957689      1.2851805         0.1875      81.246998 
+  263000      428      14.719696      1.3064593         0.1875      80.537164 
+  264000      428      14.448457      1.2950265         0.1875      87.989691 
+  265000      428      13.328559      1.3943998         0.1875      89.997164 
+  266000      428      13.059054      1.3763316         0.1875      74.978572 
+  267000      428      12.644256      1.2750692         0.1875      78.254395 
+  268000      428      12.549654        1.21366         0.1875      77.975705 
+  269000      428      12.529296      1.1575932         0.1875      61.303377 
+  270000      428      12.587305      1.0537999         0.1875      79.944814 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 270001
+ - a total of 444 particle templates (mass 3.719646e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  271000      444      14.932893      1.1448843         0.1875      63.723695 
+  272000      444      14.139442      1.2168554         0.1875      82.878053 
+  273000      444      13.543802      1.1723618         0.1875      70.718665 
+  274000      444       13.32894      1.3020408         0.1875      76.578897 
+  275000      444      13.026704      1.2899684         0.1875      68.313462 
+  276000      444      12.392707      1.2822741         0.1875      94.426366 
+  277000      444      12.525894      1.1589515         0.1875       80.97817 
+  278000      444       12.53408      1.0603177         0.1875      85.133936 
+  279000      444      12.151066     0.98884328         0.1875        68.3028 
+  280000      444       12.60274     0.93951384         0.1875      53.319981 
+INFO: Particle insertion ins: inserted 13 particle templates (mass 1.089085e+00) at step 280001
+ - a total of 457 particle templates (mass 3.828554e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  281000      457      14.627039      1.0326521         0.1875      59.576385 
+  282000      457      14.331061     0.92436143         0.1875      79.622163 
+  283000      457      13.892966     0.97244292         0.1875      83.978181 
+  284000      457       13.05421      1.0976309         0.1875      79.463831 
+  285000      457      12.461953      1.1581991         0.1875      90.256269 
+  286000      457      12.344878      1.0441813         0.1875      77.272722 
+  287000      457      12.029893      1.0540626         0.1875      87.545018 
+  288000      457      11.821376      1.0425277         0.1875      82.530687 
+  289000      457      11.935917      1.0396633         0.1875      68.407503 
+  290000      457      11.372476      1.0536288         0.1875      101.03716 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 290001
+ - a total of 472 particle templates (mass 3.954218e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  291000      472      13.459616        1.05064         0.1875       114.3447 
+  292000      472       13.74173      1.0348913         0.1875      67.157018 
+  293000      472      13.092704       1.112141         0.1875      78.692876 
+  294000      472      12.313955      1.1380606         0.1875      100.44926 
+  295000      472       12.24937     0.99031853         0.1875      91.262863 
+  296000      472      11.737077      1.0577737         0.1875      89.016313 
+  297000      472      11.437353     0.99219395         0.1875      72.209187 
+  298000      472      11.485405     0.86179642         0.1875      61.960011 
+  299000      472      11.240093     0.86925528         0.1875      78.576678 
+  300000      472       11.40076     0.83616677         0.1875      62.828602 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 300001
+ - a total of 488 particle templates (mass 4.088259e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  301000      488      13.733577     0.85593202         0.1875      76.310732 
+  302000      488      13.796462     0.85884472         0.1875      87.685326 
+  303000      488      13.597288      0.9009141         0.1875      85.214514 
+  304000      488      13.382586     0.92672084         0.1875      88.229857 
+  305000      488      12.204791      1.0346831         0.1875      106.43464 
+  306000      488      12.062899     0.99710625         0.1875       99.63255 
+  307000      488      12.088701     0.95216915         0.1875      88.378076 
+  308000      488      11.757222     0.94847366         0.1875      106.39404 
+  309000      488      11.877137      0.9370277         0.1875      90.724887 
+  310000      488      11.653595      0.8348345         0.1875      95.545902 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 310001
+ - a total of 505 particle templates (mass 4.230678e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  311000      505      14.186645      0.8814793         0.1875      93.651558 
+  312000      505      14.261231     0.84899992         0.1875      98.171548 
+  313000      505      13.692625      0.8761118         0.1875      105.30519 
+  314000      505      13.402072     0.88911849         0.1875      101.35776 
+  315000      505      13.323714      0.8861663         0.1875      71.334187 
+  316000      505      13.120416     0.86894087         0.1875      85.073233 
+  317000      505      12.795864     0.90057471         0.1875       100.4188 
+  318000      505      12.163534     0.80304854         0.1875      129.11934 
+  319000      505      12.175621     0.77276492         0.1875      107.03491 
+  320000      505      11.566735     0.92066292         0.1875      121.37028 
+INFO: Particle insertion ins: inserted 14 particle templates (mass 1.172861e+00) at step 320001
+ - a total of 519 particle templates (mass 4.347964e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  321000      519      13.555786     0.95348337         0.1875      124.54531 
+  322000      519      13.183767     0.99536173         0.1875      97.006634 
+  323000      519      12.666848     0.96285959         0.1875      107.00683 
+  324000      519      12.366242     0.86403595         0.1875      112.91557 
+  325000      519      12.081601     0.84637622         0.1875      122.62225 
+  326000      519      12.131417     0.83531583         0.1875       100.3035 
+  327000      519      11.538488     0.86884391         0.1875      107.08122 
+  328000      519      11.490611      0.7909832         0.1875        101.147 
+  329000      519       11.38167     0.73913215         0.1875      110.80691 
+  330000      519      10.937984     0.76441013         0.1875      126.29691 
+INFO: Particle insertion ins: inserted 14 particle templates (mass 1.172861e+00) at step 330001
+ - a total of 533 particle templates (mass 4.465250e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  331000      533      12.758522     0.82394098         0.1875      126.46159 
+  332000      533      12.251791     0.72596917         0.1875      136.53068 
+  333000      533      11.597598     0.74944624         0.1875      146.37378 
+  334000      533      11.082624     0.79447792         0.1875      126.92003 
+  335000      533      10.800628     0.69850138         0.1875      117.75795 
+  336000      533      10.686885     0.66033702         0.1875      114.06101 
+  337000      533      10.298668     0.68046878         0.1875      100.94871 
+  338000      533      10.197307     0.65628972         0.1875      98.983726 
+  339000      533      9.5860371     0.70584812         0.1875      122.18169 
+  340000      533      9.6555997     0.73382649         0.1875      103.81555 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 340001
+ - a total of 550 particle templates (mass 4.607669e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  341000      550      11.661756     0.75708081         0.1875      128.80189 
+  342000      550      11.581728     0.69608136         0.1875      123.18563 
+  343000      550      11.286804     0.75061819         0.1875      102.53194 
+  344000      550      10.635088     0.73863469         0.1875      126.92035 
+  345000      550      10.677714     0.70562297         0.1875      117.20835 
+  346000      550      10.648547     0.68802768         0.1875      92.050546 
+  347000      550       10.48152     0.65308324         0.1875      104.31297 
+  348000      550      10.718529     0.61631395         0.1875        94.3773 
+  349000      550      10.523321     0.65041591         0.1875      98.261073 
+  350000      550      10.680348     0.71830729         0.1875      87.851191 
+INFO: Particle insertion ins: inserted 13 particle templates (mass 1.089085e+00) at step 350001
+ - a total of 563 particle templates (mass 4.716578e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  351000      563       12.45709     0.73960318         0.1875      111.14661 
+  352000      563      12.052218     0.73810155         0.1875      124.04838 
+  353000      563      11.710366     0.73968807         0.1875      130.24093 
+  354000      563      11.274743     0.70602282         0.1875      135.59017 
+  355000      563      11.005345      0.6893176         0.1875      113.86964 
+  356000      563      11.048081     0.64231466         0.1875      99.792147 
+  357000      563       10.94236     0.68124784         0.1875      103.10534 
+  358000      563      10.889867     0.60754592         0.1875      115.36084 
+  359000      563      10.760507     0.62470263         0.1875      118.11161 
+  360000      563       10.68103      0.6276601         0.1875      106.99126 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 360001
+ - a total of 578 particle templates (mass 4.842241e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  361000      578      12.494896     0.72818652         0.1875      138.93897 
+  362000      578      11.653598     0.79256939         0.1875      167.05621 
+  363000      578      11.091794     0.76779692         0.1875      163.65309 
+  364000      578      10.076777     0.80131276         0.1875      170.19632 
+  365000      578      9.5592945     0.75374903         0.1875      151.68175 
+  366000      578      9.1860164     0.66052989         0.1875      142.04376 
+  367000      578      9.0021768     0.57761284         0.1875      131.74949 
+  368000      578      9.2166927     0.52024564         0.1875      107.50091 
+  369000      578       9.316851     0.51980171         0.1875      92.983249 
+  370000      578      9.5040799     0.46378912         0.1875       91.34457 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 370001
+ - a total of 595 particle templates (mass 4.984660e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  371000      595      12.458134      0.4339312         0.1875      105.13513 
+  372000      595      12.281787     0.52548878         0.1875      124.37086 
+  373000      595      11.537245     0.55291779         0.1875      172.48365 
+  374000      595      10.998569     0.59057521         0.1875      168.76106 
+  375000      595      10.740465     0.63653325         0.1875       152.1907 
+  376000      595      10.635756     0.56010783         0.1875      132.96559 
+  377000      595      10.584645     0.53903006         0.1875      111.76065 
+  378000      595      10.575154     0.50507887         0.1875      111.50916 
+  379000      595      10.443682     0.50665472         0.1875      120.83457 
+  380000      595       10.10285     0.47232593         0.1875      148.61119 
+INFO: Particle insertion ins: inserted 14 particle templates (mass 1.172861e+00) at step 380001
+ - a total of 609 particle templates (mass 5.101946e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  381000      609      11.982786     0.59010741         0.1875      166.08798 
+  382000      609      11.830971     0.51336419         0.1875      153.68233 
+  383000      609      11.557182     0.55517661         0.1875      145.52733 
+  384000      609      11.113843     0.53997411         0.1875      168.83879 
+  385000      609      10.843227     0.48705705         0.1875      164.58698 
+  386000      609       10.45334     0.51171148         0.1875      149.71175 
+  387000      609      10.198227     0.52239329         0.1875      140.32032 
+  388000      609      9.9734841     0.46256583         0.1875      158.35276 
+  389000      609      9.7504919     0.51446946         0.1875      149.71672 
+  390000      609      9.0698177     0.61350139         0.1875      178.94201 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 390001
+ - a total of 624 particle templates (mass 5.227610e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  391000      624      11.608737     0.58830595         0.1875      157.79981 
+  392000      624      10.997339     0.56700304         0.1875      189.40675 
+  393000      624      9.9587516     0.55465158         0.1875      203.29669 
+  394000      624      9.5174452     0.58074219         0.1875       178.6414 
+  395000      624      9.1819711     0.58372208         0.1875      167.76611 
+  396000      624      9.1373777     0.53032044         0.1875      138.32863 
+  397000      624      9.1669953      0.4549573         0.1875      124.76823 
+  398000      624      9.1569042     0.41594351         0.1875      136.39981 
+  399000      624      9.1258881     0.43076135         0.1875      141.70555 
+  400000      624      8.9063846     0.48894288         0.1875      146.81898 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 400001
+ - a total of 641 particle templates (mass 5.370029e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  401000      641      11.139205     0.49867793         0.1875      177.01214 
+  402000      641      10.890226      0.5367638         0.1875      178.62079 
+  403000      641      10.406873     0.61041748         0.1875        186.673 
+  404000      641      10.187276     0.61654292         0.1875      165.50513 
+  405000      641      10.080128     0.53044905         0.1875      148.27404 
+  406000      641      10.319301     0.49032881         0.1875      127.27954 
+  407000      641      10.498628     0.42395768         0.1875      120.50642 
+  408000      641      10.863635     0.38955961         0.1875      134.77279 
+  409000      641      11.084401     0.37720761         0.1875       143.8077 
+  410000      641      10.732272     0.50453032         0.1875      172.34516 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 410001
+ - a total of 658 particle templates (mass 5.512448e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  411000      658      12.747426     0.62903247         0.1875      200.55018 
+  412000      658      12.066417     0.65771088         0.1875      221.65589 
+  413000      658      11.907703     0.63181834         0.1875       188.0102 
+  414000      658      11.166071     0.53550968         0.1875      202.45457 
+  415000      658      10.836451     0.54652154         0.1875       189.9422 
+  416000      658      10.732381     0.53780046         0.1875      160.93682 
+  417000      658      10.469501     0.52292707         0.1875      170.73266 
+  418000      658      10.211633     0.57376552         0.1875      177.24319 
+  419000      658      9.9042584     0.58991566         0.1875      175.56604 
+  420000      658      9.4371116     0.57082833         0.1875      192.78312 
+INFO: Particle insertion ins: inserted 18 particle templates (mass 1.507964e+00) at step 420001
+ - a total of 676 particle templates (mass 5.663244e+01) inserted so far.
+  421000      676      11.805059     0.63179963         0.1875      208.17752 
+  422000      676      11.107307     0.66567495         0.1875       198.7983 
+  423000      676      10.937319     0.67060787         0.1875      194.46052 
+  424000      676      10.707069     0.66142956         0.1875      168.49067 
+  425000      676       10.49753     0.66469522         0.1875       154.4549 
+  426000      676      10.571541     0.65869761         0.1875      152.66351 
+  427000      676      10.503006     0.62933375         0.1875      176.12081 
+  428000      676      10.456974     0.62991493         0.1875      161.76571 
+  429000      676      10.745661     0.62443489         0.1875      148.40738 
+  430000      676      10.421761     0.59669635         0.1875      183.69393 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 430001
+ - a total of 692 particle templates (mass 5.797286e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  431000      692      12.917146     0.62724452         0.1875      203.60238 
+  432000      692       12.36176     0.63732302         0.1875       221.2795 
+  433000      692      12.119259     0.60148248         0.1875      200.89215 
+  434000      692      11.724429     0.59750034         0.1875      194.83583 
+  435000      692      11.559609      0.5744449         0.1875      184.11154 
+  436000      692      10.917405     0.63558406         0.1875      199.20383 
+  437000      692      10.597623     0.57874152         0.1875      200.94622 
+  438000      692       10.34952     0.55017972         0.1875      187.30207 
+  439000      692      9.9827482     0.57723105         0.1875       190.2855 
+  440000      692      9.7536718     0.54351151         0.1875       196.3993 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 440001
+ - a total of 707 particle templates (mass 5.922949e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  441000      707      11.569708     0.52588326         0.1875      211.60259 
+  442000      707      11.182071     0.57362433         0.1875      203.73227 
+  443000      707      10.478225      0.5561412         0.1875       226.4592 
+  444000      707      9.8840279     0.57199647         0.1875      228.95372 
+  445000      707      9.5833664     0.61581413         0.1875      198.86575 
+  446000      707      9.3815164     0.57683873         0.1875       194.4767 
+  447000      707      9.5185006     0.49815804         0.1875      175.76182 
+  448000      707      9.3700355     0.51620547         0.1875      176.61575 
+  449000      707      9.4220593     0.49144257         0.1875      178.37547 
+  450000      707      8.9157079     0.47090288         0.1875      207.75869 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 450001
+ - a total of 722 particle templates (mass 6.048613e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  451000      722      11.020227     0.52280934         0.1875       213.0782 
+  452000      722      10.272214     0.56357028         0.1875      232.18975 
+  453000      722      9.5331652     0.63879913         0.1875      239.99388 
+  454000      722      8.9657554     0.64907693         0.1875      222.76704 
+  455000      722      8.9377564     0.57524519         0.1875      193.61759 
+  456000      722      8.8611892     0.50689082         0.1875      178.64311 
+  457000      722      9.0307869     0.48014126         0.1875      161.20389 
+  458000      722      9.0784857     0.46323518         0.1875      163.23886 
+  459000      722       8.851049     0.47995001         0.1875      191.89851 
+  460000      722      8.9287847     0.47912742         0.1875      184.33437 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 460001
+ - a total of 739 particle templates (mass 6.191032e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  461000      739       10.98134     0.62346051         0.1875      221.90715 
+  462000      739       10.75217     0.61071222         0.1875      220.48118 
+  463000      739      10.010878     0.58856018         0.1875      237.09357 
+  464000      739      9.7597924     0.57056459         0.1875       200.7306 
+  465000      739      9.8578592     0.48798172         0.1875      180.25962 
+  466000      739      9.8840452     0.45166261         0.1875      179.73966 
+  467000      739      9.9105494     0.51455786         0.1875      185.44759 
+  468000      739       9.895502     0.53746597         0.1875      191.78253 
+  469000      739      9.3714828     0.50339747         0.1875      238.61079 
+  470000      739      8.8211773     0.57720411         0.1875      244.86112 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 470001
+ - a total of 755 particle templates (mass 6.325073e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  471000      755      10.905985      0.5894085         0.1875      245.18993 
+  472000      755      10.474138      0.5594014         0.1875      242.48679 
+  473000      755      10.114019      0.5336079         0.1875      237.00813 
+  474000      755      10.014723     0.48671587         0.1875      200.80648 
+  475000      755      9.9953446      0.4514121         0.1875      191.10214 
+  476000      755      9.8615689     0.45605679         0.1875      197.12493 
+  477000      755      9.7045773     0.45936796         0.1875      202.78938 
+  478000      755      9.6308021      0.4928938         0.1875      183.87551 
+  479000      755      9.5579452     0.45782829         0.1875      194.72483 
+  480000      755      8.9229502     0.52919451         0.1875      249.78116 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 480001
+ - a total of 770 particle templates (mass 6.450737e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  481000      770       11.17547     0.59871944         0.1875      258.71754 
+  482000      770      10.475717     0.60585058         0.1875      274.05078 
+  483000      770       9.881286     0.56344528         0.1875       278.8299 
+  484000      770      9.8027593     0.53973545         0.1875      233.54084 
+  485000      770      9.7755656     0.49542844         0.1875      187.70159 
+  486000      770      9.8211651     0.47311208         0.1875      182.11613 
+  487000      770      9.8800724     0.48809283         0.1875      186.37799 
+  488000      770      9.8371612     0.47471105         0.1875      194.98959 
+  489000      770      9.2843056     0.54866663         0.1875      242.14777 
+  490000      770      8.8068879     0.59341568         0.1875      274.13584 
+INFO: Particle insertion ins: inserted 18 particle templates (mass 1.507964e+00) at step 490001
+ - a total of 788 particle templates (mass 6.601533e+01) inserted so far.
+  491000      788      11.497798      0.5708785         0.1875      248.42013 
+  492000      788      10.841845     0.59627091         0.1875       260.4565 
+  493000      788      10.116319     0.60418106         0.1875      276.36818 
+  494000      788      9.8450077     0.58340496         0.1875      240.59448 
+  495000      788      9.6419917     0.49982685         0.1875      207.73349 
+  496000      788      9.5337491     0.47204085         0.1875      208.50031 
+  497000      788        9.40096     0.45212615         0.1875      216.65302 
+  498000      788      9.1033502     0.43401209         0.1875      234.67808 
+  499000      788      8.9165415     0.45511776         0.1875      240.92409 
+  500000      788      8.6614521     0.49284891         0.1875      239.98766 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 500001
+ - a total of 805 particle templates (mass 6.743952e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  501000      805       11.06855     0.49345397         0.1875      255.80158 
+  502000      805      10.844139     0.46265801         0.1875      255.60471 
+  503000      805      10.735117     0.44750739         0.1875      234.75494 
+  504000      805      10.712439     0.44644964         0.1875      224.68648 
+  505000      805      10.437935     0.42931121         0.1875      242.01396 
+  506000      805      9.9794459     0.48800692         0.1875      265.56085 
+  507000      805      9.8957396     0.43783828         0.1875      259.45276 
+  508000      805      9.3085203     0.48831023         0.1875      293.62984 
+  509000      805      8.9345067      0.4951971         0.1875      300.90921 
+  510000      805      8.5390258     0.48880326         0.1875      282.99609 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 510001
+ - a total of 821 particle templates (mass 6.877994e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  511000      821      10.939531     0.45004268         0.1875      285.93622 
+  512000      821      10.370014     0.48487144         0.1875      275.71456 
+  513000      821       10.22093     0.47245052         0.1875      261.61958 
+  514000      821      10.042883     0.48343091         0.1875      239.82775 
+  515000      821      9.8031509     0.50126843         0.1875       253.6781 
+  516000      821      9.5959409     0.45911817         0.1875      260.14065 
+  517000      821      9.5300405     0.47587829         0.1875      249.52624 
+  518000      821      9.2219592     0.48944345         0.1875      250.10954 
+  519000      821      9.3199917     0.49772237         0.1875       244.1684 
+  520000      821      8.5268047     0.49674911         0.1875      306.81419 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 520001
+ - a total of 836 particle templates (mass 7.003657e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  521000      836      10.351517      0.5765796         0.1875      330.01149 
+  522000      836      9.7922759      0.4822848         0.1875      345.44127 
+  523000      836      9.5349465     0.47856999         0.1875      307.89221 
+  524000      836      9.4788199     0.45076807         0.1875      255.78397 
+  525000      836      9.1175808     0.44311701         0.1875      244.92478 
+  526000      836      9.2560432     0.41169984         0.1875      222.17217 
+  527000      836      9.1959473     0.37583395         0.1875      230.90178 
+  528000      836      8.9467922     0.39791485         0.1875      255.44147 
+  529000      836      8.8916104     0.42695453         0.1875      267.00895 
+  530000      836      8.5620153     0.43280193         0.1875      297.14358 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 530001
+ - a total of 851 particle templates (mass 7.129321e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  531000      851      10.523415     0.47797455         0.1875      312.48282 
+  532000      851      9.8985329     0.48477106         0.1875      324.66209 
+  533000      851      9.3493259     0.48013253         0.1875      319.95279 
+  534000      851      9.1680377     0.43787328         0.1875      287.75968 
+  535000      851      8.9734988     0.45251548         0.1875        267.593 
+  536000      851      9.0181802     0.42690452         0.1875      262.41275 
+  537000      851      9.0359289     0.43847937         0.1875       254.9013 
+  538000      851      8.8437854     0.40227339         0.1875      281.72746 
+  539000      851      8.1404918     0.44536352         0.1875      330.57142 
+  540000      851      7.3860646     0.54232529         0.1875      366.08136 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 540001
+ - a total of 867 particle templates (mass 7.263362e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  541000      867      9.6960911     0.50510294         0.1875      328.01791 
+  542000      867      9.1605422     0.51062798         0.1875      307.20394 
+  543000      867       9.006678     0.48649415         0.1875       301.2432 
+  544000      867      9.0227157     0.42109894         0.1875      278.20463 
+  545000      867      8.9565045     0.40662951         0.1875      264.10224 
+  546000      867      8.8192768     0.43385787         0.1875      261.18326 
+  547000      867      8.8814954     0.40472713         0.1875      264.10251 
+  548000      867      8.4749451     0.47962693         0.1875      301.69836 
+  549000      867      7.8366704     0.51449189         0.1875      344.80751 
+  550000      867       7.326076     0.58898659         0.1875      342.16242 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 550001
+ - a total of 883 particle templates (mass 7.397404e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  551000      883      9.5960096     0.57833619         0.1875      346.44439 
+  552000      883      9.4901691     0.47186325         0.1875       305.1182 
+  553000      883      9.5306847     0.44290421         0.1875      269.41152 
+  554000      883      9.1909365     0.45827367         0.1875      281.44632 
+  555000      883      8.8283092     0.40645993         0.1875      311.63253 
+  556000      883      8.8887332      0.3597161         0.1875      303.60716 
+  557000      883      8.5109267     0.41655647         0.1875      304.24082 
+  558000      883      7.9816747     0.45310166         0.1875      324.31075 
+  559000      883      7.5352557     0.47291959         0.1875      327.27183 
+  560000      883      6.8607224     0.56086042         0.1875      332.34469 
+INFO: Particle insertion ins: inserted 18 particle templates (mass 1.507964e+00) at step 560001
+ - a total of 901 particle templates (mass 7.548200e+01) inserted so far.
+  561000      901      9.9150747     0.54955365         0.1875      312.47412 
+  562000      901      9.5897242     0.51403917         0.1875      322.45661 
+  563000      901      9.4166825     0.50432201         0.1875      307.85464 
+  564000      901       9.306857     0.45740745         0.1875       297.5456 
+  565000      901      9.4566106     0.43609382         0.1875      271.31446 
+  566000      901       9.399815     0.43653605         0.1875      280.17639 
+  567000      901      8.9853881     0.42987083         0.1875      315.26699 
+  568000      901      8.7117316     0.42683451         0.1875      345.97431 
+  569000      901      8.7078465     0.40877718         0.1875       327.0071 
+  570000      901      8.1464835     0.42279991         0.1875      338.36405 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 570001
+ - a total of 916 particle templates (mass 7.673864e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  571000      916      10.168232     0.40199742         0.1875      377.02378 
+  572000      916      9.6706119     0.40881981         0.1875      387.93512 
+  573000      916      9.6346437     0.40294085         0.1875       340.6513 
+  574000      916      9.3279406      0.4094116         0.1875      306.01099 
+  575000      916      8.9922027     0.42508063         0.1875      298.53807 
+  576000      916      9.2326769     0.38458259         0.1875      284.94741 
+  577000      916      8.8483014     0.46303199         0.1875      307.23363 
+  578000      916      8.3549077     0.48660158         0.1875      350.36494 
+  579000      916      8.2048274     0.47243343         0.1875      356.25912 
+  580000      916      7.8911704     0.49086749         0.1875      352.51422 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 580001
+ - a total of 932 particle templates (mass 7.807905e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  581000      932      10.042405     0.55957554         0.1875      346.00744 
+  582000      932      9.7216918      0.5765032         0.1875      355.38907 
+  583000      932      9.2673733     0.57402504         0.1875      350.59446 
+  584000      932      8.7892344     0.54463299         0.1875       366.2566 
+  585000      932      8.6733645     0.49832162         0.1875      345.37053 
+  586000      932      8.6342883     0.46087405         0.1875      303.96071 
+  587000      932      8.4600744     0.48713212         0.1875      303.38989 
+  588000      932      8.0918528       0.538536         0.1875      341.53665 
+  589000      932      7.6496055     0.55180757         0.1875      395.81516 
+  590000      932      7.4012015     0.57358932         0.1875       389.2615 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 590001
+ - a total of 947 particle templates (mass 7.933569e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  591000      947      9.3386763     0.62702131         0.1875      386.47715 
+  592000      947      9.3106879      0.5931313         0.1875      334.48562 
+  593000      947      9.2231359     0.58912233         0.1875      316.19891 
+  594000      947      8.9824089     0.63150525         0.1875      319.91822 
+  595000      947      8.9584872     0.56420835         0.1875      329.51859 
+  596000      947      8.7643211     0.53930877         0.1875      354.29085 
+  597000      947        8.48103     0.56293426         0.1875      357.29795 
+  598000      947      8.1836538     0.54744649         0.1875       373.5234 
+  599000      947      7.6709908     0.56385196         0.1875      386.19208 
+  600000      947      6.7481075     0.67939384         0.1875      416.77209 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 600001
+ - a total of 963 particle templates (mass 8.067610e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  601000      963      8.8379222     0.69026937         0.1875      421.24061 
+  602000      963      8.7295567      0.6073657         0.1875      389.48935 
+  603000      963      8.4906755     0.60998628         0.1875      341.47322 
+  604000      963      8.3332712     0.58530043         0.1875       337.2982 
+  605000      963      8.4410345     0.52764712         0.1875      317.45001 
+  606000      963      8.4095233     0.50050007         0.1875      311.22357 
+  607000      963      8.3454632     0.54993215         0.1875      335.35418 
+  608000      963      8.3384238     0.50256657         0.1875      344.87849 
+  609000      963      8.1403408     0.57050582         0.1875      362.75275 
+  610000      963      8.0190403     0.58187765         0.1875      375.40556 
+INFO: Particle insertion ins: inserted 18 particle templates (mass 1.507964e+00) at step 610001
+ - a total of 981 particle templates (mass 8.218406e+01) inserted so far.
+  611000      981      10.421056      0.5459285         0.1875      426.28731 
+  612000      981      10.098495     0.48495689         0.1875      421.87606 
+  613000      981      9.7304688     0.50071864         0.1875      401.46841 
+  614000      981       9.461176     0.50170471         0.1875      387.85396 
+  615000      981      9.2414849     0.48678058         0.1875      387.87498 
+  616000      981      8.8489765     0.52442104         0.1875      383.84139 
+  617000      981      8.8791161     0.48830644         0.1875      370.39326 
+  618000      981      8.7129145     0.49521717         0.1875      354.84595 
+  619000      981      8.2269309     0.50245079         0.1875       384.7504 
+  620000      981      7.8930875     0.49396601         0.1875      405.67645 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 620001
+ - a total of 996 particle templates (mass 8.344070e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  621000      996      9.9249728     0.52963989         0.1875      422.31525 
+  622000      996      9.5890319     0.46936593         0.1875      432.48056 
+  623000      996      9.3355177     0.43099389         0.1875      404.59449 
+  624000      996      9.1984431     0.46229987         0.1875      379.34845 
+  625000      996      8.8637348     0.50918652         0.1875       363.6048 
+  626000      996       8.445212     0.57552712         0.1875      382.18433 
+  627000      996      7.6029752     0.53817524         0.1875      433.46391 
+  628000      996      7.1597085     0.57762393         0.1875      456.95681 
+  629000      996      6.7200746     0.57275074         0.1875      426.86769 
+  630000      996      6.6469953      0.5262343         0.1875      380.01535 
+INFO: Particle insertion ins: inserted 18 particle templates (mass 1.507964e+00) at step 630001
+ - a total of 1014 particle templates (mass 8.494867e+01) inserted so far.
+  631000     1014       9.330622     0.48556733         0.1875      357.91259 
+  632000     1014      9.2955095     0.45276641         0.1875      350.02433 
+  633000     1014      9.1572839     0.43578101         0.1875      381.58967 
+  634000     1014      8.7683599     0.43832325         0.1875      410.77021 
+  635000     1014      8.7669714     0.39628753         0.1875      399.26318 
+  636000     1014      8.7815042     0.41481768         0.1875      369.47002 
+  637000     1014      8.8811549     0.43459727         0.1875      347.70392 
+  638000     1014      8.5959784     0.47620076         0.1875      388.90111 
+  639000     1014      8.4473019      0.4242208         0.1875      430.44056 
+  640000     1014      7.9302501     0.43782565         0.1875        456.791 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 640001
+ - a total of 1029 particle templates (mass 8.620530e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  641000     1029      9.9641649     0.48973258         0.1875      454.88667 
+  642000     1029      9.2493702     0.48708659         0.1875      474.67131 
+  643000     1029      9.0523483     0.49418357         0.1875      437.74967 
+  644000     1029       8.859595     0.46697441         0.1875       422.0633 
+  645000     1029       8.701567     0.47741487         0.1875      383.51327 
+  646000     1029       8.710987     0.44953462         0.1875      370.96381 
+  647000     1029      8.1620229     0.48797205         0.1875      403.60474 
+  648000     1029      8.0068005     0.52571462         0.1875      440.16667 
+  649000     1029      7.3180091     0.53091315         0.1875      482.87854 
+  650000     1029       6.691022     0.54315982         0.1875      480.47117 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 650001
+ - a total of 1044 particle templates (mass 8.746194e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  651000     1044      8.6493191     0.52715753         0.1875      460.74605 
+  652000     1044      8.6159031     0.48698954         0.1875       425.5992 
+  653000     1044      8.3580168     0.48879125         0.1875      415.98024 
+  654000     1044      8.1016523     0.49477737         0.1875      423.50368 
+  655000     1044       8.029715     0.45335839         0.1875      419.95118 
+  656000     1044      7.5015332     0.49820605         0.1875      442.23343 
+  657000     1044      7.2440335     0.42489732         0.1875      462.53826 
+  658000     1044       6.819869     0.48772448         0.1875      454.99859 
+  659000     1044      6.4921851     0.52390508         0.1875      458.04224 
+  660000     1044      6.3366889     0.47117351         0.1875      436.50083 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 660001
+ - a total of 1059 particle templates (mass 8.871858e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  661000     1059      8.4587881     0.44555125         0.1875      456.40253 
+  662000     1059      8.4088449     0.38724748         0.1875      421.63398 
+  663000     1059      8.1829601     0.39879842         0.1875      430.50966 
+  664000     1059      8.1170668     0.35780441         0.1875      416.91816 
+  665000     1059      7.4903525     0.40759758         0.1875      455.48004 
+  666000     1059      7.1469496      0.4402707         0.1875      485.43436 
+  667000     1059      6.8236971     0.46468872         0.1875      460.41822 
+  668000     1059      6.5841952     0.47708047         0.1875      443.81587 
+  669000     1059      6.2557462     0.46142988         0.1875      454.53465 
+  670000     1059       5.590497     0.41338712         0.1875      482.02709 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 670001
+ - a total of 1075 particle templates (mass 9.005899e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  671000     1075      7.9563709     0.39309291         0.1875      483.11103 
+  672000     1075      7.8656654     0.38437711         0.1875      458.51271 
+  673000     1075      7.9697999     0.36663123         0.1875      419.57124 
+  674000     1075      7.9756138     0.34416497         0.1875       413.8174 
+  675000     1075      8.1145809     0.29827044         0.1875      408.97851 
+  676000     1075      8.0241371     0.33834055         0.1875      424.28988 
+  677000     1075      7.5509581     0.41786557         0.1875      481.30649 
+  678000     1075      7.3223135     0.42837653         0.1875      490.16595 
+  679000     1075      6.9788136     0.40969315         0.1875      495.75013 
+  680000     1075      6.4221034     0.51341482         0.1875       479.5281 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 680001
+ - a total of 1091 particle templates (mass 9.139940e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  681000     1091      8.9436438     0.46923686         0.1875      484.22878 
+  682000     1091      9.0378704      0.4407559         0.1875      461.36986 
+  683000     1091      8.5886063     0.45832278         0.1875      467.00662 
+  684000     1091      8.2947486     0.41985253         0.1875      468.41675 
+  685000     1091      8.3022822     0.39561614         0.1875      462.13899 
+  686000     1091      8.1117722     0.45219824         0.1875      447.94846 
+  687000     1091      7.6339688     0.44118711         0.1875      470.54785 
+  688000     1091      7.1678419     0.46587824         0.1875      506.00096 
+  689000     1091      6.6814901     0.41513656         0.1875      531.07603 
+  690000     1091      5.9810001     0.46138034         0.1875      553.63166 
+INFO: Particle insertion ins: inserted 14 particle templates (mass 1.172861e+00) at step 690001
+ - a total of 1105 particle templates (mass 9.257226e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  691000     1105      7.9357332     0.50259868         0.1875      522.94231 
+  692000     1105      7.9997063     0.42296403         0.1875      473.48739 
+  693000     1105      7.8594702     0.39111062         0.1875      453.98387 
+  694000     1105      7.8050865     0.37490729         0.1875      443.88139 
+  695000     1105      7.9626666     0.35839925         0.1875      437.90351 
+  696000     1105      8.1733894     0.33800163         0.1875      437.67545 
+  697000     1105      8.1898716     0.35652884         0.1875      439.36262 
+  698000     1105       7.571804     0.42657624         0.1875      500.02711 
+  699000     1105      6.4885521     0.46883918         0.1875      596.78179 
+  700000     1105      5.7102271     0.51692948         0.1875      638.56252 
+INFO: Particle insertion ins: inserted 14 particle templates (mass 1.172861e+00) at step 700001
+ - a total of 1119 particle templates (mass 9.374512e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  701000     1119      7.7970557     0.48435485         0.1875      565.96807 
+  702000     1119      7.5023602     0.45491002         0.1875      504.58718 
+  703000     1119      7.3072818     0.47298961         0.1875      453.64566 
+  704000     1119      7.2421847     0.42269955         0.1875      441.08363 
+  705000     1119      7.1341868     0.42690861         0.1875      450.30424 
+  706000     1119      6.9010277      0.4236292         0.1875      466.89811 
+  707000     1119       6.745631     0.44642177         0.1875      491.49104 
+  708000     1119      6.4591893     0.43108597         0.1875      516.83194 
+  709000     1119      5.8781236     0.47805665         0.1875      565.73773 
+  710000     1119      5.5581004     0.40777918         0.1875      567.46908 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 710001
+ - a total of 1135 particle templates (mass 9.508554e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  711000     1135      7.9124286     0.40358234         0.1875      552.69008 
+  712000     1135      7.9055728     0.36307274         0.1875      499.12681 
+  713000     1135       7.762265     0.37756348         0.1875      471.84807 
+  714000     1135      7.6305273     0.33790216         0.1875      470.47296 
+  715000     1135      7.4959629     0.33963766         0.1875      488.23675 
+  716000     1135      7.1512503     0.39379732         0.1875      516.90217 
+  717000     1135      6.8361796      0.4248394         0.1875      540.20891 
+  718000     1135      6.4320697     0.45325445         0.1875      546.89464 
+  719000     1135      5.9727979     0.44896515         0.1875      561.56852 
+  720000     1135      5.8985649     0.41195107         0.1875      536.15588 
+INFO: Particle insertion ins: inserted 14 particle templates (mass 1.172861e+00) at step 720001
+ - a total of 1149 particle templates (mass 9.625840e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  721000     1149      8.0372446     0.38928342         0.1875      532.30368 
+  722000     1149       7.822373     0.36276983         0.1875      509.54396 
+  723000     1149      7.6435337     0.40117754         0.1875      492.78805 
+  724000     1149      7.6018438     0.35820954         0.1875       482.9293 
+  725000     1149      7.4543864      0.3307362         0.1875      496.19337 
+  726000     1149      7.1089676     0.37723946         0.1875      534.18137 
+  727000     1149      6.8650856     0.36896019         0.1875      545.05845 
+  728000     1149      6.2475469     0.40632018         0.1875      549.89158 
+  729000     1149       5.677004     0.40725961         0.1875      578.78989 
+  730000     1149      5.5259875      0.3619355         0.1875      550.36514 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 730001
+ - a total of 1165 particle templates (mass 9.759881e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  731000     1165      7.7609523     0.34875574         0.1875      550.05866 
+  732000     1165      7.7371784     0.31787797         0.1875      518.77552 
+  733000     1165       7.856438     0.28566337         0.1875       493.3876 
+  734000     1165      8.0495973     0.24810771         0.1875      463.71631 
+  735000     1165      7.6637331     0.30206667         0.1875      488.05746 
+  736000     1165      6.8421853       0.392794         0.1875      566.22044 
+  737000     1165      6.5167209     0.39756966         0.1875      607.71411 
+  738000     1165      6.4939214     0.35381905         0.1875      590.78024 
+  739000     1165       6.162478     0.36204349         0.1875       547.2064 
+  740000     1165      5.6054564     0.40597724         0.1875      559.57305 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 740001
+ - a total of 1180 particle templates (mass 9.885545e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  741000     1180      7.7805265     0.45380459         0.1875      547.60106 
+  742000     1180      7.5141568     0.38931886         0.1875      565.46545 
+  743000     1180      7.0946261     0.35628148         0.1875      556.39995 
+  744000     1180      7.1967534     0.34160409         0.1875      530.58102 
+  745000     1180      6.9784108     0.30658803         0.1875      529.36071 
+  746000     1180      7.1038255     0.31401948         0.1875      514.47347 
+  747000     1180      7.1475945     0.31042951         0.1875      510.72637 
+  748000     1180      6.6826068     0.32092076         0.1875       554.9282 
+  749000     1180      6.1760808     0.37418675         0.1875      583.78767 
+  750000     1180      5.6629244     0.45138092         0.1875      615.69211 
+INFO: Particle insertion ins: inserted 13 particle templates (mass 1.089085e+00) at step 750001
+ - a total of 1193 particle templates (mass 9.994453e+01) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  751000     1193       7.260396      0.4795328         0.1875      623.07752 
+  752000     1193      7.0310047     0.43235861         0.1875      600.72336 
+  753000     1193      6.7188337     0.39911746         0.1875      548.39909 
+  754000     1193        6.97363     0.39608697         0.1875      485.35893 
+  755000     1193      6.8438361     0.41123387         0.1875      481.27891 
+  756000     1193      6.4093431     0.48539207         0.1875      524.53832 
+  757000     1193       6.015235     0.46446696         0.1875      586.40987 
+  758000     1193      5.7357327     0.44196535         0.1875      610.76697 
+  759000     1193      5.3598168     0.44115345         0.1875      623.36492 
+  760000     1193      4.9652963     0.47006168         0.1875      593.17001 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 760001
+ - a total of 1209 particle templates (mass 1.012849e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  761000     1209      7.4050715     0.45136204         0.1875      579.19978 
+  762000     1209      7.5206182     0.41554905         0.1875      532.19625 
+  763000     1209      7.5700879     0.35947479         0.1875      513.00275 
+  764000     1209      7.3464649     0.42000683         0.1875      523.76733 
+  765000     1209      7.2167195     0.45823296         0.1875       558.4102 
+  766000     1209      6.6352515     0.45758242         0.1875      609.94658 
+  767000     1209      6.1865787     0.41554624         0.1875      659.72121 
+  768000     1209      5.8096936     0.44374228         0.1875      634.97829 
+  769000     1209      5.4721687     0.45193869         0.1875      631.87532 
+  770000     1209      5.2433313     0.42088512         0.1875      590.96325 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 770001
+ - a total of 1226 particle templates (mass 1.027091e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  771000     1226      8.0983259     0.37363087         0.1875      555.74477 
+  772000     1226      7.9732128     0.34125665         0.1875      540.43134 
+  773000     1226      7.7508531     0.39130939         0.1875      548.21652 
+  774000     1226      7.6506867     0.41777807         0.1875      557.43269 
+  775000     1226      7.2063662     0.42987848         0.1875      589.19513 
+  776000     1226       7.018976     0.43523905         0.1875      605.02889 
+  777000     1226      6.7693955     0.37310715         0.1875       609.1689 
+  778000     1226      6.2623006     0.40356419         0.1875      619.65275 
+  779000     1226        6.13635     0.39958997         0.1875      606.22271 
+  780000     1226      5.8284902     0.39515544         0.1875      610.26702 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 780001
+ - a total of 1243 particle templates (mass 1.041333e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  781000     1243      8.4723704     0.35910774         0.1875      600.91846 
+  782000     1243      7.9589349     0.38782647         0.1875      628.93723 
+  783000     1243      7.8660033      0.3813178         0.1875      616.62986 
+  784000     1243      7.7658221      0.3426581         0.1875       595.9873 
+  785000     1243      7.6075825     0.35973778         0.1875      583.55964 
+  786000     1243      7.2110005     0.38838787         0.1875      589.61813 
+  787000     1243      6.6568804     0.38796201         0.1875      630.87642 
+  788000     1243      6.4872375     0.39502949         0.1875      655.38781 
+  789000     1243      6.2190684      0.3891798         0.1875      654.55256 
+  790000     1243      6.0111271     0.39343934         0.1875      628.31664 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 790001
+ - a total of 1260 particle templates (mass 1.055575e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  791000     1260      8.4221424     0.40585851         0.1875      626.84236 
+  792000     1260      7.8889069     0.42191158         0.1875      647.17791 
+  793000     1260      7.7819541     0.39203974         0.1875      618.17239 
+  794000     1260      7.8035422     0.35329432         0.1875      595.48315 
+  795000     1260      7.6317093     0.36773965         0.1875      573.36938 
+  796000     1260      7.2542333     0.41665009         0.1875      587.87038 
+  797000     1260      6.6519726     0.41403395         0.1875      648.28539 
+  798000     1260      6.1955569     0.39952813         0.1875      675.44003 
+  799000     1260      5.7761126     0.43074298         0.1875      691.79938 
+  800000     1260      5.6638865     0.41192718         0.1875      641.71798 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 800001
+ - a total of 1276 particle templates (mass 1.068979e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  801000     1276      8.0977627     0.43430232         0.1875      608.17416 
+  802000     1276      7.7005157      0.4059702         0.1875      606.16505 
+  803000     1276      7.5906504     0.39968361         0.1875      611.26842 
+  804000     1276       7.584443     0.38749377         0.1875      605.14748 
+  805000     1276      7.4904263     0.41137118         0.1875      620.40292 
+  806000     1276      7.2280804     0.40762387         0.1875      621.48102 
+  807000     1276      7.0440825     0.44399706         0.1875       633.6042 
+  808000     1276      6.7134702     0.45504534         0.1875      663.13847 
+  809000     1276      6.3404531     0.45217636         0.1875      683.03744 
+  810000     1276      5.8646431     0.45241695         0.1875      698.73178 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 810001
+ - a total of 1291 particle templates (mass 1.081546e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  811000     1291      8.2647668     0.43300219         0.1875      675.10336 
+  812000     1291      7.7388563     0.45898138         0.1875      681.38568 
+  813000     1291      7.4111278     0.42454075         0.1875      657.48054 
+  814000     1291      7.0263166     0.40938314         0.1875      671.14209 
+  815000     1291      6.6613076     0.47390234         0.1875      650.62942 
+  816000     1291      6.3228431     0.48714541         0.1875      651.87339 
+  817000     1291      6.1783986     0.49112685         0.1875      643.67539 
+  818000     1291       5.982964     0.50745381         0.1875      641.07566 
+  819000     1291      5.4586268     0.53217195         0.1875       673.8287 
+  820000     1291      5.3403104     0.47777326         0.1875      674.37156 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 820001
+ - a total of 1308 particle templates (mass 1.095788e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  821000     1308      8.1825847       0.441451         0.1875      637.62047 
+  822000     1308      7.8590706     0.43944608         0.1875      651.40043 
+  823000     1308      7.4972441     0.49211245         0.1875      672.88207 
+  824000     1308      7.5328626     0.43565246         0.1875      668.96953 
+  825000     1308      7.2270442     0.40800476         0.1875      665.41699 
+  826000     1308      6.8730549     0.42825318         0.1875       690.7693 
+  827000     1308      6.2095382     0.48197476         0.1875      709.90481 
+  828000     1308      5.9430364     0.42665346         0.1875       715.9297 
+  829000     1308      5.6168529     0.44086386         0.1875      695.64123 
+  830000     1308      5.5444368     0.41609758         0.1875      665.37428 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 830001
+ - a total of 1324 particle templates (mass 1.109192e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  831000     1324       7.920115     0.42175915         0.1875      651.93745 
+  832000     1324      7.9223396     0.40392739         0.1875      657.00602 
+  833000     1324      7.7239194     0.39505818         0.1875      672.68198 
+  834000     1324      7.4217498     0.42727949         0.1875      686.82592 
+  835000     1324      7.0075157      0.4750472         0.1875      694.08445 
+  836000     1324      6.3013182      0.5100335         0.1875      752.88012 
+  837000     1324       5.918419     0.48551544         0.1875       745.8027 
+  838000     1324      5.7405488     0.47013559         0.1875      731.31649 
+  839000     1324      5.3896519     0.45957298         0.1875       709.2605 
+  840000     1324      5.2315918     0.42501364         0.1875      664.36117 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 840001
+ - a total of 1339 particle templates (mass 1.121758e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  841000     1339       7.696947     0.38390767         0.1875      646.42524 
+  842000     1339      7.4401613     0.41002288         0.1875      656.28443 
+  843000     1339      7.2719901      0.4116516         0.1875      670.21243 
+  844000     1339       7.025423      0.4372513         0.1875      685.05961 
+  845000     1339      6.5472785     0.41135231         0.1875       729.4896 
+  846000     1339       6.038147     0.44490202         0.1875      766.22472 
+  847000     1339      5.3331545     0.43051921         0.1875      783.81678 
+  848000     1339      5.0950074     0.42802647         0.1875      765.81566 
+  849000     1339      4.9767155     0.39201585         0.1875      700.76179 
+  850000     1339      4.8924467     0.38817543         0.1875      654.13587 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 850001
+ - a total of 1355 particle templates (mass 1.135162e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  851000     1355      7.3013365     0.39867092         0.1875      640.83179 
+  852000     1355      7.0795709     0.41149462         0.1875      667.39753 
+  853000     1355      6.8539605     0.44240008         0.1875      688.94383 
+  854000     1355      6.6166878      0.4114388         0.1875      715.99745 
+  855000     1355      6.3922256     0.37650391         0.1875      739.07651 
+  856000     1355      6.2928474     0.37936512         0.1875      733.80475 
+  857000     1355      6.1272513     0.40451991         0.1875      731.72341 
+  858000     1355      5.8314185     0.42356879         0.1875      735.08111 
+  859000     1355      5.3454657     0.41215057         0.1875       755.3477 
+  860000     1355      4.8714991     0.43266839         0.1875      765.09598 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 860001
+ - a total of 1372 particle templates (mass 1.149404e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  861000     1372      7.5015771     0.40468156         0.1875      759.22002 
+  862000     1372      7.3811647     0.39338669         0.1875      724.98217 
+  863000     1372      7.2285058     0.37062116         0.1875      681.40945 
+  864000     1372      6.8595551     0.38383071         0.1875      684.78338 
+  865000     1372      6.4444582     0.42650008         0.1875      728.52819 
+  866000     1372      6.0866454      0.4153849         0.1875      740.23274 
+  867000     1372      5.5776479     0.43678229         0.1875      804.89181 
+  868000     1372      5.2548588     0.43723567         0.1875      774.36284 
+  869000     1372      5.1112572     0.41983768         0.1875       754.4279 
+  870000     1372      4.9710334     0.36858737         0.1875      726.61495 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 870001
+ - a total of 1389 particle templates (mass 1.163646e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  871000     1389      7.5280638     0.38190044         0.1875      728.62642 
+  872000     1389      7.5324384     0.34393285         0.1875      718.85991 
+  873000     1389       7.566333     0.32707017         0.1875      717.75392 
+  874000     1389      7.2644204     0.35350061         0.1875      726.60671 
+  875000     1389       7.140885        0.36756         0.1875      736.76817 
+  876000     1389      6.9052909       0.379144         0.1875      754.45777 
+  877000     1389      6.4819845     0.38129196         0.1875      794.00863 
+  878000     1389        5.89089     0.41360635         0.1875      820.82607 
+  879000     1389      5.4581362     0.41682234         0.1875      816.87956 
+  880000     1389       5.067716     0.38186535         0.1875      788.14491 
+INFO: Particle insertion ins: inserted 14 particle templates (mass 1.172861e+00) at step 880001
+ - a total of 1403 particle templates (mass 1.175375e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  881000     1403      7.2825147     0.37844242         0.1875      748.13553 
+  882000     1403      6.9827104     0.36157003         0.1875       730.2876 
+  883000     1403      6.7212485     0.34580922         0.1875      731.34936 
+  884000     1403      6.1912199     0.41355496         0.1875      758.17334 
+  885000     1403      5.8032239     0.40090511         0.1875       777.7176 
+  886000     1403      5.1971779     0.42591904         0.1875      810.19141 
+  887000     1403      4.9585389     0.38076669         0.1875      798.10096 
+  888000     1403      4.4536371      0.3814738         0.1875      798.16904 
+  889000     1403      4.3512897     0.34755557         0.1875      756.54065 
+  890000     1403      4.3154072     0.32541277         0.1875      732.58054 
+INFO: Particle insertion ins: inserted 18 particle templates (mass 1.507964e+00) at step 890001
+ - a total of 1421 particle templates (mass 1.190454e+02) inserted so far.
+  891000     1421      7.4011571     0.29307666         0.1875      703.67229 
+  892000     1421      7.5366956      0.2622964         0.1875      684.75353 
+  893000     1421      7.5687824     0.29064976         0.1875      705.90699 
+  894000     1421      7.5507941     0.32737848         0.1875      719.74836 
+  895000     1421       6.926872     0.40334792         0.1875      813.68813 
+  896000     1421      6.5960152     0.38790302         0.1875      840.31104 
+  897000     1421      5.9147598     0.44158673         0.1875      895.00002 
+  898000     1421      5.6381537     0.41907446         0.1875      860.85095 
+  899000     1421      5.3473782     0.47698727         0.1875      824.08136 
+  900000     1421      5.0867442     0.47584877         0.1875      771.29082 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 900001
+ - a total of 1437 particle templates (mass 1.203858e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  901000     1437      7.6877099      0.4569817         0.1875      736.29475 
+  902000     1437      7.7707725     0.42169637         0.1875      723.93652 
+  903000     1437      7.7085583     0.42657584         0.1875      727.17858 
+  904000     1437      7.4358241     0.47037917         0.1875       762.7743 
+  905000     1437      6.8653893     0.47220899         0.1875       824.0104 
+  906000     1437      6.2823924     0.52389534         0.1875      877.29711 
+  907000     1437      5.8529464     0.52131968         0.1875      901.67579 
+  908000     1437       5.393976     0.49109961         0.1875      875.31281 
+  909000     1437      5.1379381     0.46086632         0.1875      839.80998 
+  910000     1437      4.8892683     0.40384983         0.1875      786.74265 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 910001
+ - a total of 1452 particle templates (mass 1.216425e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  911000     1452      7.0885635     0.41238273         0.1875      782.79519 
+  912000     1452      6.9973837     0.40979934         0.1875      753.53105 
+  913000     1452      6.7029144     0.40115534         0.1875      773.93848 
+  914000     1452      6.3773821     0.40961378         0.1875      798.43349 
+  915000     1452       5.976772     0.42520305         0.1875       824.1025 
+  916000     1452      5.7439466     0.45352386         0.1875      837.61066 
+  917000     1452      5.3315316      0.4573116         0.1875      865.00263 
+  918000     1452      5.0033129     0.38712185         0.1875       850.8398 
+  919000     1452      4.9657326       0.320863         0.1875      821.61809 
+  920000     1452      4.6869913     0.33622359         0.1875      790.35703 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 920001
+ - a total of 1469 particle templates (mass 1.230667e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  921000     1469      7.3175473     0.36697869         0.1875      797.38122 
+  922000     1469      7.2740812     0.34391115         0.1875      787.05211 
+  923000     1469      6.9787053     0.33859745         0.1875      820.29326 
+  924000     1469      6.5964508     0.34716144         0.1875      832.50679 
+  925000     1469      6.0567891     0.36103305         0.1875      866.30524 
+  926000     1469      5.8211157     0.38561573         0.1875      870.02567 
+  927000     1469       5.715307     0.37249888         0.1875      853.69274 
+  928000     1469       5.276543     0.39753143         0.1875       860.2337 
+  929000     1469      5.0934407      0.3997578         0.1875      835.63493 
+  930000     1469      4.6559202     0.44571677         0.1875      820.26406 
+INFO: Particle insertion ins: inserted 17 particle templates (mass 1.424189e+00) at step 930001
+ - a total of 1486 particle templates (mass 1.244908e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  931000     1486      7.2523907     0.43755902         0.1875      836.49933 
+  932000     1486      7.0502795     0.45815995         0.1875      824.15553 
+  933000     1486      6.9171207     0.39434004         0.1875      845.07163 
+  934000     1486       6.641419     0.42241285         0.1875      847.34158 
+  935000     1486      6.2165563     0.43056918         0.1875      874.88391 
+  936000     1486      5.7025081     0.42039131         0.1875      899.46421 
+  937000     1486       5.353983      0.4106417         0.1875      906.90345 
+  938000     1486      5.0159128     0.41904041         0.1875      885.01398 
+  939000     1486      5.0566876     0.37320605         0.1875      825.26368 
+  940000     1486      4.9848435     0.38293758         0.1875      775.42957 
+INFO: Particle insertion ins: inserted 15 particle templates (mass 1.256637e+00) at step 940001
+ - a total of 1501 particle templates (mass 1.257475e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  941000     1501      7.2483768     0.39123716         0.1875      792.31591 
+  942000     1501      7.1102566      0.3680772         0.1875      811.59095 
+  943000     1501      6.8390336     0.36529651         0.1875       866.0309 
+  944000     1501      6.4035805      0.4441547         0.1875      907.97343 
+  945000     1501       5.868647     0.43441684         0.1875       938.3886 
+  946000     1501      5.4341849     0.42958612         0.1875      917.21333 
+  947000     1501      4.9873453     0.42711601         0.1875      914.00687 
+  948000     1501      4.6236732     0.41049799         0.1875       877.5907 
+  949000     1501      4.5059827     0.36952019         0.1875      844.77562 
+  950000     1501       4.249703     0.37105896         0.1875      833.68601 
+INFO: Particle insertion ins: inserted 14 particle templates (mass 1.172861e+00) at step 950001
+ - a total of 1515 particle templates (mass 1.269203e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  951000     1515      6.5897137     0.36242356         0.1875      808.48798 
+  952000     1515      6.3608437     0.37488516         0.1875      830.05979 
+  953000     1515      6.2683374     0.32500673         0.1875      853.92669 
+  954000     1515      5.8647291     0.39108338         0.1875      880.13889 
+  955000     1515       5.420467     0.40751275         0.1875      908.55948 
+  956000     1515      5.1430388     0.38992989         0.1875      889.07546 
+  957000     1515       4.733826      0.4065448         0.1875      916.24683 
+  958000     1515      4.4818349     0.39591418         0.1875       919.5919 
+  959000     1515      4.5032181     0.35344015         0.1875      900.62331 
+  960000     1515      4.5493749     0.34693193         0.1875      850.77101 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 960001
+ - a total of 1531 particle templates (mass 1.282608e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  961000     1531      7.2065698     0.32650393         0.1875      810.36035 
+  962000     1531      7.0863243     0.33162534         0.1875       800.0375 
+  963000     1531      6.6859019     0.35177208         0.1875      849.86995 
+  964000     1531      5.9920976     0.44663868         0.1875      933.94463 
+  965000     1531      5.3063918     0.49929507         0.1875       972.5061 
+  966000     1531      4.5966258     0.42911201         0.1875      1024.4163 
+  967000     1531      4.3605937     0.42045483         0.1875      979.42518 
+  968000     1531      4.2953214     0.37887711         0.1875      900.38911 
+  969000     1531      4.2149952     0.36328075         0.1875      822.43169 
+  970000     1531      4.1444334     0.34296917         0.1875      806.67287 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 970001
+ - a total of 1547 particle templates (mass 1.296012e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  971000     1547       6.761588     0.32883838         0.1875      804.08719 
+  972000     1547      6.8447544     0.31523892         0.1875      823.15421 
+  973000     1547      6.7001532     0.34827179         0.1875      871.34421 
+  974000     1547      6.4635427     0.33870224         0.1875      914.98931 
+  975000     1547      6.1182083     0.31771862         0.1875      942.83295 
+  976000     1547      5.6296993     0.34054713         0.1875      968.64681 
+  977000     1547      5.1029457     0.33560745         0.1875      984.50615 
+  978000     1547      4.8165461     0.32711224         0.1875       961.4278 
+  979000     1547      4.5524569     0.32003273         0.1875      938.84061 
+  980000     1547      4.3090989     0.31147166         0.1875      890.49812 
+INFO: Particle insertion ins: inserted 13 particle templates (mass 1.089085e+00) at step 980001
+ - a total of 1560 particle templates (mass 1.306903e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  981000     1560      6.5229125     0.26524483         0.1875      840.43654 
+  982000     1560      6.0676706     0.27560931         0.1875      867.90592 
+  983000     1560      5.4039563     0.31255029         0.1875      925.18283 
+  984000     1560      4.9111039     0.32909409         0.1875      976.26673 
+  985000     1560      4.5613463     0.34385121         0.1875      997.26262 
+  986000     1560      4.2973301     0.30622599         0.1875      970.18382 
+  987000     1560      4.0033623     0.32177233         0.1875      927.83085 
+  988000     1560      3.9567441     0.31504522         0.1875      883.03464 
+  989000     1560      3.9737719     0.28530715         0.1875      859.36405 
+  990000     1560       3.755669     0.32310539         0.1875      873.77864 
+INFO: Particle insertion ins: inserted 16 particle templates (mass 1.340413e+00) at step 990001
+ - a total of 1576 particle templates (mass 1.320307e+02) inserted so far.
+WARNING: Particle insertion: Less insertions than requested (../fix_insert.cpp:814)
+  991000     1576      6.3994614     0.30671402         0.1875      901.60695 
+  992000     1576      6.1924925     0.28171806         0.1875      941.14768 
+  993000     1576      5.8342227     0.28219623         0.1875      964.61157 
+  994000     1576      5.5504499     0.29448968         0.1875       970.0709 
+  995000     1576      5.3084808     0.30362085         0.1875      955.09857 
+  996000     1576      4.8329331     0.32718275         0.1875      962.14648 
+  997000     1576      4.4227961     0.34113353         0.1875      969.92364 
+  998000     1576      4.1902522     0.37073401         0.1875      947.98752 
+  999000     1576      4.0160842     0.32976812         0.1875      938.03689 
+ 1000000     1576      4.0039415     0.31998014         0.1875      928.42367 
+Loop time of 116.055 on 80 procs for 1000000 steps with 1576 atoms, finish time Thu Sep  6 15:46:28 2018
+
+
+Pair  time (%) = 5.14443 (4.43274)
+Neigh time (%) = 2.34104 (2.01717)
+Comm  time (%) = 46.4201 (39.9982)
+Outpt time (%) = 0.311142 (0.268098)
+Other time (%) = 61.8387 (53.2838)
+
+Nlocal:    19.7 ave 55 max 0 min
+Histogram: 33 9 6 0 0 0 1 17 11 3
+Nghost:    45.375 ave 147 max 0 min
+Histogram: 32 4 8 8 4 7 7 4 1 5
+Neighs:    74.6875 ave 255 max 0 min
+Histogram: 47 1 0 0 1 3 13 9 4 2
+
+Total # of neighbors = 5975
+Ave neighs/atom = 3.79124
+Neighbor list builds = 280178
+Dangerous builds = 0
+
+write_restart   pack.restart
