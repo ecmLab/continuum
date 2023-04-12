@@ -23,7 +23,8 @@ Li_K        = 11;                    % Bulk modulus of Lithium, in unit GPa
 Lx          = 10;                    % Length of the interlayer, in unit um
 Hx          = 0.1;                     % cross-section width, in unit um
 BL_por      = 0.5;                   % Inital porosity of the BL layer
-Ag_dia      = 0.04*ones(20,1);       % The diameter of Ag particles, in unit um
+Ag_dia      = [0.02,0.04]';       % The diameter of Ag particles, in unit um
+% Ag_dia      = 0.02*ones(2,1);       % The diameter of Ag particles, in unit um
 Np          = length(Ag_dia);        % the number of particles included
 % 3. Material properties of the interfaces
 i_exc       = 1.3;                   % According to Chiku's paper (Microelectrode studies on charger transfer), unit mA/cm^2
@@ -41,7 +42,7 @@ rho         = yp_end*end_Mden/(Ag_Mmol+yp_end*Li_Mmol);    % Interstitial site d
 i_ave       = 0.68;                 % Applied current density, in unit mA/cm^2
 chemP_flag  = 1;                    % The chemical potential used, flag=1 means thermo-voltage, flag=2 means overshoot voltage
 % 6. Temperal parameters
-Nt          = 300000;                 % The total timesteps
+Nt          = 150000;                 % The total timesteps
 TotT        = 3600;                  % The total discharging time depends on the applied current, in unit s
 dt0         = TotT/Nt;               % the time step, in unit s
 ttc         = zeros(1,Nt);           % current charging time, in unit s
@@ -172,11 +173,11 @@ extrLi      = zeros(1,Nt);                      % The Li thickness that is extru
 extrLi(idX) = (poreLi(idX) - maxPLi)*Lx;
 poreLi(idX) = maxPLi;
 tmp         = find(idX==1);
-for ip = 1:Np
-poreLip(ip,idX) = poreLip(ip,tmp(1)-1);
-end
-tmpT        = linspace(0,3600,1000);              % growth time, in unit second
-prs         = FF/Li_Vmol*depI(1,Nt-1)*R_Mt*(1 - exp(-Li_K*Li_Vmol^2*pi*end_dia(1)^2/(R_Mt*FF^2*Hx^2*Lx*BL_por)*tmpT*10^7))/1000; % Pressure, in unit MPa
+% for ip = 1:Np
+% poreLip(ip,idX) = poreLip(ip,tmp(1)-1);
+% end
+% tmpT        = linspace(0,3600,1000);              % growth time, in unit second
+% prs         = FF/Li_Vmol*depI(1,Nt-1)*R_Mt*(1 - exp(-Li_K*Li_Vmol^2*pi*end_dia(1)^2/(R_Mt*FF^2*Hx^2*Lx*BL_por)*tmpT*10^7))/1000; % Pressure, in unit MPa
 
 %% Plot
 % 1. Plot the current percentage at the interface and at the particles as a function of time
