@@ -11,13 +11,13 @@
 
 #include "MooseApp.h"
 
-class electro_chemo_mech2TestApp : public MooseApp
+class ecm_fullTestApp : public MooseApp
 {
 public:
   static InputParameters validParams();
 
-  electro_chemo_mech2TestApp(InputParameters parameters);
-  virtual ~electro_chemo_mech2TestApp();
+  ecm_fullTestApp(InputParameters parameters);
+  virtual ~ecm_fullTestApp();
 
   static void registerApps();
   static void registerAll(Factory & f, ActionFactory & af, Syntax & s, bool use_test_objs = false);
