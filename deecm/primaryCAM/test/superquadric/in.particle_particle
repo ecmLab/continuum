@@ -112,8 +112,10 @@ compute_modify	thermo_temp dynamic yes
 #fix write_m2 all print ${writeOutEvery} "${time} ${kin_en}" file kinetic_energy_.txt screen no
 
 run		1
-shell mkdir post
-dump		dmp all custom/vtk ${writeOutEvery} post/dump*.superq.vtk type mass x y z id vx vy vz fx fy fz omegax omegay omegaz radius shapex shapey shapez quat1 quat2 quat3 quat4 blockiness1 blockiness2 tqx tqy tqz angmomx angmomy angmomz
+shell mkdir post1
+dump            dmp all custom 800 post1/dump*.newModels id type x y z ix iy iz vx vy vz fx fy fz omegax omegay omegaz radius
+
+#dump		dmp all custom/vtk ${writeOutEvery} post/dump*.superq.vtk type mass x y z id vx vy vz fx fy fz omegax omegay omegaz radius shapex shapey shapez quat1 quat2 quat3 quat4 blockiness1 blockiness2 tqx tqy tqz angmomx angmomy angmomz
 #dump 		dumpstress all mesh/gran/VTK ${writeOutEvery} post/dump*.vtk id
 
 run		${nStepsRun} upto

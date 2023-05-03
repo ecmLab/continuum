@@ -1,7 +1,7 @@
 
 #include "NernstPlanckConvection.h"
 
-registerADMooseObject("liExpulsionApp", NernstPlanckConvection);
+registerADMooseObject("ecmElectrochemApp", NernstPlanckConvection);
 
 InputParameters
 NernstPlanckConvection::validParams()
@@ -19,12 +19,12 @@ NernstPlanckConvection::validParams()
   return params;
 }
 
-NernstPlanckConvection::NernstPlanckConvection(const InputParameters & parameters) 
+NernstPlanckConvection::NernstPlanckConvection(const InputParameters & parameters)
    : Kernel(parameters),
     // Save off the coupled variable identifier for use in
     // computeQpOffDiagJacobian
     _V_var(coupled("Voltage")),
-    // Save off the coupled value for use in Residual 
+    // Save off the coupled value for use in Residual
     _V(coupledValue("Voltage")),
     // Couple to the gradient of the pressure
     _grad_V(coupledGradient("Voltage")),
