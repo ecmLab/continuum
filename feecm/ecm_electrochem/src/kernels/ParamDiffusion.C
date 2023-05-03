@@ -1,7 +1,7 @@
 
 #include "ParamDiffusion.h"
 
-registerADMooseObject("liExpulsionApp", ParamDiffusion);
+registerADMooseObject("ecmElectrochemApp", ParamDiffusion);
 
 InputParameters
 ParamDiffusion::validParams()

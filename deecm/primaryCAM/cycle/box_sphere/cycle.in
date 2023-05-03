@@ -89,7 +89,7 @@ thermo_modify	lost ignore norm no
 # Output to file
 dump              2 all custom ${writeOutEvery} post/cycle.lmp id type x y z radius fx fy fz
 dump_modify       2 format "%7.0g %4.0g %15.10g %15.10g %15.10g %15.10g %15.10g %15.10g %15.10g"
-#dump		dmp all custom/vtk ${writeOutEvery} post/dump*.sphere.vtk type mass x y z id vx vy vz fx fy fz omegax omegay omegaz radius 
+##dump		dmp all custom/vtk ${writeOutEvery} post/dump*.sphere.vtk type mass x y z id vx vy vz fx fy fz omegax omegay omegaz radius 
 #dump            dumpSphere all stl ${writeOutEvery} post/dump_Sphere*.stl Bsphere
 
 #------------------------Run the calculation------------------------------------------------------

@@ -1,4 +1,4 @@
-LIGGGHTS (Version LIGGGHTS-PUBLIC 3.8.0, compiled 2018-08-29-09:25:30 by howietu, git commit 28301df8853491784b1d8b90533ea89b8c6af1e8)
+LIGGGHTS (Version LIGGGHTS-PUBLIC 3.8.0, compiled 2023-04-28-19:34:04 by howard, git commit bbd23c8521fe0a4f3f5bfd0d3dc9a7dddd68d90b)
 # to run the script you have to define the variables via '-var' option
 #  - blockiness1
 #  - blockiness2
@@ -18,7 +18,7 @@ units		si
 region		reg block -0.05 0.05 -0.05 0.05 0.0 0.1 units box
 create_box	2 reg
 Created orthogonal box = (-0.05 -0.05 0) to (0.05 0.05 0.1)
-  3 by 4 by 6 MPI processor grid
+  1 by 1 by 1 MPI processor grid
 
 neighbor	0.002 bin
 neigh_modify	delay 0
@@ -80,15 +80,6 @@ fix         m7 all property/global coefficientRollingViscousDamping peratomtypep
 
 #New pair style
 pair_style gran model hertz tangential history rolling_friction epsd2 surface superquadric #Hertzian without cohesion
-WARNING: 
-	The contact model you specified is not located in any whitelist.
-	Because of this the model will be run in an unoptimized version (increasing runtime by up to 20%).
-	In order to optimize this model you have the following options:
-		(i)  Run the genAutoExamplesWhitelist.sh script in your LIGGGHTS(R) source folder to automatically parse the input script
-		(ii) Add the model combination by hand to your style_contact_model_user.whitelist that can be found in your LIGGGHTS(R) source folder
-	If you perform one of the steps above LIGGGHTS(R) needs to be recompiled to generate the optimized code.
-
- (../contact_models.h:364)
 pair_coeff	* *
 timestep ${dt}
 timestep 1e-05
@@ -101,65 +92,11 @@ variable totaltime equal step*1e-05
 #fix granwalls all wall/gran model hertz tangential history surface superquadric mesh n_meshes 1 meshes cad
 
 fix xwalls1 all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric primitive type 1 xplane -0.05
-WARNING: 
-	The contact model you specified is not located in any whitelist.
-	Because of this the model will be run in an unoptimized version (increasing runtime by up to 20%).
-	In order to optimize this model you have the following options:
-		(i)  Run the genAutoExamplesWhitelist.sh script in your LIGGGHTS(R) source folder to automatically parse the input script
-		(ii) Add the model combination by hand to your style_contact_model_user.whitelist that can be found in your LIGGGHTS(R) source folder
-	If you perform one of the steps above LIGGGHTS(R) needs to be recompiled to generate the optimized code.
-
- (../contact_models.h:364)
 fix xwalls2 all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric primitive type 1 xplane 0.05
-WARNING: 
-	The contact model you specified is not located in any whitelist.
-	Because of this the model will be run in an unoptimized version (increasing runtime by up to 20%).
-	In order to optimize this model you have the following options:
-		(i)  Run the genAutoExamplesWhitelist.sh script in your LIGGGHTS(R) source folder to automatically parse the input script
-		(ii) Add the model combination by hand to your style_contact_model_user.whitelist that can be found in your LIGGGHTS(R) source folder
-	If you perform one of the steps above LIGGGHTS(R) needs to be recompiled to generate the optimized code.
-
- (../contact_models.h:364)
 fix ywalls1 all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric primitive type 1 yplane -0.05
-WARNING: 
-	The contact model you specified is not located in any whitelist.
-	Because of this the model will be run in an unoptimized version (increasing runtime by up to 20%).
-	In order to optimize this model you have the following options:
-		(i)  Run the genAutoExamplesWhitelist.sh script in your LIGGGHTS(R) source folder to automatically parse the input script
-		(ii) Add the model combination by hand to your style_contact_model_user.whitelist that can be found in your LIGGGHTS(R) source folder
-	If you perform one of the steps above LIGGGHTS(R) needs to be recompiled to generate the optimized code.
-
- (../contact_models.h:364)
 fix ywalls2 all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric primitive type 1 yplane 0.05
-WARNING: 
-	The contact model you specified is not located in any whitelist.
-	Because of this the model will be run in an unoptimized version (increasing runtime by up to 20%).
-	In order to optimize this model you have the following options:
-		(i)  Run the genAutoExamplesWhitelist.sh script in your LIGGGHTS(R) source folder to automatically parse the input script
-		(ii) Add the model combination by hand to your style_contact_model_user.whitelist that can be found in your LIGGGHTS(R) source folder
-	If you perform one of the steps above LIGGGHTS(R) needs to be recompiled to generate the optimized code.
-
- (../contact_models.h:364)
 fix zwalls1 all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric primitive type 1 zplane 0.0
-WARNING: 
-	The contact model you specified is not located in any whitelist.
-	Because of this the model will be run in an unoptimized version (increasing runtime by up to 20%).
-	In order to optimize this model you have the following options:
-		(i)  Run the genAutoExamplesWhitelist.sh script in your LIGGGHTS(R) source folder to automatically parse the input script
-		(ii) Add the model combination by hand to your style_contact_model_user.whitelist that can be found in your LIGGGHTS(R) source folder
-	If you perform one of the steps above LIGGGHTS(R) needs to be recompiled to generate the optimized code.
-
- (../contact_models.h:364)
 fix zwalls2 all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric primitive type 1 zplane 0.1
-WARNING: 
-	The contact model you specified is not located in any whitelist.
-	Because of this the model will be run in an unoptimized version (increasing runtime by up to 20%).
-	In order to optimize this model you have the following options:
-		(i)  Run the genAutoExamplesWhitelist.sh script in your LIGGGHTS(R) source folder to automatically parse the input script
-		(ii) Add the model combination by hand to your style_contact_model_user.whitelist that can be found in your LIGGGHTS(R) source folder
-	If you perform one of the steps above LIGGGHTS(R) needs to be recompiled to generate the optimized code.
-
- (../contact_models.h:364)
 
 
 create_atoms 1 single 0.0 0.0 0.01
@@ -221,69 +158,70 @@ WARNING: Changing thermo_temp compute object. This object is deprecated and will
 #fix write_m2 all print ${writeOutEvery} "${time} ${kin_en}" file kinetic_energy_.txt screen no
 
 run		1
-Setting up run at Wed Aug 29 09:36:36 2018
+Setting up run at Fri Apr 28 19:45:55 2023
 
-Memory usage per processor = 11.8826 Mbytes
+Memory usage per processor = 22.5184 Mbytes
     Step    Atoms            rke          kin_e           vmax            CPU           Time 
        0        2              0  2.0873831e-06            0.1              0              0 
-       1        2              0  2.0873831e-06            0.1    0.082081106          1e-05 
-Loop time of 0.0375048 on 72 procs for 1 steps with 2 atoms, finish time Wed Aug 29 09:36:36 2018
+       1        2              0  2.0873831e-06            0.1  3.4353987e-05          1e-05 
+Loop time of 4.0966e-05 on 1 procs for 1 steps with 2 atoms, finish time Fri Apr 28 19:45:55 2023
 
 
-Pair  time (%) = 3.25223e-06 (0.00867149)
+Pair  time (%) = 1.21398e-06 (2.96338)
 Neigh time (%) = 0 (0)
-Comm  time (%) = 2.58948e-05 (0.0690439)
-Outpt time (%) = 0.000228205 (0.608468)
-Other time (%) = 0.0372475 (99.3138)
+Comm  time (%) = 2.20025e-07 (0.537092)
+Outpt time (%) = 2.0155e-05 (49.1995)
+Other time (%) = 1.93769e-05 (47.3)
 
-Nlocal:    0.0277778 ave 1 max 0 min
-Histogram: 70 0 0 0 0 0 0 0 0 2
-Nghost:    0.0833333 ave 1 max 0 min
-Histogram: 66 0 0 0 0 0 0 0 0 6
+Nlocal:    2 ave 2 max 2 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
 Neighs:    0 ave 0 max 0 min
-Histogram: 72 0 0 0 0 0 0 0 0 0
+Histogram: 1 0 0 0 0 0 0 0 0 0
 
 Total # of neighbors = 0
 Ave neighs/atom = 0
 Neighbor list builds = 0
 Dangerous builds = 0
-shell mkdir post
-dump		dmp all custom/vtk ${writeOutEvery} post/dump*.superq.vtk type mass x y z id vx vy vz fx fy fz omegax omegay omegaz radius shapex shapey shapez quat1 quat2 quat3 quat4 blockiness1 blockiness2 tqx tqy tqz angmomx angmomy angmomz
-dump		dmp all custom/vtk 100 post/dump*.superq.vtk type mass x y z id vx vy vz fx fy fz omegax omegay omegaz radius shapex shapey shapez quat1 quat2 quat3 quat4 blockiness1 blockiness2 tqx tqy tqz angmomx angmomy angmomz
+shell mkdir post1
+dump            dmp all custom 800 post1/dump*.newModels id type x y z ix iy iz vx vy vz fx fy fz omegax omegay omegaz radius
+
+#dump		dmp all custom/vtk ${writeOutEvery} post/dump*.superq.vtk type mass x y z id vx vy vz fx fy fz omegax omegay omegaz radius shapex shapey shapez quat1 quat2 quat3 quat4 blockiness1 blockiness2 tqx tqy tqz angmomx angmomy angmomz
 #dump 		dumpstress all mesh/gran/VTK ${writeOutEvery} post/dump*.vtk id
 
 run		${nStepsRun} upto
 run		10000 upto
-Setting up run at Wed Aug 29 09:36:36 2018
+Setting up run at Fri Apr 28 19:45:55 2023
 
-Memory usage per processor = 11.8826 Mbytes
+Memory usage per processor = 22.5948 Mbytes
     Step    Atoms            rke          kin_e           vmax            CPU           Time 
        1        2              0  2.0873831e-06            0.1              0          1e-05 
-    1000        2              0  2.0873831e-06            0.1     0.86157439           0.01 
-    2000        2              0  2.0873831e-06            0.1      1.0717778           0.02 
-    3000        2              0  2.0873831e-06            0.1       1.249628           0.03 
-    4000        2              0  2.0873831e-06            0.1      1.4427526           0.04 
-    5000        2              0  2.0873831e-06            0.1      1.6250084           0.05 
-    6000        2              0  2.0873831e-06            0.1      1.8026063           0.06 
-    7000        2              0  2.0873831e-06            0.1      1.9343482           0.07 
-    8000        2              0  2.0873831e-06            0.1      2.0691029           0.08 
-    9000        2              0  2.0873831e-06            0.1      2.2014467           0.09 
-   10000        2              0  2.0873831e-06            0.1      2.3392382            0.1 
-Loop time of 2.30042 on 72 procs for 9999 steps with 2 atoms, finish time Wed Aug 29 09:36:38 2018
+    1000        2              0  2.0873831e-06            0.1     0.00143544           0.01 
+    2000        2              0  2.0873831e-06            0.1    0.002790975           0.02 
+    3000        2              0  2.0873831e-06            0.1    0.004127291           0.03 
+    4000        2              0  2.0873831e-06            0.1    0.005648284           0.04 
+    5000        2              0  2.0873831e-06            0.1     0.00691335           0.05 
+    6000        2              0  2.0873831e-06            0.1    0.008173452           0.06 
+    7000        2              0  2.0873831e-06            0.1    0.009441118           0.07 
+    8000        2              0  2.0873831e-06            0.1    0.010868092           0.08 
+    9000        2              0  2.0873831e-06            0.1    0.012067945           0.09 
+   10000        2              0  2.0873831e-06            0.1    0.013361488            0.1 
+Loop time of 0.0133689 on 1 procs for 9999 steps with 2 atoms, finish time Fri Apr 28 19:45:55 2023
 
 
-Pair  time (%) = 0.0051991 (0.226006)
-Neigh time (%) = 1.73704e-05 (0.000755098)
-Comm  time (%) = 0.0113472 (0.493266)
-Outpt time (%) = 0.403157 (17.5254)
-Other time (%) = 1.8807 (81.7546)
+Pair  time (%) = 0.00206209 (15.4245)
+Neigh time (%) = 5.995e-05 (0.448428)
+Comm  time (%) = 0.000473986 (3.54543)
+Outpt time (%) = 0.00201487 (15.0713)
+Other time (%) = 0.00875804 (65.5104)
 
-Nlocal:    0.0277778 ave 1 max 0 min
-Histogram: 70 0 0 0 0 0 0 0 0 2
-Nghost:    0.0833333 ave 1 max 0 min
-Histogram: 66 0 0 0 0 0 0 0 0 6
+Nlocal:    2 ave 2 max 2 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
 Neighs:    0 ave 0 max 0 min
-Histogram: 72 0 0 0 0 0 0 0 0 0
+Histogram: 1 0 0 0 0 0 0 0 0 0
 
 Total # of neighbors = 0
 Ave neighs/atom = 0

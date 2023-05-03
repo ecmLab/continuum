@@ -1,6 +1,6 @@
 #include "chargeDensity.h"
 
-registerADMooseObject("liExpulsionApp", chargeDensity);
+registerADMooseObject("ecmElectrochemApp", chargeDensity);
 
 InputParameters
 chargeDensity::validParams()

@@ -2,7 +2,7 @@
 
 #include "Function.h"
 
-registerADMooseObject("liExpulsionApp", sourceTerm);
+registerADMooseObject("ecmElectrochemApp", sourceTerm);
 
 InputParameters
 sourceTerm::validParams()
@@ -14,7 +14,7 @@ sourceTerm::validParams()
   params.addRequiredParam<MaterialPropertyName>("srcCoef", "The source coefficient.");
   params.addParam<FunctionName>("function", "0", "A function that describes the source");
   params.addParam<Real>("F_RT", 38.68, "The constant of F/RT,in unit 1/V, when T = 300K.");
-    
+
   return params;
 }
 
