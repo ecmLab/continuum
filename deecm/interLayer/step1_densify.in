@@ -19,7 +19,7 @@ variable       x2y2          equal     0.5*${thk}*5  # The depth of the RVE to s
 variable       z1            equal     0
 variable       z2            equal     1.5*${thk}
 #--------Geometry information---------------------------------------------------------------------------
-variable        r0            equal     0.02                   # The initial radius of Ag particle is 20nm
+variable        r0            equal     0.2                   # The initial radius of Ag particle is 200nm
 variable        grwth         equal     1.126                   # Radius increases by 1.13 times  to AgLiy phase
 variable        grwFq         equal     100                    # The growth frequncy, every # of steps
 variable        grwNs         equal     ${nStepsRun}/${grwFq}  # The total number of growth step
@@ -43,16 +43,16 @@ variable        corf_ww       equal     0.2
 region          reg block ${x1y1} ${x2y2} ${x1y1} ${x2y2} ${z1} ${z2}  units box
 create_box      2 reg
 #--------Describe the box for Ag particles to be inserted
-fix Bbox all mesh/surface file data/box.stl type 2 scale 1.0
+fix Bbox all mesh/surface file data/box.stl type 2 scale 0.0125
 fix wall all wall/gran model hertz tangential history mesh n_meshes 1 meshes Bbox
 #--------Describe particle distributions of Ag particles to be inserted
 fix pts1 all particletemplate/sphere 15485863 atom_type 1 density constant ${rho} radius constant ${r0}
 fix pdd1 all particledistribution/discrete 86028157 1 pts1 1
 #--------Insert granular particles into the box
-fix ins_mesh all mesh/surface/planar file data/ins_face.stl heal auto_remove_duplicates type 2 scale 0.125
+fix ins_mesh all mesh/surface/planar file data/ins_face.stl heal auto_remove_duplicates type 2 scale 0.0125
 fix ins all insert/stream seed 86028121 distributiontemplate pdd1 & 
-                maxattempt 200 nparticles 1200 particlerate 180 overlapcheck yes all_in yes vel constant 0 0 -0.1 & 
-                insertion_face ins_mesh extrude_length 1.0
+                maxattempt 200 nparticles 1200 particlerate 200 overlapcheck yes all_in yes vel constant 0 0 -0.2 & 
+                insertion_face ins_mesh extrude_length 10
 
 ###-------------Step 4: General Settings for the System-----------------------------###
 #--------Pair style and force field coefficients------------------------------------
