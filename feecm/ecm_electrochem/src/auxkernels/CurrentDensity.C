@@ -1,10 +1,9 @@
+#include "currentDensity.h"
 
-#include "CurrentDensity.h"
-
-registerMooseObject("ecmElectrochemApp", CurrentDensity);
+registerMooseObject("ecmElectrochemApp", currentDensity);
 
 InputParameters
-CurrentDensity::validParams()
+currentDensity::validParams()
 {
   InputParameters params = AuxKernel::validParams();
 
@@ -23,7 +22,7 @@ CurrentDensity::validParams()
   return params;
 }
 
-CurrentDensity::CurrentDensity(const InputParameters & parameters)
+currentDensity::currentDensity(const InputParameters & parameters)
   : AuxKernel(parameters),
 
     // Automatically convert the MooseEnum to an integer
@@ -40,13 +39,13 @@ CurrentDensity::CurrentDensity(const InputParameters & parameters)
 }
 
 Real
-CurrentDensity::computeValue()
+currentDensity::computeValue()
 {
   // Access the gradient of the potential at this quadrature point, then pull out the "component" of
   // it requested (x, y, z). Note, that getting a particular component of a gradient is done using
   // the parenthesis operator.
 
-  Real k = MetaPhysicL::raw_value(_conductivity_coef[_qp]) * _potential_gradient[_qp](_component) * 10000;
+  Real k = 10.0 * MetaPhysicL::raw_value(_conductivity_coef[_qp]) * _potential_gradient[_qp](_component); // The prefactor 10 is due to unit conversion
   if(_conductivity == "ionic_conductivity") {
     k = -k;
   }

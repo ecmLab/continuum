@@ -1,19 +1,18 @@
-
 #pragma once
 
 // Include the base class so it can be extended
 #include "ADIntegratedBC.h"
 
 // Forward declare the class being created and the validParams function
-class SingleSEElectrodeBV;
+class ionicSEBV;
 
 //** Tafel relation is used for deposition at Li metal/SE interface
 
-class SingleSEElectrodeBV : public ADIntegratedBC
+class ionicSEBV : public ADIntegratedBC
 {
 public:
   static InputParameters validParams();
-  SingleSEElectrodeBV(const InputParameters & parameters);
+  ionicSEBV(const InputParameters & parameters);
 
 protected:
   virtual ADReal computeQpResidual() override;
@@ -23,6 +22,8 @@ protected:
   const Real & _reaction_rate;
   const Real & _LiPotEle;
   const Real & _exchange_current;
+//  MaterialPropertyName _ex_current;
+//  const ADMaterialProperty<Real> & _exchange_current;
 
 //  usingIntegratedBCMembers;
 };

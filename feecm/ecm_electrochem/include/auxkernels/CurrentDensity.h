@@ -4,18 +4,18 @@
 #include "AuxKernel.h"
 
 // Forward Declarations
-class CurrentDensity;
+class currentDensity;
 
 /**
  * Auxiliary kernel responsible for computing the current density given
  * several fluid properties and the potential gradient.
  */
-class CurrentDensity : public AuxKernel
+class currentDensity : public AuxKernel
 {
 public:
   static InputParameters validParams();
 
-  CurrentDensity(const InputParameters & parameters);
+  currentDensity(const InputParameters & parameters);
 
 protected:
   /**
