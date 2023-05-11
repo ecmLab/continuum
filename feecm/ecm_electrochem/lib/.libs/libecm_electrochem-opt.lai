@@ -5,19 +5,19 @@
 # It is necessary for linking the library.
 
 # The name that we can dlopen(3).
-dlname='libecm_electrochem-opt.0.dylib'
+dlname='libecm_electrochem-opt.so.0'
 
 # Names of this library.
-library_names='libecm_electrochem-opt.0.dylib libecm_electrochem-opt.dylib'
+library_names='libecm_electrochem-opt.so.0.0.0 libecm_electrochem-opt.so.0 libecm_electrochem-opt.so'
 
 # The name of the static archive.
 old_library=''
 
 # Linker flags that cannot go in dependency_libs.
-inherited_linker_flags='  -fopenmp'
+inherited_linker_flags=' -fopenmp'
 
 # Libraries that this one depends upon.
-dependency_libs=' /Users/howard/Documents/modeling/continuum/feecm/moose/modules/module_loader/lib/libmodule_loader_with_cr_tm_pf-opt.la /Users/howard/Documents/modeling/continuum/feecm/moose/modules/phase_field/lib/libphase_field-opt.la /Users/howard/Documents/modeling/continuum/feecm/moose/modules/tensor_mechanics/lib/libtensor_mechanics-opt.la /Users/howard/Documents/modeling/continuum/feecm/moose/modules/chemical_reactions/lib/libchemical_reactions-opt.la'
+dependency_libs=' /mnt/c/Users/qhteme/ubuntu/continuum/feecm/moose/modules/module_loader/lib/libmodule_loader_with_cr_tm_pf-opt.la /mnt/c/Users/qhteme/ubuntu/continuum/feecm/moose/modules/phase_field/lib/libphase_field-opt.la /mnt/c/Users/qhteme/ubuntu/continuum/feecm/moose/modules/tensor_mechanics/lib/libtensor_mechanics-opt.la /mnt/c/Users/qhteme/ubuntu/continuum/feecm/moose/modules/chemical_reactions/lib/libchemical_reactions-opt.la'
 
 # Names of additional weak libraries provided by this library
 weak_library_names=''
@@ -38,4 +38,4 @@ dlopen=''
 dlpreopen=''
 
 # Directory that this library needs to be installed in:
-libdir='/Users/howard/Documents/modeling/continuum/feecm/ecm_electrochem/lib'
+libdir='/mnt/c/Users/qhteme/ubuntu/continuum/feecm/ecm_electrochem/lib'
