@@ -1,10 +1,10 @@
 
-#include "LiPotInSE.h"
+#include "LiPotMixSE.h"
 
-registerMooseObject("ecmElectrochemApp", LiPotInSE);
+registerMooseObject("ecmElectrochemApp", LiPotMixSE);
 
 InputParameters
-LiPotInSE::validParams()
+LiPotMixSE::validParams()
 {
   InputParameters params = AuxKernel::validParams();
 
@@ -17,7 +17,7 @@ LiPotInSE::validParams()
   return params;
 }
 
-LiPotInSE::LiPotInSE(const InputParameters & parameters)
+LiPotMixSE::LiPotMixSE(const InputParameters & parameters)
   : AuxKernel(parameters),
 
     // Couple to the potential of Li+
@@ -30,12 +30,11 @@ LiPotInSE::LiPotInSE(const InputParameters & parameters)
 }
 
 Real
-LiPotInSE::computeValue()
+LiPotMixSE::computeValue()
 {
   Real kk = _potLi[_qp] + _potEn[_qp];
 //  if (kk<0) {
-//    return 0;
-//  } else {
-    return kk;
-//  }
+//    kk = 0.0;
+//  } 
+  return kk;
 }

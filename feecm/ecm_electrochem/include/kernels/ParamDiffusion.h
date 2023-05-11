@@ -3,21 +3,20 @@
 
 // Including the "Diffusion" Kernel here so we can extend it
 #include "ADKernel.h"
-class ParamDiffusion;
+class paramDiffusion;
 
-class ParamDiffusion : public ADKernel
+class paramDiffusion : public ADKernel
 {
 public:
   static InputParameters validParams();
 
-  ParamDiffusion(const InputParameters & parameters);
+  paramDiffusion(const InputParameters & parameters);
 
 protected:
   virtual ADReal computeQpResidual() override;
 
-//  MaterialPropertyName _conductivity;
-  const MaterialProperty<Real> & _diffusivity;
-  const Real & _scale;
+  MaterialPropertyName _diffusivity;
+  const ADMaterialProperty<Real> & _diffusivity_coef;
 
 //  usingKernelMembers;
 };

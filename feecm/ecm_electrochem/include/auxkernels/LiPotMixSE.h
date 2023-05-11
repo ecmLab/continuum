@@ -4,17 +4,17 @@
 #include "AuxKernel.h"
 
 // Forward Declarations
-class LiPotInSE;
+class LiPotMixSE;
 
 /**
  * Auxiliary kernel responsible for computing the overpotentials: potLi - potEn
  */
-class LiPotInSE : public AuxKernel
+class LiPotMixSE : public AuxKernel
 {
 public:
   static InputParameters validParams();
 
-  LiPotInSE(const InputParameters & parameters);
+  LiPotMixSE(const InputParameters & parameters);
 
 protected:
   /**
