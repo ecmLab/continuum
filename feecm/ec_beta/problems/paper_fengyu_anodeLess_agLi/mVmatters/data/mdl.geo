@@ -1,4 +1,4 @@
-lx   = 20;       // width of the SE, in unit um
+lx   = 40;       // width of the SE, in unit um
 ly   = 40;       // thickness of the SE, in unit um
 dw   = 2;       // width of the defect located at the top middle, in unit um
 dh   = 2;       // length of the defect, in unit um

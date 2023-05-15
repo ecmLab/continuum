@@ -2,15 +2,17 @@ clc; clear; myFigureSetting;
 
 ifg = 0;
 %Geometric parameter
-xSE = 20;      % width of the SE, in unit um
+xSE = 40;      % width of the SE, in unit um
 ySE = 40;      % thickness of the SE, in unit um
 dw  = 2;        % width of the defect located at the top middle, in unit um
 dh  = 2;        % length of the defect, in unit um
 %Electrochemical parameters
-i_exc = 13;       % The exchange current density, based on the ASR=2 Ohm, in unit mA/cm^2
+i_exc = 13;       % The exchange current density, 13 is based on the ASR=2 Ohm, in unit mA/cm^2
 F_RT  = 0.03868;  % The combined constant F/RT when T=300K, in unit 1/mV
 a0    = 0.5;      % Reaction rate for the charge transfer reaction, set as symmetric anodic and cathodic reaction for now
 sgm   = [0.01, 0.1, 1, 10];  % The ionic conductivity, set as variable for parameter studies, in unit mS/cm
+iex   = [0.1,1,10]; % The exchange current density, set as variable for parameter studies, in unit mA/cm^2
+iPrs  = [1 ,2, 3];  % The pressure in unit MPa, 1MPa corresponds to 0.175mV equilibrium potential change
 
 %% Read data from files
 % Relation of filenames and variable names: "sgm001" and "sgm-2" means sgm = 10^-2 = 0.01 mS/cm 
@@ -19,11 +21,24 @@ andPot_sgm001 = csvread('../rst/andPot_sgm-2.csv',1,0);
 andPot_sgm01  = csvread('../rst/andPot_sgm-1.csv',1,0);
 andPot_sgm0   = csvread('../rst/andPot_sgm0.csv',1,0);
 andPot_sgm1   = csvread('../rst/andPot_sgm1.csv',1,0);
+andPot_exc01  = csvread('../rst/andPot_exc-1.csv',1,0);
+andPot_exc0   = csvread('../rst/andPot_exc0.csv',1,0);
+andPot_exc1   = csvread('../rst/andPot_exc1.csv',1,0);
+andPot_prs1  = csvread('../rst/andPot_prs1.csv',1,0);
+andPot_prs2   = csvread('../rst/andPot_prs2.csv',1,0);
+andPot_prs3   = csvread('../rst/andPot_prs3.csv',1,0);
+
 % Load anode current
 andCrnt_sgm001 = csvread('../rst/andCrnt_sgm-2.csv',1,0);
 andCrnt_sgm01  = csvread('../rst/andCrnt_sgm-1.csv',1,0);
 andCrnt_sgm0   = csvread('../rst/andCrnt_sgm0.csv',1,0);
 andCrnt_sgm1   = csvread('../rst/andCrnt_sgm1.csv',1,0);
+andCrnt_exc01  = csvread('../rst/andCrnt_exc-1.csv',1,0);
+andCrnt_exc0   = csvread('../rst/andCrnt_exc0.csv',1,0);
+andCrnt_exc1   = csvread('../rst/andCrnt_exc1.csv',1,0);
+andCrnt_prs1  = csvread('../rst/andCrnt_prs1.csv',1,0);
+andCrnt_prs2   = csvread('../rst/andCrnt_prs2.csv',1,0);
+andCrnt_prs3   = csvread('../rst/andCrnt_prs3.csv',1,0);
 
 %% Data analysis
 % Compute the tangent of bottom cosine curve: y_prime = -pi*dh/dw*sin(pi/dw*x)
@@ -46,18 +61,54 @@ nrmCrnt0_sgm001 = i_exc * (exp(a0*F_RT*andPot_sgm001(:,2)) - exp(-a0*F_RT*andPot
 nrmCrnt0_sgm01  = i_exc * (exp(a0*F_RT*andPot_sgm01(:,2)) - exp(-a0*F_RT*andPot_sgm01(:,2)));
 nrmCrnt0_sgm0   = i_exc * (exp(a0*F_RT*andPot_sgm0(:,2)) - exp(-a0*F_RT*andPot_sgm0(:,2)));
 nrmCrnt0_sgm1   = i_exc * (exp(a0*F_RT*andPot_sgm1(:,2)) - exp(-a0*F_RT*andPot_sgm1(:,2)));
+nrmCrnt0_exc01  = iex(1) * (exp(a0*F_RT*andPot_exc01(:,2)) - exp(-a0*F_RT*andPot_exc01(:,2)));
+nrmCrnt0_exc0   = iex(2) * (exp(a0*F_RT*andPot_exc0(:,2)) - exp(-a0*F_RT*andPot_exc0(:,2)));
+nrmCrnt0_exc1   = iex(3) * (exp(a0*F_RT*andPot_exc1(:,2)) - exp(-a0*F_RT*andPot_exc1(:,2)));
+nrmCrnt0_prs1   = i_exc * (exp(a0*F_RT*andPot_prs1(:,2)) - exp(-a0*F_RT*andPot_prs1(:,2)));
+nrmCrnt0_prs2   = i_exc * (exp(a0*F_RT*andPot_prs2(:,2)) - exp(-a0*F_RT*andPot_prs2(:,2)));
+nrmCrnt0_prs3   = i_exc * (exp(a0*F_RT*andPot_prs3(:,2)) - exp(-a0*F_RT*andPot_prs3(:,2)));
 
 %% Plotting
-% Plot the potential
+% Plot the potential vs normal current at sgm=0.01mS/cm
 ifg = ifg + 1;
 figure(ifg)
-plot(andPot_sgm001(:,3),andPot_sgm001(:,2),'-b',andPot_sgm01(:,3),andPot_sgm01(:,2),'-k',andPot_sgm0(:,3),andPot_sgm0(:,2),'-r');
+plot(andPot_sgm001(:,3),-andPot_sgm001(:,2),'-b')
+ifg = ifg + 1;
+figure(ifg)
+plot(andCrnt_sgm001(:,4),-nrmCrnt0_sgm001,'-r')
+
+% Plot potential
+ifg = ifg + 1;
+figure(ifg)
+plot(andPot_sgm001(:,3),-andPot_sgm001(:,2),'-b',andPot_sgm01(:,3),-andPot_sgm01(:,2),'-k',andPot_sgm0(:,3),-andPot_sgm0(:,2),'-r');
 legend('0.01mS/cm','0.1mS/cm','1mS/cm');
 % Plot the current
 ifg = ifg + 1;
 figure(ifg)
-plot(andCrnt_sgm001(:,4),nrmCrnt_sgm001,'-b',andCrnt_sgm01(:,4),nrmCrnt_sgm01,'-k',andCrnt_sgm0(:,4),nrmCrnt_sgm0,'-r');
-hold on
-plot(andCrnt_sgm001(:,4),nrmCrnt0_sgm001,'-b',andCrnt_sgm01(:,4),nrmCrnt0_sgm01,'-k',andCrnt_sgm0(:,4),nrmCrnt0_sgm0,'-r');
+% plot(andCrnt_sgm001(:,4),nrmCrnt_sgm001,'-b',andCrnt_sgm01(:,4),nrmCrnt_sgm01,'-k',andCrnt_sgm0(:,4),nrmCrnt_sgm0,'-r');
+% hold on
+plot(andCrnt_sgm001(:,4),-nrmCrnt0_sgm001,'-b',andCrnt_sgm01(:,4),-nrmCrnt0_sgm01,'-k',andCrnt_sgm0(:,4),-nrmCrnt0_sgm0,'-r');
 legend('0.01mS/cm','0.1mS/cm','1mS/cm');
-hold off
+% hold off
+
+% Plot potential
+ifg = ifg + 1;
+figure(ifg)
+plot(andPot_exc01(:,3),-andPot_exc01(:,2),'-b',andPot_exc0(:,3),-andPot_exc0(:,2),'-k',andPot_exc1(:,3),-andPot_exc1(:,2),'-r');
+legend('200 Ohm*cm^2','20 Ohm*cm^2','2 Ohm*cm^2');
+% Plot the current
+ifg = ifg + 1;
+figure(ifg)
+plot(andCrnt_exc01(:,4),-nrmCrnt0_exc01*10,'-b',andCrnt_exc0(:,4),-nrmCrnt0_exc0*10,'-k',andCrnt_exc1(:,4),-nrmCrnt0_exc1*10,'-r');
+legend('200 Ohm*cm^2','20 Ohm*cm^2','2 Ohm*cm^2');
+
+% Plot potential
+ifg = ifg + 1;
+figure(ifg)
+plot(andPot_prs1(:,3),-andPot_prs1(:,2),'-b',andPot_prs2(:,3),-andPot_prs2(:,2),'-k',andPot_prs3(:,3),-andPot_prs3(:,2),'-r');
+legend('1 MPa','2 MPa','3 MPa');
+% Plot the current
+ifg = ifg + 1;
+figure(ifg)
+plot(andCrnt_prs1(:,4),-nrmCrnt0_prs1,'-b',andCrnt_prs2(:,4),-nrmCrnt0_prs2,'-k');
+legend('1 MPa','2 MPa','3 MPa');
