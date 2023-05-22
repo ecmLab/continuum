@@ -4,7 +4,7 @@
 # INTERNAL# length: um,                potential: mV,       current: nA,         time: s
 
 [Mesh]
-# uniform_refine = 1
+ uniform_refine = 1
  [importMesh]
    type = FileMeshGenerator
    file = data/mdl.msh
@@ -61,7 +61,7 @@
     type = ionicSEBV
     variable = potLi
     boundary = blockSE_btm
-    LiPotElectrode = -0.135
+    LiPotElectrode = 0
     ex_current= 13
   []
   [cathode_current]
