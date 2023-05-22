@@ -4,7 +4,7 @@
 # INTERNAL# length: um,                potential: mV,       current: nA,         time: s
 
 [Mesh]
-# uniform_refine = 1
+ uniform_refine = 1
  [importMesh]
    type = FileMeshGenerator
    file = data/mdlAg.msh
@@ -69,7 +69,7 @@
     type = ionicSEBV
     variable = potLi
     boundary = interface
-    LiPotElectrode = -5
+    LiPotElectrode = 5
     ex_current= 13
   []
   [anode_BV]
