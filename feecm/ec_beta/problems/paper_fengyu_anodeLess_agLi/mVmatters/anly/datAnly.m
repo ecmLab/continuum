@@ -16,6 +16,7 @@ sgmLPS=1;         % The ionic conductivity of LPS, set to be 1mS/cm
 iSgm  = [0.01, 0.1, 1];  % The ionic conductivity, set as variable for parameter studies, in unit mS/cm
 iExc  = [0.13, 1.3, 13]; % The exchange current density, set as variable for parameter studies, in unit mA/cm^2
 iVlt  = [0, 1, 2, 3,4,5]; % The equilibrium voltage of the interface, in unit mV; 0 corresponds to Li metal anode; 1mV is the high Li content AgLi SS 
+iAg   = [0, 1, 2, 3,4,5]; % The equilibrium voltage of the AgLi particle in the surface defect, in unit mV; 0 corresponds to Li metal anode;
 iPrs  = [1 ,2, 3];  % The pressure in unit MPa, 1MPa corresponds to 0.175mV equilibrium potential change
 
 %% Read data from files
@@ -34,9 +35,12 @@ andPot_vlt2   = csvread('../rst/andPot_vlt2.csv',1,0);
 andPot_vlt3   = csvread('../rst/andPot_vlt3.csv',1,0);
 andPot_vlt4   = csvread('../rst/andPot_vlt4.csv',1,0);
 andPot_vlt5   = csvread('../rst/andPot_vlt5.csv',1,0);
-% andPotAg_exc1  = csvread('../rst/andPotAg_exc1.csv',1,0);
-% andPotAg_exc3   = csvread('../rst/andPotAg_exc3.csv',1,0);
-% andPotAg_exc5   = csvread('../rst/andPotAg_exc5.csv',1,0);
+andPot_Ag0    = csvread('../rst/andPot_Ag0.csv',1,0);
+andPot_Ag1    = csvread('../rst/andPot_Ag1.csv',1,0);
+andPot_Ag2    = csvread('../rst/andPot_Ag2.csv',1,0);
+andPot_Ag3    = csvread('../rst/andPot_Ag3.csv',1,0);
+andPot_Ag4    = csvread('../rst/andPot_Ag4.csv',1,0);
+andPot_Ag5    = csvread('../rst/andPot_Ag5.csv',1,0);
 
 % Load anode current
 andCrnt_sgm001 = csvread('../rst/andCrnt_sgm-2.csv',1,0);
@@ -52,9 +56,12 @@ andCrnt_vlt2   = csvread('../rst/andCrnt_vlt2.csv',1,0);
 andCrnt_vlt3   = csvread('../rst/andCrnt_vlt3.csv',1,0);
 andCrnt_vlt4   = csvread('../rst/andCrnt_vlt4.csv',1,0);
 andCrnt_vlt5   = csvread('../rst/andCrnt_vlt5.csv',1,0);
-% andCrntAg_exc1   = csvread('../rst/andCrntAg_exc1.csv',1,0);
-% andCrntAg_exc3   = csvread('../rst/andCrntAg_exc3.csv',1,0);
-% andCrntAg_exc5   = csvread('../rst/andCrntAg_exc5.csv',1,0);
+andCrnt_Ag0    = csvread('../rst/andCrnt_Ag0.csv',1,0);
+andCrnt_Ag1    = csvread('../rst/andCrnt_Ag1.csv',1,0);
+andCrnt_Ag2    = csvread('../rst/andCrnt_Ag2.csv',1,0);
+andCrnt_Ag3    = csvread('../rst/andCrnt_Ag3.csv',1,0);
+andCrnt_Ag4    = csvread('../rst/andCrnt_Ag4.csv',1,0);
+andCrnt_Ag5    = csvread('../rst/andCrnt_Ag5.csv',1,0);
 
 %% Data analysis
 % Compute the tangent of bottom cosine curve: y_prime = -pi*dh/dw*sin(pi/dw*x)
@@ -86,9 +93,19 @@ nrmCrnt0_vlt2   = i_exc * (exp(a0*F_RT*(andPot_vlt2(:,2)-iVlt(3))) - exp(-a0*F_R
 nrmCrnt0_vlt3   = i_exc * (exp(a0*F_RT*(andPot_vlt3(:,2)-iVlt(4))) - exp(-a0*F_RT*(andPot_vlt3(:,2)-iVlt(4))));
 nrmCrnt0_vlt4   = i_exc * (exp(a0*F_RT*(andPot_vlt4(:,2)-iVlt(5))) - exp(-a0*F_RT*(andPot_vlt4(:,2)-iVlt(5))));
 nrmCrnt0_vlt5   = i_exc * (exp(a0*F_RT*(andPot_vlt5(:,2)-iVlt(6))) - exp(-a0*F_RT*(andPot_vlt5(:,2)-iVlt(6))));
-% nrmCrntAg0_exc1   = i_exc * (exp(a0*F_RT*andPotAg_exc1(:,2)) - exp(-a0*F_RT*andPotAg_exc1(:,2)));
-% nrmCrntAg0_exc3   = i_exc * (exp(a0*F_RT*andPotAg_exc3(:,2)) - exp(-a0*F_RT*andPotAg_exc3(:,2)));
-% nrmCrntAg0_exc5   = i_exc * (exp(a0*F_RT*andPotAg_exc5(:,2)) - exp(-a0*F_RT*andPotAg_exc5(:,2)));
+% For the AgLi particle case, things are a little bit complicated: zero voltage at the flat area, but AgLi voltage at the interface
+eta0 = andPot_Ag0(:,2);      eta0(abs(andPot_Ag0(:,3))-dw/2<1) = andPot_Ag0(abs(andPot_Ag0(:,3))-dw/2<1,2) - iAg(1);
+nrmCrnt0_Ag0    = i_exc * (exp(a0*F_RT*eta0) - exp(-a0*F_RT*eta0));
+eta1 = andPot_Ag1(:,2);      eta1(abs(andPot_Ag1(:,3))-dw/2<1) = andPot_Ag1(abs(andPot_Ag1(:,3))-dw/2<1,2) - iAg(2);
+nrmCrnt0_Ag1    = i_exc * (exp(a0*F_RT*eta1) - exp(-a0*F_RT*eta1));
+eta2 = andPot_Ag2(:,2);      eta2(abs(andPot_Ag2(:,3))-dw/2<1) = andPot_Ag2(abs(andPot_Ag2(:,3))-dw/2<1,2) - iAg(3);
+nrmCrnt0_Ag2    = i_exc * (exp(a0*F_RT*eta2) - exp(-a0*F_RT*eta2));
+eta3 = andPot_Ag3(:,2);      eta3(abs(andPot_Ag3(:,3))-dw/2<1) = andPot_Ag3(abs(andPot_Ag3(:,3))-dw/2<1,2) - iAg(4);
+nrmCrnt0_Ag3    = i_exc * (exp(a0*F_RT*eta3) - exp(-a0*F_RT*eta3));
+eta4 = andPot_Ag4(:,2);      eta4(abs(andPot_Ag4(:,3))-dw/2<1) = andPot_Ag4(abs(andPot_Ag4(:,3))-dw/2<1,2) - iAg(5);
+nrmCrnt0_Ag4    = i_exc * (exp(a0*F_RT*eta4) - exp(-a0*F_RT*eta4));
+eta5 = andPot_Ag5(:,2);      eta5(abs(andPot_Ag5(:,3))-dw/2<1) = andPot_Ag5(abs(andPot_Ag5(:,3))-dw/2<1,2) - iAg(6);
+nrmCrnt0_Ag5    = i_exc * (exp(a0*F_RT*eta5) - exp(-a0*F_RT*eta5));
 
 %% Plotting
 % Plot the potential vs normal current at sgm=0.01mS/cm
@@ -131,28 +148,28 @@ plot(andCrnt_exc01(:,4),-nrmCrnt0_exc01,'-b',andCrnt_exc0(:,4),-nrmCrnt0_exc0,'-
 legend('200 Ohm*cm^2','20 Ohm*cm^2','2 Ohm*cm^2');
 title('Current at SE/Anode Interface, in mA/cm^2');
 
-% Plot potential at sgm= 1 mS/cm, ASR= 2 Ohm*cm^2 and varying anode equilibrium potential= [0, 1, 2, 3, 4 ,5]Ohm*cm^2
+% Plot potential at sgm= 1 mS/cm, ASR= 2 Ohm*cm^2 and varying anode equilibrium potential= [0, 1, 2, 3, 4 ,5] mV
 ifg = ifg + 1;
 figure(ifg)
-plot(andPot_vlt0(:,3),-andPot_vlt0(:,2),'-b',  andPot_vlt1(:,3),-andPot_vlt1(:,2),'-r', andPot_vlt2(:,3),-andPot_vlt2(:,2),'-k',...
-     andPot_vlt3(:,3),-andPot_vlt3(:,2),'-.b', andPot_vlt4(:,3),-andPot_vlt4(:,2),'-.r',andPot_vlt5(:,3),-andPot_vlt5(:,2),'-.k');
-legend('0 mV','1 mV','2 mV','3 mV','4 mV','5 mV');
+plot(andPot_vlt0(:,3),-andPot_vlt0(:,2),'-b',  andPot_vlt1(:,3),-andPot_vlt1(:,2),'-r', andPot_vlt2(:,3),-andPot_vlt2(:,2),'-k');
+legend('0 mV','1 mV','2 mV');
 title('Voltage at SE/Anode Interface, in mV');
-% Plot the current at sgm= 1 mS/cm, ASR= 2 Ohm*cm^2 and varying anode equilibrium potential= [0, 1, 2, 3, 4 ,5]Ohm*cm^2
+% Plot the current at sgm= 1 mS/cm, ASR= 2 Ohm*cm^2 and varying anode equilibrium potential= [0, 1, 2, 3, 4 ,5] mV
 ifg = ifg + 1;
 figure(ifg)
-plot(andCrnt_vlt0(:,4),-nrmCrnt0_vlt0,'-b',  andCrnt_vlt1(:,4),-nrmCrnt0_vlt1,'-r', andCrnt_vlt2(:,4),-nrmCrnt0_vlt2,'-k',...
-     andCrnt_vlt3(:,4),-nrmCrnt0_vlt3,'-.b', andCrnt_vlt4(:,4),-nrmCrnt0_vlt4,'-.r',andCrnt_vlt5(:,4),-nrmCrnt0_vlt5,'-.k');
-legend('0 mV','1 mV','2 mV','3 mV','4 mV','5 mV');
+plot(andCrnt_vlt0(:,4),-nrmCrnt0_vlt0,'-b',  andCrnt_vlt1(:,4),-nrmCrnt0_vlt1,'-r', andCrnt_vlt2(:,4),-nrmCrnt0_vlt2,'-k');
+legend('0 mV','1 mV','2 mV');
 title('Current at SE/Anode Interface, in mA/cm^2');
 
-% Plot potential
+% Plot potential at sgm= 1 mS/cm, ASR= 2 Ohm*cm^2 and varying AgLi particle equilibrium potential in the surface defect = [0, 1, 2, 3, 4 ,5] mV
 ifg = ifg + 1;
 figure(ifg)
-plot(andPotAg_exc1(:,3),-andPotAg_exc1(:,2),'-b',andPotAg_exc3(:,3),-andPotAg_exc3(:,2),'-k',andPotAg_exc5(:,3),-andPotAg_exc5(:,2),'-r');
-legend('1 mV','3 mV','5 mV');
-% Plot the current
+plot(andPot_Ag0(:,3),-andPot_Ag0(:,2),'-b',andPot_Ag1(:,3),-andPot_Ag1(:,2),'-k',andPot_Ag2(:,3),-andPot_Ag2(:,2),'-r');
+legend('0 mV','1 mV','2 mV');
+title('Voltage at SE/Anode Interface, in mV');
+% Plot the current at sgm= 1 mS/cm, ASR= 2 Ohm*cm^2 and varying AgLi particle equilibrium potential in the surface defect = [0, 1, 2, 3, 4 ,5] mV
 ifg = ifg + 1;
 figure(ifg)
-plot(andCrntAg_exc1(:,4),-nrmCrntAg0_exc1,'-b',andCrntAg_exc3(:,4),-nrmCrntAg0_exc3,'-k',andCrntAg_exc3(:,4),-nrmCrntAg0_exc3,'-r');
-legend('1 mV','3 mV','5 mV');
+plot(andCrnt_Ag0(:,4),-nrmCrnt0_Ag0,'-b',andCrnt_Ag1(:,4),-nrmCrnt0_Ag1,'-k',andCrnt_Ag2(:,4),-nrmCrnt0_Ag2,'-r');
+legend('0 mV','1 mV','2 mV');
+title('Current at SE/Anode Interface, in mA/cm^2');
