@@ -4,10 +4,10 @@
 # INTERNAL# length: um,                potential: mV,       current: nA,         time: s
 
 [Mesh]
- uniform_refine = 1
+# uniform_refine = 1
  [importMesh]
    type = FileMeshGenerator
-   file = data/mdl.msh
+   file = data/mdlAg.msh
  []
 []
 
@@ -33,6 +33,14 @@
     type = ionicDiffusion
     variable = potLi
     diffusivity = ionic_conductivity
+    block = "blockSE"
+  []
+
+  [metal_diffusion]
+    type = ionicDiffusion
+    variable = potLi
+    diffusivity = 0.0001
+    block = "blockAg"
   []
 
 []
@@ -57,11 +65,18 @@
 []
 
 [BCs]
+  [interface_BV]
+    type = ionicSEBV
+    variable = potLi
+    boundary = interface
+    LiPotElectrode = -1.35
+    ex_current= 13
+  []
   [anode_BV]
     type = ionicSEBV
     variable = potLi
-    boundary = blockSE_btm
-    LiPotElectrode = 5
+    boundary = 'blockSE_btm_lft blockSE_btm_rgt'
+    LiPotElectrode = 0
     ex_current= 13
   []
   [cathode_current]
@@ -94,14 +109,14 @@
   [anode_current]
     type = SideValueSampler
     variable = 'iLi_x iLi_y'
-    boundary = blockSE_btm
+    boundary = 'blockSE_btm_lft interface blockSE_btm_rgt'
     sort_by = x
   []
 
   [anode_potential]
     type = SideValueSampler
     variable = 'potLi'
-    boundary = blockSE_btm
+    boundary = 'blockSE_btm_lft interface blockSE_btm_rgt'
     sort_by = x
   []
 []
@@ -109,6 +124,6 @@
 [Outputs]
   execute_on = 'timestep_end'
   exodus = true
-  file_base = rst/mdl
+  file_base = rst/mdlAg
   csv = true
 []
