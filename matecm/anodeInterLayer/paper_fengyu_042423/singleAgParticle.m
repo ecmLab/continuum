@@ -32,9 +32,9 @@ R_SE        = R_Mt/1.0;             % ASR of the charge-transfer resistance at t
 R_CC        = R_Mt/20.0;             % ASR of the charge-transfer resistance at the BL/CC interface, in unit Ohm*cm^2
 R_Pt        = R_Mt/5.0;             % ASR of the charge-transfer resistance at the BL/MetalParticle interface, in unit Ohm*cm^2
 % 4. Material properties of the Ag particles
-yp_end      = 0.714/(1-0.714);         % The terminal value of y in AgLi_y based on the solubility limit x=0.714
+yp_end      = 0.699/(1-0.699);         % The terminal value of y in AgLi_y based on the solubility limit x=0.699, as of 05/23/23
 end_Eden    = yp_end*FF/(Ag_Mmol+yp_end*Li_Mmol)*10/36;   % The energy density at the solubility limit, in unit mAh/g
-end_Mden    = 1.0;                   % Mass density of ending phase AgLi_yend, in unit g/cm^3
+end_Mden    = Ag_Mden*(1+Li_Mmol/Ag_Mmol*yp_end)/(1+0.98*yp_end); % Mass density of ending phase AgLi_yend, in unit g/cm^3
 end_dia     = Ag_dia .* (Ag_Mden/end_Mden * (1+Li_Mmol/Ag_Mmol*yp_end)).^ (1/3);  % The diameter of end AgLi_y, in unit um
 rho         = yp_end*end_Mden/(Ag_Mmol+yp_end*Li_Mmol);    % Interstitial site density of AgLi9, in unit mol/cm^3 = Mass_den / Molar_Mass
 % 5. Electrochemical parameters
@@ -100,7 +100,8 @@ for it = 1:Nt-1
     end
     
 % Step 0: Update the AgLiy particle density and diameters
-    AgLi_Mden   = massDensity_AgLi(yc(:,it),yp_end,end_Mden,Ag_Mden,Ag_Mmol,Li_Mmol,Li_Mden);       % The mass density of AgLi_y, in unit g/cm^3
+%     AgLi_Mden   = massDensity_AgLi(yc(:,it),yp_end,end_Mden,Ag_Mden,Ag_Mmol,Li_Mmol,Li_Mden);       % The mass density of AgLi_y, in unit g/cm^3
+    AgLi_Mden   = Ag_Mden*(1+Li_Mmol/Ag_Mmol*yc(:,it)) ./ (1+0.98*yc(:,it));      % The mass density of AgLi_y, in unit g/cm^3
     dia(:,it)   = Ag_dia .* (Ag_Mden ./ AgLi_Mden .* (1+Li_Mmol/Ag_Mmol*yc(:,it)*yp_end)).^ (1/3);  % The diameter of AgLi_y, in unit um
     
     for ip = 1 : Np
@@ -253,16 +254,16 @@ function chemPot = chemPot_AgLi(chemP_AgLi_db,chemP_flag,x)
 end
 
 % The mass density of AgLi_y vs. Li content (y), in unit g/cm^3
-function massDen = massDensity_AgLi(x,yp_end,end_Mden,Ag_Mden,Ag_Mmol,Li_Mmol,Li_Mden)
-   massDen = zeros(length(x),1);
-   for ip = 1 : length(x)
-     if x(ip) <= 1
-         massDen(ip) = (Ag_Mden-end_Mden)*exp(-0.5*x(ip)*yp_end) + end_Mden;
-     else
-         massDen(ip) = (Ag_Mmol+x(ip)*yp_end*Li_Mmol)/((Ag_Mmol+yp_end*Li_Mmol)/end_Mden + (x(ip)-1)*yp_end*Li_Mmol/Li_Mden);
-     end
-   end
-end
+% function massDen = massDensity_AgLi(x,yp_end,end_Mden,Ag_Mden,Ag_Mmol,Li_Mmol,Li_Mden)
+%    massDen = zeros(length(x),1);
+%    for ip = 1 : length(x)
+%      if x(ip) <= 1
+%          massDen(ip) = (Ag_Mden-end_Mden)*exp(-0.5*x(ip)*yp_end) + end_Mden;
+%      else
+%          massDen(ip) = (Ag_Mmol+x(ip)*yp_end*Li_Mmol)/((Ag_Mmol+yp_end*Li_Mmol)/end_Mden + (x(ip)-1)*yp_end*Li_Mmol/Li_Mden);
+%      end
+%    end
+% end
 
 % function massDen = massDensity_AgLi(x,yp_end,end_Mden,Ag_Mden,Ag_Mmol,Li_Mmol,Li_Mden)
 %    massDen = zeros(length(x),1);
