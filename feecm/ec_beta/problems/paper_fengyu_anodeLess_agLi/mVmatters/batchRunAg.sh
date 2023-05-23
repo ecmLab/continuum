@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for iAg in {0..5}
+for iAg in {-5..0}
  do
 # Run the simulation
   sed "s/LiPotElectrode = 1.35/LiPotElectrode = ${iAg}/" < depAg.i > iRunAg.i

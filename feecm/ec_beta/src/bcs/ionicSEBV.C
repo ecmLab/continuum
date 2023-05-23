@@ -27,16 +27,15 @@ ionicSEBV::ionicSEBV(const InputParameters & parameters)
    _LiPotEle(getParam<Real>("LiPotElectrode")),
    _exchange_current(getParam<Real>("ex_current"))
 
-   // Get the parameters from the input file
-//    _ex_current(parameters.get<MaterialPropertyName>("ex_current")),
-//    _exchange_current(getADMaterialProperty<Real>(_ex_current))
 {
 }
 
 ADReal
 ionicSEBV::computeQpResidual()
 {
-  ADReal k1 = std::exp(_reaction_rate * _F_RT * (_u[_qp] - _LiPotEle));
-  ADReal k2 = std::exp(- (1 - _reaction_rate) * _F_RT * (_u[_qp] - _LiPotEle));
-  return _test[_i][_qp] * _exchange_current * (k1 - k2);
+  ADReal k1 = std::exp(_reaction_rate * _F_RT * (_LiPotEle - _u[_qp]));
+  ADReal k2 = std::exp(- (1 - _reaction_rate) * _F_RT * (_LiPotEle - _u[_qp]));
+//  ADReal k1 = std::exp(_reaction_rate * _F_RT * (_u[_qp] - _LiPotEle));
+//  ADReal k2 = std::exp(- (1 - _reaction_rate) * _F_RT * (_u[_qp] - _LiPotEle));
+  return -_test[_i][_qp] * _exchange_current * (k1 - k2);
 }

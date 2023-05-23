@@ -2,7 +2,7 @@
 
 #for iSgm in {-2..1}
 #for iExc in {-1..1}
-for iVlt in {0..5}
+for iVlt in {-5..0}
 #for iPrs in {1..3}
  do
 
