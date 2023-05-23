@@ -69,7 +69,7 @@
     type = ionicSEBV
     variable = potLi
     boundary = interface
-    LiPotElectrode = 5
+    LiPotElectrode = 0
     ex_current= 13
   []
   [anode_BV]

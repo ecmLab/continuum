@@ -45,8 +45,8 @@ NeumannEn::NeumannEn(const InputParameters & parameters)
 ADReal
 NeumannEn::computeQpResidual()
 {
-  ADReal k1 = std::exp(_reaction_rate[_qp] * _F_RT * (_potLi[_qp] + _u[_qp] - _LiPotEle[_qp]));
-  ADReal k2 = std::exp(- (1 - _reaction_rate[_qp]) * _F_RT * (_potLi[_qp] + _u[_qp] - _LiPotEle[_qp]));
+  ADReal k1 = std::exp(_reaction_rate[_qp] * _F_RT * (_LiPotEle[_qp] - _potLi[_qp] - _u[_qp]));
+  ADReal k2 = std::exp(- (1 - _reaction_rate[_qp]) * _F_RT * (_LiPotEle[_qp] - _potLi[_qp] - _u[_qp]));
 
-  return _test[_i][_qp] * (_inlet_current[_qp] + _exchange_current[_qp] * (k1 - k2));
+  return _test[_i][_qp] * _exchange_current[_qp] * (k1 - k2);
 }

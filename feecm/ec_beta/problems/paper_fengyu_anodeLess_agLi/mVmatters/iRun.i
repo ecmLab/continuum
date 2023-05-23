@@ -61,7 +61,7 @@
     type = ionicSEBV
     variable = potLi
     boundary = blockSE_btm
-    LiPotElectrode = 5
+    LiPotElectrode = 0
     ex_current= 13
   []
   [cathode_current]

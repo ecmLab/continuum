@@ -32,8 +32,8 @@ R_SE        = R_Mt/1.0;             % ASR of the charge-transfer resistance at t
 R_CC        = R_Mt/20.0;             % ASR of the charge-transfer resistance at the BL/CC interface, in unit Ohm*cm^2
 R_Pt        = R_Mt/5.0;             % ASR of the charge-transfer resistance at the BL/MetalParticle interface, in unit Ohm*cm^2
 % 4. Material properties of the Ag particles
-yp_end      = 0.91/(1-0.91);         % The terminal value of y in AgLi_y based on the solubility limit x=0.93
-end_Eden    = yp_end*FF/(Ag_Mmol+yp_end*Li_Mmol)*10/36;   % The energy density of AgLi10, in unit mAh/g
+yp_end      = 0.714/(1-0.714);         % The terminal value of y in AgLi_y based on the solubility limit x=0.714
+end_Eden    = yp_end*FF/(Ag_Mmol+yp_end*Li_Mmol)*10/36;   % The energy density at the solubility limit, in unit mAh/g
 end_Mden    = 1.0;                   % Mass density of ending phase AgLi_yend, in unit g/cm^3
 end_dia     = Ag_dia .* (Ag_Mden/end_Mden * (1+Li_Mmol/Ag_Mmol*yp_end)).^ (1/3);  % The diameter of end AgLi_y, in unit um
 rho         = yp_end*end_Mden/(Ag_Mmol+yp_end*Li_Mmol);    % Interstitial site density of AgLi9, in unit mol/cm^3 = Mass_den / Molar_Mass
@@ -263,3 +263,14 @@ function massDen = massDensity_AgLi(x,yp_end,end_Mden,Ag_Mden,Ag_Mmol,Li_Mmol,Li
      end
    end
 end
+
+% function massDen = massDensity_AgLi(x,yp_end,end_Mden,Ag_Mden,Ag_Mmol,Li_Mmol,Li_Mden)
+%    massDen = zeros(length(x),1);
+%    for ip = 1 : length(x)
+%      if x(ip) <= 1
+%          massDen(ip) = (Ag_Mden-end_Mden)*exp(-0.5*x(ip)*yp_end) + end_Mden;
+%      else
+%          massDen(ip) = (Ag_Mmol+x(ip)*yp_end*Li_Mmol)/((Ag_Mmol+yp_end*Li_Mmol)/end_Mden + (x(ip)-1)*yp_end*Li_Mmol/Li_Mden);
+%      end
+%    end
+% end
