@@ -96,7 +96,7 @@ temp_print_trace.*
 *.json
 *.json.*
 *.bak
-*.data
+!*.data
 *.processor.*
 .failed_tests
 failed-unittest
