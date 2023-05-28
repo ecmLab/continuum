@@ -3,10 +3,8 @@
 variable  imdl    index000     
 clear   					# Clear all previous runs
 
-variable  iNcm   equal 1
-variable  iLps   equal 3
-variable  sxy    equal 50    
-variable  sz     equal 100
+variable  sxy    equal 5
+variable  sz     equal 10
 variable  kn_11  equal 1300000
 variable  kn_22  equal 142900
 variable  kn_12  equal 257500
@@ -19,22 +17,21 @@ variable  xmu    equal 8
 ### Environment Setup
 units         micro           # micro unit system is suitable for the current research
 atom_style    sphere          # Granular Particle method will be used
-boundary      fm fm fm          # Periodic condition in only x and y direction
+boundary      p p f           # Periodic condition in x and y directions, fixed condition in z direction
 comm_modify   vel yes         # Communicate velocity info with ghost atoms
 neighbor      0.2 bin         # 0.2 micron extra distance beyond force cutoff
 neigh_modify  delay 0         # Update the neighbor list every step
-timestep      0.0002          # Time step is in unit micro-seconds
+timestep      0.002           # Time step is in unit micro-seconds
 
 ### Geometry Definition
-#read_data    ../massratio/mr${imdl}/mdl_ncm${iNcm}_lps${iLps}.data
-read_data    mdl.data
+read_data    massratio/mr${imdl}/mdl.data
 group  ptc  type  1 2
-group  ncm  type  1
-group  lps  type  2
+group  ag   type  1
+group  ac   type  2
 group  gst  type  3
 
 ### Granular Force Fields Definition
-## normal repulsion elastic constant K_n is in unit 1000Pa; tangential elastic constant Kt(NULL) = 2/7*Kn;
+## normal repulsion elastic constant K_n is in unit kPa; tangential elastic constant Kt(NULL) = 2/7*Kn;
 ## Elastic constant are decrease to 1/100 of physical value to decay kinetic energy quickly
 ## viscoelastic damping constant for normal contact 50;
 ## viscoelastic damping constant for tangential contact gamma_t(NULL) = 1/2* gamma_n;
@@ -60,19 +57,19 @@ fix 1 all nve/sphere                             # NVE ensemble for Granular sys
 fix 3 gst move linear 0 0 -0.25               # Apply constant velosity on ghost particle in z direction, in unit micron/micro-second
 
 ## Define the wall in z direction because only z direction is non-periodic
-# NCM to Wall
-fix x1wll ncm wall/gran hertz/history ${kn_13} ${kt} ${gma_n} NULL ${xmu} 1 xplane 0.0 ${sxy}
-fix y1wll ncm wall/gran hertz/history ${kn_13} ${kt} ${gma_n} NULL ${xmu} 1 yplane 0.0 ${sxy}
-fix z1wll ncm wall/gran hertz/history ${kn_13} ${kt} ${gma_n} NULL ${xmu} 1 zplane 0.0 ${sz}
-# LPS to Wall
-fix x2wll lps wall/gran hertz/history ${kn_23} ${kt} ${gma_n} NULL ${xmu} 1 xplane 0.0 ${sxy}
-fix y2wll lps wall/gran hertz/history ${kn_23} ${kt} ${gma_n} NULL ${xmu} 1 yplane 0.0 ${sxy}
-fix z2wll lps wall/gran hertz/history ${kn_23} ${kt} ${gma_n} NULL ${xmu} 1 zplane 0.0 ${sz}
+# Ag to Wall
+fix x1wll ag wall/gran hertz/history ${kn_13} ${kt} ${gma_n} NULL ${xmu} 1 xplane 0.0 ${sxy}
+fix y1wll ag wall/gran hertz/history ${kn_13} ${kt} ${gma_n} NULL ${xmu} 1 yplane 0.0 ${sxy}
+fix z1wll ag wall/gran hertz/history ${kn_13} ${kt} ${gma_n} NULL ${xmu} 1 zplane 0.0 ${sz}
+# aC to Wall
+fix x2wll ac wall/gran hertz/history ${kn_23} ${kt} ${gma_n} NULL ${xmu} 1 xplane 0.0 ${sxy}
+fix y2wll ac wall/gran hertz/history ${kn_23} ${kt} ${gma_n} NULL ${xmu} 1 yplane 0.0 ${sxy}
+fix z2wll ac wall/gran hertz/history ${kn_23} ${kt} ${gma_n} NULL ${xmu} 1 zplane 0.0 ${sz}
 
 ### OUTPUT results to Screen
 compute        ker   all   erotate/sphere                  # Compute the rotational kinetic energy of all particles
 compute        frc   gst   reduce sum fz                   # Total pressure on ghost particles
-variable       mss  equal  mass(ptc) 		           # Total mass of LPS and NCM particles
+variable       mss  equal  mass(ptc) 		           # Total mass of Ag and aC particles
 variable       prs  equal  (c_frc)/(1000*${sxy}*${sxy})    # Pressure in unit of MPa
 # Print info to screen, include step, total atom number, kinetic nergy, compute_1(Rotational energy), volume
 thermo_style    custom step atoms ke c_ker vol v_prs
@@ -87,7 +84,7 @@ label loop1
   if "${prs} > 2" then "jump mr.in loop2"
 jump mr.in loop1
 
-# 2. Run second period: hold to pressure = 200MPa so that kinetic energy decrease
+# 2. Run second period: hold to pressure = 2MPa so that kinetic energy decrease
 label loop2
 unfix 3
 fix 3 gst move linear 0 0 0.0
