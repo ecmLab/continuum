@@ -15,7 +15,7 @@ impt_mdl;
 for iwt = 1:nWt
     
 % % 0. Generate folder of different files
-%     fid = strcat('../pack/massRatio/mr',num2str(iwt),'/');
+    fid = strcat('../pack/massRatio/mr',num2str(iwt),'/');
 %     stmp = ['mkdir ' fid];
 %     eval(stmp);
 %     
