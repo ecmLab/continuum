@@ -1,32 +1,23 @@
 #!/bin/bash
-nMdl=25       # number of models studied
-iNcm=1        # NMC size studied, iNcm=1 for 5.0um, iNcm=2 for 10um, iNcm=3 for 12um
-iLps=2        # LPS size studied, iLps=3 for 3um, iLps=4 for 4um
-sxy=50        # area length studied
-sz=100         # initial height
+nMdl=5       # number of models studied
 
 for irt in $(seq 1 $nMdl);
 do
 ###Create folder for splitted calculations
-#  mkdir mr_ncm${iNcm}_lps${iLps}_${irt}
 
 ###Edit the lammps file for each calculation
-  sed "s/index000/index ${irt}/" < lmp_mr.in > tmp0.in
-  sed "s/iNcm   equal 1/iNcm   equal ${iNcm}/" < tmp0.in > tmp1.in
-  sed "s/iLps   equal 3/iLps   equal ${iLps}/" < tmp1.in > tmp2.in
-  sed "s/sxy    equal 80/sxy    equal ${sxy}/" < tmp2.in > tmp3.in
-  sed "s/sz     equal 83/sz     equal ${sz}/" < tmp3.in > mr.in  
+  sed "s/imdl   equal 1/imdl   equal ${irt}/" < lmp_mr.in > mr.in
 
 ###Edit the submit file to call different number of nodes
 #  sed "s/--nodes=1/--nodes=$(($irt))/" < myjob.sh > job0.sh
 #  sed "s/-np 20/-np $((100*$irt-80))/" < job0.sh > subjobtest.sh
 
 ##Copy files into each directory
-  cp mr.in    massratio/mr${irt}/
-  cp myjob.sh massratio/mr${irt}/ 
+  cp mr.in    massRatio/mr${irt}/
+  cp myjob.sh massRatio/mr${irt}/
 
 ###Submit file for calculation
-  cd massratio/mr${irt}/  
+  cd massRatio/mr${irt}/  
   sbatch myjob.sh
   cd ../../
   rm -f mr.in tmp* job*

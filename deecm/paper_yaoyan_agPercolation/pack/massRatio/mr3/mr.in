@@ -3,7 +3,7 @@
 #variable  imdl    index000     
 clear   					# Clear all previous runs
 
-variable  imdl   equal 1
+variable  imdl   equal 3
 variable  sxy    equal 5
 variable  sz     equal 30.15625
 variable  kn_11  equal 1300000
