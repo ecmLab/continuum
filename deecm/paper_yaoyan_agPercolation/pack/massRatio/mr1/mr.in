@@ -4,7 +4,7 @@
 clear   					# Clear all previous runs
 
 variable  imdl   equal 1
-variable  tarp   equal 1                        # The target pressure to stop the packing
+variable  tarp   equal 0.5                        # The target pressure to stop the packing, in unit MPa
 variable  sxy    equal 5
 variable  sz     equal 30.15625
 variable  kn_11  equal 1300000
@@ -93,28 +93,28 @@ unfix 3
 fix 3 gst move linear 0 0 0.0
 dump 1 all custom 1000 rst1.lmp id type x y z radius fx fy fz
 dump_modify 1 format line "%7d %5d %17.12f %17.12f %17.12f %17.12f %20.12e %20.12e %20.12e"
-run 200000
+run 10000
 
 # 3. Run third period: decrease pressing velocity so that pressure value converge more accurate to designed value
-label loop3
-  fix 3 gst move linear 0 0 -0.02
-  run 2000
-  if "${prs} > ${tarp}" then "jump mr.in loop4"
-jump mr.in loop3
+#label loop3
+#  fix 3 gst move linear 0 0 -0.02
+#  run 2000
+#  if "${prs} > ${tarp}" then "jump mr.in loop4"
+#jump mr.in loop3
 
 # 4. Run forth period: hold for relax
-label loop4
-fix 3 gst move linear 0 0 0.0
-run 50000
-if "${prs} < ${tarp}" then "jump mr.in loop3"
+#label loop4
+#fix 3 gst move linear 0 0 0.0
+#run 50000
+#if "${prs} < ${tarp}" then "jump mr.in loop3"
 
-dump 2 all custom 2000 rst2.lmp id type x y z radius fx fy fz
-dump_modify 2 format line "%7d %5d %17.12f %17.12f %17.12f %17.12f %20.12e %20.12e %20.12e"
-run 300000
+#dump 2 all custom 5000 rst2.lmp id type x y z radius fx fy fz
+#dump_modify 2 format line "%7d %5d %17.12f %17.12f %17.12f %17.12f %20.12e %20.12e %20.12e"
+#run 300000
 # 5. Output 5 frames for average
-dump 3 all custom 1000 rst3.lmp id type x y z radius fx fy fz
-dump_modify 3 format line "%7d %5d %17.12f %17.12f %17.12f %17.12f %20.12e %20.12e %20.12e"
-run 5000
+#dump 3 all custom 1000 rst3.lmp id type x y z radius fx fy fz
+#dump_modify 3 format line "%7d %5d %17.12f %17.12f %17.12f %17.12f %20.12e %20.12e %20.12e"
+#run 5000
 # End of loop
 
 #next imdl
