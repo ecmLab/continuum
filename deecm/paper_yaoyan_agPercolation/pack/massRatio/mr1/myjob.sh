@@ -11,7 +11,7 @@
 #SBATCH --cpus-per-task=4
 #
 # Wall clock limit:
-#SBATCH --time=10:00:00
+#SBATCH --time=01:00:00
 #SBATCH --mem=3g
 
 ## Commands to run:

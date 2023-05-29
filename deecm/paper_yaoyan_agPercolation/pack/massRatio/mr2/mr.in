@@ -4,6 +4,7 @@
 clear   					# Clear all previous runs
 
 variable  imdl   equal 2
+variable  tarp   equal 1                        # The target pressure to stop the packing
 variable  sxy    equal 5
 variable  sz     equal 30.15625
 variable  kn_11  equal 1300000
@@ -83,7 +84,7 @@ compute_modify  thermo_temp dynamic/dof yes
 # 1. Run first period: move down until pressure growth
 label loop1
   run   2000
-  if "${prs} > 2" then "jump mr.in loop2"
+  if "${prs} > ${tarp}" then "jump mr.in loop2"
 jump mr.in loop1
 
 # 2. Run second period: hold to pressure = 2MPa so that kinetic energy decrease
@@ -96,14 +97,14 @@ run 200000
 label loop3
   fix 3 gst move linear 0 0 -0.02
   run 2000
-  if "${prs} > 2" then "jump mr.in loop4"
+  if "${prs} > ${tarp}" then "jump mr.in loop4"
 jump mr.in loop3
 
 # 4. Run forth period: hold for relax
 label loop4
 fix 3 gst move linear 0 0 0.0
 run 50000
-if "${prs} < 2" then "jump mr.in loop3"
+if "${prs} < ${tarp}" then "jump mr.in loop3"
 
 run 300000
 # 5. Output 5 frames for average
