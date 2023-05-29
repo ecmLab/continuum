@@ -5,10 +5,12 @@ function [sys,ag,ac] = create_sys(ii, ag, ac)
 %% 1. Define System Parameters in sys structure
 sys         = struct;                                         % For massratio study, box size and loading are fixed
 sys.masRt   = 1.0/ii;                                         % The weight ratio of Ag to C
-sys.lx      = 5;                                              % The box size in x direction, in unit um 
-sys.ly      = 5;                                              % The box size in y direction, in unit um
+sys.lx      = 2;                                              % The box size in x direction, in unit um 
+sys.ly      = 2;                                              % The box size in y direction, in unit um
 sys.lzf     = 10;                                             % The desired box size in z direction after packing, in unit um
-sys.prf     = 0.2;                                            % The desired porosity of the interlayer after packing, can be obtained from characterization
+% The desired porosity of the interlayer after packing, can be obtained from characterization; 
+% however, the theoretical smallest value is 0.26 for HCP pack, and 0.365 for random pack
+sys.prf     = 0.4;                                            
 sys.lz      = sys.lzf*3;                                      % The box size in z direction before packing.
 sys.pr      = 1-(1-sys.prf)*sys.lzf/sys.lz;                   % The porosity of the interlayer before packing
 sys.vol     = sys.lx * sys.ly * sys.lz;                       % The volume of the system
