@@ -11,8 +11,8 @@
 #SBATCH --cpus-per-task=4
 #
 # Wall clock limit:
-#SBATCH --time=10:00:00
-#SBATCH --mem=3g
+#SBATCH --time=20:00:00
+#SBATCH --mem=6g
 
 ## Commands to run:
 srun lmp -log none -in mr.in
