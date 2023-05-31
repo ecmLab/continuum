@@ -7,19 +7,20 @@ variable  imdl   equal 4
 variable  tarp   equal 0.1                        # The target pressure to stop the packing
 variable  sxy    equal 2
 variable  sz     equal 30.04
-variable  kn_11  equal 1300000
-variable  kn_22  equal 142900
-variable  kn_12  equal 257500
-variable  kn_13  equal 2600000
-variable  kn_23  equal 2858000
-variable  kn_33  equal 10000000
-variable  kt     equal 10
-variable  gma_n  equal 100
+variable  kn_11  equal 175661.4
+variable  kn_22  equal 148.148
+variable  kn_12  equal 82054.3
+variable  kn_x3  equal 1000000
+variable  kt_11  equal 203681.0
+variable  kt_22  equal 186.046
+variable  kt_12  equal 99.20
+variable  kt_x3  equal 100000
+variable  gma_n  equal 1000
 variable  xmu    equal 8
 ### Environment Setup
 units         micro           # micro unit system is suitable for the current research
 atom_style    sphere          # Granular Particle method will be used
-boundary      f f f           # Periodic condition in x and y directions, fixed condition in z direction
+boundary      fm fm fm           # Periodic condition in x and y directions, fixed condition in z direction
 comm_modify   vel yes         # Communicate velocity info with ghost atoms
 neighbor      0.05 bin         # 0.2 micron extra distance beyond force cutoff
 neigh_modify  delay 0         # Update the neighbor list every step
@@ -34,22 +35,22 @@ group  ac   type  2
 group  gst  type  3
 
 ### Granular Force Fields Definition
-## normal repulsion elastic constant K_n is in unit kPa; tangential elastic constant Kt(NULL) = 2/7*Kn;
-## Elastic constant are decrease to 1/100 of physical value to decay kinetic energy quickly
-## viscoelastic damping constant for normal contact 50;
-## viscoelastic damping constant for tangential contact gamma_t(NULL) = 1/2* gamma_n;
-## static yield criterion 0.5, and tangential damping force is excluded
-pair_style gran/hertz/history ${kn_11} ${kt} ${gma_n} NULL ${xmu} 1
+### normal repulsion elastic constant K_n is in unit kPa;
+### Elastic constant are decrease to 1/1000 of physical value to decay kinetic energy quickly
+### viscoelastic damping constant for normal contact 1000;
+### viscoelastic damping constant for tangential contact gamma_t(NULL) = 1/2* gamma_n;
+### static yield criterion 0.5, and tangential damping force is excluded
+pair_style gran/hertz/history ${kn_11} ${kt_11} ${gma_n} NULL ${xmu} 1
 pair_coeff 1 1
-pair_style gran/hertz/history ${kn_22} ${kt} ${gma_n} NULL ${xmu} 1
+pair_style gran/hertz/history ${kn_22} ${kt_22} ${gma_n} NULL ${xmu} 1
 pair_coeff 2 2
-pair_style gran/hertz/history ${kn_12} ${kt} ${gma_n} NULL ${xmu} 1
+pair_style gran/hertz/history ${kn_12} ${kt_12} ${gma_n} NULL ${xmu} 1
 pair_coeff 1 2
-pair_style gran/hertz/history ${kn_13} ${kt} ${gma_n} NULL ${xmu} 1
+pair_style gran/hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1
 pair_coeff 1 3
-pair_style gran/hertz/history ${kn_23} ${kt} ${gma_n} NULL ${xmu} 1
+pair_style gran/hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1
 pair_coeff 2 3
-pair_style gran/hertz/history ${kn_33} ${kt} ${gma_n} NULL ${xmu} 1
+pair_style gran/hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1
 pair_coeff 3 3
 
 ### Calculation setup
@@ -61,13 +62,13 @@ fix 3 gst move linear 0 0 -0.2               # Apply constant velosity on ghost 
 
 ## Define the wall in z direction because only z direction is non-periodic
 # Ag to Wall
-fix x1wll ag wall/gran hertz/history ${kn_13} ${kt} ${gma_n} NULL ${xmu} 1 xplane 0.0 ${sxy}
-fix y1wll ag wall/gran hertz/history ${kn_13} ${kt} ${gma_n} NULL ${xmu} 1 yplane 0.0 ${sxy}
-fix z1wll ag wall/gran hertz/history ${kn_13} ${kt} ${gma_n} NULL ${xmu} 1 zplane 0.0 ${sz}
+fix x1wll ag wall/gran hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1 xplane 0.0 ${sxy}
+fix y1wll ag wall/gran hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1 yplane 0.0 ${sxy}
+fix z1wll ag wall/gran hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1 zplane 0.0 ${sz}
 # aC to Wall
-fix x2wll ac wall/gran hertz/history ${kn_23} ${kt} ${gma_n} NULL ${xmu} 1 xplane 0.0 ${sxy}
-fix y2wll ac wall/gran hertz/history ${kn_23} ${kt} ${gma_n} NULL ${xmu} 1 yplane 0.0 ${sxy}
-fix z2wll ac wall/gran hertz/history ${kn_23} ${kt} ${gma_n} NULL ${xmu} 1 zplane 0.0 ${sz}
+fix x2wll ac wall/gran hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1 xplane 0.0 ${sxy}
+fix y2wll ac wall/gran hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1 yplane 0.0 ${sxy}
+fix z2wll ac wall/gran hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1 zplane 0.0 ${sz}
 
 ### OUTPUT results to Screen
 compute        ker   all   erotate/sphere                  # Compute the rotational kinetic energy of all particles
@@ -89,7 +90,7 @@ jump mr.in loop1
 
 # 2. Run second period: hold to pressure = 2MPa so that kinetic energy decrease
 label loop2
-unfix 3
+#unfix 3
 fix 3 gst move linear 0 0 0.0
 dump 1 all custom 10000 rst1.lmp id type x y z radius fx fy fz
 dump_modify 1 format line "%7d %5d %17.12f %17.12f %17.12f %17.12f %20.12e %20.12e %20.12e"
