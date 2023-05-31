@@ -27,7 +27,6 @@ neigh_modify  delay 0         # Update the neighbor list every step
 timestep      0.0001          # Time step is in unit micro-seconds
 
 ### Geometry Definition
-#read_data    massRatio/mr${imdl}/mdl.data
 read_data    mdl.data
 group  ptc  type  1 2
 group  ag   type  1

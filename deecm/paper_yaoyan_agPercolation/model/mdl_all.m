@@ -15,9 +15,9 @@ impt_mdl;
 for iwt = 1:nWt
     
 % % 0. Generate folder of different files
-    fid = strcat('../pack/massRatio/mr',num2str(iwt),'/');
-%     stmp = ['mkdir ' fid];
-%     eval(stmp);
+    fid = strcat('../pack/mrPlot/mr',num2str(iwt),'/');
+    stmp = ['mkdir ' fid];
+    eval(stmp);
 %     
 % 1. Generate system, including box and system level variables
     [sys,ag,ac] = create_sys(iwt, ag, ac);      
