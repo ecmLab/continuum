@@ -3,10 +3,10 @@
 #variable  imdl    index000     
 clear   					# Clear all previous runs
 
-variable  imdl   equal 1
+variable  imdl   equal 3
 variable  tarp   equal 0.1                        # The target pressure to stop the packing
-variable  sxy    equal 2
-variable  sz     equal 30.04
+variable  sxy    equal 20
+variable  sz     equal 30.31747
 variable  kn_11  equal 175661.4
 variable  kn_22  equal 148.148
 variable  kn_12  equal 82054.3
@@ -27,7 +27,6 @@ neigh_modify  delay 0         # Update the neighbor list every step
 timestep      0.0001          # Time step is in unit micro-seconds
 
 ### Geometry Definition
-#read_data    massRatio/mr${imdl}/mdl.data
 read_data    mdl.data
 group  ptc  type  1 2
 group  ag   type  1
