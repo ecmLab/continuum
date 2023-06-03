@@ -97,8 +97,10 @@ temp_print_trace.*
 *.json.*
 *.bak
 !*.data
-rst1.lmp
-rst2.lmp
+**/massRatio/mr*/rst1.lmp
+**/massRatio/mr*/rst2.lmp
+**/massRatio/mr*/rst3.lmp
+*.restart
 *.processor.*
 .failed_tests
 failed-unittest
