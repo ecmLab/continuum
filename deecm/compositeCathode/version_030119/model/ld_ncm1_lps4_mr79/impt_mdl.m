@@ -21,7 +21,7 @@ for itmp = 1 : par.nNcm
     stmp = strcat('ncm.s',num2str(itmp),'.ave = ncm.ave(',num2str(itmp),');');
     eval(stmp);                                % The average diameter of current NMC size
     stmp = strcat('ncm.s',num2str(itmp),'.sgm = ncm.sgm(',num2str(itmp),');');
-    eval(stmp);       
+    eval(stmp);
 end
 
 %% 2.Define properties of different sizes LPS particles in lps structure
@@ -54,7 +54,7 @@ gst.typ     = 3;
 %% 4. Compute theoretical particle probabilities of all particles
 % For NMC particles
 for itmp = 1 : par.nNcm
-    tmp = strcat('ncm.s',num2str(itmp),'  = cmp_prob(ncm.s',num2str(itmp),',ncm.nD,1);');   
+    tmp = strcat('ncm.s',num2str(itmp),'  = cmp_prob(ncm.s',num2str(itmp),',ncm.nD,1);');
     eval(tmp);
 end
 % For LPS particles
