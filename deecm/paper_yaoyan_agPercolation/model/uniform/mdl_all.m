@@ -13,17 +13,17 @@ impt_mdl;
 
 %% Generate nMdl data files for different mass ratios
 for iwt = 1:nWt
-    
+
 % % 0. Generate folder of different files
-    fid = strcat('../../pack/mrPlot_uniform/mr',num2str(iwt),'/');
+    fid = strcat('../../data/mrPlot_uniform/mr',num2str(iwt),'/');
     stmp = ['mkdir ' fid];
     eval(stmp);
-%     
+%
 % 1. Generate system, including box and system level variables
-    [sys,ag,ac] = create_sys(iwt, ag, ac);      
+    [sys,ag,ac] = create_sys(iwt, ag, ac);
     fprintf('The total particles are Ag = %6.4f , C = %6.4f\n',ag.nTot, ac.nTot);
     fprintf('The initial porosity is : %6.4f\n',1-(ag.rVol+ac.rVol)/sys.vol);
-    
+
 % 2. Insert all Particles into the box, stored in sys.cord matrix:
     % 1st colume: id of particle;
     % 2th column: particle type: Ag or aC;
@@ -46,7 +46,7 @@ for iwt = 1:nWt
         sys.cord(:,2:end)  = sortrows(sys.cord(:,2:end),1);      % Make sure Ag particles are always listed before C particles in the input data first
         gst.max   = ag.dia;                                  % The maximal possible size for ghost particles
     end
-    
+
 % 3. Generate the coordinates of all ghost particles
     gst.nxy  = ceil(3*(sqrt(2)-1) * sys.lx/gst.max);  % The number of ghost particles in X and Y direction for current particle size
     gst.dia  = sys.lx/gst.nxy;                      % The diameter of ghost particles for current particle size
@@ -62,7 +62,7 @@ for iwt = 1:nWt
             gst.cord((ig-1)*gst.nxy+jg,6) = gst.dia/2 + gst.dia*(ig-1);
         end
     end
-    
+
 % 4. Output all particles in LAMMPS data file format
     stmp = strcat(fid,'mdl.data');
     fileID = fopen(stmp,'w');
@@ -81,6 +81,5 @@ for iwt = 1:nWt
     fprintf(fileID,'%5d %4d %8.5f %8.5f %20.15f %20.15f %20.15f\n',sys.cord');
     fprintf(fileID,'%5d %4d %8.5f %8.5f %20.15f %20.15f %20.15f\n',gst.cord');
     fclose(fileID);
-    
-end   % End of iwt
 
+end   % End of iwt
