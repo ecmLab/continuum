@@ -11,7 +11,7 @@ variable  tarp   equal 0.1                        # The target pressure to stop 
 # parameter for the Ag growth
 variable  ag_dia0 equal 0.1                        # The initial diameter of Ag particles, in unit um
 variable  ag_tf  equal 1.5                        # The ratio of final Ag diameter to initial diameter
-variable  Ngrw   equal 10000 		          # The timesteps to update each Ag diameter growth
+variable  Ngrw   equal 1000 		          # The timesteps to update each Ag diameter growth
 variable  dDia   equal (${ag_tf}-1)*${ag_dia0}/1000 # The incremental of Ag diameter each Ngrw timesteps
 variable  maxp   equal 2.0                        # The max pressure to stop the Ag growth
 # parameter of material contact
@@ -32,7 +32,7 @@ boundary      fm fm fm           # Periodic condition in x and y directions, fix
 comm_modify   vel yes         # Communicate velocity info with ghost atoms
 neighbor      0.05 bin         # 0.2 micron extra distance beyond force cutoff
 neigh_modify  delay 0         # Update the neighbor list every step
-timestep      0.001          # Time step is in unit micro-seconds
+timestep      1000              # Time step is in unit micro-seconds
 
 ### Geometry Definition
 #read_data    mdl.data
