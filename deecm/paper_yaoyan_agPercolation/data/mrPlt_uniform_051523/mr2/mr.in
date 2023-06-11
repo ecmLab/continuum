@@ -1,0 +1,140 @@
+###### DFE Method to compute Particle distribution under pressure #######
+### Define Variables
+#variable  imdl    index000     
+clear   					# Clear all previous runs
+
+# parameters of the box
+variable  sxy    equal 20
+variable  sz     equal 30.31747
+variable  imdl   equal 2
+variable  tarp   equal 0.1                        # The target pressure to stop the packing
+# parameter for the Ag growth
+variable  ag_dia0 equal 0.8                        # The initial diameter of Ag particles, in 
+variable  ag_tf  equal 1.5                        # The ratio of final Ag diameter to initial 
+variable  Ngrw   equal 10000 		          # The timesteps to update each Ag diameter g
+variable  dDia   equal (${ag_tf}-1)*${ag_dia0}/1000 # The incremental of Ag diameter each Ngrw
+variable  maxp   equal 3.0                        # The max pressure to stop the Ag growth
+# parameter of material contact
+variable  kn_11  equal 175661.4
+variable  kn_22  equal 148.148
+variable  kn_12  equal 82054.3
+variable  kn_x3  equal 1000000
+variable  kt_11  equal 203681.0
+variable  kt_22  equal 186.046
+variable  kt_12  equal 99.20
+variable  kt_x3  equal 100000
+variable  gma_n  equal 1000
+variable  xmu    equal 8
+### Environment Setup
+units         micro           # micro unit system is suitable for the current research
+atom_style    sphere          # Granular Particle method will be used
+boundary      fm fm fm           # Periodic condition in x and y directions, fixed condition in z direction
+comm_modify   vel yes         # Communicate velocity info with ghost atoms
+neighbor      0.05 bin         # 0.2 micron extra distance beyond force cutoff
+neigh_modify  delay 0         # Update the neighbor list every step
+timestep      0.0001          # Time step is in unit micro-seconds
+
+### Geometry Definition
+read_data    mdl.data
+group  ptc  type  1 2
+group  ag   type  1
+group  ac   type  2
+group  gst  type  3
+
+### Granular Force Fields Definition
+### normal repulsion elastic constant K_n is in unit kPa;
+### Elastic constant are decrease to 1/1000 of physical value to decay kinetic energy quickly
+### viscoelastic damping constant for normal contact 1000;
+### viscoelastic damping constant for tangential contact gamma_t(NULL) = 1/2* gamma_n;
+### static yield criterion 0.5, and tangential damping force is excluded
+pair_style gran/hertz/history ${kn_11} ${kt_11} ${gma_n} NULL ${xmu} 1
+pair_coeff 1 1
+pair_style gran/hertz/history ${kn_22} ${kt_22} ${gma_n} NULL ${xmu} 1
+pair_coeff 2 2
+pair_style gran/hertz/history ${kn_12} ${kt_12} ${gma_n} NULL ${xmu} 1
+pair_coeff 1 2
+pair_style gran/hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1
+pair_coeff 1 3
+pair_style gran/hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1
+pair_coeff 2 3
+pair_style gran/hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1
+pair_coeff 3 3
+
+### Calculation setup
+## NVE emsemble with gravity
+fix 1 all nve/sphere                             # NVE ensemble for Granular system
+## Gravity is necessary for pour
+#fix 2 all gravity 0.1 spherical 0.0 -180.0    # gravitic acceleration in unit micron/microsecond^2
+fix 3 gst move linear 0 0 -0.2               # Apply constant velosity on ghost particle in z direction, in unit micron/micro-second
+
+## Define the wall in z direction because only z direction is non-periodic
+# Ag to Wall
+fix x1wll ag wall/gran hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1 xplane 0.0 ${sxy}
+fix y1wll ag wall/gran hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1 yplane 0.0 ${sxy}
+fix z1wll ag wall/gran hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1 zplane 0.0 ${sz}
+# aC to Wall
+fix x2wll ac wall/gran hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1 xplane 0.0 ${sxy}
+fix y2wll ac wall/gran hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1 yplane 0.0 ${sxy}
+fix z2wll ac wall/gran hertz/history ${kn_x3} ${kt_x3} ${gma_n} NULL ${xmu} 1 zplane 0.0 ${sz}
+
+### OUTPUT results to Screen
+compute        ker   all   erotate/sphere                  # Compute the rotational kinetic energy of all particles
+compute        frc   gst   reduce sum fz                   # Total pressure on ghost particles
+variable       mss  equal  mass(ptc) 		           # Total mass of Ag and aC particles
+variable       prs  equal  (c_frc)/(1000*${sxy}*${sxy})    # Pressure in unit of MPa
+# Print info to screen, include step, total atom number, kinetic nergy, compute_1(Rotational energy), volume
+thermo_style    custom step atoms ke c_ker vol v_prs
+thermo          1000                              # Print thermodynamics every 500 stimesteps
+thermo_modify   lost ignore norm no
+compute_modify  thermo_temp dynamic/dof yes
+
+### Run calculation
+# 1. Run first period: move down until pressure growth
+label loop1
+  run   2000
+  if "${prs} > ${tarp}" then "jump mr.in loop2"
+jump mr.in loop1
+
+# 2. Run second period: hold to pressure = 2MPa so that kinetic energy decrease
+label loop2
+#unfix 3
+fix 3 gst move linear 0 0 0.0
+dump 1 all custom 50000 rst1.lmp id type x y z radius
+dump_modify 1 format line "%7d %5d %17.12f %17.12f %17.12f %17.12f "
+run 100000
+undump 1
+
+# 3. Run third period: decrease pressing velocity so that pressure value converge more accurate to designed value
+label loop3
+  fix 3 gst move linear 0 0 -0.02
+  run 2000
+  if "${prs} > ${tarp}" then "jump mr.in loop4"
+jump mr.in loop3
+
+# 4. Run forth period: hold for relax
+label loop4
+fix 3 gst move linear 0 0 0.0
+run 5000
+if "${prs} < ${tarp}" then "jump mr.in loop3"
+
+dump 2 all custom 50000 rst2.lmp id type x y z radius
+dump_modify 2 format line "%7d %5d %17.12f %17.12f %17.12f %17.12f"
+run 100000
+undump 2
+
+write_restart pack.restart
+
+# 5. Run fifth period: grow the Ag particles in radius direction
+dump 3 ag custom ${Ngrw} rst3.lmp id type x y z radius
+dump_modify 3 format line "%7d %5d %17.12f %17.12f %17.12f %17.12f"
+label loop5
+  variable  ag_dia  equal  ${ag_dia0}+${dDia}            # set the diameter of the Ag to an increamental 
+  set  group ag diameter ${ag_dia}
+
+  run  ${Ngrw}
+  variable  ag_dia0  equal ${ag_dia}
+  if "${prs} < ${maxp}" then "jump mr.in loop5"
+
+# End of loop
+
+#next imdl
