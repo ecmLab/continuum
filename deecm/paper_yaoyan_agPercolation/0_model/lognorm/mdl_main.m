@@ -35,14 +35,14 @@ if ac.ave < ag.ave
                  (sys.ly - ag.dia(end))*rand + ag.dia(end)/2, (sys.lz - ag.dia(end))*rand + ag.dia(end)/2];
     sys.cord  = insrtPtc(sys, ag, ag.typ, ag.den, 1);     % Insert all Ag particles
     sys.cord  = insrtPtc(sys, ac, ac.typ, ac.den, 1);     % Insert all C particles
-    gst.max   = ac.dia.min;                                     % The maximal possible size for ghost particles
+    gst.max   = min(ac.dia);                                     % The maximal possible size for ghost particles
 else
     sys.cord  = [1, ac.typ, ac.dia(end), ac.den, (sys.lx - ac.dia(end))*rand + ac.dia(end)/2,...
                  (sys.ly - ac.dia(end))*rand + ac.dia(end)/2, (sys.lz - ac.dia(end))*rand + ac.dia(end)/2];
     sys.cord  = insrtPtc(sys, ac, ac.typ, ac.den, 1);  % Insert all C particles
     sys.cord  = insrtPtc(sys, ag, ag.typ, ag.den, 1);  % Insert all Ag particles
     sys.cord(:,2:end)  = sortrows(sys.cord(:,2:end),1);      % Make sure Ag particles are always listed before C particles in the input data first
-    gst.max   = ag.dia.min;                                  % The maximal possible size for ghost particles
+    gst.max   = min(ag.dia);                                  % The maximal possible size for ghost particles
 end
 
 % 4. Generate the coordinates of all ghost particles
