@@ -1,4 +1,4 @@
-### create on 05/09/2023 by Howard Tu for the AgLi paper
+## create on 05/09/2023 by Howard Tu for the AgLi paper
 ## Unit system used in this code. Convert all parameters to these units !!!
 # INPUT   # current density: mA/cm^2,  conductivity: mS/cm, Diffusivity: um^2/s
 # INTERNAL# length: um,                potential: mV,       current: nA,         time: s
@@ -40,14 +40,14 @@
 
 [Kernels]
   [ionic_conduction]
-    type = IonicDiffusion
+    type = ChargedTransport
     variable = potLi
     diffusivity = ionic_conductivity
     block = "blockBL"
   []
 
   [electronic_conduction]
-    type = IonicDiffusion
+    type = ChargedTransport
     variable = potEn
     diffusivity = electronic_conductivity
     block = "blockBL"
