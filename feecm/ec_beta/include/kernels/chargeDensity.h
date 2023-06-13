@@ -3,13 +3,11 @@
 
 #include "ADKernel.h"
 
-class chargeDensity;
-
-class chargeDensity : public ADKernel
+class ChargeDensity : public ADKernel
 {
 public:
   static InputParameters validParams();
-  chargeDensity(const InputParameters & parameters);
+  ChargeDensity(const InputParameters & parameters);
 
 protected:
   virtual ADReal computeQpResidual() override;

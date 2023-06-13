@@ -6,12 +6,12 @@ registerADMooseObject("ecBetaApp", DirichletLi);
 InputParameters
 DirichletLi::validParams()
 {
-   InputParameters params = ADNodalBC::validParams();
+  InputParameters params = ADNodalBC::validParams();
 
    // Add a coupled parameter: potEn
    params.addRequiredCoupledVar("potEn", "The potential of Electron");
-  
-   return params;
+
+  return params;
 }
 
 DirichletLi::DirichletLi(const InputParameters & parameters)

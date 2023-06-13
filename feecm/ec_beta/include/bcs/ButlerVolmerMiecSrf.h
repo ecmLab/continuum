@@ -5,15 +5,11 @@
 #include "ADIntegratedBC.h"
 
 // Forward declare the class being created and the validParams function
-class miecSELiBV;
-
-//** Tafel relation is used for deposition at Li metal/SE interface
-
-class miecSELiBV : public ADIntegratedBC
+class ButlerVolmerMiecSrf : public ADIntegratedBC
 {
 public:
   static InputParameters validParams();
-  miecSELiBV(const InputParameters & parameters);
+  ButlerVolmerMiecSrf(const InputParameters & parameters);
 
 protected:
   virtual ADReal computeQpResidual() override;

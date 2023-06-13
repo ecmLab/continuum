@@ -1,10 +1,10 @@
 
-#include "miecSEBV.h"
+#include "ButlerVolmerMiecInt.h"
 
-registerADMooseObject("ecBetaApp", miecSEBV);
+registerADMooseObject("ecBetaApp", ButlerVolmerMiecInt);
 
 InputParameters
-miecSEBV::validParams()
+ButlerVolmerMiecInt::validParams()
 {
   InputParameters params = ADIntegratedBC::validParams();
   params.addClassDescription("Compute the outflow boundary condition.");
@@ -22,7 +22,7 @@ miecSEBV::validParams()
   return params;
 }
 
-miecSEBV::miecSEBV(const InputParameters & parameters)
+ButlerVolmerMiecInt::ButlerVolmerMiecInt(const InputParameters & parameters)
   : ADIntegratedBC(parameters),
   // Couple to the potential of electron
    _potEn(adCoupledValue("potEn")),
@@ -39,7 +39,7 @@ miecSEBV::miecSEBV(const InputParameters & parameters)
 }
 
 ADReal
-miecSEBV::computeQpResidual()
+ButlerVolmerMiecInt::computeQpResidual()
 {
   ADReal k1 = std::exp(_reaction_rate[_qp] * _F_RT * (_u[_qp] + _potEn[_qp] - _LiPotEle[_qp]));
   ADReal k2 = std::exp(- (1 - _reaction_rate[_qp]) * _F_RT * (_u[_qp] + _potEn[_qp] - _LiPotEle[_qp]));

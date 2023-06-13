@@ -21,8 +21,8 @@ Li_Vmol     = Li_Mmol/Li_Mden;       % Molar volume of Lithium, in unit cm^3/mol
 Li_K        = 11;                    % Bulk modulus of Lithium, in unit GPa
 % 2. Microstructural parameters
 Lx          = 10;                    % Length of the interlayer, in unit um
-Hx          = 0.0175;                     % cross-section width, in unit um
-BL_por      = 0.5;                   % Inital porosity of the BL layer
+Hx          = 0.0175;                % cross-section width, in unit um
+BL_por      = 0.4;                   % Inital porosity of the BL layer, according to paper "Highly cyclable..."
 Ag_dia      = 0.04;                  % The diameter of Ag particles, in unit um
 Np          = length(Ag_dia);        % the number of particles included
 % 3. Material properties of the interfaces

@@ -1,9 +1,9 @@
-#include "miecSEInterfacePrs.h"
+#include "MiecSEInterfacePrs.h"
 
-registerMooseObject("ecBetaApp", miecSEInterfacePrs);
+registerMooseObject("ecBetaApp", MiecSEInterfacePrs);
 
 InputParameters
-miecSEInterfacePrs::validParams()
+MiecSEInterfacePrs::validParams()
 {
   InputParameters params = ADInterfaceKernel::validParams();
   // Add a coupled parameter: potEn
@@ -27,7 +27,7 @@ miecSEInterfacePrs::validParams()
   return params;
 }
 
-miecSEInterfacePrs::miecSEInterfacePrs(const InputParameters & parameters)
+MiecSEInterfacePrs::MiecSEInterfacePrs(const InputParameters & parameters)
   : ADInterfaceKernel(parameters),
 
   // Couple to the potential of Li
@@ -51,7 +51,7 @@ miecSEInterfacePrs::miecSEInterfacePrs(const InputParameters & parameters)
 }
 
 ADReal
-miecSEInterfacePrs::computeQpResidual(Moose::DGResidualType type)
+MiecSEInterfacePrs::computeQpResidual(Moose::DGResidualType type)
 {
   ADReal r = 0;
   ADReal k1 = std::exp(_reaction_rate[_qp] * (_F_RT*(_potLi[_qp] + _u[_qp]) - _Vm_RT*_pressure));
@@ -73,7 +73,7 @@ miecSEInterfacePrs::computeQpResidual(Moose::DGResidualType type)
 
 /**
 ADReal
-miecSEInterfacePrs::computeQpJacobian(Moose::DGJacobianType type)
+MiecSEInterfacePrs::computeQpJacobian(Moose::DGJacobianType type)
 {
   ADReal jac = 0;
   ADReal k1 = std::exp(_reaction_rate[_qp] * (_F_RT*(_potLi[_qp] + _u[_qp]) - _Vm_RT*_pressure));

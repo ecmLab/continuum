@@ -3,18 +3,15 @@
 
 #include "AuxKernel.h"
 
-// Forward Declarations
-class LiPotMiecSE;
-
 /**
  * Auxiliary kernel responsible for computing the overpotentials: potLi - potEn
  */
-class LiPotMiecSE : public AuxKernel
+class LiPotMiec : public AuxKernel
 {
 public:
   static InputParameters validParams();
 
-  LiPotMiecSE(const InputParameters & parameters);
+  LiPotMiec(const InputParameters & parameters);
 
 protected:
   /**

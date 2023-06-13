@@ -1,9 +1,9 @@
-#include "chargeDensity.h"
+#include "ChargeDensity.h"
 
-registerADMooseObject("ecBetaApp", chargeDensity);
+registerADMooseObject("ecBetaApp", ChargeDensity);
 
 InputParameters
-chargeDensity::validParams()
+ChargeDensity::validParams()
 {
   InputParameters params = ADKernel::validParams();
   params.addClassDescription("Implements the weak form $(\\psi_i, -f)$.");
@@ -11,13 +11,13 @@ chargeDensity::validParams()
 // Add a coupled parameter: Concentration of the ions
   params.addRequiredCoupledVar("conIons", "The concentration of the ions");
 
-    params.addParam<Real>("zIons", 1, "The charge state of the ions, default be positive 1");
+    params.addParam<Real>("zIons", 1, "The Charge state of the ions, default be positive 1");
     params.addParam<Real>("scale", 1, "The scale of the equation, default no scaling");
 
   return params;
 }
 
-chargeDensity::chargeDensity(const InputParameters & parameters)
+ChargeDensity::ChargeDensity(const InputParameters & parameters)
   : ADKernel(parameters),
    _conIons(adCoupledValue("conIons")),
    // Couple to the gradient of the concentration
@@ -28,13 +28,13 @@ chargeDensity::chargeDensity(const InputParameters & parameters)
 }
 
 ADReal
-chargeDensity::computeQpResidual()
+ChargeDensity::computeQpResidual()
 {
  return -_scale * _test[_i][_qp] * _zIons * _conIons[_qp];
 }
 
 //Real
-//chargeDensity::computeQpJacobian()
+//ChargeDensity::computeQpJacobian()
 //{
 //  return -_scale * _test[_i][_qp] * _zIons * _grad_con[_qp]);
 //}

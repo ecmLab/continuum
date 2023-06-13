@@ -1,11 +1,11 @@
 
-#include "ionicSE.h"
+#include "Ionics.h"
 #include "Function.h"
 
-registerADMooseObject("ecBetaApp", ionicSE);
+registerADMooseObject("ecBetaApp", Ionics);
 
 InputParameters
-ionicSE::validParams()
+Ionics::validParams()
 {
    InputParameters params = ADMaterial::validParams();
 
@@ -24,7 +24,7 @@ ionicSE::validParams()
    return params;
 }
 
-ionicSE::ionicSE(const InputParameters & parameters)
+Ionics::Ionics(const InputParameters & parameters)
   : ADMaterial(parameters),
 
     // Get the parameters from the input file
@@ -43,7 +43,7 @@ ionicSE::ionicSE(const InputParameters & parameters)
 }
 
 void
-ionicSE::computeQpProperties()
+Ionics::computeQpProperties()
 {
   _ionic_conductivity[_qp] = _inIonicConductivity;
   _gb_conductivity[_qp] = _inGbConductivity;

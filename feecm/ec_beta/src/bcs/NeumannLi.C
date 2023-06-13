@@ -30,6 +30,5 @@ NeumannLi::NeumannLi(const InputParameters & parameters)
 ADReal
 NeumannLi::computeQpResidual()
 {
-//  return _test[_i][_qp] * (_electronic_conductivity[_qp] * _potEn_grad[_qp] * _normals[_qp] - _inlet_current[_qp]);
   return _test[_i][_qp] * (10000 * _electronic_conductivity[_qp] * _grad_u[_qp] * _normals[_qp] - _inlet_current[_qp]);
 }

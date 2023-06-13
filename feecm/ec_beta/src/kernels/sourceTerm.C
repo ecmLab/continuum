@@ -1,11 +1,11 @@
-#include "sourceTerm.h"
+#include "SourceTerm.h"
 
 #include "Function.h"
 
-registerADMooseObject("ecBetaApp", sourceTerm);
+registerADMooseObject("ecBetaApp", SourceTerm);
 
 InputParameters
-sourceTerm::validParams()
+SourceTerm::validParams()
 {
   InputParameters params = Kernel::validParams();
   params.addClassDescription("Implements the weak form $(\\psi_i, -f)$.");
@@ -18,7 +18,7 @@ sourceTerm::validParams()
   return params;
 }
 
-sourceTerm::sourceTerm(const InputParameters & parameters)
+SourceTerm::SourceTerm(const InputParameters & parameters)
   : Kernel(parameters),
    _srcCoef(getMaterialProperty<Real>("srcCoef")),
    _function(getFunction("function")),
@@ -27,13 +27,13 @@ sourceTerm::sourceTerm(const InputParameters & parameters)
 }
 
 Real
-sourceTerm::computeQpResidual()
+SourceTerm::computeQpResidual()
 {
   return _test[_i][_qp] * (_F_RT * _srcCoef[_qp] * _u[_qp] * _u[_qp] - _function.value(_t, _q_point[_qp]));
 }
 
 Real
-sourceTerm::computeQpJacobian()
+SourceTerm::computeQpJacobian()
 {
   return _test[_i][_qp] * _F_RT * _srcCoef[_qp] * 2*_u[_qp] * _phi[_j][_qp] ;
 }

@@ -1,10 +1,10 @@
-#include "paperHongli.h"
+#include "PaperHongli.h"
 #include "Function.h"
 
-registerMooseObject("ecBetaApp", paperHongli);
+registerMooseObject("ecBetaApp", PaperHongli);
 
 InputParameters
-paperHongli::validParams()
+PaperHongli::validParams()
 {
   InputParameters params = Material::validParams();
 
@@ -16,7 +16,7 @@ paperHongli::validParams()
   return params;
 }
 
-paperHongli::paperHongli(const InputParameters & parameters)
+PaperHongli::PaperHongli(const InputParameters & parameters)
   : Material(parameters),
     
     // Couple to the Li concentration
@@ -32,7 +32,7 @@ paperHongli::paperHongli(const InputParameters & parameters)
 }
 
 void
-paperHongli::computeQpProperties()
+PaperHongli::computeQpProperties()
 {
 //     	_diffusivity[_qp] = _c1 * std::exp(_c2*6*_cLi[_qp]);
      	_diffusivity[_qp] = _c1 * std::pow(10, _c2*6*_cLi[_qp]);

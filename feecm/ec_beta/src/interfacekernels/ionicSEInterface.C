@@ -1,9 +1,9 @@
-#include "ionicSEInterface.h"
+#include "IonicSEInterface.h"
 
-registerMooseObject("ecBetaApp", ionicSEInterface);
+registerMooseObject("ecBetaApp", IonicSEInterface);
 
 InputParameters
-ionicSEInterface::validParams()
+IonicSEInterface::validParams()
 {
   InputParameters params = ADInterfaceKernel::validParams();
 
@@ -16,7 +16,7 @@ ionicSEInterface::validParams()
   return params;
 }
 
-ionicSEInterface::ionicSEInterface(const InputParameters & parameters)
+IonicSEInterface::IonicSEInterface(const InputParameters & parameters)
   : ADInterfaceKernel(parameters),
 
  // Get the parameters from the input file
@@ -30,7 +30,7 @@ ionicSEInterface::ionicSEInterface(const InputParameters & parameters)
 }
 
 ADReal
-ionicSEInterface::computeQpResidual(Moose::DGResidualType type)
+IonicSEInterface::computeQpResidual(Moose::DGResidualType type)
 {
   ADReal r = 0;
   ADReal k1 = std::exp(_reaction_rate[_qp] * _F_RT * (_u[_qp] +  _neighbor_value[_qp]));
