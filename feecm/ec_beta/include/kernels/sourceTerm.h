@@ -3,13 +3,11 @@
 
 #include "Kernel.h"
 
-class sourceTerm;
-
-class sourceTerm : public Kernel
+class SourceTerm : public Kernel
 {
 public:
   static InputParameters validParams();
-  sourceTerm(const InputParameters & parameters);
+  SourceTerm(const InputParameters & parameters);
 
 protected:
   virtual Real computeQpResidual() override;

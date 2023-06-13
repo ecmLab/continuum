@@ -1,10 +1,10 @@
 
-#include "miecSEEnBV.h"
+#include "MiecSEEnBV.h"
 
-registerADMooseObject("ecBetaApp", miecSEEnBV);
+registerADMooseObject("ecBetaApp", MiecSEEnBV);
 
 InputParameters
-miecSEEnBV::validParams()
+MiecSEEnBV::validParams()
 {
 
   InputParameters params = ADIntegratedBC::validParams();
@@ -25,7 +25,7 @@ miecSEEnBV::validParams()
   return params;
 }
 
-miecSEEnBV::miecSEEnBV(const InputParameters & parameters)
+MiecSEEnBV::MiecSEEnBV(const InputParameters & parameters)
   : ADIntegratedBC(parameters),
 
   // Couple to the electron potential in metal of the pore
@@ -47,7 +47,7 @@ miecSEEnBV::miecSEEnBV(const InputParameters & parameters)
 }
 
 ADReal
-miecSEEnBV::computeQpResidual()
+MiecSEEnBV::computeQpResidual()
 {
   ADReal k1 = std::exp(_reaction_rate[_qp] * _F_RT * (_potLi[_qp] + _u[_qp] ));
   ADReal k2 = std::exp(- (1 - _reaction_rate[_qp]) * _F_RT * (_potLi[_qp] + _u[_qp] ));

@@ -1,10 +1,10 @@
 
-#include "miecSE.h"
+#include "Miec.h"
 #include "Function.h"
 
-registerADMooseObject("ecBetaApp", miecSE);
+registerADMooseObject("ecBetaApp", Miec);
 
-InputParameters miecSE::validParams()
+InputParameters Miec::validParams()
 {
   InputParameters params = ADMaterial::validParams();
 
@@ -38,7 +38,7 @@ InputParameters miecSE::validParams()
   return params;
 }
 
-miecSE::miecSE(const InputParameters & parameters)
+Miec::Miec(const InputParameters & parameters)
   : ADMaterial(parameters),
 
     // Get the parameters from the input file
@@ -67,7 +67,7 @@ miecSE::miecSE(const InputParameters & parameters)
 }
 
 void
-miecSE::computeQpProperties()
+Miec::computeQpProperties()
 {
   _ionic_conductivity[_qp] = _inIonicConductivity;
   _metal_conductivity[_qp] = _inMetalConductivity;

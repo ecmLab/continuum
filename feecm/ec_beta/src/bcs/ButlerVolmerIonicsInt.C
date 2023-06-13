@@ -1,14 +1,14 @@
 
-#include "ionicSEBV.h"
+#include "ButlerVolmerIonicsInt.h"
 
-registerADMooseObject("ecBetaApp", ionicSEBV);
+registerADMooseObject("ecBetaApp", ButlerVolmerIonicsInt);
 
 InputParameters
-ionicSEBV::validParams()
+ButlerVolmerIonicsInt::validParams()
 {
 
   InputParameters params = ADIntegratedBC::validParams();
-  params.addClassDescription("Compute the outflow boundary condition.");
+  params.addClassDescription("Butler-Volmer boundary condition of the Ionics material at the Interface with the other material.");
 
 // Add a parameter with a default value; this value can be overridden in the input file.
   params.addParam<Real>("F_RT", 0.03868, "The constant of F/RT  when T = 300K, in unit 1/mV");
@@ -18,7 +18,7 @@ ionicSEBV::validParams()
   return params;
 }
 
-ionicSEBV::ionicSEBV(const InputParameters & parameters)
+ButlerVolmerIonicsInt::ButlerVolmerIonicsInt(const InputParameters & parameters)
   : ADIntegratedBC(parameters),
 
   // Get the parameters from the input file
@@ -31,7 +31,7 @@ ionicSEBV::ionicSEBV(const InputParameters & parameters)
 }
 
 ADReal
-ionicSEBV::computeQpResidual()
+ButlerVolmerIonicsInt::computeQpResidual()
 {
   ADReal k1 = std::exp(_reaction_rate * _F_RT * (_LiPotEle - _u[_qp]));
   ADReal k2 = std::exp(- (1 - _reaction_rate) * _F_RT * (_LiPotEle - _u[_qp]));

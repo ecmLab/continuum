@@ -4,15 +4,12 @@
 #include "ADIntegratedBC.h"
 
 // Forward declare the class being created and the validParams function
-class ionicSEBV;
 
-//** Tafel relation is used for deposition at Li metal/SE interface
-
-class ionicSEBV : public ADIntegratedBC
+class ButlerVolmerIonicsInt : public ADIntegratedBC
 {
 public:
   static InputParameters validParams();
-  ionicSEBV(const InputParameters & parameters);
+  ButlerVolmerIonicsInt(const InputParameters & parameters);
 
 protected:
   virtual ADReal computeQpResidual() override;

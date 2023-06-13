@@ -4,14 +4,12 @@
 #include "ADInterfaceKernel.h"
 
 // Forward Declarations
-class miecSEInterfaceEn;
-
-class miecSEInterfaceEn : public ADInterfaceKernel
+class MiecSEInterfaceEn : public ADInterfaceKernel
 {
 public:
   static InputParameters validParams();
 
-  miecSEInterfaceEn(const InputParameters & parameters);
+  MiecSEInterfaceEn(const InputParameters & parameters);
 
 protected:
   virtual ADReal computeQpResidual(Moose::DGResidualType type) override;

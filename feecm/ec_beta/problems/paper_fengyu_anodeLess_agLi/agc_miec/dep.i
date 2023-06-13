@@ -4,15 +4,17 @@
 # INTERNAL# length: um,                potential: mV,       current: nA,         time: s
 
 [Mesh]
- uniform_refine = 1
+# uniform_refine = 1
  [importMesh]
    type = FileMeshGenerator
-   file = data/mdl.msh
+   file = data/purePore.msh
  []
 []
 
 [Variables]
   [potLi]
+  []
+  [potEn]
   []
 []
 
@@ -25,6 +27,14 @@
     order = CONSTANT
     family = MONOMIAL
   []
+  [iEn_x]
+    order = CONSTANT
+    family = MONOMIAL
+  []
+  [iEn_y]
+    order = CONSTANT
+    family = MONOMIAL
+  []
 
 []
 
@@ -33,6 +43,14 @@
     type = IonicDiffusion
     variable = potLi
     diffusivity = ionic_conductivity
+    block = "blockBL"
+  []
+
+  [electronic_conduction]
+    type = IonicDiffusion
+    variable = potEn
+    diffusivity = electronic_conductivity
+    block = "blockBL"
   []
 
 []
@@ -54,13 +72,37 @@
     execute_on = timestep_end
     potential = potLi
   []
+
+  [iEn_x]
+    type = CurrentDensity
+    variable = iEn_x
+    component = x
+    conductivity = electronic_conductivity
+    execute_on = timestep_end
+    potential = potEn
+  []
+  [iEn_y]
+    type = CurrentDensity
+    variable = iEn_y
+    component = y
+    conductivity = electronic_conductivity
+    execute_on = timestep_end
+    potential = potEn
+  []
 []
 
 [BCs]
-  [anode_BV]
-    type = IonicsBV
+  [anodeCC_BV]
+    type = ionicSEBV
     variable = potLi
-    boundary = blockSE_btm
+    boundary = interface
+    LiPotElectrode = 1.35
+    ex_current= 13
+  []
+  [anode_BV]
+    type = ionicSEBV
+    variable = potLi
+    boundary = 'blockSE_btm_lft blockSE_btm_rgt'
     LiPotElectrode = 0
     ex_current= 13
   []
@@ -74,7 +116,7 @@
 []
 
 [Materials/constant]
-  type = Ionics
+  type = ionicSE
   ionic_conductivity = 1
 []
 
@@ -94,14 +136,14 @@
   [anode_current]
     type = SideValueSampler
     variable = 'iLi_x iLi_y'
-    boundary = blockSE_btm
+    boundary = 'blockSE_btm_lft interface blockSE_btm_rgt'
     sort_by = x
   []
 
   [anode_potential]
     type = SideValueSampler
     variable = 'potLi'
-    boundary = blockSE_btm
+    boundary = 'blockSE_btm_lft interface blockSE_btm_rgt'
     sort_by = x
   []
 []
@@ -109,6 +151,6 @@
 [Outputs]
   execute_on = 'timestep_end'
   exodus = true
-  file_base = rst/mdl
+  file_base = rst/mdlAg
   csv = true
 []

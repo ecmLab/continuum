@@ -30,14 +30,14 @@
 
 [Kernels]
   [ionic_conduction]
-    type = ionicDiffusion
+    type = IonicDiffusion
     variable = potLi
     diffusivity = ionic_conductivity
     block = "blockSE"
   []
 
   [metal_diffusion]
-    type = ionicDiffusion
+    type = IonicDiffusion
     variable = potLi
     diffusivity = 0.0001
     block = "blockAg"
@@ -47,7 +47,7 @@
 
 [AuxKernels]
   [iLi_x]
-    type = currentDensity
+    type = CurrentDensity
     variable = iLi_x
     component = x
     conductivity = ionic_conductivity
@@ -55,7 +55,7 @@
     potential = potLi
   []
   [iLi_y]
-    type = currentDensity
+    type = CurrentDensity
     variable = iLi_y
     component = y
     conductivity = ionic_conductivity
@@ -66,14 +66,14 @@
 
 [BCs]
   [interface_BV]
-    type = ionicSEBV
+    type = IonicSEBV
     variable = potLi
     boundary = interface
     LiPotElectrode = 1.35
     ex_current= 13
   []
   [anode_BV]
-    type = ionicSEBV
+    type = IonicSEBV
     variable = potLi
     boundary = 'blockSE_btm_lft blockSE_btm_rgt'
     LiPotElectrode = 0
@@ -89,7 +89,7 @@
 []
 
 [Materials/constant]
-  type = ionicSE
+  type = IonicSE
   ionic_conductivity = 1
 []
 

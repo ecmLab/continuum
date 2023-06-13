@@ -2,20 +2,18 @@
 #pragma once
 
 #include "ADMaterial.h"
-class miecSEAgC;
-
 /**
  * Material-derived objects override the computeQpProperties()
  * function.  They must declare and compute material properties for
  * use by other objects in the calculation such as Kernels and
  * BoundaryConditions.
  */
-class miecSEAgC : public ADMaterial
+class MiecSEAgC : public ADMaterial
 {
 public:
   static InputParameters validParams();
 
-  miecSEAgC(const InputParameters & parameters);
+  MiecSEAgC(const InputParameters & parameters);
 
 protected:
   /// Necessary override. This is where the values of the properties are computed.

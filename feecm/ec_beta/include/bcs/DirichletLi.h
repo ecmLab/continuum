@@ -3,8 +3,6 @@
 
 #include "ADNodalBC.h"
 
-class DirichletLi;
-
 /// Implements a coupled Dirichlet BC where u = alpha * some_var on the boundary.
 class DirichletLi : public ADNodalBC
 {

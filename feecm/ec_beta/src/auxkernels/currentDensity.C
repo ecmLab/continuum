@@ -1,9 +1,9 @@
-#include "currentDensity.h"
+#include "CurrentDensity.h"
 
-registerMooseObject("ecBetaApp", currentDensity);
+registerMooseObject("ecBetaApp", CurrentDensity);
 
 InputParameters
-currentDensity::validParams()
+CurrentDensity::validParams()
 {
   InputParameters params = AuxKernel::validParams();
 
@@ -13,7 +13,7 @@ currentDensity::validParams()
   MooseEnum component("x y z");
 
   // Use the MooseEnum to add a parameter called "component"
-  params.addRequiredParam<MooseEnum>("component", component, "The desired component of current density.");
+  params.addRequiredParam<MooseEnum>("component", component, "The desired component of Current density.");
   params.addRequiredParam<MaterialPropertyName>("conductivity", "The conductivity, in mS/cm.");
 
   // Add a "coupling paramater" to get a variable from the input file.
@@ -22,7 +22,7 @@ currentDensity::validParams()
   return params;
 }
 
-currentDensity::currentDensity(const InputParameters & parameters)
+CurrentDensity::CurrentDensity(const InputParameters & parameters)
   : AuxKernel(parameters),
 
     // Automatically convert the MooseEnum to an integer
@@ -39,7 +39,7 @@ currentDensity::currentDensity(const InputParameters & parameters)
 }
 
 Real
-currentDensity::computeValue()
+CurrentDensity::computeValue()
 {
   // Access the gradient of the potential at this quadrature point, then pull out the "component" of
   // it requested (x, y, z). Note, that getting a particular component of a gradient is done using

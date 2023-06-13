@@ -8,12 +8,12 @@
  * Their job is to declare properties for use by other objects in the
  * calculation such as Kernels and BoundaryConditions.
  */
-class paperHongli : public Material
+class PaperHongli : public Material
 {
 public:
   static InputParameters validParams();
 
-  paperHongli(const InputParameters & parameters);
+  PaperHongli(const InputParameters & parameters);
 
 protected:
   /// Necessary override. This is where the values of the properties are computed.

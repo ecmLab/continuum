@@ -1,9 +1,9 @@
-#include "ionicDiffusion.h"
+#include "ChargedTransport.h"
 
-registerADMooseObject("ecBetaApp", ionicDiffusion);
+registerADMooseObject("ecBetaApp", ChargedTransport);
 
 InputParameters
-ionicDiffusion::validParams()
+ChargedTransport::validParams()
 {
     InputParameters params = ADKernel::validParams();
     params.addClassDescription("Compute the laplacian equation.");
@@ -11,7 +11,7 @@ ionicDiffusion::validParams()
     return params;
 }
 
-ionicDiffusion::ionicDiffusion(const InputParameters & parameters)
+ChargedTransport::ChargedTransport(const InputParameters & parameters)
   : ADKernel(parameters),
 
 // Get the parameters from the input file
@@ -21,7 +21,7 @@ ionicDiffusion::ionicDiffusion(const InputParameters & parameters)
 }
 
 ADReal
-ionicDiffusion::computeQpResidual()
+ChargedTransport::computeQpResidual()
 {
   ADReal k = 10.0 * MetaPhysicL::raw_value(_diffusivity_coef[_qp]) * _grad_test[_i][_qp] * _grad_u[_qp]; // The prefactor 10.0 is due to unit conversion
 

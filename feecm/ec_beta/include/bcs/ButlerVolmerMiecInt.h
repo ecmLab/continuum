@@ -5,26 +5,23 @@
 #include "ADIntegratedBC.h"
 
 // Forward declare the class being created and the validParams function
-class miecSEVoidBV;
-
-//** Tafel relation is used for deposition at Li metal/SE interface
-
-class miecSEVoidBV : public ADIntegratedBC
+class ButlerVolmerMiecInt : public ADIntegratedBC
 {
 public:
   static InputParameters validParams();
-  miecSEVoidBV(const InputParameters & parameters);
+  ButlerVolmerMiecInt(const InputParameters & parameters);
 
 protected:
   virtual ADReal computeQpResidual() override;
-
-  // The electric potential
-  const ADVariableValue & _potRef;
+  
+  // The electric potential of electron
+  const ADVariableValue & _potEn;
 
   /// Get parameters from Material system
   const ADMaterialProperty<Real> & _exchange_current;
   const ADMaterialProperty<Real> & _reaction_rate;
-  const ADMaterialProperty<Real> & _electron_concentration;
+  MaterialPropertyName _LiPotElectrode;
+  const ADMaterialProperty<Real> & _LiPotEle;
   const Real & _F_RT;
 
 //  usingIntegratedBCMembers;

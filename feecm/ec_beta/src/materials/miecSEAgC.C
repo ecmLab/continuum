@@ -1,10 +1,10 @@
 
-#include "miecSEAgC.h"
+#include "MiecSEAgC.h"
 #include "Function.h"
 
-registerADMooseObject("ecBetaApp", miecSEAgC);
+registerADMooseObject("ecBetaApp", MiecSEAgC);
 
-InputParameters miecSEAgC::validParams()
+InputParameters MiecSEAgC::validParams()
 {
   InputParameters params = ADMaterial::validParams();
 
@@ -41,7 +41,7 @@ InputParameters miecSEAgC::validParams()
   return params;
 }
 
-miecSEAgC::miecSEAgC(const InputParameters & parameters)
+MiecSEAgC::MiecSEAgC(const InputParameters & parameters)
   : ADMaterial(parameters),
 
     // Get the parameters from the input file
@@ -72,7 +72,7 @@ miecSEAgC::miecSEAgC(const InputParameters & parameters)
 }
 
 void
-miecSEAgC::computeQpProperties()
+MiecSEAgC::computeQpProperties()
 {
   _ionic_conductivity_SE[_qp] = _inIonicConductivitySE;
   _ionic_conductivity_AgC[_qp] = _inIonicConductivityAgC;

@@ -1,10 +1,10 @@
 
-#include "LiPotMiecSE.h"
+#include "LiPotMiec.h"
 
-registerMooseObject("ecBetaApp", LiPotMiecSE);
+registerMooseObject("ecBetaApp", LiPotMiec);
 
 InputParameters
-LiPotMiecSE::validParams()
+LiPotMiec::validParams()
 {
   InputParameters params = AuxKernel::validParams();
 
@@ -17,7 +17,7 @@ LiPotMiecSE::validParams()
   return params;
 }
 
-LiPotMiecSE::LiPotMiecSE(const InputParameters & parameters)
+LiPotMiec::LiPotMiec(const InputParameters & parameters)
   : AuxKernel(parameters),
 
     // Couple to the potential of Li+
@@ -30,7 +30,7 @@ LiPotMiecSE::LiPotMiecSE(const InputParameters & parameters)
 }
 
 Real
-LiPotMiecSE::computeValue()
+LiPotMiec::computeValue()
 {
   Real kk = _potLi[_qp] + _potEn[_qp];
 //  if (kk<0) {

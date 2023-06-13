@@ -3,14 +3,12 @@
 #include "ADInterfaceKernel.h"
 
 // Forward Declarations
-class ionicSEInterface;
-
-class ionicSEInterface : public ADInterfaceKernel
+class IonicSEInterface : public ADInterfaceKernel
 {
 public:
   static InputParameters validParams();
 
-  ionicSEInterface(const InputParameters & parameters);
+  IonicSEInterface(const InputParameters & parameters);
 
 protected:
   virtual ADReal computeQpResidual(Moose::DGResidualType type) override;
