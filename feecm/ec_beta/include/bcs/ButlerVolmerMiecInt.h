@@ -14,15 +14,14 @@ public:
 protected:
   virtual ADReal computeQpResidual() override;
   
-  // The electric potential of electron
-  const ADVariableValue & _potEn;
+  // Get parameters from input
+   const Real & _F_RT;
+   const Real & _reaction_rate;
+   const Real & _LiPotRef;
+   const Real & _exchange_current;
 
-  /// Get parameters from Material system
-  const ADMaterialProperty<Real> & _exchange_current;
-  const ADMaterialProperty<Real> & _reaction_rate;
-  MaterialPropertyName _LiPotElectrode;
-  const ADMaterialProperty<Real> & _LiPotEle;
-  const Real & _F_RT;
+   // The electric potential of electron
+  const ADVariableValue & _potEn;
 
 //  usingIntegratedBCMembers;
 };
