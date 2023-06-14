@@ -30,14 +30,14 @@
 
 [Kernels]
   [ionic_conduction]
-    type = IonicDiffusion
+    type = ChargedTransport
     variable = potLi
     diffusivity = ionic_conductivity
     block = "blockSE"
   []
 
   [metal_diffusion]
-    type = IonicDiffusion
+    type = ChargedTransport
     variable = potLi
     diffusivity = 0.0001
     block = "blockAg"
@@ -66,17 +66,17 @@
 
 [BCs]
   [interface_BV]
-    type = IonicSEBV
+    type = ButlerVolmerIonicsInt
     variable = potLi
     boundary = interface
-    LiPotElectrode = 1.35
+    LiPot = 1.35
     ex_current= 13
   []
   [anode_BV]
-    type = IonicSEBV
+    type = ButlerVolmerIonicsInt
     variable = potLi
     boundary = 'blockSE_btm_lft blockSE_btm_rgt'
-    LiPotElectrode = 0
+    LiPot = 0
     ex_current= 13
   []
   [cathode_current]

@@ -93,19 +93,22 @@
 
 [BCs]
   [anodeCC_BV]
-    type = ionicSEBV
+    type = ButlerVolmerMiecInt
     variable = potLi
-    boundary = interface
-    LiPotElectrode = 1.35
+    potEn = potEn
+    boundary = blockBL_btm
+    LiPotRef = 0.0
     ex_current= 13
   []
-  [anode_BV]
-    type = ionicSEBV
+
+  [pore_BV]
+    type = ButlerVolmerMiecSrf
     variable = potLi
-    boundary = 'blockSE_btm_lft blockSE_btm_rgt'
-    LiPotElectrode = 0
+    potEn = potEn
+    boundary = pore
     ex_current= 13
   []
+
   [cathode_current]
     type = ADNeumannBC
     variable = potLi

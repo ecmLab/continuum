@@ -17,7 +17,7 @@ protected:
   /// Get parameters from Material system
   const Real & _F_RT;
   const Real & _reaction_rate;
-  const Real & _LiPotEle;
+  const Real & _LiPotRef;
   const Real & _exchange_current;
 //  MaterialPropertyName _ex_current;
 //  const ADMaterialProperty<Real> & _exchange_current;

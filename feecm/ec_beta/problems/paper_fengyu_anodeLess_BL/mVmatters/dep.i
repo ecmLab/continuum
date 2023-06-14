@@ -58,10 +58,10 @@
 
 [BCs]
   [anode_BV]
-    type = IonicsBV
+    type = ButlerVolmerIonicsInt
     variable = potLi
     boundary = blockSE_btm
-    LiPotElectrode = 0
+    LiPot = 0
     ex_current= 13
   []
   [cathode_current]
