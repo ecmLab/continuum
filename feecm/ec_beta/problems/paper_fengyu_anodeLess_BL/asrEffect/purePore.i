@@ -92,7 +92,22 @@
 []
 
 [BCs]
-  [anodeCC_BV]
+  [delithiation_BV]    ## De-lithiation at the SE/BL interface
+    type = ButlerVolmerMiecInt
+    variable = potLi
+    potEn = potEn
+    boundary = blockBL_top
+    LiPotRef = 0.0
+    ex_current= 13
+  []
+  [pore_BV]            ## Li-depostion at the pore surface inside the BL
+    type = ButlerVolmerMiecSrf
+    variable = potLi
+    potEn = potEn
+    boundary = pore
+    ex_current= 13
+  []
+  [lithiation_BV]      ## Lithiation at the CC/BL interface
     type = ButlerVolmerMiecInt
     variable = potLi
     potEn = potEn
@@ -101,26 +116,41 @@
     ex_current= 13
   []
 
-  [pore_BV]
-    type = ButlerVolmerMiecSrf
-    variable = potLi
-    potEn = potEn
+  [coupling_current_SE]   ## The coupling of electronic and ionic current at the SE/BL interface
+    type = CouplingMiec
+    variable = potEn
+    potLi  = potLi
+    boundary = blockBL_top
+    i_reference  = -0.68   ## reference current at this interface, in unit mA/cm^2; negative means cell charging
+  []
+  [coupling_current_pore]   ## The coupling of electronic and ionic current at the pore surface
+    type = CouplingMiec
+    variable = potEn
+    potLi  = potLi
     boundary = pore
-    ex_current= 13
+    i_reference  = 0.0   ## reference current at this interface, in unit mA/cm^2
+  []
+  [coupling_current_CC]   ## The coupling of electronic and ionic current at the CC/BL interface
+    type = CouplingMiec
+    variable = potEn
+    potLi  = potLi
+    boundary = blockBL_btm
+    i_reference  = 0.68   ## reference current at this interace, in unit mA/cm^2; 
   []
 
-  [cathode_current]
-    type = ADNeumannBC
-    variable = potLi
-    boundary = blockSE_top
-    value    = 0.68   ## applied current density. in unit mA/cm^2
+  [anodeEn_potential]
+    type = DirichletBC
+    variable = potEn
+    boundary = blockBL_btm
+    value = 0
   []
 
 []
 
 [Materials/constant]
-  type = ionicSE
+  type = Miec
   ionic_conductivity = 1
+  electronic_conductivity = 10
 []
 
 [Executioner]
@@ -135,25 +165,25 @@
   l_tol = 1e-8
 []
 
-[VectorPostprocessors]
-  [anode_current]
-    type = SideValueSampler
-    variable = 'iLi_x iLi_y'
-    boundary = 'blockSE_btm_lft interface blockSE_btm_rgt'
-    sort_by = x
-  []
+#[VectorPostprocessors]
+#  [anode_current]
+#    type = SideValueSampler
+#    variable = 'iLi_x iLi_y'
+#    boundary = 'blockSE_btm_lft interface blockSE_btm_rgt'
+#    sort_by = x
+#  []
 
-  [anode_potential]
-    type = SideValueSampler
-    variable = 'potLi'
-    boundary = 'blockSE_btm_lft interface blockSE_btm_rgt'
-    sort_by = x
-  []
-[]
+#  [anode_potential]
+#    type = SideValueSampler
+#    variable = 'potLi'
+#    boundary = 'blockSE_btm_lft interface blockSE_btm_rgt'
+#    sort_by = x
+#  []
+#[]
 
 [Outputs]
   execute_on = 'timestep_end'
   exodus = true
-  file_base = rst/mdlAg
+  file_base = rst/mdl
   csv = true
 []

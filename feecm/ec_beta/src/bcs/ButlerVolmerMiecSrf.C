@@ -41,9 +41,9 @@ ButlerVolmerMiecSrf::computeQpResidual()
   ADReal k1 = std::exp(_reaction_rate * _F_RT * (-_u[_qp] - _potEn[_qp]));
   ADReal k2 = std::exp(- (1 - _reaction_rate) * _F_RT * (-_u[_qp] - _potEn[_qp]));
 
-  if (k1>k2) {
+  if (k1<k2) {
     return -_test[_i][_qp] * _ele_conc * _exchange_current * (k1-k2);
   } else {
-    return _test[_i][_qp] * 0.0;
+    return -_test[_i][_qp] * 0.0;
   }
 }

@@ -30,7 +30,7 @@
 
 [Kernels]
   [ionic_conduction]
-    type = IonicDiffusion
+    type = ChargedTransport
     variable = potLi
     diffusivity = ionic_conductivity
   []
@@ -61,21 +61,21 @@
     type = ButlerVolmerIonicsInt
     variable = potLi
     boundary = blockSE_btm
-    LiPot = 0
+    LiPotRef = 0
     ex_current= 13
   []
   [cathode_current]
     type = ADNeumannBC
     variable = potLi
     boundary = blockSE_top
-    value    = 0.68   ## applied current density. in unit mA/cm^2
+    value    = 0.68   ## applied current density, in unit mA/cm^2; positive means charging
   []
 
 []
 
 [Materials/constant]
   type = Ionics
-  ionic_conductivity = 1
+  ionic_conductivity = 0.1
 []
 
 [Executioner]

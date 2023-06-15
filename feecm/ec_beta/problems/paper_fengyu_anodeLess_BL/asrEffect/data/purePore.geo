@@ -47,7 +47,7 @@ Physical Curve("blockBL_top") = {3};
 //+
 Physical Curve("blockBL_lft") = {4};
 //+
-Physical Curve("pore")     = {52};
+Physical Curve("pore")     = {5,6,7,8};
 //+
 Physical Surface("blockBL") = {1};
 //+

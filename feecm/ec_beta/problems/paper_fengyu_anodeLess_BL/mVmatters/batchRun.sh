@@ -9,7 +9,7 @@ for iVlt in {-5..0}
 # generate the input data
 #  sed "s/ionic_conductivity = 1/ionic_conductivity = 10e${iSgm}/"  < dep.i > iRun.i
 #  sed "s/ex_current= 13/ex_current= 1.3e${iExc}/" < dep.i > iRun.i
-  sed "s/LiPot = 0/LiPot = ${iVlt}/" < dep.i > iRun.i
+  sed "s/LiPotRef = 0/LiPot = ${iVlt}/" < dep.i > iRun.i
 #  sed "s/LiPot = -0.135/LiPot = $(echo "-0.135 * $iPrs" | bc -l)/" < dep.i > iRun.i
 
 # Run the simulation
