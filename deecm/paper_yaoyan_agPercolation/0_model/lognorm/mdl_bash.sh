@@ -26,7 +26,7 @@ do
 ###Submit file for calculation
   cd ../../data/sz_lognorm/sz${irt}/
   sbatch mdl_sub.sh
-  cd ../../../model/lognorm/
+  cd ../../../0_model/lognorm/
   rm -f mdl_run.m
 
 done

@@ -4,7 +4,7 @@
 clear   					# Clear all previous runs
 
 # parameters of the box
-variable  sxy    equal 2
+variable  sxy    equal 2.0
 variable  sz     equal 30.04
 variable  imdl   equal 1
 variable  tarp   equal 0.1                        # The target pressure to stop the packing

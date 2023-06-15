@@ -3,7 +3,8 @@
 #SBATCH --job-name=Ag_aC
 #
 # Partition:
-#SBATCH --partition=tier3
+##SBATCH --partition=tier3
+#SBATCH --partition=debug
 #
 # Processors:
 #SBATCH --nodes=1

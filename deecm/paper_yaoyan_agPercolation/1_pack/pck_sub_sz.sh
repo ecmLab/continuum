@@ -7,11 +7,11 @@
 #
 # Processors:
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=4
-#SBATCH --cpus-per-task=4
+#SBATCH --ntasks-per-node=16
+#SBATCH --cpus-per-task=1
 #
 # Wall clock limit:
-#SBATCH --time=20:00:00
+#SBATCH --time=40:00:00
 #SBATCH --mem=6g
 
 ## Commands to run:
