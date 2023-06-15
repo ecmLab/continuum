@@ -21,42 +21,14 @@ protected:
 
   /// Values from the input file
   const Real & _inIonicConductivity;
-  const Real & _inMetalConductivity;
   const Real & _inElectronicConductivity;
-  const Real & _inInletCurrent;
-  const Real & _inExchangeCurrent;
-  const Real & _inReactionRate;
-  const Real & _inElectronConcentration;
-  const Real & _inLiPotAnode;
-  const Real & _inLiPotCathode;
+  const Real & _inGbConductivity;
 
   /// The ionic conductivity of Li+ in SE
   ADMaterialProperty<Real> & _ionic_conductivity;
-  
-  /// The electric conductivity of electron in Li metal
-  ADMaterialProperty<Real> & _metal_conductivity;
-  
-  /// The electronic conductivity of SE
   ADMaterialProperty<Real> & _electronic_conductivity;
-
-  /// The inlet current density from cathode boundary
-  ADMaterialProperty<Real> & _inlet_current;
-
-  /// The exchange current density at Li metal/SE interface
-  ADMaterialProperty<Real> & _exchange_current;
+  ADMaterialProperty<Real> & _gb_conductivity;
   
-  /// The reaction rate of the Li/Li+ reaction
-  ADMaterialProperty<Real> & _reaction_rate;
-
-  /// The relative electron concentration in the SE
-  ADMaterialProperty<Real> & _electron_concentration;
-
-  /// The Li chemical potential in Anode, unit V.
-  ADMaterialProperty<Real> & _LiPotAnode;
-
-  /// The Li chemical potential in Cathode, unit V.
-  ADMaterialProperty<Real> & _LiPotCathode;
-
 //  usingMaterialMembers;
 //  using ADMaterial<compute_stage>::_communicator;
 };

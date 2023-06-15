@@ -25,9 +25,10 @@ ChargedTransport::computeQpResidual()
 {
   ADReal k = 10.0 * MetaPhysicL::raw_value(_diffusivity_coef[_qp]) * _grad_test[_i][_qp] * _grad_u[_qp]; // The prefactor 10.0 is due to unit conversion
 
-  if(_diffusivity == "electronic_conductivity") {
-    k = -k;
-  }
+//  if(_diffusivity == "electronic_conductivity") {
+//    k = -k;
+//  }
+
   return k;
 }
 

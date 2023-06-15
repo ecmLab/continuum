@@ -89,7 +89,7 @@
 []
 
 [Materials/constant]
-  type = IonicSE
+  type = Ionics
   ionic_conductivity = 1
 []
 
