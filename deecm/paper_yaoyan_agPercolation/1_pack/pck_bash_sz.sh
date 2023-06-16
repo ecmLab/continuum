@@ -13,12 +13,12 @@ do
 #  sed "s/-np 20/-np $((100*$irt-80))/" < job0.sh > subjobtest.sh
 
 ##Copy files into each directory
-  cp pck_run.in       ../data/sz_lognorm_061523/sz${irt}/
-  cp pck_sub_sz.sh    ../data/sz_lognorm_061523/sz${irt}/
+  cp pck_run.in       ../data/sz_lognorm_061023/sz${irt}/
+  cp pck_sub_sz.sh    ../data/sz_lognorm_061023/sz${irt}/
 
 ###Submit file for calculation
-  cd ../data/sz_lognorm_061523/sz${irt}/  
-#  sbatch pck_sub_sz.sh
+  cd ../data/sz_lognorm_061023/sz${irt}/  
+  sbatch pck_sub_sz.sh
   cd ../../../1_pack/
   rm -f pck_run.in tmp* job*
 

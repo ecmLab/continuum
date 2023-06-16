@@ -3,6 +3,7 @@
 #SBATCH --job-name=Ag_aC
 #
 # Partition:
+##SBATCH --partition=debug
 #SBATCH --partition=tier3
 #
 # Processors:
@@ -11,8 +12,8 @@
 #SBATCH --cpus-per-task=1
 #
 # Wall clock limit:
-#SBATCH --time=40:00:00
-#SBATCH --mem=6g
+#SBATCH --time=72:00:00
+#SBATCH --mem=200g
 
 ## Commands to run:
 srun lmp -log none -in pck_run.in
