@@ -33,7 +33,7 @@ for i = length(dia):-1:1
                              (try_p(2)-cord(1:idx,6)).^2 + ...
                              (try_p(3)-cord(1:idx,7)).^2);
                 diff  = dis(1:idx) - (lDia + cord(1:idx,3))/2;
-                if diff >= -0.01
+                if diff > 0.0
                     idx         = idx + 1;
                     ipt         = ipt + 1;
                     cord(idx,:) = [idx, type, lDia, den, try_p];

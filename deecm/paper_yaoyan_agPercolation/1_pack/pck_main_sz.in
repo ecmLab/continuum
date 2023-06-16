@@ -3,7 +3,8 @@
 clear   					# Clear all previous runs
 
 # parameters of the box
-variable  sxy    equal 0.6
+variable  sxy    equal 1
+#variable  sxy    equal 0.6
 variable  sz     equal 30.0125
 variable  imdl   equal 1
 variable  tarp   equal 0.1                        # The target pressure to stop the packing
@@ -11,11 +12,11 @@ variable  tarp   equal 0.1                        # The target pressure to stop 
 variable  kn_11  equal 175661.4
 variable  kn_22  equal 148.148
 variable  kn_12  equal 82054.3
-variable  kn_x3  equal 1000000
+variable  kn_x3  equal 10000
 variable  kt_11  equal 203681.0
 variable  kt_22  equal 186.046
 variable  kt_12  equal 99.20
-variable  kt_x3  equal 100000
+variable  kt_x3  equal 1000
 variable  gma_n  equal 1000
 variable  xmu    equal 8
 ### Environment Setup
@@ -23,7 +24,7 @@ units         micro           # micro unit system is suitable for the current re
 atom_style    sphere          # Granular Particle method will be used
 boundary      fm fm fm           # Periodic condition in x and y directions, fixed condition in z direction
 comm_modify   vel yes         # Communicate velocity info with ghost atoms
-neighbor      0.05 bin         # 0.2 micron extra distance beyond force cutoff
+neighbor      0.002 bin         # 0.2 micron extra distance beyond force cutoff
 neigh_modify  delay 0         # Update the neighbor list every step
 timestep      0.0001          # Time step is in unit micro-seconds
 
