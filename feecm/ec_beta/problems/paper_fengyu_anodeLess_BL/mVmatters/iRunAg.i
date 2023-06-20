@@ -4,10 +4,10 @@
 # INTERNAL# length: um,                potential: mV,       current: nA,         time: s
 
 [Mesh]
- uniform_refine = 1
+# uniform_refine = 1
  [importMesh]
    type = FileMeshGenerator
-   file = data/mdlAg.msh
+   file = data/4Ag3defects.msh
  []
 []
 
@@ -30,14 +30,14 @@
 
 [Kernels]
   [ionic_conduction]
-    type = ionicDiffusion
+    type = ChargedTransport
     variable = potLi
     diffusivity = ionic_conductivity
     block = "blockSE"
   []
 
   [metal_diffusion]
-    type = ionicDiffusion
+    type = ChargedTransport
     variable = potLi
     diffusivity = 0.0001
     block = "blockAg"
@@ -47,7 +47,7 @@
 
 [AuxKernels]
   [iLi_x]
-    type = currentDensity
+    type = CurrentDensity
     variable = iLi_x
     component = x
     conductivity = ionic_conductivity
@@ -55,7 +55,7 @@
     potential = potLi
   []
   [iLi_y]
-    type = currentDensity
+    type = CurrentDensity
     variable = iLi_y
     component = y
     conductivity = ionic_conductivity
@@ -66,18 +66,18 @@
 
 [BCs]
   [interface_BV]
-    type = ionicSEBV
+    type = ButlerVolmerIonics
     variable = potLi
     boundary = interface
-    LiPotElectrode = 0
-    ex_current= 13
+    LiPotRef = -1
+    ex_current= 1.3
   []
   [anode_BV]
-    type = ionicSEBV
+    type = ButlerVolmerIonics
     variable = potLi
-    boundary = 'blockSE_btm_lft blockSE_btm_rgt'
-    LiPotElectrode = 0
-    ex_current= 13
+    boundary = 'blockSE_btm'
+    LiPotRef = 0
+    ex_current= 1.3
   []
   [cathode_current]
     type = ADNeumannBC
@@ -89,7 +89,7 @@
 []
 
 [Materials/constant]
-  type = ionicSE
+  type = Ionics
   ionic_conductivity = 1
 []
 
@@ -109,14 +109,14 @@
   [anode_current]
     type = SideValueSampler
     variable = 'iLi_x iLi_y'
-    boundary = 'blockSE_btm_lft interface blockSE_btm_rgt'
+    boundary = 'blockSE_btm interface'
     sort_by = x
   []
 
   [anode_potential]
     type = SideValueSampler
     variable = 'potLi'
-    boundary = 'blockSE_btm_lft interface blockSE_btm_rgt'
+    boundary = 'blockSE_btm interface'
     sort_by = x
   []
 []
@@ -124,6 +124,6 @@
 [Outputs]
   execute_on = 'timestep_end'
   exodus = true
-  file_base = rst/mdlAg
+  file_base = rst/4Ag3defects
   csv = true
 []

@@ -1,14 +1,14 @@
 #!/bin/bash
 
-for iAg in {-5..0}
+for iAg in {-3..-1}
  do
 # Run the simulation
-  sed "s/LiPot = 1.35/LiPot = ${iAg}/" < depAg.i > iRunAg.i
+  sed "s/LiPotRef = -0.35/LiPotRef = ${iAg}/" < depAg.i > iRunAg.i
    ../../../ec_beta-opt -i iRunAg.i
 
 # Change file name for later data analysis
-  mv rst/mdlAg_anode_current_0001.csv rst/andCrnt_Ag${iAg}.csv
-  mv rst/mdlAg_anode_potential_0001.csv rst/andPot_Ag${iAg}.csv
+  mv rst/4Ag3defects_anode_current_0001.csv rst/4Ag3defects_andCrnt_Ag${iAg}.csv
+  mv rst/4Ag3defects_anode_potential_0001.csv rst/4Ag3defects_andPot_Ag${iAg}.csv
    
 done
 

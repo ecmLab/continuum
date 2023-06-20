@@ -14,7 +14,7 @@ protected:
   virtual ADReal computeQpResidual() override;
 
   // Get parameters from input
-  const Real & _i_ref;
+  const Real & _liCrtRef;
 
   // Get parameters from Material system
   const ADMaterialProperty<Real> & _ionic_conductivity;

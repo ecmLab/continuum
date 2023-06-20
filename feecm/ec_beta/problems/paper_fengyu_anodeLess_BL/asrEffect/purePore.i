@@ -92,26 +92,30 @@
 []
 
 [BCs]
-  [delithiation_BV]    ## De-lithiation at the SE/BL interface
-    type = ButlerVolmerMiecInt
+  [delithiation_BV]    ##Lithiation at the SE/BL interface
+    type = ButlerVolmerMiec
     variable = potLi
     potEn = potEn
     boundary = blockBL_top
+    LiCrtRef = -0.68
     LiPotRef = 0.0
     ex_current= 13
   []
   [pore_BV]            ## Li-depostion at the pore surface inside the BL
-    type = ButlerVolmerMiecSrf
+    type = ButlerVolmerMiec
     variable = potLi
     potEn = potEn
     boundary = pore
+    LiCrtRef = 0.0
+    LiPotRef = 0.0
     ex_current= 13
   []
   [lithiation_BV]      ## Lithiation at the CC/BL interface
-    type = ButlerVolmerMiecInt
+    type = ButlerVolmerMiec
     variable = potLi
     potEn = potEn
     boundary = blockBL_btm
+    LiCrtRef = 0.0
     LiPotRef = 0.0
     ex_current= 13
   []
@@ -121,21 +125,21 @@
     variable = potEn
     potLi  = potLi
     boundary = blockBL_top
-    i_reference  = -0.68   ## reference current at this interface, in unit mA/cm^2; negative means cell charging
+    LiCrtRef  = -0.68   ## reference current at this interface, in unit mA/cm^2; negative means cell charging
   []
   [coupling_current_pore]   ## The coupling of electronic and ionic current at the pore surface
     type = CouplingMiec
     variable = potEn
     potLi  = potLi
     boundary = pore
-    i_reference  = 0.0   ## reference current at this interface, in unit mA/cm^2
+    LiCrtRef  = 0.0   ## reference current at this interface, in unit mA/cm^2
   []
   [coupling_current_CC]   ## The coupling of electronic and ionic current at the CC/BL interface
     type = CouplingMiec
     variable = potEn
     potLi  = potLi
     boundary = blockBL_btm
-    i_reference  = 0.68   ## reference current at this interace, in unit mA/cm^2; 
+    LiCrtRef  = 0.68   ## reference current at this interace, in unit mA/cm^2; 
   []
 
   [anodeEn_potential]
@@ -149,8 +153,8 @@
 
 [Materials/constant]
   type = Miec
-  ionic_conductivity = 1
-  electronic_conductivity = 10
+  ionic_conductivity = 100
+  electronic_conductivity = 10000
 []
 
 [Executioner]

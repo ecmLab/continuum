@@ -7,7 +7,7 @@
  uniform_refine = 1
  [importMesh]
    type = FileMeshGenerator
-   file = data/mdl.msh
+   file = data/mdl_3defects.msh
  []
 []
 
@@ -30,7 +30,7 @@
 
 [Kernels]
   [ionic_conduction]
-    type = ionicDiffusion
+    type = ChargedTransport
     variable = potLi
     diffusivity = ionic_conductivity
   []
@@ -39,7 +39,7 @@
 
 [AuxKernels]
   [iLi_x]
-    type = currentDensity
+    type = CurrentDensity
     variable = iLi_x
     component = x
     conductivity = ionic_conductivity
@@ -47,7 +47,7 @@
     potential = potLi
   []
   [iLi_y]
-    type = currentDensity
+    type = CurrentDensity
     variable = iLi_y
     component = y
     conductivity = ionic_conductivity
@@ -58,23 +58,23 @@
 
 [BCs]
   [anode_BV]
-    type = ionicSEBV
+    type = ButlerVolmerIonics
     variable = potLi
     boundary = blockSE_btm
-    LiPotElectrode = 0
-    ex_current= 13
+    LiPotRef = 0
+    ex_current= 1.3e1
   []
   [cathode_current]
     type = ADNeumannBC
     variable = potLi
     boundary = blockSE_top
-    value    = 0.68   ## applied current density. in unit mA/cm^2
+    value    = 0.68   ## applied current density, in unit mA/cm^2; positive means charging
   []
 
 []
 
 [Materials/constant]
-  type = ionicSE
+  type = Ionics
   ionic_conductivity = 1
 []
 
@@ -109,6 +109,6 @@
 [Outputs]
   execute_on = 'timestep_end'
   exodus = true
-  file_base = rst/mdl
+  file_base = rst/mdl_3defects
   csv = true
 []

@@ -7,7 +7,7 @@
  uniform_refine = 1
  [importMesh]
    type = FileMeshGenerator
-   file = data/mdl.msh
+   file = data/3defects.msh
  []
 []
 
@@ -58,11 +58,11 @@
 
 [BCs]
   [anode_BV]
-    type = ButlerVolmerIonicsInt
+    type = ButlerVolmerIonics
     variable = potLi
     boundary = blockSE_btm
     LiPotRef = 0
-    ex_current= 13
+    ex_current= 1.3
   []
   [cathode_current]
     type = ADNeumannBC
@@ -75,7 +75,7 @@
 
 [Materials/constant]
   type = Ionics
-  ionic_conductivity = 0.1
+  ionic_conductivity = 1
 []
 
 [Executioner]
@@ -109,6 +109,6 @@
 [Outputs]
   execute_on = 'timestep_end'
   exodus = true
-  file_base = rst/mdl
+  file_base = rst/3defects
   csv = true
 []
