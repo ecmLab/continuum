@@ -19,8 +19,8 @@ isz    = 4;
 % 2. Generate system, including box and system level variables
 [sys,ag,ac] = create_sys(ag, ac);
 
-% fprintf('The total particles are Ag = %6.4f , C = %6.4f\n',ag.nTot, ac.nTot);
-% fprintf('The initial porosity is : %6.4f\n',1-(ag.rVol+ac.rVol)/sys.vol);
+fprintf('The total particles are Ag = %6.4f , C = %6.4f\n',ag.nTot, ac.nTot);
+fprintf('The initial porosity is : %6.4f\n',1-(ag.rVol+ac.rVol)/sys.vol);
 
 % 3. Insert all Particles into the box, stored in sys.cord matrix:
   % 1st colume: id of particle;

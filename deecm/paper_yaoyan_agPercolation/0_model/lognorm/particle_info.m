@@ -34,10 +34,14 @@ ac         = struct;
 ac.nD      = 20;            % The number of sampling diameters of active carbon particles
 ac.den     = 2.1;           % The density of active carbon material, in unit picogram/micron^3, equivalent to g/cm^3
 ac.typ     = 2;             % Label active carbon particles as Type 2 particles
-ac.ave     = 0.02;          % The designed diameter of active carbon particles, in unit um; 0.2 is for plot; 0.02 is for calculation
-ac.min     = 0.015;         % The minimum diameter of ac particles
-ac.max     = 0.04;          % The maximum diameter of ac particles
+ac.ave     = 0.03;          % The designed diameter of active carbon particles, in unit um; 0.2 is for plot; 0.02 is for calculation
+ac.min     = 0.025;         % The minimum diameter of ac particles
+ac.max     = 0.05;          % The maximum diameter of ac particles
 ac.sgm     = 0.005;          % The deviation of ac particles
+% ac.ave     = 0.02;          % The designed diameter of active carbon particles, in unit um; 0.2 is for plot; 0.02 is for calculation
+% ac.min     = 0.015;         % The minimum diameter of ac particles
+% ac.max     = 0.04;          % The maximum diameter of ac particles
+% ac.sgm     = 0.005;          % The deviation of ac particles
 
 %% 3.Define ghost particles at the top of the system to apply pressure
 gst         = struct;
