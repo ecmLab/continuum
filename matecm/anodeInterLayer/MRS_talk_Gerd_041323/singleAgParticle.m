@@ -26,13 +26,13 @@ BL_por      = 0.5;                   % Inital porosity of the BL layer
 Ag_dia      = 0.04;                  % The diameter of Ag particles, in unit um
 Np          = length(Ag_dia);        % the number of particles included
 % 3. Material properties of the interfaces
-i_exc       = 13;                   % According to Chiku's paper (Microelectrode studies on charger transfer), unit mA/cm^2
+i_exc       = 1.3;                   % According to Chiku's paper (Microelectrode studies on charger transfer), unit mA/cm^2
 R_Mt        = 1000/(i_exc*FF/RT);    % ASR of charge-transfer resistance at Li-metal/SE interface, in unit Ohm*cm^2
 R_SE        = R_Mt/1.0;             % ASR of the charge-transfer resistance at the BL/SS interface, in unit Ohm*cm^2
 R_CC        = R_Mt/20.0;             % ASR of the charge-transfer resistance at the BL/CC interface, in unit Ohm*cm^2
 R_Pt        = R_Mt/5.0;             % ASR of the charge-transfer resistance at the BL/MetalParticle interface, in unit Ohm*cm^2
 % 4. Material properties of the Ag particles
-yp_end      = 0.7/(1-0.7);         % The terminal value of y in AgLi_y based on the solubility limit x=0.93
+yp_end      = 0.93/(1-0.93);         % The terminal value of y in AgLi_y based on the solubility limit x=0.93
 end_Eden    = yp_end*FF/(Ag_Mmol+yp_end*Li_Mmol)*10/36;   % The energy density of AgLi10, in unit mAh/g
 end_Mden    = 1.0;                   % Mass density of ending phase AgLi_yend, in unit g/cm^3
 end_dia     = Ag_dia .* (Ag_Mden/end_Mden * (1+Li_Mmol/Ag_Mmol*yp_end)).^ (1/3);  % The diameter of end AgLi_y, in unit um

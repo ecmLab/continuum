@@ -1,7 +1,7 @@
 %% This code is developed for the Li-Ag project, for SE-MIEC
 % This version considered the Liniearized BV relation, 
 % The intraparticle phase separation supressed
-% Howard Tu, 07/16/21
+% Howard Tu, 06/16/23
 clc;clear;
 set(0, 'DefaultLineLineWidth', 2);
 set(0,'defaultAxesFontName','Arial');
@@ -20,24 +20,22 @@ Li_Mden     = 0.534;                 % Mass density of Lithium, in unit g/cm^3
 Li_Vmol     = Li_Mmol/Li_Mden;       % Molar volume of Lithium, in unit cm^3/mol
 Li_K        = 11;                    % Bulk modulus of Lithium, in unit GPa
 % 2. Microstructural parameters
-Lx          = 10;                    % Length of the interlayer, in unit um
+Lx          = 10;                    % Thickness of the interlayer, in unit um
 Hx          = 0.0175;                % cross-section width, in unit um
 BL_por      = 0.4;                   % Inital porosity of the BL layer, according to paper "Highly cyclable..."
 Ag_dia      = 0.04;                  % The diameter of Ag particles, in unit um
+Dia_max     = (6/pi*BL_por*Lx*Hx^2)^(1/3); % The maximal diameter AgLiy can reach inside the BL, in unit um
 Np          = length(Ag_dia);        % the number of particles included
 % 3. Material properties of the interfaces
 i_exc       = 1.30;                   % According to Chiku's paper (Microelectrode studies on charger transfer), unit mA/cm^2
 R_Mt        = 1000/(i_exc*FF/RT);    % ASR of charge-transfer resistance at Li-metal/SE interface, in unit Ohm*cm^2
 R_SE        = R_Mt/1.0;             % ASR of the charge-transfer resistance at the BL/SS interface, in unit Ohm*cm^2
-R_CC        = R_Mt/10.0;             % ASR of the charge-transfer resistance at the BL/CC interface, in unit Ohm*cm^2
-R_Pt        = R_Mt/1.0;             % ASR of the charge-transfer resistance at the BL/MetalParticle interface, in unit Ohm*cm^2
+R_CC        = R_Mt/1.0;             % ASR of the charge-transfer resistance at the BL/CC interface, in unit Ohm*cm^2
+R_Pt        = R_Mt/5.0;             % ASR of the charge-transfer resistance at the BL/MetalParticle interface, in unit Ohm*cm^2
 % 4. Material properties of the Ag particles
-yp_end      = 0.92/(1-0.92);         % The terminal value of y in AgLi_y based on the solubility limit
-end_Eden    = yp_end*FF/(Ag_Mmol+yp_end*Li_Mmol)*10/36;   % The energy density at the solubility limit, in unit mAh/g
+yp_end      = 0.996/(1-0.996);         % The terminal value of y in AgLi_y based on the weight ratio
 end_Mden    = Ag_Mden*(1+Li_Mmol/Ag_Mmol*yp_end)/(1+0.98*yp_end); % Mass density of ending phase AgLi_yend, in unit g/cm^3
-% end_Mden    = 1.0; % Mass density of ending phase AgLi_yend, in unit g/cm^3
-end_dia     = Ag_dia .* (Ag_Mden/end_Mden * (1+Li_Mmol/Ag_Mmol*yp_end)).^ (1/3);  % The diameter of end AgLi_y, in unit um
-rho         = yp_end*end_Mden/(Ag_Mmol+yp_end*Li_Mmol);    % Interstitial site density of AgLi9, in unit mol/cm^3 = Mass_den / Molar_Mass
+% rho         = 10*yp_end*end_Mden/(Ag_Mmol+yp_end*Li_Mmol);    % Interstitial site density of AgLi9, in unit mol/cm^3 = Mass_den / Molar_Mass
 % 5. Electrochemical parameters
 i_ave       = 0.68;                 % Applied current density, in unit mA/cm^2
  % The chemical potential used:
@@ -46,13 +44,13 @@ i_ave       = 0.68;                 % Applied current density, in unit mA/cm^2
  % flag=4 means voltage overshoot to zero from gamma2 phase
 chemP_flag  = 1;                   
 % 6. Temperal parameters
-Nt          = 200000;                 % The total timesteps
+Nt          = 200000;               % The total timesteps
 TotT        = 3600;                  % The total discharging time depends on the applied current, in unit s
 dt0         = TotT/Nt;               % the time step, in unit s
 ttc         = zeros(1,Nt);           % current charging time, in unit s
 % 7. Initialization
 yc          = zeros(Np,Nt);          % Initialize Li site fraction of each particle, and at the interfaces
-yc(:,1)     = 0.01*ones(Np,1);       % The initial Li fraction in Ag particles is 1%
+yc(:,1)     = 0.1*ones(Np,1);        % The initial Li fraction in Ag particles is AgLi0.1
 dia         = zeros(Np,Nt);          % The diameter of AgLi_y alloy, in unit um
 chem_pot    = zeros(Np,Nt);          % The Li chemical potential of all particles, in unit J/mol
 mu_SE       = zeros(1,Nt);           % The Li chemical potential at the SE/AgC interface, in unit J/mol
@@ -85,8 +83,8 @@ YY  = [chem_pot(:,1)',mu_SE(1),mu_CC(1),i_ave]';
 XX  = zeros(Np+3,1);
 
 % 2. The DD matrix in the equation: yc' = DD*m
-DD  = zeros(Np,Np);
-cnt = 10*6/(rho*FF);
+DD  = eye(Np);
+cnt = 60*Ag_Vmol/FF;   % constant
 
 % 3. Compute and load the Li chemical potential of AgLiy, y from 0 to yp_end, in unit J/mol
 % LiAg_freEng_chemPot;
@@ -95,35 +93,34 @@ load('chemP_AgLi_db.mat');
 %% Numerical solution with Forward Euler method
 for it = 1:Nt-1
     if it<Nt/2
-        dt = 0.2*dt0;      % Finer timestep in the initial T/10 Hours
+        dt = 0.5*dt0;      % Finer timestep in the initial T/10 Hours
     else
-        dt = 1.8*dt0;
+        dt = 1.5*dt0;
     end
-    
+
 % Step 0: Update the AgLiy particle density and diameters
-    AgLi_Mden   = massDensity_AgLi(yc(:,it),yp_end,end_Mden,Ag_Mden,Ag_Mmol,Li_Mmol,Li_Mden);       % The mass density of AgLi_y, in unit g/cm^3
-%     AgLi_Mden   = Ag_Mden*(1+Li_Mmol/Ag_Mmol*yc(:,it)) ./ (1+0.98*yc(:,it));      % The mass density of AgLi_y, in unit g/cm^3
-    dia(:,it)   = Ag_dia .* (Ag_Mden ./ AgLi_Mden .* (1+Li_Mmol/Ag_Mmol*yc(:,it)*yp_end)).^ (1/3);  % The diameter of AgLi_y, in unit um
-    
+%     AgLi_Mden   = massDensity_AgLi(yc(:,it),yp_end,end_Mden,Ag_Mden,Ag_Mmol,Li_Mmol,Li_Mden);       % The mass density of AgLi_y, in unit g/cm^3
+    AgLi_Mden   = Ag_Mden*(1+Li_Mmol/Ag_Mmol*yc(:,it)) ./ (1+0.98*yc(:,it));      % The mass density of AgLi_y, in unit g/cm^3
+    dia(:,it)   = Ag_dia .* (Ag_Mden ./ AgLi_Mden .* (1+Li_Mmol/Ag_Mmol*yc(:,it))).^ (1/3);  % The diameter of AgLi_y, in unit um
+
     for ip = 1 : Np
-%        if yc(ip,it) <= 1
-            rVolp(ip,it)      = pi/6*dia(ip,it)^3/(Lx*Hx^2);  % The approximated volume ratio of AgLi
-            if rVolp(ip,it) > BL_por
-                rVolp(ip,it)      = BL_por;
-            end
-%        else
-%             rVolp(ip,it)      = pi/6*end_dia(ip)^3/(Lx*Hx^2);
-%             poreLip(ip,it)    = pi/6*(dia(ip,it)^3-end_dia(ip)^3)/(Lx*Hx^2);  % The approximated volume ratio of Li in pores
-%        end
+        if dia(ip,it) > Dia_max      % If the diameter of AgLiy reaches the maximal allowed size constrained by porosity, AgLiy growth stops and pressure built up
+            dia(ip,it) = Dia_max;
+        end
+        rVolp(ip,it)      = pi/6*dia(ip,it)^3/(Lx*Hx^2);  % The approximated volume ratio of AgLi 
     end
-    
+
+    if yc(:,it) > yp_end   % If the AgLi alloying is beyond the ending y value, stop the calculation
+       break
+    end
+
     for ip = 1 : Np
         M21(ip)   = pi/Hx^2 * dia(ip,it).^2;
         DD(ip,ip) = cnt/dia(ip,it);       % In unit 1/(mA/cm^2) * (1/s)
     end
 
 % Step 1: Try the first calculation
-    chem_pot(:,it)   = chemPot_AgLi(chemP_AgLi_db,chemP_flag,yc(:,it)*yp_end); % The Li chemical potential in Ag particles at current step, in unit J/mol
+    chem_pot(:,it)   = chemPot_AgLi(chemP_AgLi_db,chemP_flag,yc(:,it)); % The Li chemical potential in Ag particles at current step, in unit J/mol
     YY(1:Np)         = chem_pot(:,it);
     YY(Np+1)         = mu_SE(it);                                       % For Li metal anode, the Li chemical potential is always 0, in unit J/mol
     YY(Np+2)         = mu_CC(it);                                       % For Li metal cathode, the Li chemical potential is always 0, in unit J/mol 
@@ -176,32 +173,31 @@ end
 
 %% Data analysis
 rVol        = sum(rVolp,1);                     % The volume ratio of AgLi alloy during charging
-poreLi      = sum(poreLip,1);                   % The volume ratio of Li in pores in the BL
-maxPLi      = BL_por - rVol(end-1);             % The maximal allowed Li volume ratio in the BL
-idX         = poreLi>maxPLi;                    % The time when BL is full
+[tmp,idX]   = find(rVol>BL_por);                      % The time when BL is full
 extrLi      = zeros(1,Nt);                      % The Li thickness that is extruded out from the BL due to fully dense BL
-extrLi(idX) = (poreLi(idX) - maxPLi)*Lx;
-poreLi(idX) = maxPLi;
-tPrs = linspace(dt,3600,1000)'/3600;
-prs = depI(:,1:Nt-1) .* (1 - exp(-Li_K*Li_Vmol^2*pi*end_dia(1)^2/(R_Mt*FF^2*Hx^2*Lx*BL_por)*tPrs'*10^7)) * R_Mt*FF/Li_Vmol/1000; % Pressure, in unit MPa
-[pm,pIdx] = max(prs);
-prs(pIdx:end)=pm;
+extrLi(idX) = (rVol(idX) - BL_por)*Lx;
+rVol(idX)   = BL_por;
+prs         = zeros(1,Nt);                      % The pressure developed in the BL
+prs(idX)    = FF/Li_Vmol*depI(1,it)*R_Pt * (1 - exp(-Li_K*Li_Vmol^2*pi*Dia_max^2/(R_Pt*FF^2*Hx^2*Lx*BL_por)*(ttc(idX)-ttc(idX(1)))*10^4))/1000; % Pressure, in unit MPa
+% prs = depI(:,1:Nt-1) .* (1 - exp(-Li_K*Li_Vmol^2*pi*end_dia(1)^2/(R_Mt*FF^2*Hx^2*Lx*BL_por)*tPrs'*10^7)) * R_Mt*FF/Li_Vmol/1000; % Pressure, in unit MPa
+% [pm,pIdx] = max(prs);
+% prs(pIdx:end)=pm;
 
 %% Plot
-ttp = linspace(dt,TotT,Nt-1)'/3600;
+ttp = ttc(2:it)/60;
 
 % 1. Plot the voltage as a function of time
 ifg = ifg + 1;
 figure(ifg)
-plot(ttp*60,-V0(2:Nt)/FF*10^3,'--k');
+plot(ttp,-V0(2:it)/FF*10^3,'--k');
 for ii = 1 : Np
     hold on
-    plot(ttp*60,-eqmV(ii,2:Nt)/FF*10^3,'-b');
+    plot(ttp,-eqmV(ii,2:it)/FF*10^3,'-b');
 end
 hold off
 xlabel('Charging time (Minutes)');
 ylabel('Voltage (mV)');
-axis([0,1,-100,400]);
+% axis([0,1,-100,400]);
 legend('AgLi local voltage','AgLi thermo voltage');
 
 % 2. Plot the current percentage at the interface and at the particles as a function of time
@@ -212,50 +208,50 @@ figure(ifg)
 % axis([0,5,-100,400]);
 % hold on
 % yyaxis left
-plot(ttp*60,depSE(2:Nt)/i_ave,'-g',ttp*60,depCC(2:Nt)/i_ave,'-r');
+plot(ttp,depSE(2:it)/i_ave,'-g',ttp,depCC(2:it)/i_ave,'-r');
 for ii = 1 : Np
     hold on
-    plot(ttp*60,depI(ii,2:Nt)/i_ave,'-b');
+    plot(ttp,depI(ii,2:it)/i_ave,'-b');
 %     plot(ttp,pi*dia(ii,2:Nt).^2 .* depI(ii,2:Nt)/(i_ave*Hx^2));
 end
 hold off
 xlabel('Charging time (Minutes)');
 ylabel('Current density ratio');
-axis([0,5,-0.1,1.1]);
+% axis([0,5,-0.1,1.1]);
 legend('SE/BL','CC/BL','AgParticle');
 
 % 3. Plot Li content in the Ag particles.
 ifg = ifg + 1;
 figure(ifg)
 for ii = 1 : Np
-    plot(ttp,yc(ii,2:Nt)*yp_end);
+    plot(ttp,yc(ii,2:it));
     hold on
 end
 hold off
-xlabel('Charging time (Hours)');
+xlabel('Charging time (Minutes)');
 ylabel('y in AgLi_y');
 
 % Plot the volume ratio
 ifg = ifg + 1;
 figure(ifg)
-plot(ttp*60,rVol(1:Nt-1)*100,'-b');
+plot(ttp,rVol(1:it-1)*100,'-b');
 xlabel('Charging time (Minutes)');
 ylabel('volume ratio (%)');
-axis([0,10,0,42])
+% axis([0,10,0,42])
 % legend('AgLi','poreLi');
 
 % Plot Li thickness at the interfaces
 ifg = ifg + 1;
 figure(ifg)
-plot(ttp*3600,LiSE(2:Nt),'--k',ttp*3600,LiCC(2:Nt)+extrLi(2:Nt),'r');
-xlabel('Charging time (seconds)');
+plot(ttp,LiSE(2:it),'--k',ttp,LiCC(2:it)+extrLi(2:it),'r');
+xlabel('Charging time (Minutes)');
 ylabel('Li thickness (um)');
 legend('SE/BL','CC/BL');
 
 % Plot the internal pressure
 ifg = ifg + 1;
 figure(ifg)
-plot(tPrs*60, prs);
+plot(ttp, prs(2:it));
 xlabel('Charging time (Minutes)');
 ylabel('Pressure (MPa)');
 
@@ -268,17 +264,6 @@ function chemPot = chemPot_AgLi(chemP_AgLi_db,chemP_flag,x)
 end
 
 % The mass density of AgLi_y vs. Li content (y), in unit g/cm^3
-function massDen = massDensity_AgLi(x,yp_end,end_Mden,Ag_Mden,Ag_Mmol,Li_Mmol,Li_Mden)
-   massDen = zeros(length(x),1);
-   for ip = 1 : length(x)
-     if x(ip) <= 1
-         massDen(ip) = (Ag_Mden-end_Mden)*exp(-0.5*x(ip)*yp_end) + end_Mden;
-     else
-         massDen(ip) = (Ag_Mmol+x(ip)*yp_end*Li_Mmol)/((Ag_Mmol+yp_end*Li_Mmol)/end_Mden + (x(ip)-1)*yp_end*Li_Mmol/Li_Mden);
-     end
-   end
-end
-
 % function massDen = massDensity_AgLi(x,yp_end,end_Mden,Ag_Mden,Ag_Mmol,Li_Mmol,Li_Mden)
 %    massDen = zeros(length(x),1);
 %    for ip = 1 : length(x)
