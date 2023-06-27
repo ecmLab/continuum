@@ -11,7 +11,7 @@ sys.lzf     = 10;                                             % The desired box 
 % The desired porosity of the interlayer after packing, can be obtained from characterization; 
 % however, the theoretical smallest value is 0.26 for HCP pack, and 0.365 for random pack
 sys.prf     = 0.4;                                            
-sys.lz      = sys.lzf*2;                                      % The box size in z direction before packing.
+sys.lz      = sys.lzf*3.0;                                      % The box size in z direction before packing.
 sys.pr      = 1-(1-sys.prf)*sys.lzf/sys.lz;                   % The porosity of the interlayer before packing
 sys.vol     = sys.lx * sys.ly * sys.lz;                       % The volume of the system
 sys.volRt   = sys.masRt * ac.den/ag.den;                      % The volume ratio of Ag to C
