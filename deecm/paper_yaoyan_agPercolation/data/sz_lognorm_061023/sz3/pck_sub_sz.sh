@@ -6,13 +6,13 @@
 #SBATCH --partition=tier3
 #
 # Processors:
-#SBATCH --nodes=1
+#SBATCH --nodes=4
 #SBATCH --ntasks-per-node=16
 #SBATCH --cpus-per-task=1
 #
 # Wall clock limit:
 #SBATCH --time=72:00:00
-#SBATCH --mem=200g
+#SBATCH --mem=350g
 
 ## Commands to run:
 srun lmp -log none -in pck_run.in
