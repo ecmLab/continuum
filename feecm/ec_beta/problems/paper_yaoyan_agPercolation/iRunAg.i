@@ -7,7 +7,7 @@
 # uniform_refine = 1
  [importMesh]
    type = FileMeshGenerator
-   file = data/purePore.msh
+   file = data/agPore.msh
  []
 []
 
@@ -92,7 +92,7 @@
 []
 
 [BCs]
-  [delithiation_BV]    ##Lithiation at the SE/BL interface
+  [SElithiation_BV]    ##Lithiation at the SE/BL interface
     type = ButlerVolmerMiec
     variable = potLi
     potEn = potEn
@@ -105,19 +105,28 @@
     type = ButlerVolmerMiec
     variable = potLi
     potEn = potEn
+    boundary = Ag
+    LiCrtRef = 0.0
+    LiPotRef = -1.0
+    ex_current= 6.5
+  []
+  [pore_BV]            ## Deposition at the pore/BL interface inside the BL
+    type = ButlerVolmerMiec
+    variable = potLi
+    potEn = potEn
     boundary = pore
     LiCrtRef = 0.0
-    LiPotRef = -10
+    LiPotRef = 0.0
     ex_current= 1.3
   []
-  [lithiation_BV]      ## Lithiation at the CC/BL interface
+  [CClithiation_BV]      ## Lithiation at the CC/BL interface
     type = ButlerVolmerMiec
     variable = potLi
     potEn = potEn
     boundary = blockBL_btm
     LiCrtRef = 0.0
     LiPotRef = 0.0
-    ex_current= 1.3
+    ex_current= 13
   []
 
   [coupling_current_SE]   ## The coupling of electronic and ionic current at the SE/BL interface
@@ -153,8 +162,8 @@
 
 [Materials/constant]
   type = Miec
-  ionic_conductivity = 10
-  electronic_conductivity = 1000
+  ionic_conductivity = .07943282347242815020
+  electronic_conductivity = 25.11886431509580111046
 []
 
 [Executioner]
@@ -169,25 +178,64 @@
   l_tol = 1e-8
 []
 
-#[VectorPostprocessors]
-#  [anode_current]
-#    type = SideValueSampler
-#    variable = 'iLi_x iLi_y'
-#    boundary = 'blockSE_btm_lft interface blockSE_btm_rgt'
-#    sort_by = x
-#  []
+[VectorPostprocessors]
 
-#  [anode_potential]
-#    type = SideValueSampler
-#    variable = 'potLi'
-#    boundary = 'blockSE_btm_lft interface blockSE_btm_rgt'
-#    sort_by = x
-#  []
-#[]
+  [SE_potential]
+    type = SideValueSampler
+    variable = 'potLi potEn'
+    boundary = 'blockBL_top'
+    sort_by = x
+  []
+  [pore_potential]
+    type = SideValueSampler
+    variable = 'potLi potEn'
+    boundary = 'pore'
+    sort_by = x
+  []
+  [ag_potential]
+    type = SideValueSampler
+    variable = 'potLi potEn'
+    boundary = 'Ag'
+    sort_by = x
+  []
+  [CC_potential]
+    type = SideValueSampler
+    variable = 'potLi potEn'
+    boundary = 'blockBL_btm'
+    sort_by = x
+  []
+  [zeroX1_potential]
+    type = LineValueSampler
+    warn_discontinuous_face_values = false
+    variable = 'potLi potEn'
+    start_point = '-5  0 0'
+    end_point = '-2.75 0 0'
+    num_points = 1000
+    sort_by = x
+  []
+  [zeroX2_potential]
+    type = LineValueSampler
+    warn_discontinuous_face_values = false
+    variable = 'potLi potEn'
+    start_point = '-2.25  0 0'
+    end_point = '2.25 0 0'
+    num_points = 1000
+    sort_by = x
+  []
+  [zeroX3_potential]
+    type = LineValueSampler
+    warn_discontinuous_face_values = false
+    variable = 'potLi potEn'
+    start_point = '2.75  0 0'
+    end_point = '5 0 0'
+    num_points = 1000
+    sort_by = x
+  []
+[]
 
 [Outputs]
   execute_on = 'timestep_end'
   exodus = true
-  file_base = rst/mdl
+  file_base = rst/agPore
   csv = true
 []

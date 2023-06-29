@@ -99,16 +99,16 @@
     boundary = blockBL_top
     LiCrtRef = -0.68
     LiPotRef = 0.0
-    ex_current= 1.3
+    ex_current= 13
   []
-  [Ag_BV]            ## Li-Ag alloying at the Ag/C interface inside the BL
+  [pore_BV]            ## Li-depostion at the pore surface inside the BL
     type = ButlerVolmerMiec
     variable = potLi
     potEn = potEn
     boundary = pore
     LiCrtRef = 0.0
-    LiPotRef = -10
-    ex_current= 1.3
+    LiPotRef = 0.0
+    ex_current= 13
   []
   [lithiation_BV]      ## Lithiation at the CC/BL interface
     type = ButlerVolmerMiec
@@ -117,7 +117,7 @@
     boundary = blockBL_btm
     LiCrtRef = 0.0
     LiPotRef = 0.0
-    ex_current= 1.3
+    ex_current= 13
   []
 
   [coupling_current_SE]   ## The coupling of electronic and ionic current at the SE/BL interface
@@ -153,8 +153,8 @@
 
 [Materials/constant]
   type = Miec
-  ionic_conductivity = 10
-  electronic_conductivity = 1000
+  ionic_conductivity = 100
+  electronic_conductivity = 10000
 []
 
 [Executioner]
