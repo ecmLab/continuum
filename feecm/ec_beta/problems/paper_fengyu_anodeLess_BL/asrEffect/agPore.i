@@ -7,7 +7,7 @@
 # uniform_refine = 1
  [importMesh]
    type = FileMeshGenerator
-   file = data/purePore.msh
+   file = data/agPore.msh
  []
 []
 
@@ -92,7 +92,7 @@
 []
 
 [BCs]
-  [delithiation_BV]    ##Lithiation at the SE/BL interface
+  [SElithiation_BV]    ##Lithiation at the SE/BL interface
     type = ButlerVolmerMiec
     variable = potLi
     potEn = potEn
@@ -105,12 +105,21 @@
     type = ButlerVolmerMiec
     variable = potLi
     potEn = potEn
-    boundary = pore
+    boundary = Ag
     LiCrtRef = 0.0
-    LiPotRef = -10
+    LiPotRef = -20
     ex_current= 1.3
   []
-  [lithiation_BV]      ## Lithiation at the CC/BL interface
+  [pore_BV]            ## Deposition at the pore/BL interface inside the BL
+    type = ButlerVolmerMiec
+    variable = potLi
+    potEn = potEn
+    boundary = pore
+    LiCrtRef = 0.0
+    LiPotRef = 0.0
+    ex_current= 1.3
+  []
+  [CClithiation_BV]      ## Lithiation at the CC/BL interface
     type = ButlerVolmerMiec
     variable = potLi
     potEn = potEn
