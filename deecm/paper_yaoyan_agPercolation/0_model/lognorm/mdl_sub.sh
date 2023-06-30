@@ -11,8 +11,8 @@
 #SBATCH --cpus-per-task=1
 #
 # Wall clock limit:
-#SBATCH --time=10:00:00
-#SBATCH --mem=6g
+#SBATCH --time=24:00:00
+#SBATCH --mem=60g
 
 ## Commands to run:
 srun matlab -nodisplay -nosplash < mdl_run.m

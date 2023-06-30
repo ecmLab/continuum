@@ -5,9 +5,9 @@ clear   					# Clear all previous runs
 # parameters of the box
 variable  sxy    equal 1
 #variable  sxy    equal 0.6
-variable  sz     equal 30.0125
+variable  sz     equal 30.02041
 variable  imdl   equal 1
-variable  tarp   equal 0.1                        # The target pressure to stop the packing
+variable  tarp   equal 1                        # The target pressure to stop the packing
 # parameter of material contact
 variable  kn_11  equal 175661.4
 variable  kn_22  equal 148.148
@@ -24,8 +24,8 @@ units         micro           # micro unit system is suitable for the current re
 atom_style    sphere          # Granular Particle method will be used
 boundary      fm fm fm           # Periodic condition in x and y directions, fixed condition in z direction
 comm_modify   vel yes         # Communicate velocity info with ghost atoms
-neighbor      0.002 bin         # 0.2 micron extra distance beyond force cutoff
-neigh_modify  delay 0         # Update the neighbor list every step
+neighbor      0.0001 bin         # 0.2 micron extra distance beyond force cutoff
+neigh_modify  every 3 delay 0  # Update the neighbor list every step
 timestep      0.0001          # Time step is in unit micro-seconds
 
 ### Geometry Definition
@@ -85,7 +85,7 @@ compute_modify  thermo_temp dynamic/dof yes
 ### Run calculation
 # 1. Run first period: move down until pressure growth
 label loop1
-  run   2000
+  run   5000
   if "${prs} > ${tarp}" then "jump pck_run.in loop2"
 jump pck_run.in loop1
 
@@ -93,15 +93,15 @@ jump pck_run.in loop1
 label loop2
 #unfix 3
 fix 3 gst move linear 0 0 0.0
-dump 1 all custom 50000 rst1.lmp id type x y z radius
+dump 1 all custom 25000 rst1.lmp id type x y z radius
 dump_modify 1 format line "%7d %5d %17.12f %17.12f %17.12f %17.12f "
-run 100000
+run 50000
 undump 1
 
 # 3. Run third period: decrease pressing velocity so that pressure value converge more accurate to designed value
 label loop3
-  fix 3 gst move linear 0 0 -0.02
-  run 2000
+  fix 3 gst move linear 0 0 -0.05
+  run 5000
   if "${prs} > ${tarp}" then "jump pck_run.in loop4"
   jump pck_run.in loop3
 
@@ -111,9 +111,9 @@ fix 3 gst move linear 0 0 0.0
 run 5000
 if "${prs} < ${tarp}" then "jump pck_run.in loop3"
 
-dump 2 all custom 50000 rst2.lmp id type x y z radius
+dump 2 all custom 25000 rst2.lmp id type x y z radius
 dump_modify 2 format line "%7d %5d %17.12f %17.12f %17.12f %17.12f"
-run 100000
+run 50000
 undump 2
 
 write_restart pack.restart
