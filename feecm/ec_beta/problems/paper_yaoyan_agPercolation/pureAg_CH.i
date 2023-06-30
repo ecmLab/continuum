@@ -1,4 +1,4 @@
-## create on 05/09/2023 by Howard Tu for the AgLi paper
+## create on 06/27/2023 by Howard Tu for the AgLi paper
 ## Unit system used in this code. Convert all parameters to these units !!!
 # INPUT   # current density: mA/cm^2,  conductivity: mS/cm, Diffusivity: um^2/s
 # INTERNAL# length: um,                potential: mV,       current: nA,         time: s
@@ -13,8 +13,15 @@
 
 [Variables]
   [potLi]
+    block = 'blockBL'
   []
+
   [potEn]
+    block = 'blockBL'
+  []
+
+  [cLi]
+    block = 'blockAg'
   []
 []
 
@@ -22,23 +29,32 @@
   [iLi_x]
     order = CONSTANT
     family = MONOMIAL
+    block = 'blockBL'
   []
   [iLi_y]
     order = CONSTANT
     family = MONOMIAL
+    block = 'blockBL'
   []
   [iEn_x]
     order = CONSTANT
     family = MONOMIAL
+    block = 'blockBL'
   []
   [iEn_y]
     order = CONSTANT
     family = MONOMIAL
+    block = 'blockBL'
   []
 
 []
 
 [Kernels]
+  [ionic_conduction_t]
+    type = TimeDerivative
+    variable = potLi
+    block = 'blockBL'
+  []
   [ionic_conduction]
     type = ChargedTransport
     variable = potLi
@@ -46,12 +62,37 @@
     block = "blockBL"
   []
 
+  [electronic_conduction_t]
+    type = TimeDerivative
+    variable = potLi
+    block = 'blockBL'
+  []
   [electronic_conduction]
     type = ChargedTransport
     variable = potEn
     diffusivity = electronic_conductivity
     block = "blockBL"
   []
+
+  [AgLi_alloy_t]
+    type = TimeDerivative
+    variable = cLi
+    block = "blockAg"
+  []
+  [AgLi_CHSolid]
+    type = CahnHilliard
+    variable = cLi
+    f_name = F
+    mob_name = M
+    block = "blockAg"
+  []
+  [AgLi_CHInterface]
+    type = CHInterface
+    variable = cLi
+    mob_name = M
+    kappa_name = kappa_c
+    block = "blockAg"
+  [../]
 
 []
 
@@ -99,7 +140,7 @@
     boundary = blockBL_top
     LiCrtRef = -0.68
     LiPotRef = 0.0
-    ex_current= 1.3
+    ex_current= 13
   []
   [Ag_BV]            ## Li-Ag alloying at the Ag/C interface inside the BL
     type = ButlerVolmerMiec
@@ -107,8 +148,8 @@
     potEn = potEn
     boundary = pore
     LiCrtRef = 0.0
-    LiPotRef = -10
-    ex_current= 1.3
+    LiPotRef = -150
+    ex_current= 13
   []
   [lithiation_BV]      ## Lithiation at the CC/BL interface
     type = ButlerVolmerMiec
@@ -117,7 +158,7 @@
     boundary = blockBL_btm
     LiCrtRef = 0.0
     LiPotRef = 0.0
-    ex_current= 1.3
+    ex_current= 13
   []
 
   [coupling_current_SE]   ## The coupling of electronic and ionic current at the SE/BL interface
@@ -147,6 +188,16 @@
     variable = potEn
     boundary = blockBL_btm
     value = 0
+  []
+
+  [AgLi_CH]            ## Li-Ag alloy flux into the Ag particles at the Ag/BL interface
+    type = CahnHilliardBL
+    variable = potLi
+    potEn = potEn
+    boundary = pore
+    LiCrtRef = 0.0
+    LiPotRef = -150
+    ex_current= 13
   []
 
 []
