@@ -7,7 +7,7 @@
 #SBATCH --partition=tier3
 #
 # Processors:
-#SBATCH --nodes=1
+#SBATCH --nodes=2
 #SBATCH --ntasks-per-node=16
 #SBATCH --cpus-per-task=1
 #

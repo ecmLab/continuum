@@ -1,5 +1,5 @@
 #!/bin/bash
-nMdl=5       # number of models studied
+nMdl=4       # number of models studied
 
 for irt in $(seq 1 $nMdl);
 do
@@ -13,13 +13,15 @@ do
 #  sed "s/-np 20/-np $((100*$irt-80))/" < job0.sh > subjobtest.sh
 
 ##Copy files into each directory
-  cp grw_run.in    ../data/mr_uniform/mr${irt}/
-  cp grw_sub.sh    ../data/mr_uniform/mr${irt}/
+#  cp grw_run.in    ../data/mr_uniform/mr${irt}/
+#  cp grw_sub.sh    ../data/mr_uniform/mr${irt}/
+  cp grw_run.in    ../data/sz_lognorm_062723/sz${irt}/
+  cp grw_sub.sh    ../data/sz_lognorm_062723/sz${irt}/
 
 ###Submit file for calculation
-  cd ../data/mr_uniform/mr${irt}/  
-  sbatch grw_sub.sh
+  cd ../data/sz_lognorm_062723/sz${irt}/  
+#  sbatch grw_sub.sh
   cd ../../../2_grow/
-  rm -f grw_sub.in tmp* job*
+  rm -f grw_run.in tmp* job*
 
 done

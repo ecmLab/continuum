@@ -4,16 +4,16 @@
 clear   					# Clear all previous runs
 
 # parameters of the box
-variable  sxy    equal 2
-variable  sz     equal 30.04
+variable  sxy    equal 1
+variable  sz     equal 30.02041
 variable  imdl   equal 1
-variable  tarp   equal 0.1                        # The target pressure to stop the packing
+variable  tarp   equal 1                        # The target pressure to stop the packing
 # parameter for the Ag growth
 variable  ag_dia0 equal 0.1                        # The initial diameter of Ag particles, in unit um
 variable  ag_tf  equal 1.5                        # The ratio of final Ag diameter to initial diameter
 variable  Ngrw   equal 1000 		          # The timesteps to update each Ag diameter growth
 variable  dDia   equal (${ag_tf}-1)*${ag_dia0}/1000 # The incremental of Ag diameter each Ngrw timesteps
-variable  maxp   equal 2.0                        # The max pressure to stop the Ag growth
+variable  maxp   equal 3.0                        # The max pressure to stop the Ag growth
 # parameter of material contact
 variable  kn_11  equal 175661.4
 variable  kn_22  equal 148.148
@@ -30,9 +30,9 @@ units         micro           # micro unit system is suitable for the current re
 atom_style    sphere          # Granular Particle method will be used
 boundary      fm fm fm           # Periodic condition in x and y directions, fixed condition in z direction
 comm_modify   vel yes         # Communicate velocity info with ghost atoms
-neighbor      0.05 bin         # 0.2 micron extra distance beyond force cutoff
-neigh_modify  delay 0         # Update the neighbor list every step
-timestep      1000              # Time step is in unit micro-seconds
+neighbor      0.0001 bin      # 0.2 micron extra distance beyond force cutoff
+neigh_modify  every 3 delay 0 # Update the neighbor list every step
+timestep      1000            # Time step is in unit micro-seconds
 
 ### Geometry Definition
 #read_data    mdl.data
@@ -100,7 +100,7 @@ label loop5
 
   run  ${Ngrw}
   variable  ag_dia0  equal ${ag_dia}
-  if "${prs} < ${maxp}" then "jump grw.in loop5"
+  if "${prs} < ${maxp}" then "jump grw_run.in loop5"
 
 # End of loop
 
