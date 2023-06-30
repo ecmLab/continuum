@@ -235,7 +235,7 @@
 
 [Outputs]
   execute_on = 'timestep_end'
-  exodus = true
+  exodus = false
   file_base = rst/agPore
   csv = true
 []

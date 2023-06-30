@@ -162,8 +162,8 @@
 
 [Materials/constant]
   type = Miec
-  ionic_conductivity = .07943282347242815020
-  electronic_conductivity = 25.11886431509580111046
+  ionic_conductivity = 79.43282347242815020467
+  electronic_conductivity = 1023.29299228075413094155
 []
 
 [Executioner]
@@ -235,7 +235,7 @@
 
 [Outputs]
   execute_on = 'timestep_end'
-  exodus = true
+  exodus = false
   file_base = rst/agPore
   csv = true
 []

@@ -1,7 +1,6 @@
 #!/bin/bash
 nLi=0
-nEn=0
-for iLi in $(seq -1.1 0.2 1.1)
+for iLi in $(seq -1.1 0.2 2.0)
 do
 # Run the simulation
   iSgmLi=$(bc -l <<< "e(${iLi}*l(10))")
@@ -9,7 +8,8 @@ do
   sed "s/ionic_conductivity = 0.8/ionic_conductivity = ${iSgmLi}/" < agPore.i > tmp
   ((nLi++))
 
-    for iEn in $(seq 1 0.2 3.7)
+    nEn=0
+    for iEn in $(seq 0.01 0.2 3.01)
     do
       iSgmEn=$(bc -l <<< "e(${iEn}*l(10))")
       sed "s/electronic_conductivity = 172/electronic_conductivity = ${iSgmEn}/" < tmp > iRunAg.i
