@@ -12,32 +12,28 @@ a0    = 0.5;      % Reaction rate for the charge transfer reaction, set as symme
 iSE_exc = 1.3;        % The exchange current density, 13 is based on the ASR=2 Ohm, in unit mA/cm^2; LPS/Li metal interface from paper
 iAg_exc = iSE_exc*5;  % The exchange current density, 13 is based on the ASR=2 Ohm, in unit mA/cm^2; LPS/Li metal interface from paper
 iCC_exc = iSE_exc*10; % The exchange current density, 13 is based on the ASR=2 Ohm, in unit mA/cm^2; LPS/Li metal interface from paper
-sgmLPS=1;         % The ionic conductivity of LPS, set to be 1mS/cm
 % For change variables
-iSgm  = [0.01, 0.1, 1];      % The ionic conductivity, set as variable for parameter studies, in unit mS/cm
+sgmLi = 10.^(linspace(-1.1,1.1,12));  % The ionic conductivity, set as variable for parameter studies, in unit mS/cm
+sgmEn = 10.^(linspace(1.0,3.6,14));  % The ionic conductivity, set as variable for parameter studies, in unit mS/cm
 vAg   = linspace(-1,-10,10); % The equilibrium voltage of the AgLi particle in the surface defect, in unit mV; 0 corresponds to Li metal anode;
-seIave  = zeros(length(vAg),1);
-ccIave  = zeros(length(vAg),1);
-poreIave  = zeros(length(vAg),1);
-agIave  = zeros(length(vAg),1);
 
 for jAg = 1 : length(vAg)
 %% Read data from files
 % Relation of filenames and variable names: "sgm001" and "sgm-2" means sgm = 10^-2 = 0.01 mS/cm 
 % Load potentials at different interfaces
-    tmpStr  = ['sePot_Ag',num2str(jAg),'= csvread(''../rst/agPore_sePot_Ag-',num2str(jAg),'.csv'',1,0);'];
+    tmpStr  = ['sePot_Ag',num2str(jAg),'= csvread(''../rst/Vlt_sePot_Ag-',num2str(jAg),'.csv'',1,0);'];
     eval(tmpStr);
-    tmpStr  = ['porePot_Ag',num2str(jAg),'= csvread(''../rst/agPore_porePot_Ag-',num2str(jAg),'.csv'',1,0);'];
+    tmpStr  = ['porePot_Ag',num2str(jAg),'= csvread(''../rst/Vlt_porePot_Ag-',num2str(jAg),'.csv'',1,0);'];
     eval(tmpStr);
-    tmpStr  = ['agPot_Ag',num2str(jAg),'= csvread(''../rst/agPore_agPot_Ag-',num2str(jAg),'.csv'',1,0);'];
+    tmpStr  = ['agPot_Ag',num2str(jAg),'= csvread(''../rst/Vlt_agPot_Ag-',num2str(jAg),'.csv'',1,0);'];
     eval(tmpStr);
-    tmpStr  = ['ccPot_Ag',num2str(jAg),'= csvread(''../rst/agPore_ccPot_Ag-',num2str(jAg),'.csv'',1,0);'];
+    tmpStr  = ['ccPot_Ag',num2str(jAg),'= csvread(''../rst/Vlt_ccPot_Ag-',num2str(jAg),'.csv'',1,0);'];
     eval(tmpStr);
-    tmpStr  = ['x1Pot_Ag',num2str(jAg),'= csvread(''../rst/agPore_z1Pot_Ag-',num2str(jAg),'.csv'',1,0);'];
+    tmpStr  = ['x1Pot_Ag',num2str(jAg),'= csvread(''../rst/Vlt_z1Pot_Ag-',num2str(jAg),'.csv'',1,0);'];
     eval(tmpStr);
-    tmpStr  = ['x2Pot_Ag',num2str(jAg),'= csvread(''../rst/agPore_z2Pot_Ag-',num2str(jAg),'.csv'',1,0);'];
+    tmpStr  = ['x2Pot_Ag',num2str(jAg),'= csvread(''../rst/Vlt_z2Pot_Ag-',num2str(jAg),'.csv'',1,0);'];
     eval(tmpStr);
-    tmpStr  = ['x3Pot_Ag',num2str(jAg),'= csvread(''../rst/agPore_z3Pot_Ag-',num2str(jAg),'.csv'',1,0);'];
+    tmpStr  = ['x3Pot_Ag',num2str(jAg),'= csvread(''../rst/Vlt_z3Pot_Ag-',num2str(jAg),'.csv'',1,0);'];
     eval(tmpStr);
 
 % porePot_Ag1  = csvread('../rst/mdl_pore_potential_0001.csv',1,0);
