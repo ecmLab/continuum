@@ -15,17 +15,18 @@ do
       sed "s/electronic_conductivity = 172/electronic_conductivity = ${iSgmEn}/" < tmp > iRunAg.i
       ((nEn++))
  
-   ../../ec_beta-opt -i iRunAg.i
+#   ../../ec_beta-opt -i iRunAg.i
 
 # Change file name for later data analysis
-  mv rst/agPore_SE_potential_0001.csv rst/sgm_sePot_Li${nLi}En${nEn}.csv
-  mv rst/agPore_pore_potential_0001.csv rst/sgm_porePot_Li${nLi}En${nEn}.csv
-  mv rst/agPore_ag_potential_0001.csv rst/sgm_agPot_Li${nLi}En${nEn}.csv
-  mv rst/agPore_CC_potential_0001.csv rst/sgm_ccPot_Li${nLi}En${nEn}.csv
-  mv rst/agPore_zeroX1_potential_0001.csv rst/sgm_z1Pot_Li${nLi}En${nEn}.csv
-  mv rst/agPore_zeroX2_potential_0001.csv rst/sgm_z2Pot_Li${nLi}En${nEn}.csv
-  mv rst/agPore_zeroX3_potential_0001.csv rst/sgm_z3Pot_Li${nLi}En${nEn}.csv
-#  echo $iSgmEn
+#  mv rst/agPore_SE_potential_0001.csv rst/sgm_sePot_Li${nLi}En${nEn}.csv
+#  mv rst/agPore_pore_potential_0001.csv rst/sgm_porePot_Li${nLi}En${nEn}.csv
+#  mv rst/agPore_ag_potential_0001.csv rst/sgm_agPot_Li${nLi}En${nEn}.csv
+#  mv rst/agPore_CC_potential_0001.csv rst/sgm_ccPot_Li${nLi}En${nEn}.csv
+#  mv rst/agPore_Y1Sec1_potential_0001.csv rst/sgm_z1Pot_Li${nLi}En${nEn}.csv
+#  mv rst/agPore_Y1Sec2_potential_0001.csv rst/sgm_z2Pot_Li${nLi}En${nEn}.csv
+#  mv rst/agPore_Y1Sec3_potential_0001.csv rst/sgm_z3Pot_Li${nLi}En${nEn}.csv
+#  mv rst/agPore_center_potential_0001.csv rst/sgm_z0Pot_Li${nLi}En${nEn}.csv
+  echo $nEn
 
    done
 
