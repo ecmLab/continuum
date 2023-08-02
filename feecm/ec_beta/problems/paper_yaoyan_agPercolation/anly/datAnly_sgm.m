@@ -2,9 +2,9 @@ clc; clear; myFigureSetting;
 
 ifg = 0;
 %Geometric parameter
-xBL = 10;      % width of the BL, in unit um
-yBL = 10;      % thickness of the BL, in unit um
-dia = 1.0;      % diameter of pore and Ag, in unit um
+xBL = 0.265;      % width of the BL, in unit um
+yBL = 0.265;      % thickness of the BL, in unit um
+diaAg = 0.04;      % diameter of pore and Ag, in unit um
 %Electrochemical parameters
 F_RT  = 0.03868;  % The combined constant F/RT when T=300K, in unit 1/mV
 a0    = 0.5;      % Reaction rate for the charge transfer reaction, set as symmetric anodic and cathodic reaction for now
@@ -68,8 +68,8 @@ for jLi = 1 : length(sgmLi)
     % Compute the total current ratio at each interfaces
     tmpStr   =['IrSE(jLi,jEn) = -mean(seCrnt_Li',num2str(jLi),'En',num2str(jEn),');'];  eval(tmpStr);
     tmpStr   =['IrCC(jLi,jEn) = -mean(ccCrnt_Li',num2str(jLi),'En',num2str(jEn),');'];  eval(tmpStr);
-    tmpStr   =['IrPr(jLi,jEn) = -mean(poreCrnt_Li',num2str(jLi),'En',num2str(jEn),')*pi*dia/yBL;'];  eval(tmpStr);
-    tmpStr   =['IrAg(jLi,jEn) = -mean(agCrnt_Li',num2str(jLi),'En',num2str(jEn),')*pi*dia/yBL;'];  eval(tmpStr);
+    tmpStr   =['IrPr(jLi,jEn) = -mean(poreCrnt_Li',num2str(jLi),'En',num2str(jEn),')*pi*diaAg/yBL;'];  eval(tmpStr);
+    tmpStr   =['IrAg(jLi,jEn) = -mean(agCrnt_Li',num2str(jLi),'En',num2str(jEn),')*pi*diaAg/yBL;'];  eval(tmpStr);
 
 
     end

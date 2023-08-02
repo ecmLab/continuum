@@ -2,9 +2,10 @@ clc; clear; myFigureSetting;
 
 ifg = 0;
 %Geometric parameter
-xBL = 10;      % width of the BL, in unit um
-yBL = 10;      % thickness of the BL, in unit um
-dia = 1.0;      % diameter of pore and Ag, in unit um
+xBL = 0.265;      % width of the BL, in unit um
+yBL = 0.265;      % thickness of the BL, in unit um
+diaAg = 0.04;      % diameter of Ag, in unit um
+diaPr = 0.11;      % diameter of Ag, in unit um
 %Electrochemical parameters
 F_RT  = 0.03868;  % The combined constant F/RT when T=300K, in unit 1/mV
 a0    = 0.5;      % Reaction rate for the charge transfer reaction, set as symmetric anodic and cathodic reaction for now
@@ -36,15 +37,8 @@ for jAg = 1 : length(vAg)
     tmpStr  = ['x3Pot_Ag',num2str(jAg),'= csvread(''../rst/Vlt_z3Pot_Ag-',num2str(jAg),'.csv'',1,0);'];
     eval(tmpStr);
 
-% porePot_Ag1  = csvread('../rst/mdl_pore_potential_0001.csv',1,0);
-% agPot_Ag1    = csvread('../rst/mdl_ag_potential_0001.csv',1,0);
-% ccPot_Ag1    = csvread('../rst/mdl_CC_potential_0001.csv',1,0);
-% x1Pot_Ag1    = csvread('../rst/mdl_zeroX1_potential_0001.csv',1,0);
-% x2Pot_Ag1    = csvread('../rst/mdl_zeroX2_potential_0001.csv',1,0);
-% x3Pot_Ag1    = csvread('../rst/mdl_zeroX3_potential_0001.csv',1,0);
-
 %% Data analysis
-% Compute the Li potential along the middle line
+% Compute the Li potential along the Y1 line
     tmpStr  = ['midPot_Ag',num2str(jAg),'= [x1Pot_Ag',num2str(jAg),';porePot_Ag',num2str(jAg),'(porePot_Ag',...
                 num2str(jAg),'(:,5)>0,:);x2Pot_Ag',num2str(jAg),';agPot_Ag',num2str(jAg),'(agPot_Ag',num2str(jAg),'(:,5)>0,:);x3Pot_Ag',num2str(jAg),'];'];
     eval(tmpStr);
@@ -76,8 +70,8 @@ for jAg = 1 : length(vAg)
     % Compute the total current ratio at each interfaces
     tmpStr   =['seIr(jAg) = -mean(seCrnt_Ag',num2str(jAg),');'];  eval(tmpStr);
     tmpStr   =['ccIr(jAg) = -mean(ccCrnt_Ag',num2str(jAg),');'];  eval(tmpStr);
-    tmpStr   =['poreIr(jAg) = -mean(poreCrnt_Ag',num2str(jAg),')*pi*dia/yBL;'];  eval(tmpStr);
-    tmpStr   =['agIr(jAg) = -mean(agCrnt_Ag',num2str(jAg),')*pi*dia/yBL;'];  eval(tmpStr);
+    tmpStr   =['poreIr(jAg) = -mean(poreCrnt_Ag',num2str(jAg),')*pi*diaPr/yBL;'];  eval(tmpStr);
+    tmpStr   =['agIr(jAg) = -mean(agCrnt_Ag',num2str(jAg),')*pi*diaAg/yBL;'];  eval(tmpStr);
 
 % Compute the Li potential along the middle line
 % midPot_Ag1   = [x1Pot_Ag1;porePot_Ag1(porePot_Ag1(:,5)>0,:);x2Pot_Ag1;agPot_Ag1(agPot_Ag1(:,5)>0,:);x3Pot_Ag1];
@@ -105,8 +99,10 @@ title('Voltage at Interface, in mV');
 % Plot the current at sgm= 0.1 mS/cm, ASR= 2 Ohm*cm^2 and varying AgLi particle equilibrium potential in the surface defect = [0, -1, -2, -3, -4 ,-5] mV
 ifg = ifg + 1;
 figure(ifg)
+% plot(sePot_Ag1(:,4),-seCrnt_Ag1,'-b',ccPot_Ag1(:,4),-ccCrnt_Ag1,'-r',...
+%      porePot_Ag1(porePot_Ag1(:,5)>0,4),-poreCrnt_Ag1(porePot_Ag1(:,5)>0),'-k',agPot_Ag1(porePot_Ag1(:,5)>0,4),-agCrnt_Ag1(porePot_Ag1(:,5)>0),'-k');
 plot(sePot_Ag1(:,4),-seCrnt_Ag1,'-b',ccPot_Ag1(:,4),-ccCrnt_Ag1,'-r',...
-     porePot_Ag1(porePot_Ag1(:,5)>0,4),-poreCrnt_Ag1(porePot_Ag1(:,5)>0),'-k',agPot_Ag1(porePot_Ag1(:,5)>0,4),-agCrnt_Ag1(porePot_Ag1(:,5)>0),'-k');
+     porePot_Ag1(:,4),-poreCrnt_Ag1,'-k',agPot_Ag1(:,4),-agCrnt_Ag1,'-k');
 legend('SE','CC','Middle');
 title('Current at SE/Anode Interface, in mA/cm^2');
 

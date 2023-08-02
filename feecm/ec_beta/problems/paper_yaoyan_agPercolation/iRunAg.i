@@ -7,7 +7,7 @@
 # uniform_refine = 1
  [importMesh]
    type = FileMeshGenerator
-   file = data/agPore.msh
+   file = data/agPoreReal.msh
  []
 []
 
@@ -107,7 +107,7 @@
     potEn = potEn
     boundary = Ag
     LiCrtRef = 0.0
-    LiPotRef = -1.0
+    LiPotRef = -1
     ex_current= 6.5
   []
   [pore_BV]            ## Deposition at the pore/BL interface inside the BL
@@ -162,8 +162,8 @@
 
 [Materials/constant]
   type = Miec
-  ionic_conductivity = 79.43282347242815020467
-  electronic_conductivity = 1023.29299228075413094155
+  ionic_conductivity = 0.8
+  electronic_conductivity = 172
 []
 
 [Executioner]
@@ -204,30 +204,39 @@
     boundary = 'blockBL_btm'
     sort_by = x
   []
-  [zeroX1_potential]
+  [Y1Sec1_potential]
     type = LineValueSampler
     warn_discontinuous_face_values = false
     variable = 'potLi potEn'
-    start_point = '-5  0 0'
-    end_point = '-2.75 0 0'
+    start_point = '-0.13250 0.06625  0'
+    end_point   = '-0.08625 0.06625 0'
     num_points = 1000
     sort_by = x
   []
-  [zeroX2_potential]
+  [Y1Sec2_potential]
     type = LineValueSampler
     warn_discontinuous_face_values = false
     variable = 'potLi potEn'
-    start_point = '-2.25  0 0'
-    end_point = '2.25 0 0'
+    start_point = '-0.04625 0.06625  0'
+    end_point   = ' 0.01125 0.06625 0'
     num_points = 1000
     sort_by = x
   []
-  [zeroX3_potential]
+  [Y1Sec3_potential]
     type = LineValueSampler
     warn_discontinuous_face_values = false
     variable = 'potLi potEn'
-    start_point = '2.75  0 0'
-    end_point = '5 0 0'
+    start_point = '0.12125 0.06625  0'
+    end_point   = '0.13250 0.06625 0'
+    num_points = 1000
+    sort_by = x
+  []
+  [center_potential]
+    type = LineValueSampler
+    warn_discontinuous_face_values = false
+    variable = 'potLi potEn'
+    start_point = '-0.1325  0 0'
+    end_point = '0.1325 0 0'
     num_points = 1000
     sort_by = x
   []
