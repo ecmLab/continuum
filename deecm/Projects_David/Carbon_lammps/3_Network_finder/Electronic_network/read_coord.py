@@ -5,12 +5,12 @@ import math
 import sys
 
 args = sys.argv
-#input = args[1]
-#output = args[2]
+input = args[1]
+output = args[2]
 
 # Load txt for coordinates and radius of LPS and NMC particles.
-#file = open(input, 'r')
-file = open('size1')
+file = open(input, 'r')
+
 lines = file.readlines()
 NMC_lst = []
 LPS_lst = []
@@ -179,9 +179,6 @@ data = {'num_NMC': num_NMC, 'num_LPS': num_LPS,
         'adj': adj,
         'thickness': SYS_thk
 }
-#with open(output, 'w') as fp:
-#    json.dump(data, fp)
-    
-with open('adj_size2.json', 'w') as fp:
-    json.dump(data, fp)
 
+with open(output, 'w') as fp:
+    json.dump(data, fp)

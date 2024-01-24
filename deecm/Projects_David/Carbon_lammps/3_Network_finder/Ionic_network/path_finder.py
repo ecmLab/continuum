@@ -8,8 +8,7 @@ output = args[2]
 
 Load JSON file and variables
 with open(input, 'rb') as fp:
-#with open('adj_size2.json', 'rb') as fp:
-#    data = json.load(fp)
+    data = json.load(fp)
 
 adj_data = data['adj']
 num_NMC = data['num_NMC']
