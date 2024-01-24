@@ -5,12 +5,12 @@ import math
 import sys
 
 args = sys.argv
-#input = args[1]
-#output = args[2]
+input = args[1]
+output = args[2]
 
 # Load txt for coordinates and radius of LPS and NMC particles.
-#file = open(input, 'r')
-file = open('size1')
+file = open(input, 'r')
+
 lines = file.readlines()
 NMC_lst = []
 LPS_lst = []
@@ -56,7 +56,7 @@ Carb_array = Carb_tmp2[:,2:]
 # print('LPS radius std: ', np.std(LPS_radius))
 
 dlta = 0.0
-combined_array = np.concatenate((NMC_array, Carb_array), axis=0)
+combined_array = np.concatenate((NMC_array, LPS_array), axis=0)
 num_particle = combined_array.shape[0]
 max_x = max(combined_array[:, 0])
 max_y = max(combined_array[:, 1])
@@ -103,7 +103,7 @@ def type_of_particle(i):
         return 'NMC'
     elif i == num_particle:
         return 'Target'
-    return 'Carbon'
+    return 'LPS'
 
 # Build adj map for each NMC and LPS particles.
 # E.g., {0: {1: [5.2, -0.1, 'NMC'], 2: [3.3, -0.2, 'LPS']},
@@ -142,7 +142,7 @@ for i in range(num_particle):
     z_coord = combined_array[i, 2]
     vertical_dist[i] = z_coord
     particle_rads[i] = radius_i
-    if SYS_thk-z_coord <= radius_i+dlta:
+    if z_coord <= radius_i+dlta:
         adj[i][num_particle] = [z_coord, 0, 'Target']
 
     grid_index_i = grid_index_lst(coord_i)
@@ -179,9 +179,7 @@ data = {'num_NMC': num_NMC, 'num_LPS': num_LPS,
         'adj': adj,
         'thickness': SYS_thk
 }
-#with open(output, 'w') as fp:
-#    json.dump(data, fp)
-    
-with open('adj_size2.json', 'w') as fp:
+
+with open(output, 'w') as fp:
     json.dump(data, fp)
 
