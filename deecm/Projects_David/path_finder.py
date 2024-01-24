@@ -3,13 +3,13 @@ from queue import PriorityQueue
 import sys
 
 args = sys.argv
-# input = args[1]
-# output = args[2]
+input = args[1]
+output = args[2]
 
-# Load JSON file and variables
-# with open(input, 'rb') as fp:
-with open('adj_size2.json', 'rb') as fp:
-    data = json.load(fp)
+Load JSON file and variables
+with open(input, 'rb') as fp:
+#with open('adj_size2.json', 'rb') as fp:
+#    data = json.load(fp)
 
 adj_data = data['adj']
 num_NMC = data['num_NMC']
@@ -108,6 +108,7 @@ for s in range(num_NMC):
         num_active_NMC += 1
 
 data = {'num_NMC': num_NMC, 'num_active_NMC': num_active_NMC, 'thickness': SYS_thk, 'active_NMC_percent': vol_active_NMC/vol_NMC, 'path': shortest_paths}
-# with open(output, 'w') as fp:
-#     json.dump(data, fp)
+
+with open(output, 'w') as fp:
+     json.dump(data, fp)
 
