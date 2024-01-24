@@ -1,6 +1,6 @@
 #!/bin/bash
 # Job name:
-#SBATCH --job-name=NMC_LPS
+#SBATCH --job-name=Percolation-Networks
 #
 # Partition:
 #SBATCH --partition=tier3
