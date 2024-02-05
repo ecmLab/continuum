@@ -9,11 +9,8 @@
 
 #pragma once
 
-#include "OptimizationData.h"
-
-// friends
-#include "OptimizeSolve.h"
-#include "OptimizationReporterTest.h"
+#include "GeneralReporter.h"
+#include "libmesh/petsc_matrix.h"
 
 namespace libMesh
 {
@@ -25,21 +22,20 @@ class PetscVector;
  * Base class for optimization objects, implements routines for calculating misfit. Derived classes
  * are responsible for parameter members and gradient computation.
  */
-class OptimizationReporterBase : public OptimizationData
+class OptimizationReporterBase : public GeneralReporter
 {
 public:
   static InputParameters validParams();
   OptimizationReporterBase(const InputParameters & parameters);
 
-  void initialize() override final {}
-  void execute() override final {}
-  void finalize() override final {}
-
+  virtual void initialize() override {}
+  virtual void execute() override {}
+  virtual void finalize() override {}
   /**
    * Function to compute objective.
    * This is the last function called in objective routine
    */
-  virtual Real computeObjective();
+  virtual Real computeObjective() = 0;
 
   /**
    * Function to compute gradient.
@@ -54,14 +50,9 @@ public:
 
   /**
    * Function to override misfit values with the simulated values from the matrix free hessian
-   * forward solve
+   * forward solve.
    */
-  void setMisfitToSimulatedValues();
-
-  /**
-   * Functions to check if bounds are set
-   */
-  bool hasBounds() const { return _upper_bounds.size() && _lower_bounds.size(); }
+  virtual void setMisfitToSimulatedValues(){};
 
   /**
    * Upper and lower bounds for each parameter being controlled
@@ -76,7 +67,43 @@ public:
    * Function to get the total number of parameters
    * @return total number of parameters
    */
-  dof_id_type getNumParams() const { return _ndof; }
+  virtual dof_id_type getNumParams() const { return _ndof; }
+
+  /**
+   * Function to compute the equality constraints.
+   * This is the last call of the equality function routine.
+   */
+  virtual void computeEqualityConstraints(libMesh::PetscVector<Number> & eqs_constraints) const;
+
+  /**
+   * Function to compute the inequality constraints.
+   * This is the last call of the inequality function routine.
+   */
+  virtual void computeInequalityConstraints(libMesh::PetscVector<Number> & ineqs_constraints) const;
+
+  /**
+   * Function to compute the gradient of the equality constraints/
+   * This is the last call of the equality constraint gradient routine.
+   */
+  virtual void computeEqualityGradient(libMesh::PetscMatrix<Number> & gradient) const;
+
+  /**
+   * Function to compute the gradient of the inequality constraints/
+   * This is the last call of the inequality constraint gradient routine.
+   */
+  virtual void computeInequalityGradient(libMesh::PetscMatrix<Number> & gradient) const;
+
+  /**
+   * Function to get the total number of equalities
+   * @return total number of equality constraints
+   */
+  dof_id_type getNumEqCons() const { return _n_eq_cons; }
+
+  /**
+   * Function to get the total number of inequalities
+   * @return total number of inequalities constraints
+   */
+  dof_id_type getNumInEqCons() const { return _n_ineq_cons; }
 
 protected:
   /**
@@ -84,13 +111,14 @@ protected:
    * This is the first function called in objective/gradient/hessian routine
    */
   virtual void updateParameters(const libMesh::PetscVector<Number> & x);
+
   /**
-   * Helper function to get index of the list of parameters from the dof index
-   *
-   * @param i The DoF index in the optimization vector
-   * @return unsigned int The index of the parameter the DoF is representing
+   * Function to fill vector with parameters.
    */
-  virtual unsigned int getParameterIndex(dof_id_type i) const;
+  std::vector<Real> fillParamsVector(std::string type, Real default_value) const;
+
+  /// Sets the initial conditions and bounds right before it is needed.
+  virtual void setICsandBounds(){};
 
   /// Parameter names
   const std::vector<ReporterValueName> & _parameter_names;
@@ -102,9 +130,30 @@ protected:
   /// Gradient values declared as reporter data
   std::vector<std::vector<Real> *> _gradients;
 
+  /// Tikhonov Coefficient for regularization
+  const Real _tikhonov_coeff;
+
+  /// Equality constraint names
+  const std::vector<ReporterValueName> * _equality_names;
+  /// Number of equality constraint names
+  const unsigned int _n_eq_cons;
+  /// Equality values declared as reporter data
+  std::vector<std::vector<Real> *> _eq_constraints;
+  /// Gradient values declared as reporter data
+  std::vector<std::vector<Real> *> _eq_gradients;
+
+  /// Inequality constraint names
+  const std::vector<ReporterValueName> * _inequality_names;
+  /// Number of inequality constraint names
+  const unsigned int _n_ineq_cons;
+  /// Inequality values declared as reporter data
+  std::vector<std::vector<Real> *> _ineq_constraints;
+  /// Gradient values declared as reporter data
+  std::vector<std::vector<Real> *> _ineq_gradients;
+
   /// Bounds of the parameters
-  const std::vector<Real> & _lower_bounds;
-  const std::vector<Real> & _upper_bounds;
+  std::vector<Real> _lower_bounds;
+  std::vector<Real> _upper_bounds;
 
   /// Number of values for each parameter
   std::vector<dof_id_type> _nvalues;
@@ -114,6 +163,6 @@ protected:
 private:
   friend class OptimizeSolve;
   friend class OptimizationReporterTest;
-
-  void setSimulationValuesForTesting(std::vector<Real> & data);
+  /// private method for testing optimizationData with test src
+  virtual void setSimulationValuesForTesting(std::vector<Real> & /*data*/){};
 };

@@ -15,6 +15,7 @@
 #include "MooseMesh.h"
 #include "MooseTypes.h"
 #include "MooseVariableFE.h"
+#include "Positions.h"
 
 #include "libmesh/system.h"
 #include "libmesh/mesh_function.h"
@@ -42,6 +43,17 @@ MultiAppGeneralFieldShapeEvaluationTransfer::MultiAppGeneralFieldShapeEvaluation
     const InputParameters & parameters)
   : MultiAppGeneralFieldTransfer(parameters)
 {
+  // Nearest point isn't well defined for sending app-based data from main app to a multiapp
+  if (_nearest_positions_obj && isParamValid("to_multi_app") && !isParamValid("from_multi_app"))
+    paramError("use_nearest_position",
+               "Cannot use nearest-position algorithm when sending from the main application");
+
+  // There's not much use for matching cell divisions when the locations have to match exactly
+  // to get a valid source variable value anyway
+  if (_from_mesh_division_behavior == MeshDivisionTransferUse::MATCH_DIVISION_INDEX ||
+      _to_mesh_division_behavior == MeshDivisionTransferUse::MATCH_DIVISION_INDEX)
+    paramError("from_mesh_division_usage",
+               "Matching division index is disabled for shape evaluation transfers");
 }
 
 void
@@ -49,7 +61,8 @@ MultiAppGeneralFieldShapeEvaluationTransfer::prepareEvaluationOfInterpValues(
     const unsigned int var_index)
 {
   _local_bboxes.clear();
-  extractLocalFromBoundingBoxes(_local_bboxes);
+  if (_use_bounding_boxes)
+    extractLocalFromBoundingBoxes(_local_bboxes);
 
   _local_meshfuns.clear();
   buildMeshFunctions(var_index, _local_meshfuns);
@@ -85,7 +98,8 @@ MultiAppGeneralFieldShapeEvaluationTransfer::buildMeshFunctions(
 
 void
 MultiAppGeneralFieldShapeEvaluationTransfer::evaluateInterpValues(
-    const std::vector<Point> & incoming_points, std::vector<std::pair<Real, Real>> & outgoing_vals)
+    const std::vector<std::pair<Point, unsigned int>> & incoming_points,
+    std::vector<std::pair<Real, Real>> & outgoing_vals)
 {
   evaluateInterpValuesWithMeshFunctions(
       _local_bboxes, _local_meshfuns, incoming_points, outgoing_vals);
@@ -95,15 +109,14 @@ void
 MultiAppGeneralFieldShapeEvaluationTransfer::evaluateInterpValuesWithMeshFunctions(
     const std::vector<BoundingBox> & local_bboxes,
     std::vector<MeshFunction> & local_meshfuns,
-    const std::vector<Point> & incoming_points,
+    const std::vector<std::pair<Point, unsigned int>> & incoming_points,
     std::vector<std::pair<Real, Real>> & outgoing_vals)
 {
   dof_id_type i_pt = 0;
-  for (auto & pt : incoming_points)
+  for (auto & [pt, mesh_div] : incoming_points)
   {
     bool point_found = false;
-    if (_use_nearest_app)
-      outgoing_vals[i_pt].second = GeneralFieldTransfer::BetterOutOfMeshValue;
+    outgoing_vals[i_pt].second = GeneralFieldTransfer::BetterOutOfMeshValue;
 
     // Loop on all local origin problems until:
     // - we've found the point in an app and the value at that point is valid
@@ -111,26 +124,26 @@ MultiAppGeneralFieldShapeEvaluationTransfer::evaluateInterpValuesWithMeshFunctio
     // - or if looking for the nearest app, we also check them all
     for (MooseIndex(_from_problems.size()) i_from = 0;
          i_from < _from_problems.size() &&
-         (!point_found || _search_value_conflicts || _use_nearest_app);
+         (!point_found || _search_value_conflicts || _nearest_positions_obj);
          ++i_from)
     {
       // Check spatial restrictions
-      if (!acceptPointInOriginMesh(i_from, local_bboxes, pt))
+      Real distance = 0;
+      if (!acceptPointInOriginMesh(i_from, local_bboxes, pt, mesh_div, distance))
         continue;
       else
       {
         // Use mesh function to compute interpolation values
-        auto val = (local_meshfuns[i_from])(pt - _from_positions[i_from]);
+        const auto from_global_num = getGlobalSourceAppIndex(i_from);
+        const auto local_pt = _from_transforms[from_global_num]->mapBack(pt);
+        auto val = (local_meshfuns[i_from])(local_pt);
 
         // Look for overlaps. The check is not active outside of overlap search because in that
         // case we accept the first value from the lowest ranked process
         // NOTE: There is no guarantee this will be the final value used among all problems
         //       but for shape evaluation we really do expect only one value to even be valid
-        if (detectConflict(val,
-                           outgoing_vals[i_pt].first,
-                           _use_nearest_app ? (pt - _from_positions[i_from]).norm() : 1,
-                           outgoing_vals[i_pt].second))
-          registerConflict(i_from, 0, pt - _from_positions[i_from], 1, true);
+        if (detectConflict(val, outgoing_vals[i_pt].first, distance, outgoing_vals[i_pt].second))
+          registerConflict(i_from, 0, local_pt, distance, true);
 
         // No need to consider decision factors if value is invalid
         if (val == GeneralFieldTransfer::BetterOutOfMeshValue)
@@ -138,16 +151,14 @@ MultiAppGeneralFieldShapeEvaluationTransfer::evaluateInterpValuesWithMeshFunctio
         else
           point_found = true;
 
-        // Assign value
-        if (!_use_nearest_app)
+        // Assign value and the distance from the target point to the origin data
+        // distance only matters if multiple applications are providing a valid value
+        // which would mean they overlap in the reference space. The distance can help
+        // lift the indetermination on which value to select
+        if (distance < outgoing_vals[i_pt].second)
         {
           outgoing_vals[i_pt].first = val;
-          outgoing_vals[i_pt].second = 1;
-        }
-        else if ((pt - _from_positions[i_from]).norm() < outgoing_vals[i_pt].second)
-        {
-          outgoing_vals[i_pt].first = val;
-          outgoing_vals[i_pt].second = (pt - _from_positions[i_from]).norm();
+          outgoing_vals[i_pt].second = distance;
         }
       }
     }

@@ -7,7 +7,7 @@
 #* Licensed under LGPL 2.1, please see LICENSE for details
 #* https://www.gnu.org/licenses/lgpl-2.1.html
 
-import platform, re, os, sys, pkgutil, shutil
+import platform, re, os, sys, pkgutil, shutil, shlex
 import mooseutils
 from TestHarness import util
 from TestHarness.StatusSystem import StatusSystem
@@ -39,6 +39,7 @@ class Tester(MooseObject):
         params.addParam('success_message', 'OK', "The successful message")
 
         params.addParam('cli_args',       [], "Additional arguments to be passed to the test.")
+        params.addParam('use_shell',          False, "Whether to use the shell as the executing program. This has the effect of prepending '/bin/sh -c ' to the command to be run.")
         params.addParam('allow_test_objects', False, "Allow the use of test objects by adding --allow-test-objects to the command line.")
 
         params.addParam('valgrind', 'NONE', "Set to (NONE, NORMAL, HEAVY) to determine which configurations where valgrind will run.")
@@ -49,6 +50,7 @@ class Tester(MooseObject):
 
         # Test Filters
         params.addParam('platform',      ['ALL'], "A list of platforms for which this test will run on. ('ALL', 'DARWIN', 'LINUX', 'SL', 'LION', 'ML')")
+        params.addParam('machine',       ['ALL'], "A list of micro architectures for which this test will run on. ('ALL', 'X86_64', 'ARM64')")
         params.addParam('compiler',      ['ALL'], "A list of compilers for which this test is valid on. ('ALL', 'GCC', 'INTEL', 'CLANG')")
         params.addParam('petsc_version', ['ALL'], "A list of petsc versions for which this test will run on, supports normal comparison operators ('<', '>', etc...)")
         params.addParam('petsc_version_release', ['ALL'], "A test that runs against PETSc master if FALSE ('ALL', 'TRUE', 'FALSE')")
@@ -57,6 +59,7 @@ class Tester(MooseObject):
         params.addParam('vtk_version', ['ALL'], "A list of VTK versions for which this test will run on, supports normal comparison operators ('<', '>', etc...)")
         params.addParam('mesh_mode',     ['ALL'], "A list of mesh modes for which this test will run ('DISTRIBUTED', 'REPLICATED')")
         params.addParam('min_ad_size',   None, "A minimum AD size for which this test will run")
+        params.addParam('max_ad_size',   None, "A maximum AD size for which this test will run")
         params.addParam('method',        ['ALL'], "A test that runs under certain executable configurations ('ALL', 'OPT', 'DBG', 'DEVEL', 'OPROF', 'PRO')")
         params.addParam('library_mode',  ['ALL'], "A test that only runs when libraries are built under certain configurations ('ALL', 'STATIC', 'DYNAMIC')")
         params.addParam('dtk',           ['ALL'], "A test that runs only if DTK is detected ('ALL', 'TRUE', 'FALSE')")
@@ -83,10 +86,11 @@ class Tester(MooseObject):
         params.addParam('libpng',        ['ALL'], "A test that runs only if libpng is available ('ALL', 'TRUE', 'FALSE')")
         params.addParam('libtorch',      ['ALL'], "A test that runs only if libtorch is available ('ALL', 'TRUE', 'FALSE')")
         params.addParam('libtorch_version', ['ALL'], "A list of libtorch versions for which this test will run on, supports normal comparison operators ('<', '>', etc...)")
-        params.addParam('installed',     ['ALL'], "A test that runs only if it is installed ('ALL', 'TRUE', 'FALSE')")
+        params.addParam('installation_type',['ALL'], "A test that runs under certain executable installation configurations ('ALL', 'IN_TREE', 'RELOCATED')")
 
         params.addParam('depend_files',  [], "A test that only runs if all depend files exist (files listed are expected to be relative to the base directory, not the test directory")
-        params.addParam('env_vars',      [], "A test that only runs if all the environment variables listed exist")
+        params.addParam('env_vars',      [], "A test that only runs if all the environment variables listed are set")
+        params.addParam('env_vars_not_set', [], "A test that only runs if all the environment variables listed are not set")
         params.addParam('should_execute', True, 'Whether or not the executable needs to be run.  Use this to chain together multiple tests based off of one executeable invocation')
         params.addParam('required_submodule', [], "A list of initialized submodules for which this test requires.")
         params.addParam('required_objects', [], "A list of required objects that are in the executable.")
@@ -305,15 +309,19 @@ class Tester(MooseObject):
         """ return the executable command that will be executed by the tester """
         return ''
 
-    def runCommand(self, cmd, cwd, timer, options):
+    def spawnSubprocessFromOptions(self, timer, options):
         """
-        Helper method for running external (sub)processes as part of the tester's execution.  This
-        uses the tester's getCommand and getTestDir methods to run a subprocess.  The timer must
-        be the same timer passed to the run method.  Results from running the subprocess is stored
-        in the tester's output and exit_code fields.
+        Spawns a subprocess based on given options, sets output and error files,
+        and starts timer.
         """
-
         cmd = self.getCommand(options)
+
+        use_shell = self.specs["use_shell"]
+
+        if not use_shell:
+            # Split command into list of args to be passed to Popen
+            cmd = shlex.split(cmd)
+
         cwd = self.getTestDir()
 
         # Verify that the working directory is available right before we execute.
@@ -322,7 +330,7 @@ class Tester(MooseObject):
             timer.start()
             self.setStatus(self.fail, 'WORKING DIRECTORY NOT FOUND')
             timer.stop()
-            return
+            return 1
 
         self.process = None
         try:
@@ -331,12 +339,14 @@ class Tester(MooseObject):
 
             # On Windows, there is an issue with path translation when the command is passed in
             # as a list.
+            # shell is set to False to avoid getting wrong PID to parent sh
+            # process on some systems instead of to child MOOSE app process
             if platform.system() == "Windows":
                 process = subprocess.Popen(cmd, stdout=f, stderr=e, close_fds=False,
-                                           shell=True, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, cwd=cwd)
+                                           shell=use_shell, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP, cwd=cwd)
             else:
                 process = subprocess.Popen(cmd, stdout=f, stderr=e, close_fds=False,
-                                           shell=True, preexec_fn=os.setsid, cwd=cwd)
+                                           shell=use_shell, preexec_fn=os.setsid, cwd=cwd)
         except:
             print("Error in launching a new task", cmd)
             raise
@@ -346,10 +356,18 @@ class Tester(MooseObject):
         self.errfile = e
 
         timer.start()
-        process.wait()
+        return 0
+
+    def finishAndCleanupSubprocess(self, timer):
+        """
+        Waits for the current subproccess to finish, stops the timer, and
+        cleans up.
+        """
+        self.process.wait()
+
         timer.stop()
 
-        self.exit_code = process.poll()
+        self.exit_code = self.process.poll()
         self.outfile.flush()
         self.errfile.flush()
 
@@ -357,6 +375,20 @@ class Tester(MooseObject):
         self.joined_out = util.readOutput(self.outfile, self.errfile, self)
         self.outfile.close()
         self.errfile.close()
+
+    def runCommand(self, timer, options):
+        """
+        Helper method for running external (sub)processes as part of the tester's execution.  This
+        uses the tester's getCommand and getTestDir methods to run a subprocess.  The timer must
+        be the same timer passed to the run method.  Results from running the subprocess is stored
+        in the tester's output and exit_code fields.
+        """
+
+        exit_code = self.spawnSubprocessFromOptions(timer, options)
+        if exit_code: # Something went wrong
+            return
+
+        self.finishAndCleanupSubprocess(timer)
 
     def killCommand(self):
         """
@@ -385,10 +417,7 @@ class Tester(MooseObject):
         if needed. The run method is responsible to call the start+stop methods on timer to record
         the time taken to run the actual test.  start+stop can be called multiple times.
         """
-        cmd = self.getCommand(options)
-        cwd = self.getTestDir()
-
-        self.runCommand(cmd, cwd, timer, options)
+        self.runCommand(timer, options)
 
     def processResultsCommand(self, moose_dir, options):
         """ method to return the commands (list) used for processing results """
@@ -518,6 +547,9 @@ class Tester(MooseObject):
         min_ad_size = self.specs['min_ad_size']
         if min_ad_size is not None and int(min_ad_size) > ad_size:
             reasons['min_ad_size'] = "Minimum AD size %d needed, but MOOSE is configured with %d" % (int(min_ad_size), ad_size)
+        max_ad_size = self.specs['max_ad_size']
+        if max_ad_size is not None and int(max_ad_size) < ad_size:
+            reasons['max_ad_size'] = "Maximum AD size %d needed, but MOOSE is configured with %d" % (int(max_ad_size), ad_size)
 
         # Check for PETSc versions
         (petsc_status, petsc_version) = util.checkPetscVersion(checks, self.specs)
@@ -554,9 +586,11 @@ class Tester(MooseObject):
             reasons['libtorch_version'] = 'using libtorch ' + str(checks['libtorch_version']) + ' REQ: ' + libtorch_version
 
         # PETSc and SLEPc is being explicitly checked above
-        local_checks = ['platform', 'compiler', 'mesh_mode', 'method', 'library_mode', 'dtk', 'unique_ids', 'vtk', 'tecplot',
-                        'petsc_debug', 'curl', 'superlu', 'mumps', 'strumpack', 'cxx11', 'asio', 'unique_id', 'slepc', 'petsc_version_release', 'boost', 'fparser_jit',
-                        'parmetis', 'chaco', 'party', 'ptscotch', 'threading', 'libpng', 'libtorch', 'installed']
+        local_checks = ['platform', 'machine', 'compiler', 'mesh_mode', 'method', 'library_mode', 'dtk',
+                        'unique_ids', 'vtk', 'tecplot', 'petsc_debug', 'curl', 'superlu', 'mumps',
+                        'strumpack', 'cxx11', 'asio', 'unique_id', 'slepc', 'petsc_version_release',
+                        'boost', 'fparser_jit', 'parmetis', 'chaco', 'party', 'ptscotch',
+                        'threading', 'libpng', 'libtorch']
 
         for check in local_checks:
             test_platforms = set()
@@ -579,6 +613,11 @@ class Tester(MooseObject):
             # or we did find the match when we wanted to exclude it
             if inverse_set == match_found:
                 reasons[check] = re.sub(r'\[|\]', '', check).upper() + operator_display + ', '.join(test_platforms)
+
+        # Check for binary location
+        if (self.specs['installation_type'] and
+            self.specs['installation_type'][0].upper() not in checks['installation_type']):
+            reasons['installation_type'] = f'test requires "{self.specs["installation_type"][0]}" binary'
 
         # Check for heavy tests
         if options.all_tests or options.heavy_tests:
@@ -609,11 +648,12 @@ class Tester(MooseObject):
 
         # We extract the registered apps only if we need them
         if self.specs["required_applications"] and checks["registered_apps"] is None:
-            checks["registered_apps"] = util.getExeRegisteredApps(self.specs["executable"])
+            checks["registered_apps"] = util.getRegisteredApps(self.specs["executable"],
+                                                               self.specs["app_name"])
 
         # Check to see if we have the required application names
         for var in self.specs['required_applications']:
-            if var not in checks["registered_apps"]:
+            if var.upper() not in checks["registered_apps"]:
                 reasons['required_applications'] = 'App %s not registered in executable' % var
                 break
 
@@ -626,6 +666,10 @@ class Tester(MooseObject):
         for var in self.specs['env_vars']:
             if not os.environ.get(var):
                 reasons['env_vars'] = 'ENV VAR NOT SET'
+
+        for var in self.specs['env_vars_not_set']:
+            if os.environ.get(var):
+                reasons['env_vars'] = 'ENV VAR SET'
 
         # Check for display
         if self.specs['display_required'] and not os.getenv('DISPLAY', False):
@@ -648,7 +692,7 @@ class Tester(MooseObject):
         if py_packages is not None:
             missing = mooseutils.check_configuration(py_packages.split(), message=False)
             if missing:
-                reasons['python_packages_required'] = ', '.join(['no {}'.format(p) for p in missing])
+                reasons['python_packages_required'] = ', '.join(['{}'.format(p) for p in missing])
 
         # Check for programs
         programs = self.specs['requires']
@@ -686,14 +730,20 @@ class Tester(MooseObject):
                     tmp_reason.append(value)
 
             flat_reason = ', '.join(tmp_reason)
-
-            # If the test is deleted we still need to treat this differently
             self.addCaveats(flat_reason)
+
+            # Reasons we wish to silence tests
             if 'deleted' in reasons.keys():
                 if options.extra_info:
                     self.setStatus(self.deleted)
                 else:
                     self.setStatus(self.silent)
+            elif ('heavy' in reasons.keys()
+                  and options.heavy_tests
+                  and not self.specs['heavy']):
+                self.setStatus(self.silent)
+
+            # Failed already (cannot run)
             elif self.getStatus() == self.fail:
                 return False
             else:

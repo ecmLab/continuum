@@ -37,17 +37,22 @@ ElementIntegralUserObject::execute()
   _integral_value += computeIntegral();
 }
 
-Real
-ElementIntegralUserObject::getValue()
+void
+ElementIntegralUserObject::finalize()
 {
   gatherSum(_integral_value);
+}
+
+Real
+ElementIntegralUserObject::getValue() const
+{
   return _integral_value;
 }
 
 void
 ElementIntegralUserObject::threadJoin(const UserObject & y)
 {
-  const ElementIntegralUserObject & pps = static_cast<const ElementIntegralUserObject &>(y);
+  const auto & pps = static_cast<const ElementIntegralUserObject &>(y);
   _integral_value += pps._integral_value;
 }
 

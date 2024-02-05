@@ -43,12 +43,17 @@ Syntax::registerTaskName(const std::string & task,
 }
 
 void
-Syntax::appendTaskName(const std::string & task, const std::string & moose_object_type)
+Syntax::appendTaskName(const std::string & task,
+                       const std::string & moose_object_type,
+                       bool deprecated)
 {
   if (_registered_tasks.find(task) == _registered_tasks.end())
     mooseError("A ", task, " is not a registered task name.");
 
-  _moose_systems_to_tasks.insert(std::make_pair(moose_object_type, task));
+  if (!deprecated)
+    _moose_systems_to_tasks.insert(std::make_pair(moose_object_type, task));
+  else
+    _deprecated_list_moose_systems_to_tasks.insert(std::make_pair(moose_object_type, task));
 }
 
 void
@@ -223,8 +228,23 @@ Syntax::getSyntaxByAction(const std::string & action, const std::string & task)
 }
 
 std::string
-Syntax::isAssociated(const std::string & real_id, bool * is_parent) const
+Syntax::isAssociated(const std::string & real_id,
+                     bool * is_parent,
+                     const std::map<std::string, std::set<std::string>> & alt_map) const
 {
+  // if non-empty alt_map was provided then traverse its syntax instead of _syntax_to_actions
+  std::set<std::string> syntax_to_traverse;
+  if (!alt_map.empty())
+    std::transform(alt_map.begin(),
+                   alt_map.end(),
+                   std::inserter(syntax_to_traverse, syntax_to_traverse.end()),
+                   [](auto pair) { return pair.first; });
+  else
+    std::transform(_syntax_to_actions.begin(),
+                   _syntax_to_actions.end(),
+                   std::inserter(syntax_to_traverse, syntax_to_traverse.end()),
+                   [](auto pair) { return pair.first; });
+
   /**
    * This implementation assumes that wildcards can occur in the place of an entire token but not as
    * part of a token (i.e.  'Variables/ * /InitialConditions' is valid but not 'Variables/Partial*
@@ -241,9 +261,9 @@ Syntax::isAssociated(const std::string & real_id, bool * is_parent) const
   MooseUtils::tokenize(real_id, real_elements);
 
   *is_parent = false;
-  for (auto it = _syntax_to_actions.rbegin(); it != _syntax_to_actions.rend(); ++it)
+  for (auto it = syntax_to_traverse.rbegin(); it != syntax_to_traverse.rend(); ++it)
   {
-    std::string reg_id = it->first;
+    std::string reg_id = *it;
     if (reg_id == real_id)
     {
       *is_parent = false;
@@ -298,6 +318,22 @@ Syntax::verifyMooseObjectTask(const std::string & base, const std::string & task
   for (const auto & task_it : as_range(iters))
     if (task == task_it.second)
       return true;
+
+  iters = _deprecated_list_moose_systems_to_tasks.equal_range(base);
+  for (const auto & task_it : as_range(iters))
+    if (task == task_it.second)
+    {
+      std::string object_tasks = "";
+      for (const auto & other_task : as_range(_moose_systems_to_tasks.equal_range(base)))
+        object_tasks += (object_tasks == "" ? "" : " ") + other_task.second;
+
+      mooseDeprecated(
+          "Adding objects from system '" + base + "' through task '" + task +
+          "' is deprecated. This object should only be added from task(s): " + object_tasks +
+          ". This is likely caused by adding objects in a block they no longer belong to. For "
+          "example, FunctorMaterials should no longer be added in the [Materials] block.");
+      return true;
+    }
 
   return false;
 }

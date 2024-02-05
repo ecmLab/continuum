@@ -63,6 +63,9 @@ GeneralizedPlaneStrainAction::validParams()
   params.addParam<std::vector<TagName>>(
       "extra_vector_tags",
       "The tag names for extra vectors that residual data should be saved into");
+  params.addParam<std::vector<TagName>>("absolute_value_vector_tags",
+                                        "The tag names for extra vectors that the absolute value "
+                                        "of the residual should be accumulated into");
 
   return params;
 }
@@ -111,7 +114,7 @@ GeneralizedPlaneStrainAction::act()
       auto temp = getParam<std::vector<VariableName>>("temperature");
       if (temp.size() > 1)
         mooseError("Only one variable may be specified in 'temperature'");
-      if (_problem->getNonlinearSystemBase().hasVariable(temp[0]))
+      if (_problem->getNonlinearSystemBase(/*nl_sys_num=*/0).hasVariable(temp[0]))
       {
         std::string k_name = _name + "_GeneralizedPlaneStrainOffDiag_temp";
         params.set<NonlinearVariableName>("variable") = temp[0];
@@ -167,6 +170,9 @@ GeneralizedPlaneStrainAction::act()
     if (isParamValid("extra_vector_tags"))
       params.set<std::vector<TagName>>("extra_vector_tags") =
           getParam<std::vector<TagName>>("extra_vector_tags");
+    if (isParamValid("absolute_value_vector_tags"))
+      params.set<std::vector<TagName>>("absolute_value_vector_tags") =
+          getParam<std::vector<TagName>>("absolute_value_vector_tags");
 
     _problem->addScalarKernel(sk_type, _name + "_GeneralizedPlaneStrain", params);
   }

@@ -103,9 +103,15 @@ public:
 
   /**
    * Return the block subdomain ids for this object
-   * @return a set of SudomainIDs that are valid for this object
+   * Note, if this is not block restricted, this function returns all mesh subdomain ids.
+   * @return a set of SubdomainIDs that are valid for this object
    */
   const virtual std::set<SubdomainID> & blockIDs() const;
+
+  /**
+   * Return the largest mesh dimension of the elements in the blocks for this object
+   */
+  unsigned int blocksMaxDimension() const;
 
   /**
    * Test if the supplied block name is valid for this object
@@ -131,14 +137,14 @@ public:
   /**
    * Test if the supplied vector block ids are valid for this object
    * @param ids A vector of SubdomainIDs ids to check
-   * @return True if the all of the given ids are found within the ids for this object
+   * @return True if all of the given ids are found within the ids for this object
    */
   bool hasBlocks(const std::vector<SubdomainID> & ids) const;
 
   /**
    * Test if the supplied set of block ids are valid for this object
    * @param ids A std::set of SubdomainIDs to check
-   * @return True if the all of the given ids are found within the ids for this object
+   * @return True if all of the given ids are found within the ids for this object
    * \see isSubset
    */
   bool hasBlocks(const std::set<SubdomainID> & ids) const;
@@ -198,7 +204,7 @@ public:
 
 protected:
   /// Pointer to the MaterialData class for this object
-  std::shared_ptr<MaterialData> _blk_material_data;
+  const MaterialData * _blk_material_data;
 
   /**
    * A helper method to allow the Material object to specialize the behavior
@@ -248,6 +254,9 @@ private:
 
   /// Name of the object
   const std::string & _blk_name;
+
+  /// Largest mesh dimension of the elements in the blocks for this object
+  unsigned int _blk_dim;
 };
 
 template <typename T, bool is_ad>

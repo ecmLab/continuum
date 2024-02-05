@@ -66,6 +66,12 @@
                   'tagged and the auxiliary output variables do not match.'
   []
 
+  [call_residual]
+    type = RunApp
+    input = 'tag_residual_call.i'
+    requirement = 'The system shall be able to accumulate tagged vectors individually with multiple residual computations.'
+  []
+
   [systems]
     requirement = 'The system shall support filling in labeled or "tagged" vectors or matrices from:'
 
@@ -133,7 +139,7 @@
       input = 'tag_nodal_kernels.i'
       exodiff = 'tag_nodal_kernels_out.e'
 
-      detail = 'the nodal kernel system, and'
+      detail = 'the nodal kernel system,'
     []
 
     [test_eigen]
@@ -141,7 +147,14 @@
       input = 'eigen_tag.i'
       exodiff = 'eigen_tag_out.e'
       slepc_version = '>=3.8.0'
-      detail = 'the eigen system.'
+      detail = 'the eigen system, and '
+    []
+
+    [test_old_eigen]
+      type = 'Exodiff'
+      input = 'old_eigen_tag.i'
+      exodiff = 'old_eigen_tag_out.e'
+      detail = 'the legacy eigen system.'
     []
   []
 
@@ -196,6 +209,14 @@
     exodiff = 'tag-array-grad_out.e'
     abs_zero = 1e-08
   []
+  [array_grad_dot]
+    type = 'Exodiff'
+    input = 'coupled_array_grad_dot.i'
+    issues = '#26385'
+    requirement = 'The system shall be able to populate auxiliary array variable values using the components of gradient of time derivative of coupled array variable.'
+    exodiff = 'coupled_array_grad_dot_out.e'
+    abs_zero = 1e-08
+  []
   [multiple_component_tag_interface]
     type = 'Exodiff'
     input = 2d_diffusion_tag_vector.i
@@ -208,5 +229,20 @@
     input = tag-fv.i
     exodiff = tag-fv_out.e
     requirement = 'The system shall be able to index solution vectors and residual vectors using the degree of freedom indices of a finite volume variable.'
+  []
+  [mass]
+    requirement = 'The system shall be able to use matrix tagging to compute a mass matrix'
+    [fv]
+      type = 'Exodiff'
+      input = mass-matrix.i
+      exodiff = mass-matrix_out.e
+      detail = 'for a finite volume variable, and'
+    []
+    [fe]
+      type = 'Exodiff'
+      input = fe-mass-matrix.i
+      exodiff = fe-mass-matrix_out.e
+      detail = 'for a finite element variable.'
+    []
   []
 []

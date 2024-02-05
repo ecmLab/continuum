@@ -153,7 +153,7 @@ advected_interp_method = 'average'
     type = INSFVEnergyTimeDerivative
     variable = T
     rho = ${rho}
-    cp = 'cp'
+    dh_dt = dh_dt
   []
   [temp_conduction]
     type = FVDiffusion
@@ -205,14 +205,14 @@ advected_interp_method = 'average'
   []
 []
 
-[Materials]
+[FunctorMaterials]
   [functor_constants]
     type = ADGenericFunctorMaterial
     prop_names = 'cp k'
     prop_values = '${cp} ${k}'
   []
   [ins_fv]
-    type = INSFVEnthalpyMaterial
+    type = INSFVEnthalpyFunctorMaterial
     temperature = 'T'
     rho = ${rho}
   []

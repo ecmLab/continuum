@@ -9,14 +9,32 @@
 
 #pragma once
 
+#include "OptimizationData.h"
 #include "OptimizationReporterBase.h"
+
+class ParameterMesh;
 
 /**
  * Mesh-based parameter optimization
  */
-class ParameterMeshOptimization : public OptimizationReporterBase
+class ParameterMeshOptimization : public OptimizationDataTempl<OptimizationReporterBase>
 {
+
 public:
   static InputParameters validParams();
   ParameterMeshOptimization(const InputParameters & parameters);
+
+  virtual Real computeObjective() override;
+
+private:
+  /**
+   * Read initialization data off of parameter mesh and error check.
+   * @return values read from mesh
+   */
+  std::vector<Real> parseData(const std::vector<unsigned int> & exodus_timestep,
+                              const ParameterMesh & pmesh,
+                              Real constantDataFromInput,
+                              const std::string & meshVarName,
+                              unsigned int ntimes) const;
+  virtual void setSimulationValuesForTesting(std::vector<Real> & data) override;
 };

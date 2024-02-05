@@ -49,7 +49,7 @@ GeneralizedPlaneStrainActionPD::validParams()
                                               "GeneralizedPlaneStrainActionPD will be applied "
                                               "to");
   params.addParam<std::vector<MaterialPropertyName>>(
-      "eigenstrain_names", "List of eigenstrains to be applied in this strain calculation");
+      "eigenstrain_names", {}, "List of eigenstrains to be applied in this strain calculation");
 
   return params;
 }
@@ -111,7 +111,7 @@ GeneralizedPlaneStrainActionPD::act()
     if (isParamValid("temperature"))
     {
       VariableName temp = getParam<VariableName>("temperature");
-      if (_problem->getNonlinearSystemBase().hasVariable(temp))
+      if (_problem->getNonlinearSystemBase(/*nl_sys_num=*/0).hasVariable(temp))
       {
         params.set<std::vector<VariableName>>("temperature") = {temp};
 

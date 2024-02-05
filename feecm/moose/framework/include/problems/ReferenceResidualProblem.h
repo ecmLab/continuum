@@ -70,6 +70,15 @@ public:
     LOCAL_LINF
   };
 
+  class ReferenceVectorTagIDKey
+  {
+    friend class TaggingInterface;
+    ReferenceVectorTagIDKey() {}
+    ReferenceVectorTagIDKey(const ReferenceVectorTagIDKey &) {}
+  };
+
+  TagID referenceVectorTagID(ReferenceVectorTagIDKey) const { return _reference_vector_tag_id; }
+
 protected:
   ///@{
   /// List of solution variable names whose reference residuals will be stored,
@@ -129,6 +138,12 @@ protected:
 
   /// Container for normalization type
   FEMNormType _norm_type;
+
+  /// Container for convergence treatment when the reference residual is zero
+  const enum class ZeroReferenceType { ZERO_TOLERANCE, RELATIVE_TOLERANCE } _zero_ref_type;
+
+  /// The reference vector tag id
+  TagID _reference_vector_tag_id;
 };
 
 template <typename T>

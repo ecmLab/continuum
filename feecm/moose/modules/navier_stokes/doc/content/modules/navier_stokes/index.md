@@ -12,6 +12,7 @@ For documentation specific to finite element or finite volume implementations,
 please refer to the below pages:
 
 - [Continuous Galerkin Finite Element](navier_stokes/cgfe.md)
+- [Hybrid Continuous/Discontinuous Galerkin Finite Element](navier_stokes/hcgdgfe.md)
 - [Incompressible Finite Volume](insfv.md)
 - [Weakly Compressible Finite Volume](wcnsfv.md)
 - [Porous media Incompressible Finite Volume](pinsfv.md)
@@ -30,12 +31,13 @@ Here we give a brief tabular summary of the Navier-Stokes implementations:
 | INSFE      | Hand-coded | incompressible       | mixing length      | Not porous        | CGFE   | SUPG                              |
 | PINSFE     | Hand-coded | incompressible       | mixing length      | porous            | CGFE   | SUPG                              |
 | NS         | Hand-coded | compressible         | None               | Not porous        | CGFE   | SUPG                              |
+| INSChorin  | Hand-coded | incompressible       | None               | Not porous        | CGFE   | Chorin predictor-corrector        |
 | INSFV      | AD         | incompressible       | mixing length      | Not porous        | FV     | RC, CD velocity; limited advected |
 | WCNSFV     | AD         | weakly compressible  | mixing length      | Not porous        | FV     | RC, CD velocity; limited advected |
-| PINSFV     | AD         | incompressible       | mixing length      | Darcy, Forcheimer | FV     | RC, CD velocity; limited advected |
+| PINSFV     | AD         | incompressible       | mixing length      | Darcy, Forchheimer | FV     | RC, CD velocity; limited advected |
 | CNSFVHLLC  | AD         | compressible         | None               | Not porous        | FV     | HLLC, piecewise constant data     |
-| PCNSFVHLLC | AD         | compressible         | None               | Darcy, Forcheimer | FV     | HLLC, piecewise constant data     |
-| PCNSFVKT   | AD         | compressible         | None               | Darcy, Forcheimer | FV     | Kurganov-Tadmor, limited data     |
+| PCNSFVHLLC | AD         | compressible         | None               | Darcy, Forchheimer | FV     | HLLC, piecewise constant data     |
+| PCNSFVKT   | AD         | compressible         | None               | Darcy, Forchheimer | FV     | Kurganov-Tadmor, limited data     |
 
 Table definitions:
 

@@ -64,7 +64,8 @@ GaussianProcessHandler::setupCovarianceMatrix(const RealEigenMatrix & training_p
                                               const RealEigenMatrix & training_data,
                                               const GPOptimizerOptions & opts)
 {
-  const unsigned int batch_size = opts.batch_size > 0 ? opts.batch_size : training_params.rows();
+  const bool batch_decision = opts.batch_size > 0 && opts.batch_size <= training_params.rows();
+  const unsigned int batch_size = batch_decision ? opts.batch_size : training_params.rows();
   _K.resize(batch_size, batch_size);
 
   if (opts.opt_type == "tao")
@@ -307,7 +308,7 @@ GaussianProcessHandler::tuneHyperParamsAdam(const RealEigenMatrix & training_par
   Real new_val;
   Real m_hat;
   Real v_hat;
-  Real store_loss;
+  Real store_loss = 0.0;
   std::vector<Real> grad1;
 
   // Initialize randomizer

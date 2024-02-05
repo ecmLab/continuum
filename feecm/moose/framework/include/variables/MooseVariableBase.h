@@ -112,7 +112,7 @@ public:
    * Is this variable nodal
    * @return true if it nodal, otherwise false
    */
-  virtual bool isNodal() const { return true; }
+  virtual bool isNodal() const { mooseError("Base class cannot determine this"); }
 
   /**
    * Does this variable have DoFs on nodes
@@ -179,6 +179,11 @@ public:
   bool isArray() const { return _is_array; }
 
 protected:
+  /**
+   * @returns whether we should insert derivatives
+   */
+  bool doDerivatives() const;
+
   /// System this variable is part of
   SystemBase & _sys;
 

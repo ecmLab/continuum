@@ -236,6 +236,9 @@ PatternedHexMeshGenerator::PatternedHexMeshGenerator(const InputParameters & par
 
   if (_pattern_boundary == "hexagon")
   {
+    for (unsigned int i = 1; i < _duct_sizes.size(); i++)
+      if (_duct_sizes[i] <= _duct_sizes[i - 1])
+        paramError("duct_sizes", "This parameter must be strictly ascending.");
     if (!_peripheral_block_ids.empty() && _peripheral_block_ids.size() != _duct_sizes.size() + 1)
       paramError("duct_block_ids",
                  "This parameter, if provided, must have a length equal to length of duct_sizes.");
@@ -392,6 +395,10 @@ PatternedHexMeshGenerator::generate()
                    _name,
                    ": num_sectors_per_side metadata values of all six sides of each input mesh "
                    "generator must be identical.");
+      if (num_sectors_per_side_array_tmp.front() == 1 && _pattern_boundary == "hexagon")
+        paramError(
+            "inputs",
+            "for each input mesh, the number of sectors on each side must be greater than unity.");
       num_sectors_per_side_array.push_back(*num_sectors_per_side_array_tmp.begin());
       background_intervals_array.push_back(
           getMeshProperty<unsigned int>("background_intervals_meta", _input_names[i]));
@@ -425,6 +432,7 @@ PatternedHexMeshGenerator::generate()
   if (_pattern_boundary == "hexagon")
   {
     if (_has_assembly_duct)
+    {
       for (unsigned int i = 0; i < _duct_sizes.size(); i++)
       {
         if (_duct_sizes_style == PolygonSizeStyle::radius)
@@ -434,6 +442,10 @@ PatternedHexMeshGenerator::generate()
                                                          (Real)((_pattern.size() / 2) * 3 + 2)));
         peripheral_duct_intervals.push_back(_duct_intervals[i]);
       }
+      if (_duct_sizes.back() >= _pattern_pitch / 2.0)
+        paramError("duct_sizes",
+                   "The duct sizes should not exceed the size of the hexagonal boundary.");
+    }
     // calculate the distance between the larger hexagon boundary and the boundary of stitched unit
     // hexagons this is used to decide whether deformation is needed when cut-off happens or when
     // the distance is small.
@@ -444,7 +456,7 @@ PatternedHexMeshGenerator::generate()
     // In same cases, when the external hexagon size is small enough, the external hexagon boundary
     // may either be very close to the input hexagon meshes that are near the boundary or even cut
     // off the these hexagons. As long as the ring regions are not cut off, the input hexagons can
-    // be deformed to accomodate the external hexagon shape. This block sets up the range of mesh
+    // be deformed to accommodate the external hexagon shape. This block sets up the range of mesh
     // region that needs to be deformed.
     if (extra_dist.front() <= extra_dist_tol)
     {
@@ -848,6 +860,7 @@ PatternedHexMeshGenerator::generate()
     new_nodeset_map.insert(input_nodeset_map.begin(), input_nodeset_map.end());
   }
 
+  out_mesh->set_isnt_prepared();
   auto mesh = dynamic_pointer_cast<MeshBase>(out_mesh);
   // before return, add reporting IDs if _use_reporting_id is set true
   if (_use_reporting_id)
@@ -893,7 +906,7 @@ PatternedHexMeshGenerator::addPeripheralMesh(
                   pitch,
                   i);
 
-    // Loop for all applicable sides that need peripherial mesh (3 for corner and 2 for edge)
+    // Loop for all applicable sides that need peripheral mesh (3 for corner and 2 for edge)
     for (unsigned int peripheral_index = 0; peripheral_index < peripheral_point_index.size();
          peripheral_index++)
     {
@@ -1051,7 +1064,7 @@ PatternedHexMeshGenerator::addReportingIDs(
         "id_name", "An element integer with the name '", element_id_name, "' already exists");
   }
 
-  // asssign reporting IDs to individual elements
+  // assign reporting IDs to individual elements
   std::set<subdomain_id_type> background_block_ids;
   if (isParamValid("background_block_id"))
     background_block_ids.insert(getParam<subdomain_id_type>("background_block_id"));

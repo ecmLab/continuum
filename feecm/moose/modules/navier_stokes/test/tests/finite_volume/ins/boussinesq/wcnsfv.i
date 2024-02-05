@@ -113,7 +113,7 @@ hot_temp=310
     coupled_variables = 'T'
   []
   [rho_out]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     functor = 'rho'
     variable = 'rho_out'
     execute_on = 'initial timestep_end'
@@ -246,6 +246,9 @@ hot_temp=310
     prop_names = 'alpha'
     prop_values = '${alpha}'
   []
+[]
+
+[FunctorMaterials]
   [const_functor]
     type = ADGenericFunctorMaterial
     prop_names = 'cp k'
@@ -258,7 +261,7 @@ hot_temp=310
     pressure = pressure
   []
   [ins_fv]
-    type = INSFVEnthalpyMaterial
+    type = INSFVEnthalpyFunctorMaterial
     temperature = 'T'
     rho = ${rho}
   []

@@ -116,8 +116,25 @@
       input = 'spatial_adaptivity_test.i'
       exodiff = 'spatial_adaptivity_test_out.e-s004'
 
-      detail = 'when properties vary spatially.'
+      detail = 'when properties vary spatially,'
     []
+
+    [spatially_const_p]
+      type = 'Exodiff'
+      input = 'stateful_prop_adaptivity_test.i'
+      cli_args = 'Adaptivity/switch_h_to_p_refinement=true Adaptivity/disable_p_refinement_for_families="lagrange" Outputs/file_base=stateful_prop_adaptivity_test_p'
+      exodiff = 'stateful_prop_adaptivity_test_p.e-s004'
+      detail = 'when properties are spatially constant and we are performing p-refinement, and'
+    []
+
+    [spatially_varying_p]
+      type = 'Exodiff'
+      input = 'spatial_adaptivity_test.i'
+      exodiff = 'spatial_adaptivity_test_p.e-s004'
+      cli_args = 'Adaptivity/switch_h_to_p_refinement=true Adaptivity/disable_p_refinement_for_families="lagrange" Outputs/file_base=spatial_adaptivity_test_p'
+      detail = 'when properties vary spatially and we are performing p-refinement.'
+    []
+
   []
 
   [many_stateful_props]
@@ -154,6 +171,33 @@
       input = 'stateful_ad_template.i'
       exodiff = 'stateful_ad_template_out.e'
       detail = 'when using an AD material property using templated methods.'
+    []
+  []
+
+  [restart_different_props]
+    requirement = 'The system shall support reporting a reasonable error when there is a stateful material property mismatch during restore by'
+    [store]
+      type = 'RunApp'
+      input = 'stateful_reg.i'
+      cli_args = 'Outputs/exodus=false
+                  Outputs/checkpoint=true
+                  Outputs/file_base=restart_different_props'
+      recover = false
+      detail = 'storing the named stateful material properties during checkpoint, and'
+    []
+    [load]
+      type = 'RunException'
+      input = 'stateful_reg.i'
+      cli_args = 'Outputs/exodus=false
+                  Materials/matprop2/type=Stateful
+                  Materials/matprop2/property_name=dummy_prop_2
+                  Executioner/num_steps=2
+                  --recover restart_different_props_cp/0001'
+      delete_output_before_running = false
+      recover = false
+      prereq = 'restart_different_props/store'
+      expect_err = 'dummy_prop.*dummy_prop.*dummy_prop_2'
+      detail = 'loading the stateful material properties during recover and comparing to the declared stateful material properties.'
     []
   []
 []

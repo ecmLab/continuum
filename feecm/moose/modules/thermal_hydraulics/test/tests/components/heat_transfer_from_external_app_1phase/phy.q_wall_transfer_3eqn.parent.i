@@ -1,6 +1,6 @@
 # This tests a heat flux transfer using the MultiApp system.  Simple heat
-# conduction problem is solved, then the heat flux is picked up by the slave
-# side of the solve, slave side solves and transfers its variables back to the
+# conduction problem is solved, then the heat flux is picked up by the child
+# side of the solve, child side solves and transfers its variables back to the
 # master
 
 [Mesh]
@@ -79,14 +79,14 @@
   [thm]
     type = TransientMultiApp
     app_type = ThermalHydraulicsApp
-    input_files = phy.q_wall_transfer_3eqn.slave.i
+    input_files = phy.q_wall_transfer_3eqn.child.i
     execute_on = 'initial timestep_end'
   []
 []
 
 [Transfers]
   [q_to_thm]
-    type = MultiAppNearestNodeTransfer
+    type = MultiAppGeneralFieldNearestLocationTransfer
     to_multi_app = thm
     source_variable = q_wall
     variable = q_wall

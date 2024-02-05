@@ -108,7 +108,7 @@ ADIntegratedBCTempl<T>::computeResidual()
       for (_i = 0; _i < _test.size(); _i++)
         _residuals[_i] += raw_value(_JxW[_qp] * _coord[_qp] * computeQpResidual());
 
-  _assembly.processResiduals(_residuals, _var.dofIndices(), _vector_tags, _var.scalingFactor());
+  addResiduals(_assembly, _residuals, _var.dofIndices(), _var.scalingFactor());
 
   if (_has_save_in)
     for (unsigned int i = 0; i < _save_in.size(); i++)
@@ -143,36 +143,15 @@ void
 ADIntegratedBCTempl<T>::computeResidualAndJacobian()
 {
   computeResidualsForJacobian();
-  _assembly.processResidualsAndJacobian(_residuals_and_jacobians,
-                                        _var.dofIndices(),
-                                        _vector_tags,
-                                        _matrix_tags,
-                                        _var.scalingFactor());
-}
-
-template <typename T>
-void
-ADIntegratedBCTempl<T>::addJacobian(const MooseVariableFieldBase & jvariable)
-{
-  unsigned int jvar = jvariable.number();
-
-  auto ad_offset = Moose::adOffset(jvar, _sys.getMaxVarNDofsPerElem(), Moose::ElementType::Element);
-
-  prepareMatrixTag(_assembly, _var.number(), jvar);
-
-  for (_i = 0; _i < _test.size(); _i++)
-    for (_j = 0; _j < jvariable.phiSize(); _j++)
-      _local_ke(_i, _j) += _residuals_and_jacobians[_i].derivatives()[ad_offset + _j];
-  accumulateTaggedLocalMatrix();
+  addResidualsAndJacobian(
+      _assembly, _residuals_and_jacobians, _var.dofIndices(), _var.scalingFactor());
 }
 
 template <typename T>
 void
 ADIntegratedBCTempl<T>::computeJacobian()
 {
-  const std::vector<std::pair<MooseVariableFieldBase *, MooseVariableFieldBase *>>
-      var_var_coupling = {std::make_pair(&_var, &_var)};
-  computeADJacobian(var_var_coupling);
+  computeADJacobian();
 
   if (_has_diag_save_in && !_sys.computingScalingJacobian())
     mooseError("_local_ke not computed for global AD indexing. Save-in is deprecated anyway. Use "
@@ -181,35 +160,10 @@ ADIntegratedBCTempl<T>::computeJacobian()
 
 template <typename T>
 void
-ADIntegratedBCTempl<T>::computeADJacobian(
-    const std::vector<std::pair<MooseVariableFieldBase *, MooseVariableFieldBase *>> &
-        coupling_entries)
+ADIntegratedBCTempl<T>::computeADJacobian()
 {
   computeResidualsForJacobian();
-
-  auto local_functor =
-      [&](const std::vector<ADReal> &, const std::vector<dof_id_type> &, const std::set<TagID> &)
-  {
-    for (const auto & it : coupling_entries)
-    {
-      MooseVariableFEBase & ivariable = *(it.first);
-      MooseVariableFEBase & jvariable = *(it.second);
-
-      unsigned int ivar = ivariable.number();
-
-      if (ivar != _var.number() || !jvariable.hasBlocks(_current_elem->subdomain_id()))
-        continue;
-
-      // Make sure to get the correct undisplaced/displaced variable
-      addJacobian(getVariable(jvariable.number()));
-    }
-  };
-
-  _assembly.processJacobian(_residuals_and_jacobians,
-                            _var.dofIndices(),
-                            _matrix_tags,
-                            _var.scalingFactor(),
-                            local_functor);
+  addJacobian(_assembly, _residuals_and_jacobians, _var.dofIndices(), _var.scalingFactor());
 }
 
 template <typename T>
@@ -218,7 +172,7 @@ ADIntegratedBCTempl<T>::computeOffDiagJacobian(const unsigned int jvar)
 {
   // Only need to do this once because AD does all the derivatives at once
   if (jvar == _var.number())
-    computeADJacobian(_assembly.couplingEntries());
+    computeADJacobian();
 }
 
 template <typename T>

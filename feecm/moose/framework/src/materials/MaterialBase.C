@@ -9,6 +9,7 @@
 
 // MOOSE includes
 #include "MaterialBase.h"
+#include "MaterialPropertyStorage.h"
 #include "SubProblem.h"
 #include "Assembly.h"
 #include "Executioner.h"
@@ -49,6 +50,7 @@ MaterialBase::validParams()
   params.set<std::vector<OutputName>>("outputs") = {"none"};
   params.addParam<std::vector<std::string>>(
       "output_properties",
+      {},
       "List of material properties, from this material, to output (outputs "
       "must also be defined to an output type)");
   params.addParam<MaterialPropertyName>(
@@ -136,21 +138,29 @@ MaterialBase::initQpStatefulProperties()
 void
 MaterialBase::checkStatefulSanity() const
 {
-  for (const auto & it : _props_to_flags)
-    if (static_cast<int>(it.second) % 2 == 0) // Only Stateful properties declared!
-      mooseError("Material '", name(), "' requests undefined stateful property '", it.first, "'");
+  for (const auto & [id, min_state] : _props_to_min_states)
+    if (min_state > 0)
+      mooseError("The stateful property '",
+                 _fe_problem.getMaterialPropertyRegistry().getName(id),
+                 "' is undefined");
 }
 
 void
-MaterialBase::registerPropName(std::string prop_name, bool is_get, MaterialPropState state)
+MaterialBase::registerPropName(const std::string & prop_name, bool is_get, const unsigned int state)
 {
   if (!is_get)
   {
+    const auto property_id = materialData().getPropertyId(prop_name);
+
     _supplied_props.insert(prop_name);
-    const auto & property_id = materialData().getPropertyId(prop_name);
     _supplied_prop_ids.insert(property_id);
 
-    _props_to_flags[prop_name] |= static_cast<MaterialPropStateInt>(state);
+    // Store the minimum state declared
+    auto find_min_state = _props_to_min_states.find(property_id);
+    if (find_min_state == _props_to_min_states.end())
+      _props_to_min_states.emplace(property_id, state);
+    else
+      find_min_state->second = std::min(find_min_state->second, state);
 
     // Store material properties for block ids
     for (const auto & block_id : blockIDs())
@@ -161,7 +171,7 @@ MaterialBase::registerPropName(std::string prop_name, bool is_get, MaterialPropS
       _fe_problem.storeBoundaryMatPropName(boundary_id, prop_name);
   }
 
-  if (static_cast<MaterialPropStateInt>(state) % 2 == 0)
+  if (state > 0)
     _has_stateful_property = true;
 }
 

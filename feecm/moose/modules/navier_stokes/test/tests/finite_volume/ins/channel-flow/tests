@@ -32,15 +32,41 @@
     requirement = 'The system shall be able to initialize variables added by NSFV action from the mesh file.'
     prereq = free-slip-action
   []
-  [no-slip]
-    type = 'Exodiff'
-    input = 2d-rc-no-slip.i
-    exodiff = 2d-rc-no-slip_out.e
+  [checkpoint-restart]
+    type = 'RunApp'
+    input = 2d-rc-action-nulltr-checkpoint.i
+    absent_out = '1 Nonlinear'
     method = "!dbg"
-    requirement = 'The system shall be able to model no-slip conditions in a channel; specifically, moving down the channel, the tangential velocity shall develop a parabolic profile.'
-    abs_zero = 1e-9
-    cli_args = '-pc_type lu -pc_factor_shift_type NONZERO'
-    valgrind = HEAVY
+    valgrind = heavy
+    requirement = 'The system shall be able to restart a transient calculation from a steady calculation and immediately register the steady solution as a solution to the transient problem.'
+    issues = '#24144'
+    cli_args = 'Outputs/exodus=false'
+    prereq = free-slip-action
+  []
+  [no-slip]
+    requirement = 'The system shall be able to model no-slip conditions in a channel; specifically, moving down the channel, the tangential velocity shall develop a parabolic profile. This problem shall be solvable using a'
+    [SMP]
+      type = 'Exodiff'
+      input = 2d-rc-no-slip.i
+      exodiff = 2d-rc-no-slip_out.e
+      method = "!dbg"
+      abs_zero = 1e-9
+      valgrind = HEAVY
+      detail = 'monolithic preconditioning technique'
+      cli_args = 'Preconditioning/active=SMP'
+    []
+    [no-slip-field-split]
+      type = 'Exodiff'
+      input = 2d-rc-no-slip.i
+      exodiff = 2d-rc-no-slip-fsp.e
+      method = "!dbg"
+      detail = 'field-split preconditioning technique'
+      abs_zero = 8e-7
+      rel_err = 1e-5
+      cli_args = 'Preconditioning/active=FSP Outputs/file_base=2d-rc-no-slip-fsp'
+      valgrind = HEAVY
+      prereq = 'no-slip/SMP'
+    []
   []
   [no-slip-action]
     type = 'Exodiff'
@@ -68,7 +94,9 @@
     input = 2d-scalar-transport-action.i
     exodiff = 2d-scalar-transport-action_out.e
     method = "!dbg"
-    cli_args = "Modules/NavierStokesFV/initial_velocity='1 1 0' Modules/NavierStokesFV/initial_pressure=0 Modules/NavierStokesFV/initial_temperature=0"
+    cli_args = "Modules/NavierStokesFV/initial_velocity='1 1 0' "
+               "Modules/NavierStokesFV/initial_pressure=0 "
+               "Modules/NavierStokesFV/initial_temperature=0"
     requirement = 'The system shall be able to create and transport scalar field variables in a fluid flow field using the NSFVAction syntax.'
     design = 'NSFVAction.md'
     issues = '#19472'
@@ -80,7 +108,9 @@
     exodiff = 2d-scalar-transport-action_out.e
     method = "!dbg"
     requirement = 'The system shall be able to transport an externally-generated scalar field variables in a fluid flow field using the NSFVAction syntax.'
-    cli_args = "Variables/inactive='' Modules/NavierStokesFV/velocity_variable='vel_x vel_y' Modules/NavierStokesFV/pressure_variable='pressure' Modules/NavierStokesFV/fluid_temperature_variable='T_fluid'"
+    cli_args = "Variables/inactive='' Modules/NavierStokesFV/velocity_variable='vel_x vel_y' "
+               "Modules/NavierStokesFV/pressure_variable='pressure' "
+               "Modules/NavierStokesFV/fluid_temperature_variable='T_fluid'"
     design = 'NSFVAction.md'
     issues = '#19472'
     valgrind = HEAVY
@@ -136,38 +166,6 @@
     cli_args = "Mesh/gen/nx=2 Mesh/gen/ny=2"
     only_final_jacobian = True
   []
-  [linear-friction]
-    type = 'Exodiff'
-    input = 2d-rc-friction.i
-    exodiff = 2d-rc-friction_out.e
-    requirement = 'The system shall be able to model linear volumetric friction in a channel.'
-    issues = '#16872'
-    design = 'INSFVMomentumFriction.md'
-  []
-  [quadratic-friction]
-    type = 'Exodiff'
-    input = 2d-rc-friction.i
-    exodiff = 2d-rc-friction-quad_out.e
-    requirement = 'The system shall be able to model quadratic volumetric friction in a channel.'
-    issues = '#16872'
-    cli_args = "Outputs/file_base='2d-rc-friction-quad_out' FVKernels/inactive='u_friction_linear v_friction_linear'"
-    design = 'INSFVMomentumFriction.md'
-  []
-  [linear-friction-action]
-    type = 'Exodiff'
-    input = 2d-rc-friction-action.i
-    exodiff = 2d-rc-friction-action_out.e
-    requirement = 'The system shall be able to model linear volumetric friction in a channel using NSFVAction syntax.'
-    issues = '#19472'
-  []
-  [quadratic-friction-action]
-    type = 'Exodiff'
-    input = 2d-rc-friction-action.i
-    exodiff = 2d-rc-friction-action-quad_out.e
-    requirement = 'The system shall be able to model quadratic volumetric friction in a channel using NSFVAction syntax.'
-    issues = '#19472'
-    cli_args = "Modules/NavierStokesFV/friction_types='forchheimer' Outputs/file_base='2d-rc-friction-action-quad_out'"
-  []
   [ambient-convection]
     type = 'CSVDiff'
     input = 2d-rc-ambient-convection.i
@@ -194,7 +192,7 @@
       type = 'Exodiff'
       input = 2d-rc-no-slip.i
       exodiff = 2d-rc-no-slip-tris.e
-      cli_args = 'Mesh/gen/elem_type=TRI3 GlobalParams/two_term_boundary_expansion=false Outputs/file_base=2d-rc-no-slip-tris'
+      cli_args = 'Mesh/gen/elem_type=TRI3 GlobalParams/two_term_boundary_expansion=false Outputs/file_base=2d-rc-no-slip-tris Preconditioning/active=SMP'
       valgrind = HEAVY
       detail = 'two-dimensional triangular elements'
       abs_zero = 1e-9

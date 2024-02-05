@@ -23,8 +23,44 @@ INSFVElementalKernel::INSFVElementalKernel(const InputParameters & params)
 }
 
 void
-INSFVElementalKernel::processResidualAndJacobian(const ADReal & residual,
-                                                 const dof_id_type dof_index)
+INSFVElementalKernel::computeResidual()
 {
-  _assembly.processResidualAndJacobian(residual, dof_index, _vector_tags, _matrix_tags);
+  if (_rc_uo.segregated())
+  {
+    prepareVectorTag(_assembly, _var.number());
+    _local_re(0) +=
+        MetaPhysicL::raw_value(computeSegregatedContribution() * _assembly.elemVolume());
+    accumulateTaggedLocalResidual();
+  }
+}
+
+void
+INSFVElementalKernel::computeJacobian()
+{
+  if (_rc_uo.segregated())
+  {
+    const auto r = computeSegregatedContribution() * _assembly.elemVolume();
+    mooseAssert(_var.dofIndices().size() == 1, "We're currently built to use CONSTANT MONOMIALS");
+    addJacobian(_assembly, std::array<ADReal, 1>{{r}}, _var.dofIndices(), _var.scalingFactor());
+  }
+}
+
+void
+INSFVElementalKernel::computeResidualAndJacobian()
+{
+  if (_rc_uo.segregated())
+  {
+    const auto r = computeSegregatedContribution() * _assembly.elemVolume();
+    addResidualsAndJacobian(
+        _assembly, std::array<ADReal, 1>{{r}}, _var.dofIndices(), _var.scalingFactor());
+  }
+}
+
+void
+INSFVElementalKernel::addResidualAndJacobian(const ADReal & residual, const dof_id_type dof_index)
+{
+  addResidualsAndJacobian(_assembly,
+                          std::array<ADReal, 1>{{residual}},
+                          std::array<dof_id_type, 1>{{dof_index}},
+                          _var.scalingFactor());
 }

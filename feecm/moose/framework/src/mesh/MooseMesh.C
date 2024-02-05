@@ -16,6 +16,7 @@
 #include "PointListAdaptor.h"
 #include "Executioner.h"
 #include "NonlinearSystemBase.h"
+#include "AuxiliarySystem.h"
 #include "Assembly.h"
 #include "SubProblem.h"
 #include "MooseVariableBase.h"
@@ -61,6 +62,17 @@
 
 static const int GRAIN_SIZE =
     1; // the grain_size does not have much influence on our execution speed
+
+// Make newer nanoflann API compatible with older nanoflann versions
+#if NANOFLANN_VERSION < 0x150
+namespace nanoflann
+{
+typedef SearchParams SearchParameters;
+
+template <typename T, typename U>
+using ResultItem = std::pair<T, U>;
+}
+#endif
 
 InputParameters
 MooseMesh::validParams()
@@ -159,6 +171,9 @@ MooseMesh::validParams()
   // derived types that do so.
   params.addPrivateParam<bool>("_mesh_generator_mesh", false);
 
+  // Whether or not the mesh is pre split
+  params.addPrivateParam<bool>("_is_split", false);
+
   params.registerBase("MooseMesh");
 
   // groups
@@ -196,6 +211,7 @@ MooseMesh::MooseMesh(const InputParameters & parameters)
     _patch_update_strategy(
         getParam<MooseEnum>("patch_update_strategy").getEnum<Moose::PatchUpdateType>()),
     _regular_orthogonal_mesh(false),
+    _is_split(getParam<bool>("_is_split")),
     _allow_recovery(true),
     _construct_node_list_from_side_list(getParam<bool>("construct_node_list_from_side_list")),
     _need_delete(false),
@@ -203,7 +219,8 @@ MooseMesh::MooseMesh(const InputParameters & parameters)
     _need_ghost_ghosted_boundaries(true),
     _is_displaced(false),
     _rz_coord_axis(getParam<MooseEnum>("rz_coord_axis")),
-    _coord_system_set(false)
+    _coord_system_set(false),
+    _doing_p_refinement(false)
 {
   if (isParamValid("ghosting_patch_size") && (_patch_update_strategy != Moose::Iteration))
     mooseError("Ghosting patch size parameter has to be set in the mesh block "
@@ -232,6 +249,7 @@ MooseMesh::MooseMesh(const MooseMesh & other_mesh)
   : MooseObject(other_mesh._pars),
     Restartable(this, "Mesh"),
     PerfGraphInterface(this, "CopiedMesh"),
+    _built_from_other_mesh(true),
     _parallel_type(other_mesh._parallel_type),
     _use_distributed_mesh(other_mesh._use_distributed_mesh),
     _distribution_overridden(other_mesh._distribution_overridden),
@@ -251,14 +269,17 @@ MooseMesh::MooseMesh(const MooseMesh & other_mesh)
     _max_leaf_size(other_mesh._max_leaf_size),
     _patch_update_strategy(other_mesh._patch_update_strategy),
     _regular_orthogonal_mesh(false),
+    _is_split(other_mesh._is_split),
     _construct_node_list_from_side_list(other_mesh._construct_node_list_from_side_list),
     _need_delete(other_mesh._need_delete),
     _allow_remote_element_removal(other_mesh._allow_remote_element_removal),
     _need_ghost_ghosted_boundaries(other_mesh._need_ghost_ghosted_boundaries),
     _coord_sys(other_mesh._coord_sys),
     _rz_coord_axis(other_mesh._rz_coord_axis),
+    _subdomain_id_to_rz_coord_axis(other_mesh._subdomain_id_to_rz_coord_axis),
     _coord_system_set(other_mesh._coord_system_set),
-    _provided_coord_blocks(other_mesh._provided_coord_blocks)
+    _provided_coord_blocks(other_mesh._provided_coord_blocks),
+    _doing_p_refinement(other_mesh._doing_p_refinement)
 {
   // Note: this calls BoundaryInfo::operator= without changing the
   // ownership semantics of either Mesh's BoundaryInfo object.
@@ -336,10 +357,12 @@ MooseMesh::freeBndElems()
   _bnd_elem_ids.clear();
 }
 
-void
-MooseMesh::prepare(bool)
+bool
+MooseMesh::prepare(const MeshBase * const mesh_to_clone)
 {
   TIME_SECTION("prepare", 2, "Preparing Mesh", true);
+
+  bool called_prepare_for_use = false;
 
   mooseAssert(_mesh, "The MeshBase has not been constructed");
 
@@ -347,15 +370,22 @@ MooseMesh::prepare(bool)
     // For whatever reason we do not want to allow renumbering here nor ever in the future?
     getMesh().allow_renumbering(false);
 
-  if (!_mesh->is_prepared())
+  if (mesh_to_clone)
+  {
+    mooseAssert(mesh_to_clone->is_prepared(),
+                "The mesh we wish to clone from must already be prepared");
+    _mesh = mesh_to_clone->clone();
+    _moose_mesh_prepared = false;
+  }
+  else if (!_mesh->is_prepared())
   {
     _mesh->prepare_for_use();
-
     _moose_mesh_prepared = false;
+    called_prepare_for_use = true;
   }
 
   if (_moose_mesh_prepared)
-    return;
+    return called_prepare_for_use;
 
   // Collect (local) subdomain IDs
   _mesh_subdomains.clear();
@@ -393,14 +423,46 @@ MooseMesh::prepare(bool)
     _communicator.set_union(_mesh_sideset_ids);
   }
 
-  if (!_coord_system_set)
-    setCoordSystem(_provided_coord_blocks, getParam<MultiMooseEnum>("coord_type"));
-  else if (_pars.isParamSetByUser("coord_type"))
-    mooseError(
-        "Trying to set coordinate system type information based on the user input file, but "
-        "the coordinate system type information has already been set programmatically! "
-        "Either remove your coordinate system type information from the input file, or contact "
-        "your application developer");
+  if (!_built_from_other_mesh)
+  {
+    if (!_coord_system_set)
+      setCoordSystem(_provided_coord_blocks, getParam<MultiMooseEnum>("coord_type"));
+    else if (_pars.isParamSetByUser("coord_type"))
+      mooseError(
+          "Trying to set coordinate system type information based on the user input file, but "
+          "the coordinate system type information has already been set programmatically! "
+          "Either remove your coordinate system type information from the input file, or contact "
+          "your application developer");
+  }
+
+  // Set general axisymmetric axes if provided
+  if (isParamValid("rz_coord_blocks") && isParamValid("rz_coord_origins") &&
+      isParamValid("rz_coord_directions"))
+  {
+    const auto rz_coord_blocks = getParam<std::vector<SubdomainName>>("rz_coord_blocks");
+    const auto rz_coord_origins = getParam<std::vector<Point>>("rz_coord_origins");
+    const auto rz_coord_directions = getParam<std::vector<RealVectorValue>>("rz_coord_directions");
+    if (rz_coord_origins.size() == rz_coord_blocks.size() &&
+        rz_coord_directions.size() == rz_coord_blocks.size())
+    {
+      std::vector<std::pair<Point, RealVectorValue>> rz_coord_axes;
+      for (unsigned int i = 0; i < rz_coord_origins.size(); ++i)
+        rz_coord_axes.push_back(std::make_pair(rz_coord_origins[i], rz_coord_directions[i]));
+
+      setGeneralAxisymmetricCoordAxes(rz_coord_blocks, rz_coord_axes);
+
+      if (isParamSetByUser("rz_coord_axis"))
+        mooseError("The parameter 'rz_coord_axis' may not be provided if 'rz_coord_blocks', "
+                   "'rz_coord_origins', and 'rz_coord_directions' are provided.");
+    }
+    else
+      mooseError("The parameters 'rz_coord_blocks', 'rz_coord_origins', and "
+                 "'rz_coord_directions' must all have the same size.");
+  }
+  else if (isParamValid("rz_coord_blocks") || isParamValid("rz_coord_origins") ||
+           isParamValid("rz_coord_directions"))
+    mooseError("If any of the parameters 'rz_coord_blocks', 'rz_coord_origins', and "
+               "'rz_coord_directions' are provided, then all must be provided.");
 
   detectOrthogonalDimRanges();
 
@@ -410,6 +472,8 @@ MooseMesh::prepare(bool)
   checkDuplicateSubdomainNames();
 
   _moose_mesh_prepared = true;
+
+  return called_prepare_for_use;
 }
 
 void
@@ -566,44 +630,41 @@ MooseMesh::node(const dof_id_type i)
 const Node &
 MooseMesh::nodeRef(const dof_id_type i) const
 {
-  if (i > getMesh().max_node_id())
-    return *(*_quadrature_nodes.find(i)).second;
-
-  return getMesh().node_ref(i);
+  const auto node_ptr = queryNodePtr(i);
+  mooseAssert(node_ptr, "Missing node");
+  return *node_ptr;
 }
 
 Node &
 MooseMesh::nodeRef(const dof_id_type i)
 {
-  if (i > getMesh().max_node_id())
-    return *_quadrature_nodes[i];
-
-  return getMesh().node_ref(i);
+  return const_cast<Node &>(const_cast<const MooseMesh *>(this)->nodeRef(i));
 }
 
 const Node *
 MooseMesh::nodePtr(const dof_id_type i) const
 {
-  if (i > getMesh().max_node_id())
-    return (*_quadrature_nodes.find(i)).second;
-
-  return getMesh().node_ptr(i);
+  return &nodeRef(i);
 }
 
 Node *
 MooseMesh::nodePtr(const dof_id_type i)
 {
-  if (i > getMesh().max_node_id())
-    return _quadrature_nodes[i];
-
-  return getMesh().node_ptr(i);
+  return &nodeRef(i);
 }
 
 const Node *
 MooseMesh::queryNodePtr(const dof_id_type i) const
 {
   if (i > getMesh().max_node_id())
-    return (*_quadrature_nodes.find(i)).second;
+  {
+    auto it = _quadrature_nodes.find(i);
+    if (it == _quadrature_nodes.end())
+      return nullptr;
+    auto & node_ptr = it->second;
+    mooseAssert(node_ptr, "Uninitialized quadrature node");
+    return node_ptr;
+  }
 
   return getMesh().query_node_ptr(i);
 }
@@ -611,10 +672,7 @@ MooseMesh::queryNodePtr(const dof_id_type i) const
 Node *
 MooseMesh::queryNodePtr(const dof_id_type i)
 {
-  if (i > getMesh().max_node_id())
-    return _quadrature_nodes[i];
-
-  return getMesh().query_node_ptr(i);
+  return const_cast<Node *>(const_cast<const MooseMesh *>(this)->queryNodePtr(i));
 }
 
 void
@@ -835,6 +893,35 @@ MooseMesh::buildElemIDInfo()
   comm().min(_min_ids);
 }
 
+std::unordered_map<dof_id_type, std::set<dof_id_type>>
+MooseMesh::getElemIDMapping(const std::string & from_id_name, const std::string & to_id_name) const
+{
+  auto & mesh_base = getMesh();
+
+  if (!mesh_base.has_elem_integer(from_id_name))
+    mooseError("Mesh does not have the element integer name '", from_id_name, "'");
+  if (!mesh_base.has_elem_integer(to_id_name))
+    mooseError("Mesh does not have the element integer name '", to_id_name, "'");
+
+  const auto id1 = mesh_base.get_elem_integer_index(from_id_name);
+  const auto id2 = mesh_base.get_elem_integer_index(to_id_name);
+
+  std::unordered_map<dof_id_type, std::set<dof_id_type>> id_map;
+  for (const auto id : getAllElemIDs(id1))
+    id_map[id] = std::set<dof_id_type>();
+
+  for (const auto & elem : mesh_base.active_local_element_ptr_range())
+    id_map[elem->get_extra_integer(id1)].insert(elem->get_extra_integer(id2));
+
+  for (auto & [id, ids] : id_map)
+  {
+    libmesh_ignore(id); // avoid overzealous gcc 9.4 unused var warning
+    comm().set_union(ids);
+  }
+
+  return id_map;
+}
+
 std::set<dof_id_type>
 MooseMesh::getAllElemIDs(unsigned int elem_id_index) const
 {
@@ -851,9 +938,6 @@ MooseMesh::getElemIDsOnBlocks(unsigned int elem_id_index, const std::set<Subdoma
   std::set<dof_id_type> unique_ids;
   for (auto & blk : blks)
   {
-    if (blk == Moose::ANY_BLOCK_ID)
-      return getAllElemIDs(elem_id_index);
-
     auto it = _block_id_mapping[elem_id_index].find(blk);
     if (it == _block_id_mapping[elem_id_index].end())
       mooseError("Block ", blk, " is not available on the mesh");
@@ -912,7 +996,6 @@ MooseMesh::nodeToElemMap()
       _node_to_elem_map_built = true; // MUST be set at the end for double-checked locking to work!
     }
   }
-
   return _node_to_elem_map;
 }
 
@@ -1088,7 +1171,6 @@ MooseMesh::isBoundaryFullyExternalToSubdomains(BoundaryID bid,
                                                const std::set<SubdomainID> & blk_group) const
 {
   mooseAssert(_bnd_elem_range, "Boundary element range is not initialized");
-  const bool all_blocks = blk_group.find(Moose::ANY_BLOCK_ID) != blk_group.end();
 
   // Loop over all side elements of the mesh, select those on the boundary
   for (const auto & bnd_elem : *_bnd_elem_range)
@@ -1097,7 +1179,7 @@ MooseMesh::isBoundaryFullyExternalToSubdomains(BoundaryID bid,
     if (elem_bid == bid)
     {
       // If an element is internal to the group of subdomain, check the neighbor
-      if (all_blocks || blk_group.find(elem_ptr->subdomain_id()) != blk_group.end())
+      if (blk_group.find(elem_ptr->subdomain_id()) != blk_group.end())
       {
         const auto * const neighbor = elem_ptr->neighbor_ptr(elem_side);
 
@@ -1110,7 +1192,7 @@ MooseMesh::isBoundaryFullyExternalToSubdomains(BoundaryID bid,
           continue;
         // If the neighbor is also in the group of subdomain,
         // then the boundary cuts the subdomains
-        if (all_blocks || blk_group.find(neighbor->subdomain_id()) != blk_group.end())
+        if (blk_group.find(neighbor->subdomain_id()) != blk_group.end())
           return false;
       }
     }
@@ -1212,6 +1294,22 @@ MooseMesh::ownedFaceInfoEnd()
       _face_info.end(),
       _face_info.end(),
       libMesh::Predicates::pid<std::vector<const FaceInfo *>::iterator>(this->processor_id()));
+}
+
+MooseMesh::elem_info_iterator
+MooseMesh::ownedElemInfoBegin()
+{
+  return elem_info_iterator(_elem_info.begin(),
+                            _elem_info.end(),
+                            Predicates::NotNull<std::vector<const ElemInfo *>::iterator>());
+}
+
+MooseMesh::elem_info_iterator
+MooseMesh::ownedElemInfoEnd()
+{
+  return elem_info_iterator(_elem_info.end(),
+                            _elem_info.end(),
+                            Predicates::NotNull<std::vector<const ElemInfo *>::iterator>());
 }
 
 // default begin() accessor
@@ -1404,16 +1502,13 @@ MooseMesh::getBoundaryIDs(const std::vector<BoundaryName> & boundary_name,
 SubdomainID
 MooseMesh::getSubdomainID(const SubdomainName & subdomain_name) const
 {
-  if (subdomain_name == "ANY_BLOCK_ID")
-    mooseError("Please use getSubdomainIDs() when passing \"ANY_BLOCK_ID\"");
-
   return MooseMeshUtils::getSubdomainID(subdomain_name, getMesh());
 }
 
 std::vector<SubdomainID>
 MooseMesh::getSubdomainIDs(const std::vector<SubdomainName> & subdomain_name) const
 {
-  return MooseMeshUtils::getSubdomainIDs(getMesh(), subdomain_name, _mesh_subdomains);
+  return MooseMeshUtils::getSubdomainIDs(getMesh(), subdomain_name);
 }
 
 void
@@ -1440,20 +1535,7 @@ MooseMesh::getSubdomainNames(const std::vector<SubdomainID> & subdomain_ids) con
   std::vector<SubdomainName> names(subdomain_ids.size());
 
   for (unsigned int i = 0; i < subdomain_ids.size(); i++)
-  {
-    if (subdomain_ids[i] == Moose::ANY_BLOCK_ID)
-    {
-      unsigned int j = 0;
-      for (const auto & sub_id : _mesh_subdomains)
-        names[j++] = getSubdomainName(sub_id);
-      if (i)
-        mooseWarning("You passed \"ANY_BLOCK_ID\" in addition to other block ids. This may be a "
-                     "logic error.");
-      break;
-    }
-
     names[i] = getSubdomainName(subdomain_ids[i]);
-  }
 
   return names;
 }
@@ -1534,8 +1616,8 @@ MooseMesh::buildPeriodicNodeMap(std::multimap<dof_id_type, dof_id_type> & period
   kd_tree->buildIndex();
 
   // data structures for kd-tree search
-  nanoflann::SearchParams search_params;
-  std::vector<std::pair<std::size_t, Real>> ret_matches;
+  nanoflann::SearchParameters search_params;
+  std::vector<nanoflann::ResultItem<std::size_t, Real>> ret_matches;
 
   // iterate over periodic nodes (boundary ids are in contiguous blocks)
   PeriodicBoundaryBase * periodic = nullptr;
@@ -1959,10 +2041,8 @@ MooseMesh::getPairedBoundaryMapping(unsigned int component)
 }
 
 void
-MooseMesh::buildRefinementAndCoarseningMaps(Assembly * assembly)
+MooseMesh::buildHRefinementAndCoarseningMaps(Assembly * const assembly)
 {
-  TIME_SECTION("buildRefinementAndCoarseningMaps", 5, "Building Refinement And Coarsening Maps");
-
   std::map<ElemType, Elem *> canonical_elems;
 
   // First, loop over all elements and find a canonical element for each type
@@ -2015,6 +2095,114 @@ MooseMesh::buildRefinementAndCoarseningMaps(Assembly * assembly)
         if (!elem->is_child_on_side(child, side)) // Otherwise we already computed that map
           buildRefinementMap(*elem, *qrule, *qrule_face, -1, child, side);
   }
+}
+
+void
+MooseMesh::buildPRefinementAndCoarseningMaps(Assembly * const assembly)
+{
+  _elem_type_to_p_refinement_map.clear();
+  _elem_type_to_p_refinement_side_map.clear();
+  _elem_type_to_p_coarsening_map.clear();
+  _elem_type_to_p_coarsening_side_map.clear();
+
+  std::map<ElemType, std::pair<Elem *, unsigned int>> elems_and_max_p_level;
+
+  for (const auto & elem : getMesh().active_element_ptr_range())
+  {
+    const auto type = elem->type();
+    auto & [picked_elem, max_p_level] = elems_and_max_p_level[type];
+    if (!picked_elem)
+      picked_elem = elem;
+    max_p_level = std::max(max_p_level, elem->p_level());
+  }
+
+  // The only requirement on the FEType is that it can be arbitrarily p-refined
+  const FEType p_refinable_fe_type(CONSTANT, MONOMIAL);
+  std::vector<Point> volume_ref_points_coarse, volume_ref_points_fine, face_ref_points_coarse,
+      face_ref_points_fine;
+  std::vector<unsigned int> p_levels;
+
+  for (auto & [elem_type, elem_p_level_pair] : elems_and_max_p_level)
+  {
+    auto & [moose_elem, max_p_level] = elem_p_level_pair;
+    const auto dim = moose_elem->dim();
+    // Need to do this just once to get the right qrules put in place
+    assembly->setCurrentSubdomainID(moose_elem->subdomain_id());
+    assembly->reinit(moose_elem);
+    assembly->reinit(moose_elem, 0);
+    auto & qrule = assembly->writeableQRule();
+    auto & qrule_face = assembly->writeableQRuleFace();
+
+    libMesh::Parallel::Communicator self_comm{};
+    ReplicatedMesh mesh(self_comm);
+    mesh.set_mesh_dimension(dim);
+    for (const auto & nd : moose_elem->node_ref_range())
+      mesh.add_point(nd);
+
+    Elem * const elem = mesh.add_elem(Elem::build(elem_type).release());
+    for (const auto i : elem->node_index_range())
+      elem->set_node(i) = mesh.node_ptr(i);
+
+    std::unique_ptr<FEBase> fe(FEBase::build(dim, p_refinable_fe_type));
+    std::unique_ptr<FEBase> fe_face(FEBase::build(dim, p_refinable_fe_type));
+    fe_face->get_phi();
+    const auto & face_phys_points = fe_face->get_xyz();
+
+    fe->attach_quadrature_rule(qrule);
+    fe_face->attach_quadrature_rule(qrule_face);
+    fe->reinit(elem);
+    volume_ref_points_coarse = qrule->get_points();
+    fe_face->reinit(elem, (unsigned int)0);
+    FEInterface::inverse_map(
+        dim, p_refinable_fe_type, elem, face_phys_points, face_ref_points_coarse);
+
+    p_levels.resize(max_p_level + 1);
+    std::iota(p_levels.begin(), p_levels.end(), 0);
+    MeshRefinement mesh_refinement(mesh);
+
+    for (const auto p_level : p_levels)
+    {
+      mesh_refinement.uniformly_p_refine(1);
+      fe->reinit(elem);
+      volume_ref_points_fine = qrule->get_points();
+      fe_face->reinit(elem, (unsigned int)0);
+      FEInterface::inverse_map(
+          dim, p_refinable_fe_type, elem, face_phys_points, face_ref_points_fine);
+
+      const auto map_key = std::make_pair(elem_type, p_level);
+      auto & volume_refine_map = _elem_type_to_p_refinement_map[map_key];
+      auto & face_refine_map = _elem_type_to_p_refinement_side_map[map_key];
+      auto & volume_coarsen_map = _elem_type_to_p_coarsening_map[map_key];
+      auto & face_coarsen_map = _elem_type_to_p_coarsening_side_map[map_key];
+
+      auto fill_maps = [this](const auto & coarse_ref_points,
+                              const auto & fine_ref_points,
+                              auto & coarsen_map,
+                              auto & refine_map)
+      {
+        mapPoints(fine_ref_points, coarse_ref_points, refine_map);
+        mapPoints(coarse_ref_points, fine_ref_points, coarsen_map);
+      };
+
+      fill_maps(
+          volume_ref_points_coarse, volume_ref_points_fine, volume_coarsen_map, volume_refine_map);
+      fill_maps(face_ref_points_coarse, face_ref_points_fine, face_coarsen_map, face_refine_map);
+
+      // With this level's maps filled our fine points now become our coarse points
+      volume_ref_points_fine.swap(volume_ref_points_coarse);
+      face_ref_points_fine.swap(face_ref_points_coarse);
+    }
+  }
+}
+
+void
+MooseMesh::buildRefinementAndCoarseningMaps(Assembly * const assembly)
+{
+  TIME_SECTION("buildRefinementAndCoarseningMaps", 5, "Building Refinement And Coarsening Maps");
+  if (doingPRefinement())
+    buildPRefinementAndCoarseningMaps(assembly);
+  else
+    buildHRefinementAndCoarseningMaps(assembly);
 }
 
 void
@@ -2203,7 +2391,7 @@ MooseMesh::findAdaptivityQpMaps(const Elem * template_elem,
   fe->attach_quadrature_rule(&qrule);
   fe_face->attach_quadrature_rule(&qrule_face);
 
-  // The current q_points
+  // The current q_points (locations in *physical* space)
   const std::vector<Point> * q_points;
 
   if (parent_side != -1)
@@ -2223,6 +2411,9 @@ MooseMesh::findAdaptivityQpMaps(const Elem * template_elem,
   MeshRefinement mesh_refinement(mesh);
   mesh_refinement.uniformly_refine(1);
 
+  // A map from the child element index to the locations of all the child's quadrature points in
+  // *reference* space. Note that we use a map here instead of a vector because the caller can
+  // pass an explicit child index. We are not guaranteed to have a sequence from [0, n_children)
   std::map<unsigned int, std::vector<Point>> child_to_ref_points;
 
   unsigned int n_children = elem->n_children();
@@ -2383,7 +2574,7 @@ MooseMesh::determineUseDistributedMesh()
         _use_distributed_mesh = true;
       break;
     case ParallelType::REPLICATED:
-      if (_app.getDistributedMeshOnCommandLine() || _is_nemesis || _app.isUseSplit())
+      if (_app.getDistributedMeshOnCommandLine() || _is_nemesis || _is_split)
         _parallel_type_overridden = true;
       _use_distributed_mesh = false;
       break;
@@ -2394,7 +2585,7 @@ MooseMesh::determineUseDistributedMesh()
 
   // If the user specifies 'nemesis = true' in the Mesh block, or they are using --use-split,
   // we must use DistributedMesh.
-  if (_is_nemesis || _app.isUseSplit())
+  if (_is_nemesis || _is_split)
     _use_distributed_mesh = true;
 }
 
@@ -2451,8 +2642,7 @@ MooseMesh::init()
     // sub-apps need to just build their mesh like normal
     {
       TIME_SECTION("readRecoveredMesh", 2);
-      getMesh().read(_app.getRestartRecoverFileBase() + "_mesh." +
-                     _app.getRestartRecoverFileSuffix());
+      getMesh().read(_app.getRestartRecoverFileBase() + MooseApp::checkpointSuffix());
     }
 
     getMesh().allow_renumbering(allow_renumbering_later);
@@ -2493,6 +2683,26 @@ MooseMesh::effectiveSpatialDimension() const
 
   // If we get here, we have a 1D mesh on the x-axis.
   return 1;
+}
+
+unsigned int
+MooseMesh::getBlocksMaxDimension(const std::vector<SubdomainName> & blocks) const
+{
+  const auto & mesh = getMesh();
+
+  // Take a shortcut if possible
+  if (const auto & elem_dims = mesh.elem_dimensions(); mesh.is_prepared() && elem_dims.size() == 1)
+    return *elem_dims.begin();
+
+  unsigned short dim = 0;
+  const auto subdomain_ids = getSubdomainIDs(blocks);
+  const std::set<SubdomainID> subdomain_ids_set(subdomain_ids.begin(), subdomain_ids.end());
+  for (const auto & elem : mesh.active_subdomain_set_elements_ptr_range(subdomain_ids_set))
+    dim = std::max(dim, elem->dim());
+
+  // Get the maximumal globally
+  _communicator.max(dim);
+  return dim;
 }
 
 std::vector<BoundaryID>
@@ -2851,6 +3061,8 @@ MooseMesh::ghostGhostedBoundaries()
     return;
 
   TIME_SECTION("GhostGhostedBoundaries", 3);
+
+  parallel_object_only();
 
   DistributedMesh & mesh = dynamic_cast<DistributedMesh &>(getMesh());
 
@@ -3263,9 +3475,6 @@ MooseMesh::getPointLocator() const
 void
 MooseMesh::buildFiniteVolumeInfo() const
 {
-  if (!_finite_volume_info_dirty)
-    return;
-
   mooseAssert(!Threads::in_threads,
               "This routine has not been implemented for threads. Please query this routine before "
               "a threaded region or contact a MOOSE developer to discuss.");
@@ -3277,15 +3486,12 @@ MooseMesh::buildFiniteVolumeInfo() const
   std::vector<std::tuple<dof_id_type, unsigned short int, boundary_id_type>> side_list =
       buildActiveSideList();
   std::map<Keytype, std::set<boundary_id_type>> side_map;
-  for (auto & e : side_list)
+  for (auto & [elem_id, side, bc_id] : side_list)
   {
-    const Elem * elem = _mesh->elem_ptr(std::get<0>(e));
-    Keytype key(elem, std::get<1>(e));
-    auto it = side_map.find(key);
-    if (it == side_map.end())
-      side_map[key] = {std::get<2>(e)};
-    else
-      side_map[key].insert(std::get<2>(e));
+    const Elem * elem = _mesh->elem_ptr(elem_id);
+    Keytype key(elem, side);
+    auto & bc_set = side_map[key];
+    bc_set.insert(bc_id);
   }
 
   _face_info.clear();
@@ -3293,6 +3499,7 @@ MooseMesh::buildFiniteVolumeInfo() const
   _elem_side_to_face_info.clear();
 
   _elem_to_elem_info.clear();
+  _elem_info.clear();
 
   // by performing the element ID comparison check in the below loop, we are ensuring that we never
   // double count face contributions. If a face lies along a process boundary, the only process that
@@ -3305,6 +3512,8 @@ MooseMesh::buildFiniteVolumeInfo() const
   // for the active elements.
   for (const Elem * elem : as_range(begin, end))
     _elem_to_elem_info.emplace(elem->id(), elem);
+
+  _linear_finite_volume_dofs_cached = false;
 
   dof_id_type face_index = 0;
   for (const Elem * elem : as_range(begin, end))
@@ -3334,7 +3543,7 @@ MooseMesh::buildFiniteVolumeInfo() const
         boundary_ids.clear();
 
         // We initialize the weights/other information in faceInfo. If the neighbor does not exist
-        // or is remote (so when we are on some sort of mesh boundary), we initiualize the ghost
+        // or is remote (so when we are on some sort of mesh boundary), we initialize the ghost
         // cell and use it to compute the weights corresponding to the faceInfo.
         if (!neighbor || neighbor == remote_elem)
           fi.computeBoundaryCoefficients();
@@ -3375,20 +3584,24 @@ MooseMesh::buildFiniteVolumeInfo() const
         (fi.neighborPtr() && (fi.neighborPtr()->processor_id() == this->processor_id())))
       _face_info.push_back(&fi);
   }
+
+  for (auto & ei : _elem_to_elem_info)
+    if (ei.second.elem()->processor_id() == this->processor_id())
+      _elem_info.push_back(&ei.second);
 }
 
 const FaceInfo *
 MooseMesh::faceInfo(const Elem * elem, unsigned int side) const
 {
-  buildFiniteVolumeInfo();
-
   auto it = _elem_side_to_face_info.find(std::make_pair(elem, side));
 
   if (it == _elem_side_to_face_info.end())
     return nullptr;
   else
   {
-    mooseAssert(it->second, "For some reason, the FaceInfo object is NULL!");
+    mooseAssert(it->second,
+                "For some reason, the FaceInfo object is NULL! Try calling "
+                "`buildFiniteVolumeInfo()` before using this accessor!");
     return it->second;
   }
 }
@@ -3400,10 +3613,10 @@ MooseMesh::elemInfo(const dof_id_type id) const
 }
 
 void
-MooseMesh::computeFaceInfoFaceCoords()
+MooseMesh::computeFiniteVolumeCoords() const
 {
   if (_finite_volume_info_dirty)
-    mooseError("Trying to compute face-info coords when the information is dirty");
+    mooseError("Trying to compute face- and elem-info coords when the information is dirty");
 
   for (auto & fi : _all_face_info)
   {
@@ -3414,6 +3627,10 @@ MooseMesh::computeFaceInfoFaceCoords()
     coordTransformFactor(
         *this, elem_subdomain_id, fi.faceCentroid(), fi.faceCoord(), neighbor_subdomain_id);
   }
+
+  for (auto & ei : _elem_to_elem_info)
+    coordTransformFactor(
+        *this, ei.second.subdomain_id(), ei.second.centroid(), ei.second.coordFactor());
 }
 
 MooseEnum
@@ -3451,9 +3668,26 @@ MooseMesh::deleteRemoteElements()
 }
 
 void
-MooseMesh::cacheVarIndicesByFace(const std::vector<const MooseVariableFieldBase *> & moose_vars)
+MooseMesh::cacheFaceInfoVariableOwnership() const
 {
-  buildFiniteVolumeInfo();
+  mooseAssert(
+      !Threads::in_threads,
+      "Performing writes to faceInfo variable association maps. This must be done unthreaded!");
+
+  std::vector<const MooseVariableFieldBase *> moose_vars;
+
+  for (const auto i : make_range(_app.feProblem().numNonlinearSystems()))
+  {
+    const auto & nl_variables = _app.feProblem().getNonlinearSystemBase(i).getVariables(0);
+    for (const auto & var : nl_variables)
+      if (var->fieldType() == 0)
+        moose_vars.push_back(var);
+  }
+
+  const auto & aux_variables = _app.feProblem().getAuxiliarySystem().getVariables(0);
+  for (const auto & var : aux_variables)
+    if (var->fieldType() == 0)
+      moose_vars.push_back(var);
 
   for (FaceInfo & face : _all_face_info)
   {
@@ -3465,13 +3699,9 @@ MooseMesh::cacheVarIndicesByFace(const std::vector<const MooseVariableFieldBase 
     {
       // get the variable, its name, and its domain of definition
       const MooseVariableFieldBase * const var = moose_vars[j];
-      const auto & var_name = var->name();
+      const std::pair<unsigned int, unsigned int> var_sys =
+          std::make_pair(var->number(), var->sys().number());
       std::set<SubdomainID> var_subdomains = var->blockIDs();
-
-      // unfortunately, MOOSE is lazy and all subdomains has its own
-      // ID. If ANY_BLOCK_ID is in var_subdomains, inject all subdomains explicitly
-      if (var_subdomains.find(Moose::ANY_BLOCK_ID) != var_subdomains.end())
-        var_subdomains = this->meshSubdomains();
 
       /**
        * The following paragraph of code assigns the VarFaceNeighbors
@@ -3486,21 +3716,89 @@ MooseMesh::cacheVarIndicesByFace(const std::vector<const MooseVariableFieldBase 
       bool var_defined_neighbor =
           var_subdomains.find(neighbor_subdomain_id) != var_subdomains.end();
       if (var_defined_elem && var_defined_neighbor)
-        face.faceType(var_name) = FaceInfo::VarFaceNeighbors::BOTH;
+        face.faceType(var_sys) = FaceInfo::VarFaceNeighbors::BOTH;
       else if (!var_defined_elem && !var_defined_neighbor)
-        face.faceType(var_name) = FaceInfo::VarFaceNeighbors::NEITHER;
+        face.faceType(var_sys) = FaceInfo::VarFaceNeighbors::NEITHER;
       else
       {
         // this is a boundary face for this variable, set elem or neighbor
         if (var_defined_elem)
-          face.faceType(var_name) = FaceInfo::VarFaceNeighbors::ELEM;
+          face.faceType(var_sys) = FaceInfo::VarFaceNeighbors::ELEM;
         else if (var_defined_neighbor)
-          face.faceType(var_name) = FaceInfo::VarFaceNeighbors::NEIGHBOR;
+          face.faceType(var_sys) = FaceInfo::VarFaceNeighbors::NEIGHBOR;
         else
           mooseError("Should never get here");
       }
     }
   }
+}
+
+void
+MooseMesh::cacheFVElementalDoFs() const
+{
+  mooseAssert(!Threads::in_threads,
+              "Performing writes to elemInfo dof indices. This must be done unthreaded!");
+
+  const unsigned int num_eqs = _app.feProblem().es().n_systems();
+
+  for (auto & elem_info_pair : _elem_to_elem_info)
+  {
+    ElemInfo & elem_info = elem_info_pair.second;
+    auto & dof_vector = elem_info.dofIndices();
+
+    dof_vector.clear();
+    dof_vector.resize(num_eqs);
+
+    for (const auto i : make_range(_app.feProblem().numNonlinearSystems()))
+      if (_app.feProblem().getNonlinearSystemBase(i).nFVVariables())
+      {
+        auto & sys = _app.feProblem().getNonlinearSystemBase(i);
+        dof_vector[sys.number()].resize(sys.nVariables(), libMesh::DofObject::invalid_id);
+        const auto & variables = sys.getVariables(0);
+        for (const auto & var : variables)
+        {
+          const auto & var_subdomains = var->blockIDs();
+
+          // We will only cache for FV variables and if they live on the current subdomain
+          if (var->isFV() && var_subdomains.find(elem_info.subdomain_id()) != var_subdomains.end())
+          {
+            std::vector<dof_id_type> indices;
+            var->dofMap().dof_indices(elem_info.elem(), indices, var->number());
+            mooseAssert(indices.size() == 1, "We expect to have only one dof per element!");
+            dof_vector[sys.number()][var->number()] = indices[0];
+          }
+        }
+      }
+
+    if (_app.feProblem().getAuxiliarySystem().nFVVariables())
+    {
+      auto & sys = _app.feProblem().getAuxiliarySystem();
+      dof_vector[sys.number()].resize(sys.nVariables(), libMesh::DofObject::invalid_id);
+      const auto & aux_variables = sys.getVariables(0);
+      for (const auto & var : aux_variables)
+      {
+        const auto & var_subdomains = var->blockIDs();
+
+        // We will only cache for FV variables and if they live on the current subdomain
+        if (var->isFV() && var_subdomains.find(elem_info.subdomain_id()) != var_subdomains.end())
+        {
+          std::vector<dof_id_type> indices;
+          var->dofMap().dof_indices(elem_info.elem(), indices, var->number());
+          mooseAssert(indices.size() == 1, "We expect to have only one dof per element!");
+          dof_vector[sys.number()][var->number()] = indices[0];
+        }
+      }
+    }
+  }
+}
+
+void
+MooseMesh::setupFiniteVolumeMeshData() const
+{
+  buildFiniteVolumeInfo();
+  computeFiniteVolumeCoords();
+  cacheFaceInfoVariableOwnership();
+  cacheFVElementalDoFs();
 }
 
 void
@@ -3595,6 +3893,11 @@ MooseMesh::getUniqueCoordSystem() const
   if (!result)
     mooseError("The unique coordinate system of the mesh was requested by the mesh contains "
                "multiple blocks with different coordinate systems");
+
+  if (usingGeneralAxisymmetricCoordAxes())
+    mooseError("General axisymmetric coordinate axes are being used, and it is currently "
+               "conservatively assumed that in this case there is no unique coordinate system.");
+
   return unique_system;
 }
 
@@ -3613,6 +3916,70 @@ MooseMesh::setAxisymmetricCoordAxis(const MooseEnum & rz_coord_axis)
 }
 
 void
+MooseMesh::setGeneralAxisymmetricCoordAxes(
+    const std::vector<SubdomainName> & blocks,
+    const std::vector<std::pair<Point, RealVectorValue>> & axes)
+{
+  // Set the axes for the given blocks
+  mooseAssert(blocks.size() == axes.size(), "Blocks and axes vectors must be the same length.");
+  for (const auto i : index_range(blocks))
+  {
+    const auto subdomain_id = getSubdomainID(blocks[i]);
+    const auto it = _coord_sys.find(subdomain_id);
+    if (it == _coord_sys.end())
+      mooseError("The block '",
+                 blocks[i],
+                 "' has not set a coordinate system. Make sure to call setCoordSystem() before "
+                 "setGeneralAxisymmetricCoordAxes().");
+    else
+    {
+      if (it->second == Moose::COORD_RZ)
+      {
+        const auto direction = axes[i].second;
+        if (direction.is_zero())
+          mooseError("Only nonzero vectors may be supplied for RZ directions.");
+
+        _subdomain_id_to_rz_coord_axis[subdomain_id] =
+            std::make_pair(axes[i].first, direction.unit());
+      }
+      else
+        mooseError("The block '",
+                   blocks[i],
+                   "' was provided in setGeneralAxisymmetricCoordAxes(), but the coordinate system "
+                   "for this block is not 'RZ'.");
+    }
+  }
+
+  // Make sure there are no RZ blocks that still do not have axes
+  const auto all_subdomain_ids = meshSubdomains();
+  for (const auto subdomain_id : all_subdomain_ids)
+    if (getCoordSystem(subdomain_id) == Moose::COORD_RZ &&
+        !_subdomain_id_to_rz_coord_axis.count(subdomain_id))
+      mooseError("The block '",
+                 getSubdomainName(subdomain_id),
+                 "' was specified to use the 'RZ' coordinate system but was not given in "
+                 "setGeneralAxisymmetricCoordAxes().");
+
+  updateCoordTransform();
+}
+
+const std::pair<Point, RealVectorValue> &
+MooseMesh::getGeneralAxisymmetricCoordAxis(SubdomainID subdomain_id) const
+{
+  auto it = _subdomain_id_to_rz_coord_axis.find(subdomain_id);
+  if (it != _subdomain_id_to_rz_coord_axis.end())
+    return (*it).second;
+  else
+    mooseError("Requested subdomain ", subdomain_id, " does not exist.");
+}
+
+bool
+MooseMesh::usingGeneralAxisymmetricCoordAxes() const
+{
+  return _subdomain_id_to_rz_coord_axis.size() > 0;
+}
+
+void
 MooseMesh::updateCoordTransform()
 {
   if (!_coord_transform)
@@ -3624,6 +3991,10 @@ MooseMesh::updateCoordTransform()
 unsigned int
 MooseMesh::getAxisymmetricRadialCoord() const
 {
+  if (usingGeneralAxisymmetricCoordAxes())
+    mooseError("getAxisymmetricRadialCoord() should not be called if "
+               "setGeneralAxisymmetricCoordAxes() has been called.");
+
   if (_rz_coord_axis == 0)
     return 1; // if the rotation axis is x (0), then the radial direction is y (1)
   else
@@ -3650,6 +4021,7 @@ MooseMesh::setCoordData(const MooseMesh & other_mesh)
 {
   _coord_sys = other_mesh._coord_sys;
   _rz_coord_axis = other_mesh._rz_coord_axis;
+  _subdomain_id_to_rz_coord_axis = other_mesh._subdomain_id_to_rz_coord_axis;
 }
 
 const MooseUnits &
@@ -3677,4 +4049,51 @@ MooseMesh::checkDuplicateSubdomainNames()
     else
       subdomain[sub_name] = sbd_id;
   }
+}
+
+const std::vector<QpMap> &
+MooseMesh::getPRefinementMapHelper(
+    const Elem & elem,
+    const std::map<std::pair<ElemType, unsigned int>, std::vector<QpMap>> & map) const
+{
+  mooseAssert(elem.active() && elem.p_refinement_flag() == Elem::JUST_REFINED,
+              "These are the conditions that should be met for requesting a refinement map");
+  // We are actually seeking the map stored with the p_level - 1 key, e.g. the refinement map that
+  // maps from the previous p_level to this element's p_level
+  return libmesh_map_find(map,
+                          std::make_pair(elem.type(), cast_int<unsigned int>(elem.p_level() - 1)));
+}
+
+const std::vector<QpMap> &
+MooseMesh::getPCoarseningMapHelper(
+    const Elem & elem,
+    const std::map<std::pair<ElemType, unsigned int>, std::vector<QpMap>> & map) const
+{
+  mooseAssert(elem.active() && elem.p_refinement_flag() == Elem::JUST_COARSENED,
+              "These are the conditions that should be met for requesting a coarsening map");
+  return libmesh_map_find(map, std::make_pair(elem.type(), elem.p_level()));
+}
+
+const std::vector<QpMap> &
+MooseMesh::getPRefinementMap(const Elem & elem) const
+{
+  return getPRefinementMapHelper(elem, _elem_type_to_p_refinement_map);
+}
+
+const std::vector<QpMap> &
+MooseMesh::getPRefinementSideMap(const Elem & elem) const
+{
+  return getPRefinementMapHelper(elem, _elem_type_to_p_refinement_side_map);
+}
+
+const std::vector<QpMap> &
+MooseMesh::getPCoarseningMap(const Elem & elem) const
+{
+  return getPCoarseningMapHelper(elem, _elem_type_to_p_coarsening_map);
+}
+
+const std::vector<QpMap> &
+MooseMesh::getPCoarseningSideMap(const Elem & elem) const
+{
+  return getPCoarseningMapHelper(elem, _elem_type_to_p_coarsening_side_map);
 }

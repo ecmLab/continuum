@@ -1,6 +1,6 @@
 # IterationAdaptiveDT
 
-!syntax description /Executioner/TimeStepper/IterationAdaptiveDT
+!syntax description /Executioner/TimeSteppers/IterationAdaptiveDT
 
 ## Description
 
@@ -42,7 +42,7 @@ specified in the `Executioner` block using the `dtmax` and `dtmin` parameters, r
 
 In addition to controlling the time step based on the iteration count, `IterationAdaptiveDT`
 also has an option to limit the time step based on the behavior of a time-dependent function,
-optionall specified by providing the function name in `timestep_limiting_function`. This
+optionally specified by providing the function name in `timestep_limiting_function`. This
 is typically a function that is used to drive boundary conditions of the model. The step is
 cut back if the change in the function from the previous step exceeds the value specified in
 `max_function_change`. This allows the step size to be changed to limit the change in the boundary
@@ -61,8 +61,8 @@ purpose, the iteration related parameters are not required.
 
 !listing test/tests/time_steppers/iteration_adaptive/adapt_tstep_shrink_init_dt.i block=Executioner
 
-!syntax parameters /Executioner/TimeStepper/IterationAdaptiveDT
+!syntax parameters /Executioner/TimeSteppers/IterationAdaptiveDT
 
-!syntax inputs /Executioner/TimeStepper/IterationAdaptiveDT
+!syntax inputs /Executioner/TimeSteppers/IterationAdaptiveDT
 
-!syntax children /Executioner/TimeStepper/IterationAdaptiveDT
+!syntax children /Executioner/TimeSteppers/IterationAdaptiveDT

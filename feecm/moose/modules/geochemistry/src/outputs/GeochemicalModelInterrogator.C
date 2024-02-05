@@ -22,6 +22,7 @@ GeochemicalModelInterrogator::sharedParams()
                                           "The name of the GeochemicalModelDefinition user object");
   params.addParam<std::vector<std::string>>(
       "swap_out_of_basis",
+      {},
       "Species that should be removed from the model_definition's basis and be replaced with the "
       "swap_into_basis species.  There must be the same number of species in swap_out_of_basis and "
       "swap_into_basis.  If this list contains more than one species, the swapping is performed "
@@ -29,14 +30,17 @@ GeochemicalModelInterrogator::sharedParams()
       "then the next pair, etc");
   params.addParam<std::vector<std::string>>(
       "swap_into_basis",
+      {},
       "Species that should be removed from the model_definition's "
       "equilibrium species list and added to the basis");
   params.addParam<std::vector<std::string>>(
       "activity_species",
+      {},
       "Species that are provided numerical values of activity (or fugacity for gases) in the "
       "activity_value input");
   params.addParam<std::vector<Real>>(
       "activity_values",
+      {},
       "Numerical values for the activity (or fugacity) for the "
       "species in the activity_species list.  These are activity values, not log10(activity).");
   params.addParam<unsigned int>(
@@ -105,10 +109,8 @@ GeochemicalModelInterrogator::GeochemicalModelInterrogator(const InputParameters
 }
 
 void
-GeochemicalModelInterrogator::output(const ExecFlagType & type)
+GeochemicalModelInterrogator::output()
 {
-  if (!shouldOutput(type))
-    return;
   for (const auto & sp : eqmSpeciesOfInterest())
   {
     switch (_interrogation)
@@ -124,6 +126,7 @@ GeochemicalModelInterrogator::output(const ExecFlagType & type)
         break;
     }
   }
+
   for (unsigned i = 0; i < _swap_out.size(); ++i)
   {
     // any exception here is an error

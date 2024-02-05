@@ -19,7 +19,9 @@
 
 #define usingCoupleableMembers                                                                     \
   using Coupleable::_zero;                                                                         \
-  using Coupleable::_grad_zero
+  using Coupleable::_grad_zero;                                                                    \
+  using Coupleable::_ad_zero;                                                                      \
+  using Coupleable::_ad_grad_zero
 
 // Forward declarations
 class MooseVariableScalar;
@@ -30,6 +32,10 @@ namespace libMesh
 template <typename T>
 class DenseVector;
 }
+
+template <typename>
+class MooseVariableField;
+typedef MooseVariableField<Real> MooseWritableVariable;
 
 /**
  * Interface for objects that needs coupling capabilities
@@ -191,11 +197,18 @@ protected:
                                              unsigned int comp = 0) const;
 
   /**
-   * Returns the values for all of a coupled variable's components
+   * Returns the values for all of a coupled variable components
    * @param var_name Name of coupled variable
    * @return Vector of VariableValue pointers for each component of \p var_name
    */
   std::vector<const VariableValue *> coupledValues(const std::string & var_name) const;
+
+  /**
+   * Returns the values for all of a coupled vector variable's components
+   * @param var_name Name of coupled variable
+   * @return Vector of VectorVariableValue pointers for each component of \p var_name
+   */
+  std::vector<const VectorVariableValue *> coupledVectorValues(const std::string & var_name) const;
 
   /**
    * Returns value of a coupled variable for use in templated automatic differentiation classes
@@ -412,7 +425,8 @@ protected:
    * @return Reference to a ArrayVariableValue for the coupled variable
    */
   const ArrayVariableValue & coupledVectorTagArrayDofValue(const std::string & var_name,
-                                                           const std::string & tag_name) const;
+                                                           const std::string & tag_name,
+                                                           unsigned int comp = 0) const;
 
   /**
    * Returns the dof values for all the coupled variables desired for a given tag
@@ -482,16 +496,17 @@ protected:
 
   /**
    * Returns a *writable* MooseVariable object for a nodal or elemental variable. Use
-   * var.setNodalValue(val[, idx]) in both cases (!) to set the solution DOF values. Only one object
-   * can obtain a writable reference in a simulation. Note that the written values will not ba
-   * available in the same system loop! E.g. values written using this API by a nodal AuxKernel will
-   * not be updated for other nodal AuxKernels during the same iteration over all nodes.
+   * var.setNodalValue(val[, idx]) in both cases (!) to set the solution DOF values. Only one
+   * object can obtain a writable reference in a simulation. Note that the written values will
+   * not ba available in the same system loop! E.g. values written using this API by a nodal
+   * AuxKernel will not be updated for other nodal AuxKernels during the same iteration over all
+   * nodes.
    * @param var_name Name of coupled variable
    * @param comp Component number for vector of coupled variables
-   * @return Reference to a MooseVariable for the coupled variable
+   * @return Reference to a MooseWritableVariable for the coupled variable
    * @see Kernel::value
    */
-  MooseVariable & writableVariable(const std::string & var_name, unsigned int comp = 0);
+  MooseWritableVariable & writableVariable(const std::string & var_name, unsigned int comp = 0);
 
   /**
    * Returns a *writable* reference to a coupled variable for writing to multiple
@@ -507,7 +522,7 @@ protected:
   /**
    * Checks that the passed in variable is only accessed writable by one object in a given subdomain
    */
-  void checkWritableVar(MooseVariable * var);
+  void checkWritableVar(MooseWritableVariable * var);
 
   /**
    * Returns an old value from previous time step  of a coupled variable
@@ -535,6 +550,13 @@ protected:
    */
   virtual const VariableValue & coupledValueOlder(const std::string & var_name,
                                                   unsigned int comp = 0) const;
+
+  /**
+   * Returns the older values for all of a coupled variable's components
+   * @param var_name Name of coupled variable
+   * @return Vector of VariableValue pointers for each component of \p var_name
+   */
+  std::vector<const VariableValue *> coupledValuesOlder(const std::string & var_name) const;
 
   /**
    * Returns value of previous Newton iterate of a coupled variable
@@ -797,6 +819,16 @@ protected:
                                                                   unsigned int comp = 0) const;
 
   /**
+   * Retun a gradient of a coupled array variable's time derivative
+   * @param var_name Name of coupled array variable
+   * @param comp Component number for vector of coupled array variables
+   * @return Reference to a ArrayVariableGradient containing the gradient of the time derivative
+   * the coupled array variable
+   */
+  virtual const ArrayVariableGradient & coupledArrayGradientDot(const std::string & var_name,
+                                                                unsigned int comp = 0) const;
+
+  /**
    * Returns curl of a coupled variable
    * @param var_name Name of coupled variable
    * @param comp Component number for vector of coupled variables
@@ -827,7 +859,7 @@ protected:
                                                       unsigned int comp = 0) const;
 
   /**
-   * Returns second derivative of a coupled variable
+   * Returns second spatial derivatives of a coupled variable
    * @param var_name Name of coupled variable
    * @param comp Component number for vector of coupled variables
    * @return Reference to a VariableSecond containing the second derivative of the coupled variable
@@ -837,7 +869,7 @@ protected:
                                                unsigned int comp = 0) const;
 
   /**
-   * Returns an old second derivative from previous time step of a coupled variable
+   * Returns an old second spatial derivatives from previous time step of a coupled variable
    * @param var_name Name of coupled variable
    * @param comp Component number for vector of coupled variables
    * @return Reference to a VariableSecond containing the old second derivative of the coupled
@@ -1068,6 +1100,16 @@ protected:
    */
   virtual const VariableValue & coupledDotDotDu(const std::string & var_name,
                                                 unsigned int comp = 0) const;
+
+  /**
+   * Time derivative of a coupled array variable with respect to the coefficients
+   * @param var_name Name of coupled vector variable
+   * @param comp Component number for vector of coupled vector variables
+   * @return Reference to a ArrayVariableValue containing the time derivative of the coupled
+   * variable
+   */
+  const VariableValue & coupledArrayDotDu(const std::string & var_name,
+                                          unsigned int comp = 0) const;
 
   /**
    * Returns nodal values of a coupled variable
@@ -1669,7 +1711,7 @@ private:
                                                    Moose::OLDER_SOLUTION_TAG};
 
   /// keep a set of allocated writable variable references to make sure only one object can obtain them per thread
-  std::vector<std::set<MooseVariable *>> _writable_coupled_variables;
+  std::vector<std::set<MooseWritableVariable *>> _writable_coupled_variables;
 };
 
 template <typename T>

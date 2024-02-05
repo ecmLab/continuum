@@ -81,7 +81,7 @@ PINSFVFunctorBC::PINSFVFunctorBC(const InputParameters & params)
 ADReal
 PINSFVFunctorBC::computeQpResidual()
 {
-  const auto ft = _face_info->faceType(_var.name());
+  const auto ft = _face_info->faceType(std::make_pair(_var.number(), _var.sys().number()));
   const bool out_of_elem = (ft == FaceInfo::VarFaceNeighbors::ELEM);
   const auto normal = out_of_elem ? _face_info->normal() : Point(-_face_info->normal());
   const auto & elem = out_of_elem ? _face_info->elem() : _face_info->neighbor();
@@ -89,17 +89,18 @@ PINSFVFunctorBC::computeQpResidual()
   // No interpolation on a boundary so argument values to fi_elem_is_upwind do not
   // matter
   const auto boundary_face = singleSidedFaceArg();
+  const auto state = determineState();
 
-  const VectorValue<ADReal> sup_vel(_sup_vel_x(boundary_face),
-                                    _sup_vel_y ? (*_sup_vel_y)(boundary_face) : ADReal(0),
-                                    _sup_vel_z ? (*_sup_vel_z)(boundary_face) : ADReal(0));
-  const auto rho = _rho(boundary_face);
+  const VectorValue<ADReal> sup_vel(_sup_vel_x(boundary_face, state),
+                                    _sup_vel_y ? (*_sup_vel_y)(boundary_face, state) : ADReal(0),
+                                    _sup_vel_z ? (*_sup_vel_z)(boundary_face, state) : ADReal(0));
+  const auto rho = _rho(boundary_face, state);
 
   if (_eqn == "mass")
     return rho * sup_vel * normal;
   else if (_eqn == "momentum")
   {
-    const auto eps = _eps(boundary_face);
+    const auto eps = _eps(boundary_face, state);
     // the value of our variable on the boundary could be a function of multiple degrees of freedom
     // (think two term boundary expansion), as opposed to just a function of the degree of freedom
     // at the adjoining cell centroid.
@@ -110,7 +111,7 @@ PINSFVFunctorBC::computeQpResidual()
       _a *= rho / eps * sup_vel * normal;
     }
     const auto rhou = sup_vel(_index) / eps * rho;
-    return rhou * sup_vel * normal + eps * _pressure(boundary_face) * normal(_index);
+    return rhou * sup_vel * normal + eps * _pressure(boundary_face, state) * normal(_index);
   }
   else
     mooseError("Unrecognized equation type ", _eqn);
@@ -120,7 +121,7 @@ void
 PINSFVFunctorBC::gatherRCData(const FaceInfo & fi)
 {
   _face_info = &fi;
-  _face_type = fi.faceType(_var.name());
+  _face_type = fi.faceType(std::make_pair(_var.number(), _var.sys().number()));
 
   _computing_rc_data = true;
   // Fill-in the coefficient _a (but without multiplication by A)

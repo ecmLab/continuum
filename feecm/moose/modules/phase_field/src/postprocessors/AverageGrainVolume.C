@@ -12,6 +12,7 @@
 #include "MooseMesh.h"
 #include "Assembly.h"
 #include "MooseVariable.h"
+#include "SystemBase.h"
 
 #include "libmesh/quadrature.h"
 
@@ -46,7 +47,7 @@ AverageGrainVolume::AverageGrainVolume(const InputParameters & parameters)
     Coupleable(this, false),
     MooseVariableDependencyInterface(this),
     _mesh(_subproblem.mesh()),
-    _assembly(_subproblem.assembly(0)),
+    _assembly(_subproblem.assembly(0, _sys.number())),
     _q_point(_assembly.qPoints()),
     _qrule(_assembly.qRule()),
     _JxW(_assembly.JxW()),
@@ -153,7 +154,7 @@ AverageGrainVolume::finalize()
 }
 
 Real
-AverageGrainVolume::getValue()
+AverageGrainVolume::getValue() const
 {
   Real total_volume = 0;
   for (auto & volume : _feature_volumes)

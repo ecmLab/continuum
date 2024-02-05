@@ -1,11 +1,11 @@
 # Tracked Apps
 
-MOOSE is designed for buiding custom applications, the following is a communiy driven list of applications.
+MOOSE is designed for building custom applications, the following is a community driven list of applications.
 
 The purpose of these lists is two fold:
 
 1. Every MOOSE-based application is a library, thus it is natural to create new applications from existing code.
-1. The MOOSE developpers strive to keep your applicatios up-to-date when major changes occur, this list indicates to the developpers to consider your application.
+1. The MOOSE developers strive to keep your applications up-to-date when major changes occur, this list indicates to the developers to consider your application.
 
 ## Open-source Applications
 
@@ -34,7 +34,7 @@ Please contact the [MOOSE Discussion forum](help/contact_us.md) if you are inter
 - PRONGHORN - Transient prismatic and pebble bed reactor analysis code
 - MAMMOTH - Reactor physics application
 - YAK - Common object library for INL particle transport codes
-- OSPREY - Off-gas Separation and REcoveryY for dispersed plug flow in a packed bed.
+- OSPREY - Off-gas SeParation and REcoverY for dispersed plug flow in a packed bed.
 - BIGHORN - Compressible fluid dynamics code
 
 ## Private Apps

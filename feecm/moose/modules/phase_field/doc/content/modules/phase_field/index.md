@@ -7,7 +7,7 @@
 
 The MOOSE phase field module is a library for simplifying the implementation of simulation tools that
 employ the phase field model. Multiphysics capability that includes mechanics and heat conduction can
-be obtained by employing the tensor mechanics and heat conduction modules. More information about
+be obtained by employing the tensor mechanics and heat transfer modules. More information about
 this module is found below:
 
 ## Basic Phase Field Model Information
@@ -52,6 +52,7 @@ MOOSE provides capabilities that enable the easy development of multiphase field
 - [Grain Tracker Algorithm](/GrainTracker.md): Tracking arbitrary features on an unstructured mesh over time
 - [phase_field/Grain_Boundary_Anisotropy.md]: For systems with misorientation dependence of GB properties
 - [phase_field/Elastic_Driving_Force_Grain_Growth.md]: Coupling mechanics to influence grain growth
+- [phase_field/Linearized_Interface_Grain_Growth.md]: Grain growth model using linearized interface to reduce the required mesh size
 
 ## Initial Conditions
 

@@ -24,9 +24,9 @@ public:
   InsideValuePPS(const InputParameters & parameters);
   virtual ~InsideValuePPS();
 
-  virtual void initialize();
-  virtual void execute();
-  virtual Real getValue();
+  virtual void initialize() override;
+  virtual void execute() override;
+  virtual Real getValue() const override;
 
 protected:
   const InsideUserObject & _uo;

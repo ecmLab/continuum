@@ -10,6 +10,7 @@
 #include "SolutionUserObject.h"
 
 // MOOSE includes
+#include "ConsoleUtils.h"
 #include "MooseError.h"
 #include "MooseMesh.h"
 #include "MooseUtils.h"
@@ -38,19 +39,22 @@ SolutionUserObject::validParams()
 
   // Add required parameters
   params.addRequiredParam<MeshFileName>(
-      "mesh", "The name of the mesh file (must be xda or exodusII file).");
+      "mesh", "The name of the mesh file (must be xda/xdr or exodusII file).");
   params.addParam<std::vector<std::string>>(
       "system_variables",
       std::vector<std::string>(),
       "The name of the nodal and elemental variables from the file you want to use for values");
 
-  // When using XDA files the following must be defined
+  // When using XDA/XDR files the following must be defined
   params.addParam<FileName>(
       "es",
       "<not supplied>",
-      "The name of the file holding the equation system info in xda format (xda only).");
+      "The name of the file holding the equation system info in xda/xdr format (xda/xdr only).");
   params.addParam<std::string>(
-      "system", "nl0", "The name of the system to pull values out of (xda only).");
+      "system",
+      "nl0",
+      "The name of the system to pull values out of (xda/xdr only). The default name for the "
+      "nonlinear system is 'nl0', auxiliary system is 'aux0'");
 
   // When using ExodusII a specific time is extracted
   params.addParam<std::string>("timestep",
@@ -94,8 +98,10 @@ SolutionUserObject::validParams()
       "if transformation_order = 'rotation0 scale_multiplier translation scale rotation1' then "
       "form p = R1*(R0*x*m - t)/s.  Then the values provided by the SolutionUserObject at point x "
       "in the simulation are the variable values at point p in the mesh.");
+  params.addParamNamesToGroup("scale scale_multiplier translation rotation0_vector rotation0_angle "
+                              "rotation1_angle transformation_order",
+                              "Coordinate system transformation");
   params.addClassDescription("Reads a variable from a mesh in one simulation to another");
-  // Return the parameters
   return params;
 }
 
@@ -165,6 +171,9 @@ SolutionUserObject::~SolutionUserObject() {}
 void
 SolutionUserObject::readXda()
 {
+  if (!isParamSetByUser("es"))
+    paramError("es", "Equation system file (.xda or .xdr) should have been specified");
+
   // Check that the required files exist
   MooseUtils::checkFileReadable(_es_file);
   MooseUtils::checkFileReadable(_mesh_file);
@@ -262,6 +271,11 @@ SolutionUserObject::readExodusII()
 
   // Build nodal/elemental variable lists, limit to variables listed in 'system_variables', if
   // provided
+  // This function could be called more than once, so clear the member variables so we don't keep
+  // adding to the vectors
+  _nodal_variables.clear();
+  _elemental_variables.clear();
+  _scalar_variables.clear();
   if (!_system_variables.empty())
   {
     for (const auto & var_name : _system_variables)
@@ -463,7 +477,8 @@ SolutionUserObject::initialSetup()
   _mesh = std::make_unique<ReplicatedMesh>(_communicator);
 
   // ExodusII mesh file supplied
-  if (MooseUtils::hasExtension(_mesh_file, "e", /*strip_exodus_ext =*/true))
+  if (MooseUtils::hasExtension(_mesh_file, "e", /*strip_exodus_ext =*/true) ||
+      MooseUtils::hasExtension(_mesh_file, "exo", true))
   {
     _file_type = "exodusII";
     readExodusII();
@@ -476,6 +491,7 @@ SolutionUserObject::initialSetup()
     readXda();
   }
 
+  // XDR mesh file supplied
   else if (MooseUtils::hasExtension(_mesh_file, "xdr"))
   {
     _file_type = "xdr";
@@ -484,7 +500,7 @@ SolutionUserObject::initialSetup()
 
   // Produce an error for an unknown file type
   else
-    mooseError("In SolutionUserObject, invalid file type (only .xda, .xdr, and .e supported)");
+    mooseError("In SolutionUserObject, invalid file type: only .xda, .xdr, .exo and .e supported");
 
   // Initialize the serial solution vector
   _serialized_solution = NumericVector<Number>::build(_communicator);
@@ -550,7 +566,7 @@ SolutionUserObject::initialSetup()
 }
 
 MooseEnum
-SolutionUserObject::getSolutionFileType()
+SolutionUserObject::getSolutionFileType() const
 {
   return _file_type;
 }
@@ -649,7 +665,10 @@ SolutionUserObject::getLocalVarIndex(const std::string & var_name) const
                var_name,
                "' in the '",
                name(),
-               "' SolutionUserObject");
+               "' SolutionUserObject.\nSystem selected: ",
+               _system_name,
+               "\nAvailable variables:\n",
+               ConsoleUtils::formatString(Moose::stringify(_system_variables), ""));
   return it->second;
 }
 
@@ -1227,9 +1246,13 @@ SolutionUserObject::readBlockIdMapFromExodusII()
 {
 #ifdef LIBMESH_HAVE_EXODUS_API
   ExodusII_IO_Helper & exio_helper = _exodusII_io->get_exio_helper();
-  std::map<int, std::string> & id_to_block = exio_helper.id_to_block_names;
+  const auto & id_to_block = exio_helper.id_to_block_names;
   _block_name_to_id.clear();
-  for (auto & it : id_to_block)
+  _block_id_to_name.clear();
+  for (const auto & it : id_to_block)
+  {
     _block_name_to_id[it.second] = it.first;
+    _block_id_to_name[it.first] = it.second;
+  }
 #endif
 }

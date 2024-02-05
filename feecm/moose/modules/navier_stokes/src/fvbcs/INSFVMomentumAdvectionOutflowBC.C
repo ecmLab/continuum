@@ -43,7 +43,37 @@ INSFVMomentumAdvectionOutflowBC::INSFVMomentumAdvectionOutflowBC(const InputPara
     mooseError(
         "In two or more dimensions, the v velocity must be supplied using the 'v' parameter");
   if (_dim >= 3 && !_w)
-    mooseError("In threedimensions, the w velocity must be supplied using the 'w' parameter");
+    mooseError("In three dimensions, the w velocity must be supplied using the 'w' parameter");
+}
+
+ADReal
+INSFVMomentumAdvectionOutflowBC::computeAdvectedQuantity(const Moose::FaceArg & boundary_face,
+                                                         const Moose::StateArg & state)
+{
+  const auto rho_boundary = _rho(boundary_face, state);
+  const auto eps_boundary = epsFunctor()(boundary_face, state);
+
+  // This will tend to be an extrapolated boundary for the velocity in which case, when using two
+  // term expansion, this boundary value will actually be a function of more than just the degree of
+  // freedom at the cell centroid adjacent to the face, e.g. it can/will depend on surrounding cell
+  // degrees of freedom as well
+  const auto var_boundary = _var(boundary_face, state);
+
+  return rho_boundary / eps_boundary * var_boundary;
+}
+
+ADReal
+INSFVMomentumAdvectionOutflowBC::computeSegregatedContribution()
+{
+  const auto boundary_face = singleSidedFaceArg();
+  const auto state = determineState();
+  return _normal *
+         _rc_uo.getVelocity(Moose::FV::InterpMethod::RhieChow,
+                            *_face_info,
+                            determineState(),
+                            _tid,
+                            /*subtract_mesh_velocity=*/true) *
+         computeAdvectedQuantity(boundary_face, state);
 }
 
 void
@@ -53,38 +83,35 @@ INSFVMomentumAdvectionOutflowBC::gatherRCData(const FaceInfo & fi)
 
   _face_info = &fi;
   _normal = fi.normal();
-  _face_type = fi.faceType(_var.name());
+  _face_type = fi.faceType(std::make_pair(_var.number(), _var.sys().number()));
 
   if (_face_type == FaceInfo::VarFaceNeighbors::NEIGHBOR)
     _normal = -_normal;
 
   const auto boundary_face = singleSidedFaceArg();
-
-  ADRealVectorValue v(_u(boundary_face));
+  const auto state = determineState();
+  ADRealVectorValue v(_u(boundary_face, state));
   if (_v)
-    v(1) = (*_v)(boundary_face);
+    v(1) = (*_v)(boundary_face, state);
   if (_w)
-    v(2) = (*_w)(boundary_face);
+    v(2) = (*_w)(boundary_face, state);
 
   const auto & elem = (_face_type == FaceInfo::VarFaceNeighbors::ELEM) ? _face_info->elem()
                                                                        : _face_info->neighbor();
-  const auto rho_boundary = _rho(boundary_face);
-  const auto eps_boundary = epsFunctor()(boundary_face);
 
   // This will tend to be an extrapolated boundary for the velocity in which case, when using two
   // term expansion, this boundary value will actually be a function of more than just the degree of
   // freedom at the cell centroid adjacent to the face, e.g. it can/will depend on surrounding cell
   // degrees of freedom as well
-  auto var_boundary = _var(boundary_face);
   const auto dof_number = elem.dof_number(_sys.number(), _var.number(), 0);
-  ADReal a = var_boundary.derivatives()[dof_number];
-  a *= _normal * v * rho_boundary / eps_boundary;
+  const auto advected_quant = computeAdvectedQuantity(boundary_face, state);
+  const auto a = advected_quant.derivatives()[dof_number] * _normal * v;
 
-  const auto strong_resid = _normal * v * rho_boundary / eps_boundary * var_boundary;
+  const auto strong_resid = _normal * v * advected_quant;
 
   _rc_uo.addToA((_face_type == FaceInfo::VarFaceNeighbors::ELEM) ? &fi.elem() : fi.neighborPtr(),
                 _index,
                 a * (fi.faceArea() * fi.faceCoord()));
 
-  processResidualAndJacobian(strong_resid * (fi.faceArea() * fi.faceCoord()));
+  addResidualAndJacobian(strong_resid * (fi.faceArea() * fi.faceCoord()));
 }

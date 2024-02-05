@@ -94,7 +94,7 @@ INSExplicitTimestepSelector::execute()
 }
 
 Real
-INSExplicitTimestepSelector::getValue()
+INSExplicitTimestepSelector::getValue() const
 {
   return _value;
 }
@@ -108,6 +108,6 @@ INSExplicitTimestepSelector::finalize()
 void
 INSExplicitTimestepSelector::threadJoin(const UserObject & uo)
 {
-  const INSExplicitTimestepSelector & pps = dynamic_cast<const INSExplicitTimestepSelector &>(uo);
+  const auto & pps = static_cast<const INSExplicitTimestepSelector &>(uo);
   _value = std::min(_value, pps._value);
 }

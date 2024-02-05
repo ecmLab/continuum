@@ -1,5 +1,5 @@
 [Tests]
-  issues = '#16756'
+  issues = '#16756 #24498'
   design = 'navier_stokes/pinsfv.md'
   [smooth-jump]
     type = 'Exodiff'
@@ -7,7 +7,7 @@
     exodiff = rc-smooth-epsjump.e
     method = "!dbg"
     requirement = 'The system shall be able to model a smooth porosity gradient in a 2D channel.'
-    cli_args = "Outputs/file_base='rc-smooth-epsjump' ICs/inactive='porosity_1 porosity_2' Materials/inactive='jump smooth'"
+    cli_args = "Outputs/file_base='rc-smooth-epsjump' ICs/inactive='porosity_1 porosity_2' FunctorMaterials/inactive='jump smooth'"
   []
   [1d-discontinuous-jump-average-average]
     type = 'Exodiff'
@@ -46,7 +46,7 @@
     requirement = 'The system shall be able to model a discontinuous porosity jump in a 2D channel.'
     recover = false
     max_parallel = 1
-    cli_args = "Outputs/file_base='rc-discontinuous-epsjump' Materials/inactive='jump smooth'"
+    cli_args = "Outputs/file_base='rc-discontinuous-epsjump' FunctorMaterials/inactive='jump smooth'"
   []
   [reconstruct-porosity]
     type = 'Exodiff'
@@ -60,7 +60,7 @@
     input = 2d-rc-epsjump.i
     cli_args = 'UserObjects/rc/smoothing_layers=1'
     expect_err = 'If we are reconstructing porosity, then the input porosity to this user object cannot be a Moose variable'
-    requirement = 'The system shall error if the user attempts to create a reconstructed field from a variable.'
+    requirement = 'The system shall report an error if the user attempts to create a reconstructed field from a variable.'
   []
   [automatic-jump-handling]
     requirement = 'The system shall be able to automatically impose a change in pressure in line with the Bernoulli equation at porosity jumps in'
@@ -111,6 +111,13 @@
     input = bernoulli-1d-parsed-function.i
     csvdiff = bernoulli-1d-parsed-function_out.csv
     requirement = 'The system shall be able to recognize discontinuities in parsed functions at subdomain changes and produce the correct Bernoulli pressure drop as a consequence.'
+  []
+  [bernoulli-with-parsed-function-two-term]
+    type = CSVDiff
+    input = bernoulli-1d-parsed-function.i
+    csvdiff = bernoulli-1d-parsed-function_out.csv
+    cli_args = 'Variables/pressure/allow_two_term_expansion_on_bernoulli_faces=true'
+    requirement = 'The system shall be able to use two-term expansion to compute the face pressure on the downstream side on a porosity jump face.'
   []
   [bernoulli-with-functor-material]
     type = CSVDiff

@@ -13,6 +13,7 @@
 
 #include "Limiter.h"
 #include "FaceInfo.h"
+#include "MooseTypes.h"
 #include "libmesh/elem.h"
 #include "libmesh/point.h"
 #include "libmesh/quadrature.h"
@@ -26,6 +27,11 @@ struct ElemArg
 {
   const libMesh::Elem * elem;
   bool correct_skewness;
+
+  /**
+   * @returns The conceptual physical location of this data structure
+   */
+  Point getPoint() const { return elem->vertex_average(); }
 
   /**
    * friend function that allows this structure to be used as keys in ordered containers like sets
@@ -49,6 +55,11 @@ struct ElemPointArg
   bool correct_skewness;
 
   /**
+   * @returns The conceptual physical location of this data structure
+   */
+  Point getPoint() const { return point; }
+
+  /**
    * friend function that allows this structure to be used as keys in ordered containers like sets
    * and maps
    */
@@ -69,7 +80,6 @@ struct ElemPointArg
  */
 struct FaceArg
 {
-public:
   /// a face information object which defines our location in space
   const FaceInfo * fi;
 
@@ -95,6 +105,11 @@ public:
   const Elem * face_side;
 
   /**
+   * @returns The conceptual physical location of this data structure
+   */
+  Point getPoint() const { return fi->faceCentroid(); }
+
+  /**
    * Make a \p ElemArg from our data using the face information element
    */
   ElemArg makeElem() const { return {&fi->elem(), correct_skewness}; }
@@ -116,6 +131,17 @@ public:
   }
 };
 
+struct NodeArg
+{
+  /// The node which defines our location in space
+  const Node * node;
+  /// Indicates what subdomain this argument should be associated with. This removes ambiguity when
+  /// this argument is used to evaluate functors at the intersection of different blocks
+  SubdomainID subdomain_id;
+
+  Point getPoint() const { return *node; }
+};
+
 /**
  * Argument for requesting functor evaluation at a quadrature point location in an element. Data
  * in the argument:
@@ -124,7 +150,25 @@ public:
  *   evaluation of the i-th point
  * - The quadrature rule that can be used to initialize the functor on the given element
  */
-using ElemQpArg = std::tuple<const libMesh::Elem *, unsigned int, const QBase *>;
+struct ElemQpArg
+{
+  /// The element
+  const libMesh::Elem * elem;
+
+  /// The quadrature point index
+  unsigned int qp;
+
+  /// The quadrature rule
+  const QBase * qrule;
+
+  /// The physical location of the quadrature point
+  Point point;
+
+  /**
+   * @returns The conceptual physical location of this data structure
+   */
+  Point getPoint() const { return point; }
+};
 
 /**
  * Argument for requesting functor evaluation at quadrature point locations on an element side.
@@ -135,5 +179,82 @@ using ElemQpArg = std::tuple<const libMesh::Elem *, unsigned int, const QBase *>
  *   evaluation of the i-th point
  * - The quadrature rule that can be used to initialize the functor on the given element and side
  */
-using ElemSideQpArg = std::tuple<const libMesh::Elem *, unsigned int, unsigned int, const QBase *>;
+struct ElemSideQpArg
+{
+  /// The element
+  const libMesh::Elem * elem;
+
+  /// The local side index
+  unsigned int side;
+
+  /// The quadrature point index
+  unsigned int qp;
+
+  /// The qudrature rule
+  const QBase * qrule;
+
+  /// The physical location of the quadrature point
+  Point point;
+
+  /**
+   * @returns The conceptual physical location of this data structure
+   */
+  Point getPoint() const { return point; }
+};
+
+/**
+ * State argument for evaluating functors. The iteration type indicates whether you want to evaluate
+ * a functor based on some iterate state of a transient calculation, nonlinear solve, etc. The state
+ * indicates which iterate of the iterate type we want to evaluate on. A state of 0 indicates
+ * "current", e.g. the current time or the current nonlinear iteration (which should actually be
+ * equivalent); a state of 1 indicates the most-recent "old" time or the most recent previous
+ * nonlinear iteration, etc.
+ */
+
+struct StateArg
+{
+  /**
+   * Prevent implicit conversions from boolean to avoid users accidentally constructing a time
+   * argument when they meant to construct a skewness argument, etc.
+   */
+  StateArg(bool) = delete;
+
+  StateArg(unsigned int state_in) : state(state_in), iteration_type(SolutionIterationType::Time) {}
+
+  StateArg(unsigned int state_in, SolutionIterationType iteration_type_in)
+    : state(state_in), iteration_type(iteration_type_in)
+  {
+  }
+
+  /// The state. Zero represents the most recent state, so for any kind of iteration type, a zero
+  /// state represents the current state, e.g. current solution
+  /// One may represent the 'old' value (one before, in the iteration_type specified), and two an 'older' or two steps away state
+  unsigned int state;
+
+  /// The solution iteration type, e.g. time or nonlinear
+  SolutionIterationType iteration_type;
+
+private:
+  StateArg() : state(0), iteration_type(SolutionIterationType::Time) {}
+
+  friend StateArg currentState();
+};
+
+inline StateArg
+currentState()
+{
+  return {};
+}
+
+inline StateArg
+oldState()
+{
+  return {(unsigned int)1};
+}
+
+inline StateArg
+previousNonlinearState()
+{
+  return {(unsigned int)1, SolutionIterationType::Nonlinear};
+}
 }

@@ -11,7 +11,7 @@ MOOSE_SUBMODULE    := $(CURDIR)/moose
 ifneq ($(wildcard $(MOOSE_SUBMODULE)/framework/Makefile),)
   MOOSE_DIR        ?= $(MOOSE_SUBMODULE)
 else
-  MOOSE_DIR        ?= $(shell dirname `pwd`)/../../../moose
+  MOOSE_DIR        ?= $(shell dirname `pwd`)/../../
 endif
 
 # framework
@@ -27,7 +27,7 @@ CHEMICAL_REACTIONS        := no
 CONTACT                   := no
 FLUID_PROPERTIES          := no
 # heat_conduction is required by Steps 5+
-HEAT_CONDUCTION           := yes
+HEAT_TRANSFER             := yes
 LINEAR_ELASTICITY         := no
 MISC                      := no
 NAVIER_STOKES             := no

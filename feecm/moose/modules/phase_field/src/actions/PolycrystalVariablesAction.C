@@ -44,8 +44,8 @@ PolycrystalVariablesAction::validParams()
   params.addRequiredParam<unsigned int>("op_num",
                                         "specifies the number of order parameters to create");
   params.addRequiredParam<std::string>("var_name_base", "specifies the base name of the variables");
-  params.addParam<std::vector<SubdomainName>>("block",
-                                              "Block restriction for the variables and kernels");
+  params.addParam<std::vector<SubdomainName>>(
+      "block", {}, "Block restriction for the variables and kernels");
   return params;
 }
 
@@ -88,7 +88,7 @@ PolycrystalVariablesAction::act()
 
       if (_current_task == "copy_nodal_vars")
       {
-        auto * system = &_problem->getNonlinearSystemBase();
+        auto * system = &_problem->getNonlinearSystemBase(/*nl_sys_num=*/0);
         system->addVariableToCopy(var_name, var_name, "LATEST");
       }
     }

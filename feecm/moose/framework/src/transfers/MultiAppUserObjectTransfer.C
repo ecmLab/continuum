@@ -27,7 +27,7 @@
 #include "libmesh/mesh_function.h"
 #include "libmesh/mesh_tools.h"
 
-registerMooseObject("MooseApp", MultiAppUserObjectTransfer);
+registerMooseObjectDeprecated("MooseApp", MultiAppUserObjectTransfer, "12/31/2024 24:00");
 
 InputParameters
 MultiAppUserObjectTransfer::validParams()
@@ -35,6 +35,7 @@ MultiAppUserObjectTransfer::validParams()
   InputParameters params = MultiAppConservativeTransfer::validParams();
   //  MultiAppUserObjectTransfer does not need source variable since it query values from user
   //  objects
+  params.set<std::vector<VariableName>>("source_variable") = std::vector<VariableName>{};
   params.suppressParameter<std::vector<VariableName>>("source_variable");
   params.addRequiredParam<UserObjectName>(
       "user_object",
@@ -86,6 +87,9 @@ MultiAppUserObjectTransfer::MultiAppUserObjectTransfer(const InputParameters & p
     _skip_bbox_check(getParam<bool>("skip_bounding_box_check")),
     _nearest_sub_app(getParam<bool>("nearest_sub_app"))
 {
+  mooseDeprecated("MultiAppUserObjectTransfer is deprecated. Use "
+                  "MultiAppGeneralFieldUserObjectTransfer instead and adapt the parameters");
+
   // This transfer does not work with DistributedMesh
   _fe_problem.mesh().errorIfDistributedMesh("MultiAppUserObjectTransfer");
 
@@ -525,7 +529,7 @@ MultiAppUserObjectTransfer::execute()
             Real from_value = 0;
             {
               Moose::ScopedCommSwapper swapper(getFromMultiApp()->comm());
-              from_value = user_object.spatialValue(from_transform.mapBack(to_transform(point)));
+              from_value = user_object.spatialValue(from_transform.mapBack(point));
             }
 
             if (from_value == std::numeric_limits<Real>::infinity())

@@ -27,19 +27,27 @@ class InputParameters;
 using MooseAppPtr = std::shared_ptr<MooseApp>;
 
 /**
- * alias for validParams function
+ * Polymorphic data structure with parameter and object build access.
  */
-using paramsPtr = InputParameters (*)();
+struct AppFactoryBuildInfoBase
+{
+  virtual MooseAppPtr build(const InputParameters & params) = 0;
+  virtual InputParameters buildParameters() = 0;
+  virtual ~AppFactoryBuildInfoBase() = default;
 
-/**
- * alias for method to build objects
- */
-using appBuildPtr = MooseAppPtr (*)(const InputParameters & parameters);
+  std::size_t _app_creation_count = 0;
+};
+template <typename T>
+struct AppFactoryBuildInfo : public AppFactoryBuildInfoBase
+{
+  virtual MooseAppPtr build(const InputParameters & params) override
+  {
+    return std::make_shared<T>(params);
+  }
+  virtual InputParameters buildParameters() override { return T::validParams(); }
+};
 
-/**
- * alias for registered Object iterator
- */
-using registeredMooseAppIterator = std::map<std::string, paramsPtr>::iterator;
+using AppFactoryBuildInfoMap = std::map<std::string, std::unique_ptr<AppFactoryBuildInfoBase>>;
 
 /**
  * Generic AppFactory class for building Application objects
@@ -55,8 +63,19 @@ public:
 
   virtual ~AppFactory();
 
+  static InputParameters validParams();
   /**
-   * Helper function for creating a MooseApp from command-line arguments.
+   * Helper function for creating a MooseApp from command-line arguments and a Parser.
+   */
+  static MooseAppPtr createAppShared(const std::string & default_app_type,
+                                     int argc,
+                                     char ** argv,
+                                     std::unique_ptr<Parser> parser,
+                                     MPI_Comm comm_word = MPI_COMM_WORLD);
+
+  /**
+   * Deprecated helper function for creating a MooseApp for Apps haven't adapted to the new Parser
+   * and Builder changes. This function needed to be removed after the new Parser and Builder merged
    */
   static MooseAppPtr createAppShared(const std::string & default_app_type,
                                      int argc,
@@ -89,31 +108,29 @@ public:
                            InputParameters parameters,
                            MPI_Comm COMM_WORLD_IN);
 
-  ///@{
   /**
-   * Returns iterators to the begin/end of the registered objects data structure: a name ->
-   * validParams function pointer.
+   * Returns a reference to the map from names to AppFactoryBuildInfo pointers
    */
-  registeredMooseAppIterator registeredObjectsBegin() { return _name_to_params_pointer.begin(); }
-  registeredMooseAppIterator registeredObjectsEnd() { return _name_to_params_pointer.end(); }
-  ///@}
+  const auto & registeredObjects() const { return _name_to_build_info; }
 
   /**
    * Returns a Boolean indicating whether an application type has been registered
    */
   bool isRegistered(const std::string & app_name) const
   {
-    return _name_to_params_pointer.count(app_name);
+    return _name_to_build_info.count(app_name);
   }
+
+  /**
+   * @returns the amount of times the AppFactory created the named App-type
+   */
+  std::size_t createdAppCount(const std::string & app_type) const;
 
   /**
    * Returns the map of object name to a function pointer for building said object's
    * input parameters.
    */
-  const std::map<std::string, paramsPtr> & registeredObjectParamPointers() const
-  {
-    return _name_to_params_pointer;
-  }
+  const AppFactoryBuildInfoMap & registeredObjectBuildInfos() const { return _name_to_build_info; }
 
   ///@{ Don't allow creation through copy/move construction or assignment
   AppFactory(AppFactory const &) = delete;
@@ -124,19 +141,11 @@ public:
   ///@}
 
 protected:
-  std::map<std::string, appBuildPtr> _name_to_build_pointer;
-
-  std::map<std::string, paramsPtr> _name_to_params_pointer;
+  AppFactoryBuildInfoMap _name_to_build_info;
 
 private:
   // Private constructor for singleton pattern
   AppFactory() {}
-
-  template <class T>
-  static MooseAppPtr buildApp(const InputParameters & parameters)
-  {
-    return std::make_shared<T>(parameters);
-  }
 };
 
 template <typename T>
@@ -146,6 +155,5 @@ AppFactory::reg(const std::string & name)
   if (isRegistered(name))
     return;
 
-  _name_to_build_pointer[name] = &buildApp<T>;
-  _name_to_params_pointer[name] = &moose::internal::callValidParams<T>;
+  _name_to_build_info[name] = std::make_unique<AppFactoryBuildInfo<T>>();
 }

@@ -21,9 +21,9 @@ class SumPostprocessor : public GeneralPostprocessor
 public:
   SumPostprocessor(const InputParameters & parameters);
 
-  virtual void initialize();
-  virtual void execute();
-  virtual PostprocessorValue getValue();
+  virtual void initialize() override;
+  virtual void execute() override;
+  virtual PostprocessorValue getValue() const override;
 
 protected:
   /// Postprocessors to add up

@@ -1,9 +1,12 @@
 # Postprocessor System
 
-A PostProcessor object in MOOSE is a C++ object that computes a single scalar (`Real`) value,
-typically the value computed is an aggregation of data from a simulation. For example, the
-maximum value of a variable (see [ElementExtremeValue.md]). The value compute may be coupled to
-other systems via the `getPostprocessorValue` method available in most MOOSE objects.
+A postprocessor is an object that computes a single scalar (`Real`) value,
+such as a value sampled from the solution at a point in the domain, or an integral/average
+over some subdomain or boundary. This value may be used purely for output purposes,
+or it may be retrieved by other systems via the `getPostprocessorValue` method,
+which is available in most MOOSE objects. Furthermore, postprocessors are also
+[functors](Functors/index.md), which allows them to be retrieved into various
+objects via the `getFunctor<Real>` method.
 
 MOOSE includes a large number of postprocessors within the framework, the complete list is
 provided in [Available Objects list](#available-objects) section.
@@ -158,7 +161,7 @@ Of course, the type of communication necessary depends on the calculation being 
 [UserObject.md] base class includes helper methods for common parallel communications functions.
 
 The initialize and finalize methods are utilized to aggregate for message passing (MPI) based
-parallelism. For shared memory parallelism the theadJoin method is used. This method is called,
+parallelism. For shared memory parallelism the threadJoin method is used. This method is called,
 like finalize, after execution is complete and includes a single argument. This argument is a
 reference to a UserObject, which is a base class of Postprocessor objects. The purpose of this
 method is to enable the aggregation for the Postprocessor objects that were executed on other

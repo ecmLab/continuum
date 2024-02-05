@@ -22,8 +22,8 @@ ElementJacobianDamper::validParams()
 {
   InputParameters params = GeneralDamper::validParams();
   params.addClassDescription("Damper that limits the change in element Jacobians");
-  params.addParam<std::vector<VariableName>>("displacements",
-                                             "The nonlinear displacement variables");
+  params.addParam<std::vector<VariableName>>(
+      "displacements", {}, "The nonlinear displacement variables");
   params.addParam<Real>(
       "max_increment",
       0.1,
@@ -35,7 +35,7 @@ ElementJacobianDamper::validParams()
 ElementJacobianDamper::ElementJacobianDamper(const InputParameters & parameters)
   : GeneralDamper(parameters),
     _tid(parameters.get<THREAD_ID>("_tid")),
-    _assembly(_subproblem.assembly(_tid)),
+    _assembly(_subproblem.assembly(_tid, _sys.number())),
     _qrule(_assembly.qRule()),
     _JxW(_assembly.JxW()),
     _fe_problem(*parameters.getCheckedPointerParam<FEProblemBase *>("_fe_problem_base")),

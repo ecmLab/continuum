@@ -53,7 +53,7 @@ VolumetricFlowRate::VolumetricFlowRate(const InputParameters & parameters)
     _adv_quant(isParamValid("advected_quantity") ? &getFunctor<ADReal>("advected_quantity")
                                                  : nullptr),
     _rc_uo(isParamValid("rhie_chow_user_object")
-               ? &getUserObject<INSFVRhieChowInterpolator>("rhie_chow_user_object")
+               ? &getUserObject<RhieChowInterpolatorBase>("rhie_chow_user_object")
                : nullptr)
 {
   // Check that at most one advected quantity has been provided
@@ -83,12 +83,13 @@ VolumetricFlowRate::VolumetricFlowRate(const InputParameters & parameters)
 void
 VolumetricFlowRate::initialSetup()
 {
-  if (_rc_uo && _rc_uo->velocityInterpolationMethod() == Moose::FV::InterpMethod::RhieChow)
+  if (_rc_uo && _rc_uo->velocityInterpolationMethod() == Moose::FV::InterpMethod::RhieChow &&
+      !_rc_uo->segregated())
   {
     // We must make sure the A coefficients in the Rhie Chow interpolator are present on
     // both sides of the boundaries so that interpolation coefficients may be computed
     for (const auto bid : boundaryIDs())
-      const_cast<INSFVRhieChowInterpolator *>(_rc_uo)->ghostADataOnBoundary(bid);
+      const_cast<RhieChowInterpolatorBase *>(_rc_uo)->ghostADataOnBoundary(bid);
 
     // On INITIAL, we cannot compute Rhie Chow coefficients on internal surfaces because
     // - the time integrator is not ready to compute time derivatives
@@ -121,9 +122,12 @@ VolumetricFlowRate::computeFaceInfoIntegral(const FaceInfo * fi)
 {
   mooseAssert(fi, "We should have a face info in " + name());
   mooseAssert(_adv_quant, "We should have an advected quantity in " + name());
+  const auto state = determineState();
 
   // Get face value for velocity
-  const auto vel = MetaPhysicL::raw_value(_rc_uo->getVelocity(_velocity_interp_method, *fi, _tid));
+  const auto vel = MetaPhysicL::raw_value(_rc_uo->getVelocity(
+      _velocity_interp_method, *fi, state, _tid, /*subtract_mesh_velocity=*/true));
+
   const bool correct_skewness =
       _advected_interp_method == Moose::FV::InterpMethod::SkewCorrectedAverage;
 
@@ -132,7 +136,8 @@ VolumetricFlowRate::computeFaceInfoIntegral(const FaceInfo * fi)
                                     Moose::FV::limiterType(_advected_interp_method),
                                     MetaPhysicL::raw_value(vel) * fi->normal() > 0,
                                     correct_skewness,
-                                    nullptr})));
+                                    nullptr}),
+                    state));
   return fi->normal() * adv_quant_face * vel;
 }
 
@@ -143,8 +148,8 @@ VolumetricFlowRate::computeQpIntegral()
     return _advected_variable[_qp] * RealVectorValue(_vel_x[_qp], _vel_y[_qp], _vel_z[_qp]) *
            _normals[_qp];
   else if (_advected_mat_prop_supplied)
-    return MetaPhysicL::raw_value(
-               _advected_material_property(std::make_tuple(_current_elem, _qp, _qrule))) *
+    return MetaPhysicL::raw_value(_advected_material_property(
+               Moose::ElemQpArg{_current_elem, _qp, _qrule, _q_point[_qp]}, determineState())) *
            RealVectorValue(_vel_x[_qp], _vel_y[_qp], _vel_z[_qp]) * _normals[_qp];
   else
     return RealVectorValue(_vel_x[_qp], _vel_y[_qp], _vel_z[_qp]) * _normals[_qp];

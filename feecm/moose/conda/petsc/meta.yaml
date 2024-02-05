@@ -1,12 +1,17 @@
 # Making a Change to this package?
 # REMEMBER TO UPDATE the .yaml files for the following packages:
-#   libmesh/
-#   template/
-#   moose/
-{% set build = 6 %}
+#   libmesh/*
+#
+#   And documentation:
+#   framework/doc/packages_config.yml
+#
+# As well as any directions pertaining to modifying those files.
+# ALSO: Follow the directions in scripts/tests/versioner_hashes.yaml
+{% set build = 0 %}
+{% set version = "3.20.1" %}
+
+# permanent
 {% set strbuild = "build_" + build|string %}
-{% set version = "3.16.6" %}
-{% set sha256 = "d676eb67e79314d6cca6422d7c477d2b192c830b89d5edc6b46934f7453bcfc0" %}
 
 package:
   name: moose-petsc
@@ -24,6 +29,8 @@ build:
   skip: true  # [win]
   script_env:
     - MOOSE_JOBS
+    - REQUESTS_CA_BUNDLE
+    - SSL_CERT_FILE
   run_exports:
     - {{ pin_subpackage('moose-petsc', max_pin='x.x')}}
 
@@ -60,3 +67,4 @@ about:
 extra:
   recipe-maintainers:
     - milljm
+    - cticenhour

@@ -14,6 +14,9 @@
 
 #include <iostream>
 #include <vector>
+#include <sstream>
+#include <fstream>
+#include <cstdio>
 
 // TODO:
 //
@@ -201,8 +204,17 @@ TEST(HitTests, ParseFields)
       {"int", "foo=42", "foo", "42", hit::Field::Kind::Int},
       {"float1", "foo=4.2", "foo", "4.2", hit::Field::Kind::Float},
       {"float2", "foo=.42", "foo", ".42", hit::Field::Kind::Float},
+      // Previously, the HIT lexer designated "e-23" below as a 'float' from the text pattern
+      // alone but the MOOSE string-to-float conversion logic does not support this no
+      // coefficient syntax so even through the kind method called this a 'float', retrieving
+      // it as a float would fail however WASP-HIT reuses the convert and retrieve logic for
+      // consistent field categorization making "foo=e-23" be designated now as a 'string'
       {"float3", "foo=1e10", "foo", "1e10", hit::Field::Kind::Float},
-      {"float4", "foo=e-23", "foo", "e-23", hit::Field::Kind::Float},
+      {"float4",
+       "foo=e-23",
+       "foo",
+       "e-23", // why do we even support this?
+       hit::Field::Kind::String},
       {"float5", "foo=12.345e+67", "foo", "12.345e+67", hit::Field::Kind::Float},
       {"bool-true1", "foo=true", "foo", "true", hit::Field::Kind::Bool},
       {"bool-true2", "foo=yes", "foo", "yes", hit::Field::Kind::Bool},
@@ -261,8 +273,13 @@ TEST(HitTests, ParseFields)
        "foo/bar/baz",
        "42",
        hit::Field::Kind::Int},
-
-  };
+      // numbers with # in front; used to represent issue #'s in test harness
+      {"number with #", "issue='#1234'", "issue", "#1234", hit::Field::Kind::String},
+      {"multiple numbers with #s",
+       "issue='#1234 #5678'",
+       "issue",
+       "#1234 #5678",
+       hit::Field::Kind::String}};
 
   for (size_t i = 0; i < sizeof(cases) / sizeof(ValCase); i++)
   {
@@ -369,6 +386,14 @@ TEST(HitTests, BraceExpressions)
        "a",
        "42.97674418604651",
        hit::Field::Kind::Float},
+      {"multi-line value",
+       "foo = '1 2 3\n"
+       "4 5 6\n"
+       "7 8 9'\n"
+       "boo = ${foo}",
+       "boo",
+       "1 2 3\n4 5 6\n7 8 9",
+       hit::Field::Kind::String},
   };
 
   for (size_t i = 0; i < sizeof(cases) / sizeof(ValCase); i++)
@@ -486,7 +511,7 @@ TEST(HitTests, RenderCases)
        "foo='why'\n' separate '  'strings?'",
        "foo = 'why separate strings?'",
        0},
-      {"preserve quotes preceding blankline", "foo = '42'\n\n", "foo = '42'\n", 0},
+      {"preserve quotes preceding blankline", "foo = '42'\n\n", "foo = '42'", 0},
       {"preserve block comment (#10889)",
        "[hello]\n  foo = '42'\n\n  # comment\n  bar = 'baz'\n[]",
        "[hello]\n  foo = '42'\n\n  # comment\n  bar = 'baz'\n[]",
@@ -494,6 +519,16 @@ TEST(HitTests, RenderCases)
       {"preserve block comment 2 (#10889)",
        "[hello]\n  foo = '42'\n  # comment\n  bar = 'baz'\n[]",
        "[hello]\n  foo = '42'\n  # comment\n  bar = 'baz'\n[]",
+       0},
+      {"complex newline render",
+       "[section01]\n\n  field01 = 10\n\n\n\n  field02 = '20'\n\n  [section02]"
+       "\n\n    field03 = '30 31 32 33'\n\n\n    field04 = 40\n    [section03]"
+       "\n\n\n\n\n\n      field05 = \"double 50 quoted 51 string\"\n\n\n    []"
+       "\n\n\n    field06 = 60\n\n\n\n  []\n  field07 = '70 71 72 73 74'\n\n[]",
+       "[section01]\n\n  field01 = 10\n\n  field02 = '20'\n\n  [section02]\n\n  "
+       "  field03 = '30 31 32 33'\n\n    field04 = 40\n    [section03]\n\n      "
+       "field05 = \"double 50 quoted 51 string\"\n    []\n\n    field06 = 60\n  "
+       "[]\n  field07 = '70 71 72 73 74'\n[]",
        0},
   };
 
@@ -737,4 +772,373 @@ TEST(HitTests, vector_unsigned_int)
   {
     EXPECT_EQ("negative value read from file 'TESTCASE' on line 1", std::string(err.what()));
   }
+}
+
+// helper for recursively capturing each path and leaf value in a parse tree
+void
+tree_list(hit::Node * node, std::ostringstream & tree_stream)
+{
+  // capture node path and value of the parameter if current node is a field
+  if (node->type() == hit::NodeType::Field)
+  {
+    tree_stream << "/" << node->fullpath() << " (" << static_cast<hit::Field *>(node)->val() << ")"
+                << " - fname: " << std::setw(31) << std::left << node->filename()
+                << " line: " << std::setw(2) << std::right << node->line()
+                << " column: " << std::setw(2) << std::right << node->column() << "\n";
+  }
+
+  // capture node path and recurse the children if current node is a section
+  else if (node->type() == hit::NodeType::Section)
+  {
+    tree_stream << "/" << std::setw(27) << std::left << node->fullpath()
+                << " - fname: " << std::setw(31) << std::left << node->filename()
+                << " line: " << std::setw(2) << std::right << node->line()
+                << " column: " << std::setw(2) << std::right << node->column() << "\n";
+
+    for (auto child : node->children())
+    {
+      tree_list(child, tree_stream);
+    }
+  }
+}
+
+// test ability to include external file content from various input contexts
+TEST(HitTests, FileIncludeSuccess)
+{
+  // base input file string includes a file within a block and at root level
+  std::string basefile = R"INPUT(
+[Block01]
+  param01a = value01a
+  !include include_param_from_basefile.i
+  param01c = value01c
+[]
+!include include_block_from_basefile.i
+[Block03]
+  param03a = value03a
+  param03b = value03b
+  param03c = value03c
+[]
+)INPUT";
+
+  // write param input to file on disk that is included from base input file
+  std::ofstream include_param_from_basefile("include_param_from_basefile.i");
+  include_param_from_basefile << R"INPUT(
+  param01b = value01b
+)INPUT";
+  include_param_from_basefile.close();
+
+  // write block input to file on disk that is included from base input file
+  std::ofstream include_block_from_basefile("include_block_from_basefile.i");
+  include_block_from_basefile << R"INPUT(
+[Block02]
+  param02a = value02a
+  !include include_param_from_included.i
+  param02c = value02c
+[]
+)INPUT";
+  include_block_from_basefile.close();
+
+  // write param input to file on disk that is included from an include file
+  std::ofstream include_param_from_included("include_param_from_included.i");
+  include_param_from_included << R"INPUT(
+  param02b = value02b
+)INPUT";
+  include_param_from_included.close();
+
+  // parse the base input string to consume all contents from included files
+  auto root = hit::parse("BASE-STRING", basefile);
+
+  // delete the three files that were put on disk to be parsed from includes
+  std::remove("include_block_from_basefile.i");
+  std::remove("include_param_from_basefile.i");
+  std::remove("include_param_from_included.i");
+
+  // expected content from all include files when the parse tree is rendered
+  std::string render_expect = R"INPUT(
+[Block01]
+  param01a = value01a
+  param01b = value01b
+  param01c = value01c
+[]
+[Block02]
+  param02a = value02a
+  param02b = value02b
+  param02c = value02c
+[]
+[Block03]
+  param03a = value03a
+  param03b = value03b
+  param03c = value03c
+[]
+)INPUT";
+
+  // check that all file content is included when the parse tree is rendered
+  EXPECT_EQ(render_expect, "\n" + root->render() + "\n");
+
+  // expected content from all include files when the parse paths are listed
+  std::string tree_expect = R"INPUT(
+/                            - fname: BASE-STRING                     line:  2 column:  1
+/Block01                     - fname: BASE-STRING                     line:  2 column:  1
+/Block01/param01a (value01a) - fname: BASE-STRING                     line:  3 column:  3
+/Block01/param01b (value01b) - fname: ./include_param_from_basefile.i line:  2 column:  3
+/Block01/param01c (value01c) - fname: BASE-STRING                     line:  5 column:  3
+/Block02                     - fname: ./include_block_from_basefile.i line:  2 column:  1
+/Block02/param02a (value02a) - fname: ./include_block_from_basefile.i line:  3 column:  3
+/Block02/param02b (value02b) - fname: ./include_param_from_included.i line:  2 column:  3
+/Block02/param02c (value02c) - fname: ./include_block_from_basefile.i line:  5 column:  3
+/Block03                     - fname: BASE-STRING                     line:  8 column:  1
+/Block03/param03a (value03a) - fname: BASE-STRING                     line:  9 column:  3
+/Block03/param03b (value03b) - fname: BASE-STRING                     line: 10 column:  3
+/Block03/param03c (value03c) - fname: BASE-STRING                     line: 11 column:  3
+)INPUT";
+
+  // traverse the parse tree recursively capturing paths and terminal values
+  std::ostringstream tree_actual;
+  tree_list(root, tree_actual);
+
+  // check that all file content is included when the parse paths are listed
+  EXPECT_EQ(tree_expect, "\n" + tree_actual.str());
+}
+
+// test error check for external file include that has nonexistent file path
+TEST(HitTests, FileIncludeMissing)
+{
+  // base input file string includes a file using a path that does not exist
+  std::string basefile = R"INPUT(
+[Block01]
+  param01a = value01a
+  !include missing_file.i
+  param01c = value01c
+[]
+)INPUT";
+
+  // check parsing base input fails with error of including nonexistent file
+  try
+  {
+    hit::parse("TESTCASE", basefile);
+    FAIL() << "Exception was not thrown";
+  }
+  catch (std::exception & err)
+  {
+    EXPECT_EQ("TESTCASE:4.3: could not find 'missing_file.i'\n", std::string(err.what()));
+  }
+}
+
+// test error check for external file include that causes circular reference
+TEST(HitTests, FileIncludeCircular)
+{
+  // base input file string includes existing include file 01 within a block
+  std::string basefile = R"INPUT(
+[Block01]
+  param01a = value01a
+  !include include_file_01.i
+  param01c = value01c
+[]
+)INPUT";
+
+  // write include file 01 to disk which includes include file 02 downstream
+  std::ofstream include_file_01("include_file_01.i");
+  include_file_01 << R"INPUT(
+[Block02]
+  !include include_file_02.i
+[]
+)INPUT";
+  include_file_01.close();
+
+  // write include file 02 to disk which includes include file 01 circularly
+  std::ofstream include_file_02("include_file_02.i");
+  include_file_02 << R"INPUT(
+[Block03]
+  !include include_file_01.i
+[]
+)INPUT";
+  include_file_02.close();
+
+  // check parsing base input fails with error of creating circular includes
+  try
+  {
+    hit::parse("TESTCASE", basefile);
+    FAIL() << "Exception was not thrown";
+  }
+  catch (std::exception & err)
+  {
+    EXPECT_EQ("./include_file_02.i:3.3: file include would create circular reference "
+              "'include_file_01.i'\n",
+              std::string(err.what()));
+  }
+
+  // delete two extra files that were put on disk to be parsed from includes
+  std::remove("include_file_01.i");
+  std::remove("include_file_02.i");
+}
+
+// test scenario where nested file include is first element in included file
+TEST(HitTests, FileIncludeFirstField)
+{
+  // base input file defines parameter after all content from included files
+  std::string file_a = R"INPUT(
+!include fileB.i
+param_03 = 30
+)INPUT";
+
+  // write input to file on disk that includes another file as first element
+  std::ofstream file_b("fileB.i");
+  file_b << R"INPUT(
+!include fileC.i
+param_02 = 20
+)INPUT";
+  file_b.close();
+
+  // write input to file on disk that another file includes as first element
+  std::ofstream file_c("fileC.i");
+  file_c << R"INPUT(
+param_01 = 10
+)INPUT";
+  file_c.close();
+
+  // parse the base input string to consume all contents from included files
+  auto root = hit::parse("FILE-A", file_a);
+
+  // delete two extra files that were put on disk to be parsed from includes
+  std::remove("fileB.i");
+  std::remove("fileC.i");
+
+  // expected content from all include files when the parse tree is rendered
+  std::string render_expect = R"INPUT(
+param_01 = 10
+param_02 = 20
+param_03 = 30
+)INPUT";
+
+  // check that all file content is included when the parse tree is rendered
+  EXPECT_EQ(render_expect, "\n" + root->render() + "\n");
+}
+
+// test capability that blocks of the same name are merged into single block
+TEST(HitTests, BlockMerge)
+{
+  // input that has multiple blocks of the same name and split child content
+  std::string input = R"INPUT(
+[Block_01]
+
+  param_01_a = value_01_a
+  param_01_b = value_01_b
+
+  [Subblock_01_01]
+    param_01_01_a = value_01_01_a
+    param_01_01_b = value_01_01_b
+  []
+[]
+
+[Block_02]
+
+  param_02_a = value_02_a
+  param_02_b = value_02_b
+
+  [Subblock_02_01]
+    param_02_01_a = value_02_01_a
+    param_02_01_b = value_02_01_b
+  []
+[]
+
+[Block_02]
+
+  param_02_c = value_02_c
+  param_02_d = value_02_d
+
+  [Subblock_02_01]
+    param_02_01_c = value_02_01_c
+    param_02_01_d = value_02_01_d
+  []
+
+  [Subblock_02_02]
+    param_02_02_a = value_02_02_a
+    param_02_02_b = value_02_02_b
+  []
+[]
+
+[Block_01]
+
+  [Subblock_01_02]
+    param_01_02_a = value_01_02_a
+    param_01_02_b = value_01_02_b
+  []
+
+  param_01_c = value_01_c
+  param_01_d = value_01_d
+[]
+
+[Block_01]
+
+  param_01_e = value_01_e
+  param_01_f = value_01_f
+
+  [Subblock_01_01]
+    param_01_01_c = value_01_01_c
+    param_01_01_d = value_01_01_d
+  []
+
+  param_01_g = value_01_g
+  param_01_h = value_01_h
+[]
+)INPUT";
+
+  // parse input string which merges content from blocks that have same name
+  auto root = hit::parse("TESTCASE", input);
+
+  // expected content from all merged blocks when the parse tree is rendered
+  std::string render_expect = R"INPUT(
+[Block_01]
+
+  param_01_a = value_01_a
+  param_01_b = value_01_b
+
+  [Subblock_01_01]
+    param_01_01_a = value_01_01_a
+    param_01_01_b = value_01_01_b
+
+    param_01_01_c = value_01_01_c
+    param_01_01_d = value_01_01_d
+  []
+
+  [Subblock_01_02]
+    param_01_02_a = value_01_02_a
+    param_01_02_b = value_01_02_b
+  []
+
+  param_01_c = value_01_c
+  param_01_d = value_01_d
+
+  param_01_e = value_01_e
+  param_01_f = value_01_f
+
+  param_01_g = value_01_g
+  param_01_h = value_01_h
+[]
+
+[Block_02]
+
+  param_02_a = value_02_a
+  param_02_b = value_02_b
+
+  [Subblock_02_01]
+    param_02_01_a = value_02_01_a
+    param_02_01_b = value_02_01_b
+
+    param_02_01_c = value_02_01_c
+    param_02_01_d = value_02_01_d
+  []
+
+  param_02_c = value_02_c
+  param_02_d = value_02_d
+
+  [Subblock_02_02]
+    param_02_02_a = value_02_02_a
+    param_02_02_b = value_02_02_b
+  []
+[]
+)INPUT";
+
+  // check that merging of blocks is correct when the parse tree is rendered
+  EXPECT_EQ(render_expect, "\n" + root->render() + "\n");
 }

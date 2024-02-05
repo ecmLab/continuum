@@ -58,11 +58,20 @@ coordTransformFactor(const MooseMesh & mesh,
                   : true,
               "Coordinate systems must be the same between element and neighbor");
   const auto coord_type = mesh.getCoordSystem(sub_id);
-  MooseMeshUtils::coordTransformFactor(
-      point,
-      factor,
-      coord_type,
-      coord_type == Moose::COORD_RZ ? mesh.getAxisymmetricRadialCoord() : libMesh::invalid_uint);
+
+  if (coord_type == Moose::COORD_RZ)
+  {
+    if (mesh.usingGeneralAxisymmetricCoordAxes())
+    {
+      const auto & axis = mesh.getGeneralAxisymmetricCoordAxis(sub_id);
+      MooseMeshUtils::coordTransformFactorRZGeneral(point, axis, factor);
+    }
+    else
+      MooseMeshUtils::coordTransformFactor(
+          point, factor, coord_type, mesh.getAxisymmetricRadialCoord());
+  }
+  else
+    MooseMeshUtils::coordTransformFactor(point, factor, coord_type, libMesh::invalid_uint);
 }
 
 Assembly::Assembly(SystemBase & sys, THREAD_ID tid)
@@ -77,6 +86,13 @@ Assembly::Assembly(SystemBase & sys, THREAD_ID tid)
     _tid(tid),
     _mesh(sys.mesh()),
     _mesh_dimension(_mesh.dimension()),
+    _helper_type(_mesh.hasSecondOrderElements() ? SECOND : FIRST, LAGRANGE),
+    _user_added_fe_of_helper_type(false),
+    _user_added_fe_face_of_helper_type(false),
+    _user_added_fe_face_neighbor_of_helper_type(false),
+    _user_added_fe_neighbor_of_helper_type(false),
+    _user_added_fe_lower_of_helper_type(false),
+    _building_helpers(false),
     _current_qrule(nullptr),
     _current_qrule_volume(nullptr),
     _current_qrule_arbitrary(nullptr),
@@ -120,57 +136,42 @@ Assembly::Assembly(SystemBase & sys, THREAD_ID tid)
     _calculate_xyz(false),
     _calculate_face_xyz(false),
     _calculate_curvatures(false),
-    _calculate_ad_coord(false)
+    _calculate_ad_coord(false),
+    _have_p_refinement(false)
 {
-  Order helper_order = _mesh.hasSecondOrderElements() ? SECOND : FIRST;
+  const Order helper_order = _mesh.hasSecondOrderElements() ? SECOND : FIRST;
+  _building_helpers = true;
   // Build fe's for the helpers
   buildFE(FEType(helper_order, LAGRANGE));
   buildFaceFE(FEType(helper_order, LAGRANGE));
   buildNeighborFE(FEType(helper_order, LAGRANGE));
   buildFaceNeighborFE(FEType(helper_order, LAGRANGE));
   buildLowerDFE(FEType(helper_order, LAGRANGE));
+  _building_helpers = false;
 
   // Build an FE helper object for this type for each dimension up to the dimension of the current
   // mesh
   for (unsigned int dim = 0; dim <= _mesh_dimension; dim++)
   {
-    _holder_fe_helper[dim] = &_fe[dim][FEType(helper_order, LAGRANGE)];
-    (*_holder_fe_helper[dim])->get_phi();
-    (*_holder_fe_helper[dim])->get_dphi();
-    (*_holder_fe_helper[dim])->get_xyz();
-    (*_holder_fe_helper[dim])->get_JxW();
-
-    _holder_fe_face_helper[dim] = &_fe_face[dim][FEType(helper_order, LAGRANGE)];
-    (*_holder_fe_face_helper[dim])->get_phi();
-    (*_holder_fe_face_helper[dim])->get_dphi();
-    (*_holder_fe_face_helper[dim])->get_xyz();
-    (*_holder_fe_face_helper[dim])->get_JxW();
-    (*_holder_fe_face_helper[dim])->get_normals();
-
-    _holder_fe_face_neighbor_helper[dim] = &_fe_face_neighbor[dim][FEType(helper_order, LAGRANGE)];
-    (*_holder_fe_face_neighbor_helper[dim])->get_xyz();
-    (*_holder_fe_face_neighbor_helper[dim])->get_JxW();
-    (*_holder_fe_face_neighbor_helper[dim])->get_normals();
-
-    _holder_fe_neighbor_helper[dim] = &_fe_neighbor[dim][FEType(helper_order, LAGRANGE)];
-    (*_holder_fe_neighbor_helper[dim])->get_xyz();
-    (*_holder_fe_neighbor_helper[dim])->get_JxW();
+    _holder_fe_helper[dim] = _fe[dim][FEType(helper_order, LAGRANGE)];
+    _holder_fe_face_helper[dim] = _fe_face[dim][FEType(helper_order, LAGRANGE)];
+    _holder_fe_face_neighbor_helper[dim] = _fe_face_neighbor[dim][FEType(helper_order, LAGRANGE)];
+    _holder_fe_neighbor_helper[dim] = _fe_neighbor[dim][FEType(helper_order, LAGRANGE)];
   }
 
-  for (unsigned int dim = 0; dim <= _mesh_dimension - 1; dim++)
-  {
-    _holder_fe_lower_helper[dim] = &_fe_lower[dim][FEType(helper_order, LAGRANGE)];
-    // We need these computations in order to compute correct lower-d element volumes in curvilinear
-    // coordinates
-    (*_holder_fe_lower_helper[dim])->get_xyz();
-    (*_holder_fe_lower_helper[dim])->get_JxW();
-  }
+  for (unsigned int dim = 0; dim < _mesh_dimension; dim++)
+    _holder_fe_lower_helper[dim] = _fe_lower[dim][FEType(helper_order, LAGRANGE)];
+
+  // request phi, dphi, xyz, JxW, etc. data
+  helpersRequestData();
 
   // For 3D mortar, mortar segments are always TRI3 elements so we want FIRST LAGRANGE regardless
   // of discretization
   _fe_msm = (_mesh_dimension == 2)
                 ? FEGenericBase<Real>::build(_mesh_dimension - 1, FEType(helper_order, LAGRANGE))
                 : FEGenericBase<Real>::build(_mesh_dimension - 1, FEType(FIRST, LAGRANGE));
+  // This FE object should not take part in p-refinement
+  _fe_msm->add_p_level_in_reinit(false);
   _JxW_msm = &_fe_msm->get_JxW();
   // Prerequest xyz so that it is computed for _fe_msm so that it can be used for calculating
   // _coord_msm
@@ -218,6 +219,10 @@ Assembly::~Assembly()
     for (auto & it : _vector_fe_face_neighbor[dim])
       delete it.second;
 
+  for (unsigned int dim = 0; dim <= _mesh_dimension - 1; dim++)
+    for (auto & it : _vector_fe_lower[dim])
+      delete it.second;
+
   for (auto & it : _ad_grad_phi_data)
     it.second.release();
 
@@ -258,6 +263,9 @@ Assembly::JxWNeighbor() const
 void
 Assembly::buildFE(FEType type) const
 {
+  if (!_building_helpers && type == _helper_type)
+    _user_added_fe_of_helper_type = true;
+
   if (!_fe_shape_data[type])
     _fe_shape_data[type] = std::make_unique<FEShapeData>();
 
@@ -281,6 +289,9 @@ Assembly::buildFE(FEType type) const
 void
 Assembly::buildFaceFE(FEType type) const
 {
+  if (!_building_helpers && type == _helper_type)
+    _user_added_fe_face_of_helper_type = true;
+
   if (!_fe_shape_data_face[type])
     _fe_shape_data_face[type] = std::make_unique<FEShapeData>();
 
@@ -300,6 +311,9 @@ Assembly::buildFaceFE(FEType type) const
 void
 Assembly::buildNeighborFE(FEType type) const
 {
+  if (!_building_helpers && type == _helper_type)
+    _user_added_fe_neighbor_of_helper_type = true;
+
   if (!_fe_shape_data_neighbor[type])
     _fe_shape_data_neighbor[type] = std::make_unique<FEShapeData>();
 
@@ -319,6 +333,9 @@ Assembly::buildNeighborFE(FEType type) const
 void
 Assembly::buildFaceNeighborFE(FEType type) const
 {
+  if (!_building_helpers && type == _helper_type)
+    _user_added_fe_face_neighbor_of_helper_type = true;
+
   if (!_fe_shape_data_face_neighbor[type])
     _fe_shape_data_face_neighbor[type] = std::make_unique<FEShapeData>();
 
@@ -338,6 +355,9 @@ Assembly::buildFaceNeighborFE(FEType type) const
 void
 Assembly::buildLowerDFE(FEType type) const
 {
+  if (!_building_helpers && type == _helper_type)
+    _user_added_fe_lower_of_helper_type = true;
+
   if (!_fe_shape_data_lower[type])
     _fe_shape_data_lower[type] = std::make_unique<FEShapeData>();
 
@@ -386,7 +406,11 @@ Assembly::buildVectorLowerDFE(FEType type) const
   // Build an FE object for this type for each dimension up to the dimension of
   // the current mesh minus one (because this is for lower-dimensional
   // elements!)
-  for (unsigned int dim = 0; dim <= _mesh_dimension - 1; dim++)
+  unsigned int dim = ((type.family == LAGRANGE_VEC) || (type.family == MONOMIAL_VEC)) ? 0 : 2;
+  const auto ending_dim = cast_int<unsigned int>(_mesh_dimension - 1);
+  if (ending_dim < dim)
+    return;
+  for (; dim <= ending_dim; dim++)
   {
     if (!_vector_fe_lower[dim][type])
       _vector_fe_lower[dim][type] = FEVectorBase::build(dim, type).release();
@@ -407,7 +431,11 @@ Assembly::buildVectorDualLowerDFE(FEType type) const
   // Build an FE object for this type for each dimension up to the dimension of
   // the current mesh minus one (because this is for lower-dimensional
   // elements!)
-  for (unsigned int dim = 0; dim <= _mesh_dimension - 1; dim++)
+  unsigned int dim = ((type.family == LAGRANGE_VEC) || (type.family == MONOMIAL_VEC)) ? 0 : 2;
+  const auto ending_dim = cast_int<unsigned int>(_mesh_dimension - 1);
+  if (ending_dim < dim)
+    return;
+  for (; dim <= ending_dim; dim++)
   {
     if (!_vector_fe_lower[dim][type])
       _vector_fe_lower[dim][type] = FEVectorBase::build(dim, type).release();
@@ -425,7 +453,7 @@ Assembly::buildVectorFE(FEType type) const
   if (!_vector_fe_shape_data[type])
     _vector_fe_shape_data[type] = std::make_unique<VectorFEShapeData>();
 
-  // Note that NEDELEC_ONE elements can only be built for dimension > 2
+  // Note that NEDELEC_ONE and RAVIART_THOMAS elements can only be built for dimension > 2
   unsigned int min_dim;
   if (type.family == LAGRANGE_VEC || type.family == MONOMIAL_VEC)
     min_dim = 0;
@@ -443,6 +471,8 @@ Assembly::buildVectorFE(FEType type) const
     _vector_fe[dim][type]->get_dphi();
     if (type.family == NEDELEC_ONE)
       _vector_fe[dim][type]->get_curl_phi();
+    if (type.family == RAVIART_THOMAS)
+      _vector_fe[dim][type]->get_div_phi();
     // Pre-request xyz.  We have always computed xyz, but due to
     // recent optimizations in libmesh, we now need to explicity
     // request it, since apps (Yak) may rely on it being computed.
@@ -456,7 +486,7 @@ Assembly::buildVectorFaceFE(FEType type) const
   if (!_vector_fe_shape_data_face[type])
     _vector_fe_shape_data_face[type] = std::make_unique<VectorFEShapeData>();
 
-  // Note that NEDELEC_ONE elements can only be built for dimension > 2
+  // Note that NEDELEC_ONE and RAVIART_THOMAS elements can only be built for dimension > 2
   unsigned int min_dim;
   if (type.family == LAGRANGE_VEC || type.family == MONOMIAL_VEC)
     min_dim = 0;
@@ -474,6 +504,8 @@ Assembly::buildVectorFaceFE(FEType type) const
     _vector_fe_face[dim][type]->get_dphi();
     if (type.family == NEDELEC_ONE)
       _vector_fe_face[dim][type]->get_curl_phi();
+    if (type.family == RAVIART_THOMAS)
+      _vector_fe_face[dim][type]->get_div_phi();
   }
 }
 
@@ -483,7 +515,7 @@ Assembly::buildVectorNeighborFE(FEType type) const
   if (!_vector_fe_shape_data_neighbor[type])
     _vector_fe_shape_data_neighbor[type] = std::make_unique<VectorFEShapeData>();
 
-  // Note that NEDELEC_ONE elements can only be built for dimension > 2
+  // Note that NEDELEC_ONE and RAVIART_THOMAS elements can only be built for dimension > 2
   unsigned int min_dim;
   if (type.family == LAGRANGE_VEC || type.family == MONOMIAL_VEC)
     min_dim = 0;
@@ -501,6 +533,8 @@ Assembly::buildVectorNeighborFE(FEType type) const
     _vector_fe_neighbor[dim][type]->get_dphi();
     if (type.family == NEDELEC_ONE)
       _vector_fe_neighbor[dim][type]->get_curl_phi();
+    if (type.family == RAVIART_THOMAS)
+      _vector_fe_neighbor[dim][type]->get_div_phi();
   }
 }
 
@@ -510,7 +544,7 @@ Assembly::buildVectorFaceNeighborFE(FEType type) const
   if (!_vector_fe_shape_data_face_neighbor[type])
     _vector_fe_shape_data_face_neighbor[type] = std::make_unique<VectorFEShapeData>();
 
-  // Note that NEDELEC_ONE elements can only be built for dimension > 2
+  // Note that NEDELEC_ONE and RAVIART_THOMAS elements can only be built for dimension > 2
   unsigned int min_dim;
   if (type.family == LAGRANGE_VEC || type.family == MONOMIAL_VEC)
     min_dim = 0;
@@ -529,6 +563,8 @@ Assembly::buildVectorFaceNeighborFE(FEType type) const
     _vector_fe_face_neighbor[dim][type]->get_dphi();
     if (type.family == NEDELEC_ONE)
       _vector_fe_face_neighbor[dim][type]->get_curl_phi();
+    if (type.family == RAVIART_THOMAS)
+      _vector_fe_face_neighbor[dim][type]->get_div_phi();
   }
 }
 
@@ -623,6 +659,11 @@ Assembly::setVolumeQRule(QBase * qrule, unsigned int dim)
       it.second->attach_quadrature_rule(qrule);
     for (auto & it : _vector_fe[dim])
       it.second->attach_quadrature_rule(qrule);
+    if (!_unique_fe_helper.empty())
+    {
+      mooseAssert(dim < _unique_fe_helper.size(), "We should not be indexing out of bounds");
+      _unique_fe_helper[dim]->attach_quadrature_rule(qrule);
+    }
   }
 }
 
@@ -635,6 +676,11 @@ Assembly::setFaceQRule(QBase * qrule, unsigned int dim)
     it.second->attach_quadrature_rule(qrule);
   for (auto & it : _vector_fe_face[dim])
     it.second->attach_quadrature_rule(qrule);
+  if (!_unique_fe_face_helper.empty())
+  {
+    mooseAssert(dim < _unique_fe_face_helper.size(), "We should not be indexing out of bounds");
+    _unique_fe_face_helper[dim]->attach_quadrature_rule(qrule);
+  }
 }
 
 void
@@ -649,6 +695,11 @@ Assembly::setLowerQRule(QBase * qrule, unsigned int dim)
     it.second->attach_quadrature_rule(qrule);
   for (auto & it : _vector_fe_lower[dim])
     it.second->attach_quadrature_rule(qrule);
+  if (!_unique_fe_lower_helper.empty())
+  {
+    mooseAssert(dim < _unique_fe_lower_helper.size(), "We should not be indexing out of bounds");
+    _unique_fe_lower_helper[dim]->attach_quadrature_rule(qrule);
+  }
 }
 
 void
@@ -660,6 +711,21 @@ Assembly::setNeighborQRule(QBase * qrule, unsigned int dim)
     it.second->attach_quadrature_rule(qrule);
   for (auto & it : _vector_fe_face_neighbor[dim])
     it.second->attach_quadrature_rule(qrule);
+  if (!_unique_fe_face_neighbor_helper.empty())
+  {
+    mooseAssert(dim < _unique_fe_face_neighbor_helper.size(),
+                "We should not be indexing out of bounds");
+    _unique_fe_face_neighbor_helper[dim]->attach_quadrature_rule(qrule);
+  }
+}
+
+void
+Assembly::clearCachedQRules()
+{
+  _current_qrule = nullptr;
+  _current_qrule_face = nullptr;
+  _current_qrule_lower = nullptr;
+  _current_qrule_neighbor = nullptr;
 }
 
 void
@@ -730,13 +796,20 @@ Assembly::reinitFE(const Elem * elem)
     if (_need_curl.find(fe_type) != _need_curl.end())
       fesd._curl_phi.shallowCopy(
           const_cast<std::vector<std::vector<VectorValue<Real>>> &>(fe.get_curl_phi()));
+    if (_need_div.find(fe_type) != _need_div.end())
+      fesd._div_phi.shallowCopy(const_cast<std::vector<std::vector<Real>> &>(fe.get_div_phi()));
+  }
+  if (!_unique_fe_helper.empty())
+  {
+    mooseAssert(dim < _unique_fe_helper.size(), "We should be in bounds here");
+    _unique_fe_helper[dim]->reinit(elem);
   }
 
   // During that last loop the helper objects will have been reinitialized as well
   // We need to dig out the q_points and JxW from it.
   _current_q_points.shallowCopy(
-      const_cast<std::vector<Point> &>((*_holder_fe_helper[dim])->get_xyz()));
-  _current_JxW.shallowCopy(const_cast<std::vector<Real> &>((*_holder_fe_helper[dim])->get_JxW()));
+      const_cast<std::vector<Point> &>(_holder_fe_helper[dim]->get_xyz()));
+  _current_JxW.shallowCopy(const_cast<std::vector<Real> &>(_holder_fe_helper[dim]->get_JxW()));
 
   if (_subproblem.haveADObjects())
   {
@@ -746,7 +819,7 @@ Assembly::reinitFE(const Elem * elem)
     {
       const auto & qw = _current_qrule->get_weights();
       for (unsigned int qp = 0; qp != n_qp; qp++)
-        computeSinglePointMapAD(elem, qw, qp, *_holder_fe_helper[dim]);
+        computeSinglePointMapAD(elem, qw, qp, _holder_fe_helper[dim]);
     }
     else
       for (unsigned qp = 0; qp < n_qp; ++qp)
@@ -1225,16 +1298,24 @@ Assembly::reinitFEFace(const Elem * elem, unsigned int side)
     if (_need_curl.find(fe_type) != _need_curl.end())
       fesd._curl_phi.shallowCopy(
           const_cast<std::vector<std::vector<VectorValue<Real>>> &>(fe_face.get_curl_phi()));
+    if (_need_div.find(fe_type) != _need_div.end())
+      fesd._div_phi.shallowCopy(
+          const_cast<std::vector<std::vector<Real>> &>(fe_face.get_div_phi()));
+  }
+  if (!_unique_fe_face_helper.empty())
+  {
+    mooseAssert(dim < _unique_fe_face_helper.size(), "We should be in bounds here");
+    _unique_fe_face_helper[dim]->reinit(elem, side);
   }
 
   // During that last loop the helper objects will have been reinitialized as well
   // We need to dig out the q_points and JxW from it.
   _current_q_points_face.shallowCopy(
-      const_cast<std::vector<Point> &>((*_holder_fe_face_helper[dim])->get_xyz()));
+      const_cast<std::vector<Point> &>(_holder_fe_face_helper[dim]->get_xyz()));
   _current_JxW_face.shallowCopy(
-      const_cast<std::vector<Real> &>((*_holder_fe_face_helper[dim])->get_JxW()));
+      const_cast<std::vector<Real> &>(_holder_fe_face_helper[dim]->get_JxW()));
   _current_normals.shallowCopy(
-      const_cast<std::vector<Point> &>((*_holder_fe_face_helper[dim])->get_normals()));
+      const_cast<std::vector<Point> &>(_holder_fe_face_helper[dim]->get_normals()));
 
   _mapped_normals.resize(_current_normals.size(), Eigen::Map<RealDIMValue>(nullptr));
   for (unsigned int i = 0; i < _current_normals.size(); i++)
@@ -1243,7 +1324,7 @@ Assembly::reinitFEFace(const Elem * elem, unsigned int side)
 
   if (_calculate_curvatures)
     _curvatures.shallowCopy(
-        const_cast<std::vector<Real> &>((*_holder_fe_face_helper[dim])->get_curvatures()));
+        const_cast<std::vector<Real> &>(_holder_fe_face_helper[dim]->get_curvatures()));
 
   computeADFace(*elem, side);
 
@@ -1268,9 +1349,9 @@ Assembly::computeFaceMap(const Elem & elem, const unsigned int side, const std::
   const Elem & side_elem = _compute_face_map_side_elem_builder(elem, side);
   const auto dim = elem.dim();
   const auto n_qp = qw.size();
-  const auto & dpsidxi_map = (*_holder_fe_face_helper[dim])->get_fe_map().get_dpsidxi();
-  const auto & dpsideta_map = (*_holder_fe_face_helper[dim])->get_fe_map().get_dpsideta();
-  const auto & psi_map = (*_holder_fe_face_helper[dim])->get_fe_map().get_psi();
+  const auto & dpsidxi_map = _holder_fe_face_helper[dim]->get_fe_map().get_dpsidxi();
+  const auto & dpsideta_map = _holder_fe_face_helper[dim]->get_fe_map().get_dpsideta();
+  const auto & psi_map = _holder_fe_face_helper[dim]->get_fe_map().get_psi();
   std::vector<std::vector<Real>> const * d2psidxi2_map = nullptr;
   std::vector<std::vector<Real>> const * d2psidxideta_map = nullptr;
   std::vector<std::vector<Real>> const * d2psideta2_map = nullptr;
@@ -1279,9 +1360,9 @@ Assembly::computeFaceMap(const Elem & elem, const unsigned int side, const std::
 
   if (_calculate_curvatures)
   {
-    d2psidxi2_map = &(*_holder_fe_face_helper[dim])->get_fe_map().get_d2psidxi2();
-    d2psidxideta_map = &(*_holder_fe_face_helper[dim])->get_fe_map().get_d2psidxideta();
-    d2psideta2_map = &(*_holder_fe_face_helper[dim])->get_fe_map().get_d2psideta2();
+    d2psidxi2_map = &_holder_fe_face_helper[dim]->get_fe_map().get_d2psidxi2();
+    d2psidxideta_map = &_holder_fe_face_helper[dim]->get_fe_map().get_d2psidxideta();
+    d2psideta2_map = &_holder_fe_face_helper[dim]->get_fe_map().get_d2psideta2();
   }
 
   switch (dim)
@@ -1520,7 +1601,19 @@ Assembly::reinitFEFaceNeighbor(const Elem * neighbor, const std::vector<Point> &
     if (_need_curl.find(fe_type) != _need_curl.end())
       fesd._curl_phi.shallowCopy(const_cast<std::vector<std::vector<VectorValue<Real>>> &>(
           fe_face_neighbor.get_curl_phi()));
+    if (_need_div.find(fe_type) != _need_div.end())
+      fesd._div_phi.shallowCopy(
+          const_cast<std::vector<std::vector<Real>> &>(fe_face_neighbor.get_div_phi()));
   }
+  if (!_unique_fe_face_neighbor_helper.empty())
+  {
+    mooseAssert(neighbor_dim < _unique_fe_face_neighbor_helper.size(),
+                "We should be in bounds here");
+    _unique_fe_face_neighbor_helper[neighbor_dim]->reinit(neighbor, &reference_points);
+  }
+
+  _current_q_points_face_neighbor.shallowCopy(
+      const_cast<std::vector<Point> &>(_holder_fe_face_neighbor_helper[neighbor_dim]->get_xyz()));
 }
 
 void
@@ -1567,6 +1660,14 @@ Assembly::reinitFENeighbor(const Elem * neighbor, const std::vector<Point> & ref
     if (_need_curl.find(fe_type) != _need_curl.end())
       fesd._curl_phi.shallowCopy(
           const_cast<std::vector<std::vector<VectorValue<Real>>> &>(fe_neighbor.get_curl_phi()));
+    if (_need_div.find(fe_type) != _need_div.end())
+      fesd._div_phi.shallowCopy(
+          const_cast<std::vector<std::vector<Real>> &>(fe_neighbor.get_div_phi()));
+  }
+  if (!_unique_fe_neighbor_helper.empty())
+  {
+    mooseAssert(neighbor_dim < _unique_fe_neighbor_helper.size(), "We should be in bounds here");
+    _unique_fe_neighbor_helper[neighbor_dim]->reinit(neighbor, &reference_points);
   }
 }
 
@@ -1574,8 +1675,11 @@ void
 Assembly::reinitNeighbor(const Elem * neighbor, const std::vector<Point> & reference_points)
 {
   unsigned int neighbor_dim = neighbor->dim();
+  mooseAssert(_current_neighbor_subdomain_id == neighbor->subdomain_id(),
+              "Neighbor subdomain ID has not been correctly set");
 
-  ArbitraryQuadrature * neighbor_rule = qrules(neighbor_dim).neighbor.get();
+  ArbitraryQuadrature * neighbor_rule =
+      qrules(neighbor_dim, _current_neighbor_subdomain_id).neighbor.get();
   neighbor_rule->setPoints(reference_points);
   setNeighborQRule(neighbor_rule, neighbor_dim);
 
@@ -1587,7 +1691,7 @@ Assembly::reinitNeighbor(const Elem * neighbor, const std::vector<Point> & refer
   if (_need_neighbor_elem_volume)
   {
     unsigned int dim = neighbor->dim();
-    FEBase & fe = **_holder_fe_neighbor_helper[dim];
+    FEBase & fe = *_holder_fe_neighbor_helper[dim];
     QBase * qrule = qrules(dim).vol.get();
 
     fe.attach_quadrature_rule(qrule);
@@ -1682,7 +1786,7 @@ Assembly::reinitAtPhysical(const Elem * elem, const std::vector<Point> & physica
   _current_elem_volume_computed = false;
 
   FEInterface::inverse_map(elem->dim(),
-                           (*_holder_fe_helper[elem->dim()])->get_fe_type(),
+                           _holder_fe_helper[elem->dim()]->get_fe_type(),
                            elem,
                            physical_points,
                            _temp_reference_points);
@@ -1694,6 +1798,16 @@ Assembly::reinitAtPhysical(const Elem * elem, const std::vector<Point> & physica
 }
 
 void
+Assembly::setVolumeQRule(const Elem * const elem)
+{
+  unsigned int elem_dimension = elem->dim();
+  _current_qrule_volume = qrules(elem_dimension).vol.get();
+  // Make sure the qrule is the right one
+  if (_current_qrule != _current_qrule_volume)
+    setVolumeQRule(_current_qrule_volume, elem_dimension);
+}
+
+void
 Assembly::reinit(const Elem * elem)
 {
   _current_elem = elem;
@@ -1702,14 +1816,7 @@ Assembly::reinit(const Elem * elem)
               "current subdomain has been set incorrectly");
   _current_elem_volume_computed = false;
 
-  unsigned int elem_dimension = elem->dim();
-
-  _current_qrule_volume = qrules(elem_dimension).vol.get();
-
-  // Make sure the qrule is the right one
-  if (_current_qrule != _current_qrule_volume)
-    setVolumeQRule(_current_qrule_volume, elem_dimension);
-
+  setVolumeQRule(elem);
   reinitFE(elem);
 
   computeCurrentElemVolume();
@@ -1770,16 +1877,33 @@ Assembly::reinitFVFace(const FaceInfo & fi)
 
   _current_side_elem = &_current_side_elem_builder(*_current_elem, _current_side);
 
+  mooseAssert(_current_qrule_face->n_points() == 1,
+              "Our finite volume quadrature rule should always yield a single point");
+
   // We've initialized the reference points. Now we need to compute the physical location of the
   // quadrature points. We do not do any FE initialization so we cannot simply copy over FE results
   // like we do in reinitFEFace. Instead we handle the computation of the physical locations
   // manually
-  const auto num_qp = _current_qrule_face->n_points();
-  _current_q_points_face.resize(num_qp);
+  _current_q_points_face.resize(1);
   const auto & ref_points = _current_qrule_face->get_points();
-  for (const auto qp : make_range(num_qp))
-    _current_q_points_face[qp] =
-        FEMap::map(_current_side_elem->dim(), _current_side_elem, ref_points[qp]);
+  const auto & ref_point = ref_points[0];
+  auto physical_point = FEMap::map(_current_side_elem->dim(), _current_side_elem, ref_point);
+  _current_q_points_face[0] = physical_point;
+
+  if (_current_neighbor_elem)
+  {
+    mooseAssert(_current_neighbor_subdomain_id == _current_neighbor_elem->subdomain_id(),
+                "current neighbor subdomain has been set incorrectly");
+    // Now handle the neighbor qrule/qpoints
+    ArbitraryQuadrature * const neighbor_rule =
+        qrules(_current_neighbor_elem->dim(), _current_neighbor_subdomain_id).neighbor.get();
+    // Here we are setting a reference point that is correct for the neighbor *side* element. It
+    // would be wrong if this reference point is used for a volumetric FE reinit with the neighbor
+    neighbor_rule->setPoints(ref_points);
+    setNeighborQRule(neighbor_rule, _current_neighbor_elem->dim());
+    _current_q_points_face_neighbor.resize(1);
+    _current_q_points_face_neighbor[0] = std::move(physical_point);
+  }
 }
 
 QBase *
@@ -1796,7 +1920,17 @@ Assembly::qruleArbitraryFace(const Elem * elem, unsigned int side)
 }
 
 void
-Assembly::reinit(const Elem * elem, unsigned int side)
+Assembly::setFaceQRule(const Elem * const elem, const unsigned int side)
+{
+  const auto elem_dimension = elem->dim();
+  //// Make sure the qrule is the right one
+  auto rule = qruleFace(elem, side);
+  if (_current_qrule_face != rule)
+    setFaceQRule(rule, elem_dimension);
+}
+
+void
+Assembly::reinit(const Elem * const elem, const unsigned int side)
 {
   _current_elem = elem;
   _current_neighbor_elem = nullptr;
@@ -1806,15 +1940,9 @@ Assembly::reinit(const Elem * elem, unsigned int side)
   _current_elem_volume_computed = false;
   _current_side_volume_computed = false;
 
-  unsigned int elem_dimension = elem->dim();
-
   _current_side_elem = &_current_side_elem_builder(*elem, side);
 
-  //// Make sure the qrule is the right one
-  auto rule = qruleFace(elem, side);
-  if (_current_qrule_face != rule)
-    setFaceQRule(rule, elem_dimension);
-
+  setFaceQRule(elem, side);
   reinitFEFace(elem, side);
 
   computeCurrentFaceVolume();
@@ -1868,33 +1996,19 @@ Assembly::reinitElemAndNeighbor(const Elem * elem,
 
   unsigned int neighbor_dim = neighbor->dim();
 
-  const std::vector<Point> * reference_points_ptr;
-  std::vector<Point> reference_points;
-
   if (neighbor_reference_points)
-    reference_points_ptr = neighbor_reference_points;
+    _current_neighbor_ref_points = *neighbor_reference_points;
   else
-  {
-    FEInterface::inverse_map(
-        neighbor_dim, FEType(), neighbor, _current_q_points_face.stdVector(), reference_points);
-    reference_points_ptr = &reference_points;
-  }
+    FEInterface::inverse_map(neighbor_dim,
+                             FEType(),
+                             neighbor,
+                             _current_q_points_face.stdVector(),
+                             _current_neighbor_ref_points);
 
   _current_neighbor_side_elem = &_current_neighbor_side_elem_builder(*neighbor, neighbor_side);
 
-  if (_need_JxW_neighbor)
-  {
-    // first do the side element. We need to do this to at a minimum get the correct JxW for the
-    // neighbor face.
-    reinitFEFaceNeighbor(_current_neighbor_side_elem, *reference_points_ptr);
-
-    // compute JxW on the neighbor's face
-    _current_JxW_neighbor.shallowCopy(const_cast<std::vector<Real> &>(
-        (*_holder_fe_face_neighbor_helper[_current_neighbor_side_elem->dim()])->get_JxW()));
-  }
-
-  reinitFEFaceNeighbor(neighbor, *reference_points_ptr);
-  reinitNeighbor(neighbor, *reference_points_ptr);
+  reinitFEFaceNeighbor(neighbor, _current_neighbor_ref_points);
+  reinitNeighbor(neighbor, _current_neighbor_ref_points);
 }
 
 void
@@ -1961,21 +2075,30 @@ Assembly::reinitElemFaceRef(const Elem * elem,
     if (_need_curl.find(fe_type) != _need_curl.end())
       fesd._curl_phi.shallowCopy(
           const_cast<std::vector<std::vector<VectorValue<Real>>> &>(fe_face.get_curl_phi()));
+    if (_need_div.find(fe_type) != _need_div.end())
+      fesd._div_phi.shallowCopy(
+          const_cast<std::vector<std::vector<Real>> &>(fe_face.get_div_phi()));
   }
+  if (!_unique_fe_face_helper.empty())
+  {
+    mooseAssert(elem_dim < _unique_fe_face_helper.size(), "We should be in bounds here");
+    _unique_fe_face_helper[elem_dim]->reinit(elem, elem_side, tolerance, pts, weights);
+  }
+
   // During that last loop the helper objects will have been reinitialized
   _current_q_points_face.shallowCopy(
-      const_cast<std::vector<Point> &>((*_holder_fe_face_helper[elem_dim])->get_xyz()));
+      const_cast<std::vector<Point> &>(_holder_fe_face_helper[elem_dim]->get_xyz()));
   _current_normals.shallowCopy(
-      const_cast<std::vector<Point> &>((*_holder_fe_face_helper[elem_dim])->get_normals()));
+      const_cast<std::vector<Point> &>(_holder_fe_face_helper[elem_dim]->get_normals()));
   _current_tangents.shallowCopy(const_cast<std::vector<std::vector<Point>> &>(
-      (*_holder_fe_face_helper[elem_dim])->get_tangents()));
+      _holder_fe_face_helper[elem_dim]->get_tangents()));
   // Note that if the user did pass in points and not weights to this method, JxW will be garbage
   // and should not be used
   _current_JxW_face.shallowCopy(
-      const_cast<std::vector<Real> &>((*_holder_fe_face_helper[elem_dim])->get_JxW()));
+      const_cast<std::vector<Real> &>(_holder_fe_face_helper[elem_dim]->get_JxW()));
   if (_calculate_curvatures)
     _curvatures.shallowCopy(
-        const_cast<std::vector<Real> &>((*_holder_fe_face_helper[elem_dim])->get_curvatures()));
+        const_cast<std::vector<Real> &>(_holder_fe_face_helper[elem_dim]->get_curvatures()));
 
   computeADFace(*elem, elem_side);
 }
@@ -2003,7 +2126,7 @@ Assembly::computeADFace(const Elem & elem, const unsigned int side)
       const std::vector<Real> dummy_qw(n_qp, 1.);
 
       for (unsigned int qp = 0; qp != n_qp; qp++)
-        computeSinglePointMapAD(&elem, dummy_qw, qp, *_holder_fe_face_helper[dim]);
+        computeSinglePointMapAD(&elem, dummy_qw, qp, _holder_fe_face_helper[dim]);
     }
     else
       for (unsigned qp = 0; qp < n_qp; ++qp)
@@ -2070,7 +2193,8 @@ Assembly::reinitNeighborFaceRef(const Elem * neighbor,
 
   unsigned int neighbor_dim = neighbor->dim();
 
-  ArbitraryQuadrature * neighbor_rule = qrules(neighbor_dim).neighbor.get();
+  ArbitraryQuadrature * neighbor_rule =
+      qrules(neighbor_dim, neighbor->subdomain_id()).neighbor.get();
   neighbor_rule->setPoints(*pts);
 
   // Attach this quadrature rule to all the _fe_face_neighbor FE objects. This
@@ -2119,13 +2243,21 @@ Assembly::reinitNeighborFaceRef(const Elem * neighbor,
     if (_need_curl.find(fe_type) != _need_curl.end())
       fesd._curl_phi.shallowCopy(const_cast<std::vector<std::vector<VectorValue<Real>>> &>(
           fe_face_neighbor.get_curl_phi()));
+    if (_need_div.find(fe_type) != _need_div.end())
+      fesd._div_phi.shallowCopy(
+          const_cast<std::vector<std::vector<Real>> &>(fe_face_neighbor.get_div_phi()));
+  }
+  if (!_unique_fe_face_neighbor_helper.empty())
+  {
+    mooseAssert(neighbor_dim < _unique_fe_face_neighbor_helper.size(),
+                "We should be in bounds here");
+    _unique_fe_face_neighbor_helper[neighbor_dim]->reinit(
+        neighbor, neighbor_side, tolerance, pts, weights);
   }
   // During that last loop the helper objects will have been reinitialized as well
   // We need to dig out the q_points from it
-  _current_q_points_face_neighbor.shallowCopy(const_cast<std::vector<Point> &>(
-      (*_holder_fe_face_neighbor_helper[neighbor_dim])->get_xyz()));
-  _current_neighbor_normals.shallowCopy(const_cast<std::vector<Point> &>(
-      (*_holder_fe_face_neighbor_helper[neighbor_dim])->get_normals()));
+  _current_q_points_face_neighbor.shallowCopy(
+      const_cast<std::vector<Point> &>(_holder_fe_face_neighbor_helper[neighbor_dim]->get_xyz()));
 }
 
 void
@@ -2201,6 +2333,11 @@ Assembly::reinitLowerDElem(const Elem * elem,
             const_cast<std::vector<std::vector<TensorValue<Real>>> &>(fe_lower.get_dual_d2phi()));
     }
   }
+  if (!_unique_fe_lower_helper.empty())
+  {
+    mooseAssert(elem_dim < _unique_fe_lower_helper.size(), "We should be in bounds here");
+    _unique_fe_lower_helper[elem_dim]->reinit(elem);
+  }
 
   if (!_need_lower_d_elem_volume)
     return;
@@ -2222,7 +2359,7 @@ Assembly::reinitLowerDElem(const Elem * elem,
   else
   {
     // During that last loop the helper objects will have been reinitialized as well
-    FEBase & helper_fe = **_holder_fe_lower_helper[elem_dim];
+    FEBase & helper_fe = *_holder_fe_lower_helper[elem_dim];
     const auto & physical_q_points = helper_fe.get_xyz();
     const auto & JxW = helper_fe.get_JxW();
     MooseArray<Real> coord;
@@ -2262,6 +2399,7 @@ Assembly::reinitMortarElem(const Elem * elem)
               "You should be calling reinitMortarElem on a lower dimensional element");
 
   _fe_msm->reinit(elem);
+  _msm_elem = elem;
 
   MooseArray<Point> array_q_points;
   array_q_points.shallowCopy(const_cast<std::vector<Point> &>(_fe_msm->get_xyz()));
@@ -2273,23 +2411,31 @@ Assembly::reinitNeighborAtPhysical(const Elem * neighbor,
                                    unsigned int neighbor_side,
                                    const std::vector<Point> & physical_points)
 {
-  _current_neighbor_side_elem = &_current_neighbor_side_elem_builder(*neighbor, neighbor_side);
-
-  std::vector<Point> reference_points;
-
   unsigned int neighbor_dim = neighbor->dim();
-  FEInterface::inverse_map(neighbor_dim, FEType(), neighbor, physical_points, reference_points);
+  FEInterface::inverse_map(
+      neighbor_dim, FEType(), neighbor, physical_points, _current_neighbor_ref_points);
 
-  // first do the side element
-  reinitFEFaceNeighbor(_current_neighbor_side_elem, reference_points);
-  reinitNeighbor(_current_neighbor_side_elem, reference_points);
-  // compute JxW on the neighbor's face
-  unsigned int neighbor_side_dim = _current_neighbor_side_elem->dim();
-  _current_JxW_neighbor.shallowCopy(const_cast<std::vector<Real> &>(
-      (*_holder_fe_face_neighbor_helper[neighbor_side_dim])->get_JxW()));
+  if (_need_JxW_neighbor)
+  {
+    mooseAssert(
+        physical_points.size() == 1,
+        "If reinitializing with more than one point, then I am dubious of your use case. Perhaps "
+        "you are performing a DG type method and you are reinitializing using points from the "
+        "element face. In such a case your neighbor JxW must have its index order 'match' the "
+        "element JxW index order, e.g. imagining a vertical 1D face with two quadrature points, if "
+        "index 0 for elem JxW corresponds to the 'top' quadrature point, then index 0 for neighbor "
+        "JxW must also correspond to the 'top' quadrature point. And libMesh/MOOSE has no way to "
+        "guarantee that with multiple quadrature points.");
 
-  reinitFEFaceNeighbor(neighbor, reference_points);
-  reinitNeighbor(neighbor, reference_points);
+    _current_neighbor_side_elem = &_current_neighbor_side_elem_builder(*neighbor, neighbor_side);
+
+    // With a single point our size-1 JxW should just be the element volume
+    _current_JxW_neighbor.resize(1);
+    _current_JxW_neighbor[0] = _current_neighbor_side_elem->volume();
+  }
+
+  reinitFEFaceNeighbor(neighbor, _current_neighbor_ref_points);
+  reinitNeighbor(neighbor, _current_neighbor_ref_points);
 
   // Save off the physical points
   _current_physical_points = physical_points;
@@ -2299,13 +2445,12 @@ void
 Assembly::reinitNeighborAtPhysical(const Elem * neighbor,
                                    const std::vector<Point> & physical_points)
 {
-  std::vector<Point> reference_points;
-
   unsigned int neighbor_dim = neighbor->dim();
-  FEInterface::inverse_map(neighbor_dim, FEType(), neighbor, physical_points, reference_points);
+  FEInterface::inverse_map(
+      neighbor_dim, FEType(), neighbor, physical_points, _current_neighbor_ref_points);
 
-  reinitFENeighbor(neighbor, reference_points);
-  reinitNeighbor(neighbor, reference_points);
+  reinitFENeighbor(neighbor, _current_neighbor_ref_points);
+  reinitNeighbor(neighbor, _current_neighbor_ref_points);
   // Save off the physical points
   _current_physical_points = physical_points;
 }
@@ -2542,7 +2687,7 @@ Assembly::prepareJacobianBlock()
 
     for (MooseIndex(_jacobian_block_used) tag = 0; tag < _jacobian_block_used.size(); tag++)
     {
-      jacobianBlock(vi, vj, tag)
+      jacobianBlock(vi, vj, LocalDataKey{}, tag)
           .resize(ivar.dofIndices().size() * ivar.count(), jvar.dofIndices().size() * jcount);
       jacobianBlockUsed(tag, vi, vj, false);
     }
@@ -2582,7 +2727,7 @@ Assembly::prepareNonlocal()
          tag < _jacobian_block_nonlocal_used.size();
          tag++)
     {
-      jacobianBlockNonlocal(vi, vj, tag)
+      jacobianBlockNonlocal(vi, vj, LocalDataKey{}, tag)
           .resize(ivar.dofIndices().size() * ivar.count(), jvar.allDofIndices().size() * jcount);
       jacobianBlockNonlocalUsed(tag, vi, vj, false);
     }
@@ -2606,7 +2751,7 @@ Assembly::prepareVariable(MooseVariableFEBase * var)
     {
       for (MooseIndex(_jacobian_block_used) tag = 0; tag < _jacobian_block_used.size(); tag++)
       {
-        jacobianBlock(vi, vj, tag)
+        jacobianBlock(vi, vj, LocalDataKey{}, tag)
             .resize(ivar.dofIndices().size() * ivar.count(), jvar.dofIndices().size() * jcount);
         jacobianBlockUsed(tag, vi, vj, false);
       }
@@ -2636,7 +2781,7 @@ Assembly::prepareVariableNonlocal(MooseVariableFEBase * var)
            tag < _jacobian_block_nonlocal_used.size();
            tag++)
       {
-        jacobianBlockNonlocal(vi, vj, tag)
+        jacobianBlockNonlocal(vi, vj, LocalDataKey{}, tag)
             .resize(ivar.dofIndices().size() * ivar.count(), jvar.allDofIndices().size() * jcount);
         jacobianBlockNonlocalUsed(tag, vi, vj);
       }
@@ -2661,15 +2806,15 @@ Assembly::prepareNeighbor()
          tag < _jacobian_block_neighbor_used.size();
          tag++)
     {
-      jacobianBlockNeighbor(Moose::ElementNeighbor, vi, vj, tag)
+      jacobianBlockNeighbor(Moose::ElementNeighbor, vi, vj, LocalDataKey{}, tag)
           .resize(ivar.dofIndices().size() * ivar.count(),
                   jvar.dofIndicesNeighbor().size() * jcount);
 
-      jacobianBlockNeighbor(Moose::NeighborElement, vi, vj, tag)
+      jacobianBlockNeighbor(Moose::NeighborElement, vi, vj, LocalDataKey{}, tag)
           .resize(ivar.dofIndicesNeighbor().size() * ivar.count(),
                   jvar.dofIndices().size() * jcount);
 
-      jacobianBlockNeighbor(Moose::NeighborNeighbor, vi, vj, tag)
+      jacobianBlockNeighbor(Moose::NeighborNeighbor, vi, vj, LocalDataKey{}, tag)
           .resize(ivar.dofIndicesNeighbor().size() * ivar.count(),
                   jvar.dofIndicesNeighbor().size() * jcount);
 
@@ -2706,25 +2851,25 @@ Assembly::prepareLowerD()
       // (NeighborNeighbor). With these covered we only need to prepare the 5 remaining below
 
       // derivatives w.r.t. lower dimensional residuals
-      jacobianBlockMortar(Moose::LowerLower, vi, vj, tag)
+      jacobianBlockMortar(Moose::LowerLower, vi, vj, LocalDataKey{}, tag)
           .resize(ivar.dofIndicesLower().size() * ivar.count(),
                   jvar.dofIndicesLower().size() * jcount);
 
-      jacobianBlockMortar(Moose::LowerSecondary, vi, vj, tag)
+      jacobianBlockMortar(Moose::LowerSecondary, vi, vj, LocalDataKey{}, tag)
           .resize(ivar.dofIndicesLower().size() * ivar.count(),
                   jvar.dofIndices().size() * jvar.count());
 
-      jacobianBlockMortar(Moose::LowerPrimary, vi, vj, tag)
+      jacobianBlockMortar(Moose::LowerPrimary, vi, vj, LocalDataKey{}, tag)
           .resize(ivar.dofIndicesLower().size() * ivar.count(),
                   jvar.dofIndicesNeighbor().size() * jvar.count());
 
       // derivatives w.r.t. interior secondary residuals
-      jacobianBlockMortar(Moose::SecondaryLower, vi, vj, tag)
+      jacobianBlockMortar(Moose::SecondaryLower, vi, vj, LocalDataKey{}, tag)
           .resize(ivar.dofIndices().size() * ivar.count(),
                   jvar.dofIndicesLower().size() * jvar.count());
 
       // derivatives w.r.t. interior primary residuals
-      jacobianBlockMortar(Moose::PrimaryLower, vi, vj, tag)
+      jacobianBlockMortar(Moose::PrimaryLower, vi, vj, LocalDataKey{}, tag)
           .resize(ivar.dofIndicesNeighbor().size() * ivar.count(),
                   jvar.dofIndicesLower().size() * jvar.count());
 
@@ -2754,7 +2899,8 @@ Assembly::prepareBlock(unsigned int ivar,
 
   for (MooseIndex(_jacobian_block_used) tag = 0; tag < _jacobian_block_used.size(); tag++)
   {
-    jacobianBlock(ivn, jvn, tag).resize(dof_indices.size() * icount, dof_indices.size() * jcount);
+    jacobianBlock(ivn, jvn, LocalDataKey{}, tag)
+        .resize(dof_indices.size() * icount, dof_indices.size() * jcount);
     jacobianBlockUsed(tag, ivn, jvn, false);
   }
 
@@ -2781,7 +2927,7 @@ Assembly::prepareBlockNonlocal(unsigned int ivar,
        tag < _jacobian_block_nonlocal_used.size();
        tag++)
   {
-    jacobianBlockNonlocal(ivn, jvn, tag)
+    jacobianBlockNonlocal(ivn, jvn, LocalDataKey{}, tag)
         .resize(idof_indices.size() * icount, jdof_indices.size() * jcount);
 
     jacobianBlockNonlocalUsed(tag, ivn, jvn, false);
@@ -2805,7 +2951,7 @@ Assembly::prepareScalar()
 
       for (MooseIndex(_jacobian_block_used) tag = 0; tag < _jacobian_block_used.size(); tag++)
       {
-        jacobianBlock(ivar->number(), jvar->number(), tag).resize(idofs, jdofs);
+        jacobianBlock(ivar->number(), jvar->number(), LocalDataKey{}, tag).resize(idofs, jdofs);
         jacobianBlockUsed(tag, ivar->number(), jvar->number(), false);
       }
     }
@@ -2827,10 +2973,10 @@ Assembly::prepareOffDiagScalar()
       auto jdofs = jvar->dofIndices().size() * jvar->count();
       for (MooseIndex(_jacobian_block_used) tag = 0; tag < _jacobian_block_used.size(); tag++)
       {
-        jacobianBlock(ivar->number(), jvar->number(), tag).resize(idofs, jdofs);
+        jacobianBlock(ivar->number(), jvar->number(), LocalDataKey{}, tag).resize(idofs, jdofs);
         jacobianBlockUsed(tag, ivar->number(), jvar->number(), false);
 
-        jacobianBlock(jvar->number(), ivar->number(), tag).resize(jdofs, idofs);
+        jacobianBlock(jvar->number(), ivar->number(), LocalDataKey{}, tag).resize(jdofs, idofs);
         jacobianBlockUsed(tag, jvar->number(), ivar->number(), false);
       }
     }
@@ -2867,6 +3013,8 @@ Assembly::copyShapes(unsigned int var)
     copyShapes(v);
     if (v.computingCurl())
       curlPhi(v).shallowCopy(v.curlPhi());
+    if (v.computingDiv())
+      divPhi(v).shallowCopy(v.divPhi());
   }
   else
     mooseError("Unsupported variable field type!");
@@ -2902,6 +3050,8 @@ Assembly::copyFaceShapes(unsigned int var)
     copyFaceShapes(v);
     if (v.computingCurl())
       _vector_curl_phi_face.shallowCopy(v.curlPhi());
+    if (v.computingDiv())
+      _vector_div_phi_face.shallowCopy(v.divPhi());
   }
   else
     mooseError("Unsupported variable field type!");
@@ -2952,10 +3102,8 @@ Assembly::copyNeighborShapes(unsigned int var)
 }
 
 DenseMatrix<Number> &
-Assembly::jacobianBlockNeighbor(Moose::DGJacobianType type,
-                                unsigned int ivar,
-                                unsigned int jvar,
-                                TagID tag)
+Assembly::jacobianBlockNeighbor(
+    Moose::DGJacobianType type, unsigned int ivar, unsigned int jvar, LocalDataKey, TagID tag)
 {
   if (type == Moose::ElementElement)
     jacobianBlockUsed(tag, ivar, jvar, true);
@@ -2998,6 +3146,7 @@ DenseMatrix<Number> &
 Assembly::jacobianBlockMortar(Moose::ConstraintJacobianType type,
                               unsigned int ivar,
                               unsigned int jvar,
+                              LocalDataKey,
                               TagID tag)
 {
   jacobianBlockLowerUsed(tag, ivar, jvar, true);
@@ -3163,7 +3312,7 @@ Assembly::addResidual(const VectorTag & vector_tag)
 }
 
 void
-Assembly::addResidual(const std::vector<VectorTag> & vector_tags)
+Assembly::addResidual(GlobalDataKey, const std::vector<VectorTag> & vector_tags)
 {
   for (const auto & vector_tag : vector_tags)
     if (_sys.hasVector(vector_tag._id))
@@ -3188,7 +3337,7 @@ Assembly::addResidualNeighbor(const VectorTag & vector_tag)
 }
 
 void
-Assembly::addResidualNeighbor(const std::vector<VectorTag> & vector_tags)
+Assembly::addResidualNeighbor(GlobalDataKey, const std::vector<VectorTag> & vector_tags)
 {
   for (const auto & vector_tag : vector_tags)
     if (_sys.hasVector(vector_tag._id))
@@ -3213,13 +3362,14 @@ Assembly::addResidualLower(const VectorTag & vector_tag)
 }
 
 void
-Assembly::addResidualLower(const std::vector<VectorTag> & vector_tags)
+Assembly::addResidualLower(GlobalDataKey, const std::vector<VectorTag> & vector_tags)
 {
   for (const auto & vector_tag : vector_tags)
     if (_sys.hasVector(vector_tag._id))
       addResidualLower(vector_tag);
 }
 
+// private method, so no key required
 void
 Assembly::addResidualScalar(const VectorTag & vector_tag)
 {
@@ -3236,7 +3386,7 @@ Assembly::addResidualScalar(const VectorTag & vector_tag)
 }
 
 void
-Assembly::addResidualScalar(const std::vector<VectorTag> & vector_tags)
+Assembly::addResidualScalar(GlobalDataKey, const std::vector<VectorTag> & vector_tags)
 {
   for (const auto & vector_tag : vector_tags)
     if (_sys.hasVector(vector_tag._id))
@@ -3244,11 +3394,11 @@ Assembly::addResidualScalar(const std::vector<VectorTag> & vector_tags)
 }
 
 void
-Assembly::cacheResidual()
+Assembly::cacheResidual(GlobalDataKey, const std::vector<VectorTag> & tags)
 {
   const std::vector<MooseVariableFEBase *> & vars = _sys.getVariables(_tid);
   for (const auto & var : vars)
-    for (const auto & vector_tag : _residual_vector_tags)
+    for (const auto & vector_tag : tags)
       if (_sys.hasVector(vector_tag._id))
         cacheResidualBlock(_cached_residual_values[vector_tag._type_id],
                            _cached_residual_rows[vector_tag._type_id],
@@ -3258,6 +3408,7 @@ Assembly::cacheResidual()
                            var->isNodal());
 }
 
+// private method, so no key required
 void
 Assembly::cacheResidual(dof_id_type dof, Real value, TagID tag_id)
 {
@@ -3267,6 +3418,7 @@ Assembly::cacheResidual(dof_id_type dof, Real value, TagID tag_id)
   _cached_residual_rows[tag._type_id].push_back(dof);
 }
 
+// private method, so no key required
 void
 Assembly::cacheResidual(dof_id_type dof, Real value, const std::set<TagID> & tags)
 {
@@ -3274,55 +3426,10 @@ Assembly::cacheResidual(dof_id_type dof, Real value, const std::set<TagID> & tag
     cacheResidual(dof, value, tag);
 }
 
-// swapped argument order from above methods to be consistent with argument order for
-// Assembly::processJacobian
-void
-Assembly::processResidual(Real value, const dof_id_type dof, const std::set<TagID> & tags)
-{
-  const Real scalar = _scaling_vector ? (*_scaling_vector)(dof) : 1.;
-  value *= scalar;
-
-  for (const auto tag_id : tags)
-  {
-    const VectorTag & tag = _subproblem.getVectorTag(tag_id);
-
-    _cached_residual_values[tag._type_id].push_back(value);
-    _cached_residual_rows[tag._type_id].push_back(dof);
-  }
-}
-
-void
-Assembly::processResidualAndJacobian(const ADReal & residual,
-                                     const dof_id_type row_index,
-                                     const std::set<TagID> & vector_tags,
-                                     const std::set<TagID> & matrix_tags)
-{
-  if (computingResidual())
-    processResidual(MetaPhysicL::raw_value(residual), row_index, vector_tags);
-
-  if (computingJacobian())
-    processJacobian(residual, row_index, matrix_tags);
-}
-
-void
-Assembly::cacheResidualContribution(dof_id_type dof, Real value, TagID tag_id)
-{
-  mooseDeprecated("please use cacheResidual");
-
-  cacheResidual(dof, value, tag_id);
-}
-
-void
-Assembly::cacheResidualContribution(dof_id_type dof, Real value, const std::set<TagID> & tags)
-{
-  mooseDeprecated("please use cacheResidual");
-
-  cacheResidual(dof, value, tags);
-}
-
 void
 Assembly::cacheResidualNodes(const DenseVector<Number> & res,
                              const std::vector<dof_id_type> & dof_index,
+                             LocalDataKey,
                              TagID tag)
 {
   // Add the residual value and dof_index to cached_residual_values and cached_residual_rows
@@ -3338,11 +3445,11 @@ Assembly::cacheResidualNodes(const DenseVector<Number> & res,
 }
 
 void
-Assembly::cacheResidualNeighbor()
+Assembly::cacheResidualNeighbor(GlobalDataKey, const std::vector<VectorTag> & tags)
 {
   const std::vector<MooseVariableFEBase *> & vars = _sys.getVariables(_tid);
   for (const auto & var : vars)
-    for (const auto & vector_tag : _residual_vector_tags)
+    for (const auto & vector_tag : tags)
       if (_sys.hasVector(vector_tag._id))
         cacheResidualBlock(_cached_residual_values[vector_tag._type_id],
                            _cached_residual_rows[vector_tag._type_id],
@@ -3353,11 +3460,11 @@ Assembly::cacheResidualNeighbor()
 }
 
 void
-Assembly::cacheResidualLower()
+Assembly::cacheResidualLower(GlobalDataKey, const std::vector<VectorTag> & tags)
 {
   const std::vector<MooseVariableFEBase *> & vars = _sys.getVariables(_tid);
   for (const auto & var : vars)
-    for (const auto & vector_tag : _residual_vector_tags)
+    for (const auto & vector_tag : tags)
       if (_sys.hasVector(vector_tag._id))
         cacheResidualBlock(_cached_residual_values[vector_tag._type_id],
                            _cached_residual_rows[vector_tag._type_id],
@@ -3368,9 +3475,9 @@ Assembly::cacheResidualLower()
 }
 
 void
-Assembly::addCachedResiduals()
+Assembly::addCachedResiduals(GlobalDataKey, const std::vector<VectorTag> & tags)
 {
-  for (const auto & vector_tag : _residual_vector_tags)
+  for (const auto & vector_tag : tags)
   {
     if (!_sys.hasVector(vector_tag._id))
     {
@@ -3378,17 +3485,18 @@ Assembly::addCachedResiduals()
       _cached_residual_rows[vector_tag._type_id].clear();
       continue;
     }
-    addCachedResidualDirectly(_sys.getVector(vector_tag._id), vector_tag);
+    addCachedResidualDirectly(_sys.getVector(vector_tag._id), GlobalDataKey{}, vector_tag);
   }
 }
 
 void
-Assembly::clearCachedResiduals()
+Assembly::clearCachedResiduals(GlobalDataKey)
 {
   for (const auto & vector_tag : _residual_vector_tags)
     clearCachedResiduals(vector_tag);
 }
 
+// private method, so no key required
 void
 Assembly::clearCachedResiduals(const VectorTag & vector_tag)
 {
@@ -3412,7 +3520,9 @@ Assembly::clearCachedResiduals(const VectorTag & vector_tag)
 }
 
 void
-Assembly::addCachedResidualDirectly(NumericVector<Number> & residual, const VectorTag & vector_tag)
+Assembly::addCachedResidualDirectly(NumericVector<Number> & residual,
+                                    GlobalDataKey,
+                                    const VectorTag & vector_tag)
 {
   const auto & values = _cached_residual_values[vector_tag._type_id];
   const auto & rows = _cached_residual_rows[vector_tag._type_id];
@@ -3428,7 +3538,7 @@ Assembly::addCachedResidualDirectly(NumericVector<Number> & residual, const Vect
 }
 
 void
-Assembly::setResidual(NumericVector<Number> & residual, const VectorTag & vector_tag)
+Assembly::setResidual(NumericVector<Number> & residual, GlobalDataKey, const VectorTag & vector_tag)
 {
   auto & tag_Re = _sub_Re[vector_tag._type_id];
   const std::vector<MooseVariableFEBase *> & vars = _sys.getVariables(_tid);
@@ -3441,7 +3551,9 @@ Assembly::setResidual(NumericVector<Number> & residual, const VectorTag & vector
 }
 
 void
-Assembly::setResidualNeighbor(NumericVector<Number> & residual, const VectorTag & vector_tag)
+Assembly::setResidualNeighbor(NumericVector<Number> & residual,
+                              GlobalDataKey,
+                              const VectorTag & vector_tag)
 {
   auto & tag_Rn = _sub_Rn[vector_tag._type_id];
   const std::vector<MooseVariableFEBase *> & vars = _sys.getVariables(_tid);
@@ -3453,6 +3565,7 @@ Assembly::setResidualNeighbor(NumericVector<Number> & residual, const VectorTag 
                      var->isNodal());
 }
 
+// private method, so no key required
 void
 Assembly::addJacobianBlock(SparseMatrix<Number> & jacobian,
                            DenseMatrix<Number> & jac_block,
@@ -3503,6 +3616,7 @@ Assembly::addJacobianBlock(SparseMatrix<Number> & jacobian,
   }
 }
 
+// private method, so no key required
 void
 Assembly::cacheJacobianBlock(DenseMatrix<Number> & jac_block,
                              const MooseVariableBase & ivar,
@@ -3563,6 +3677,7 @@ Assembly::cacheJacobianBlock(DenseMatrix<Number> & jac_block,
   jac_block.zero();
 }
 
+// private method, so no key required
 void
 Assembly::cacheJacobianBlockNonzero(DenseMatrix<Number> & jac_block,
                                     const MooseVariableBase & ivar,
@@ -3626,6 +3741,7 @@ Assembly::cacheJacobianBlock(DenseMatrix<Number> & jac_block,
                              const std::vector<dof_id_type> & idof_indices,
                              const std::vector<dof_id_type> & jdof_indices,
                              Real scaling_factor,
+                             LocalDataKey,
                              TagID tag)
 {
   // Only cache data when the matrix exists
@@ -3653,14 +3769,6 @@ Assembly::cacheJacobianBlock(DenseMatrix<Number> & jac_block,
       }
   }
   jac_block.zero();
-}
-
-void
-Assembly::addCachedJacobian(SparseMatrix<Number> & /*jacobian*/)
-{
-  mooseDeprecated(" Please use addCachedJacobian() ");
-
-  addCachedJacobian();
 }
 
 Real
@@ -3697,7 +3805,7 @@ Assembly::elementVolume(const Elem * elem) const
 }
 
 void
-Assembly::addCachedJacobian()
+Assembly::addCachedJacobian(GlobalDataKey)
 {
   if (!_subproblem.checkNonlocalCouplingRequirement())
   {
@@ -3744,7 +3852,7 @@ Assembly::addJacobianCoupledVarPair(const MooseVariableBase & ivar, const MooseV
   for (MooseIndex(_jacobian_block_used) tag = 0; tag < _jacobian_block_used.size(); tag++)
     if (jacobianBlockUsed(tag, i, j) && _sys.hasMatrix(tag))
       addJacobianBlock(_sys.getMatrix(tag),
-                       jacobianBlock(i, j, tag),
+                       jacobianBlock(i, j, LocalDataKey{}, tag),
                        ivar,
                        jvar,
                        ivar.dofIndices(),
@@ -3752,7 +3860,7 @@ Assembly::addJacobianCoupledVarPair(const MooseVariableBase & ivar, const MooseV
 }
 
 void
-Assembly::addJacobian()
+Assembly::addJacobian(GlobalDataKey)
 {
   for (const auto & it : _cm_ff_entry)
     addJacobianCoupledVarPair(*it.first, *it.second);
@@ -3765,7 +3873,7 @@ Assembly::addJacobian()
 }
 
 void
-Assembly::addJacobianNonlocal()
+Assembly::addJacobianNonlocal(GlobalDataKey)
 {
   for (const auto & it : _cm_nonlocal_entry)
   {
@@ -3778,7 +3886,7 @@ Assembly::addJacobianNonlocal()
          tag++)
       if (jacobianBlockNonlocalUsed(tag, i, j) && _sys.hasMatrix(tag))
         addJacobianBlock(_sys.getMatrix(tag),
-                         jacobianBlockNonlocal(i, j, tag),
+                         jacobianBlockNonlocal(i, j, LocalDataKey{}, tag),
                          *ivar,
                          *jvar,
                          ivar->dofIndices(),
@@ -3787,7 +3895,7 @@ Assembly::addJacobianNonlocal()
 }
 
 void
-Assembly::addJacobianNeighbor()
+Assembly::addJacobianNeighbor(GlobalDataKey)
 {
   for (const auto & it : _cm_ff_entry)
   {
@@ -3801,21 +3909,21 @@ Assembly::addJacobianNeighbor()
       if (jacobianBlockNeighborUsed(tag, i, j) && _sys.hasMatrix(tag))
       {
         addJacobianBlock(_sys.getMatrix(tag),
-                         jacobianBlockNeighbor(Moose::ElementNeighbor, i, j, tag),
+                         jacobianBlockNeighbor(Moose::ElementNeighbor, i, j, LocalDataKey{}, tag),
                          *ivar,
                          *jvar,
                          ivar->dofIndices(),
                          jvar->dofIndicesNeighbor());
 
         addJacobianBlock(_sys.getMatrix(tag),
-                         jacobianBlockNeighbor(Moose::NeighborElement, i, j, tag),
+                         jacobianBlockNeighbor(Moose::NeighborElement, i, j, LocalDataKey{}, tag),
                          *ivar,
                          *jvar,
                          ivar->dofIndicesNeighbor(),
                          jvar->dofIndices());
 
         addJacobianBlock(_sys.getMatrix(tag),
-                         jacobianBlockNeighbor(Moose::NeighborNeighbor, i, j, tag),
+                         jacobianBlockNeighbor(Moose::NeighborNeighbor, i, j, LocalDataKey{}, tag),
                          *ivar,
                          *jvar,
                          ivar->dofIndicesNeighbor(),
@@ -3825,7 +3933,7 @@ Assembly::addJacobianNeighbor()
 }
 
 void
-Assembly::addJacobianNeighborLowerD()
+Assembly::addJacobianNeighborLowerD(GlobalDataKey)
 {
   for (const auto & it : _cm_ff_entry)
   {
@@ -3838,35 +3946,35 @@ Assembly::addJacobianNeighborLowerD()
       if (jacobianBlockLowerUsed(tag, i, j) && _sys.hasMatrix(tag))
       {
         addJacobianBlock(_sys.getMatrix(tag),
-                         jacobianBlockMortar(Moose::LowerLower, i, j, tag),
+                         jacobianBlockMortar(Moose::LowerLower, i, j, LocalDataKey{}, tag),
                          *ivar,
                          *jvar,
                          ivar->dofIndicesLower(),
                          jvar->dofIndicesLower());
 
         addJacobianBlock(_sys.getMatrix(tag),
-                         jacobianBlockMortar(Moose::LowerSecondary, i, j, tag),
+                         jacobianBlockMortar(Moose::LowerSecondary, i, j, LocalDataKey{}, tag),
                          *ivar,
                          *jvar,
                          ivar->dofIndicesLower(),
                          jvar->dofIndicesNeighbor());
 
         addJacobianBlock(_sys.getMatrix(tag),
-                         jacobianBlockMortar(Moose::LowerPrimary, i, j, tag),
+                         jacobianBlockMortar(Moose::LowerPrimary, i, j, LocalDataKey{}, tag),
                          *ivar,
                          *jvar,
                          ivar->dofIndicesLower(),
                          jvar->dofIndices());
 
         addJacobianBlock(_sys.getMatrix(tag),
-                         jacobianBlockMortar(Moose::SecondaryLower, i, j, tag),
+                         jacobianBlockMortar(Moose::SecondaryLower, i, j, LocalDataKey{}, tag),
                          *ivar,
                          *jvar,
                          ivar->dofIndicesNeighbor(),
                          jvar->dofIndicesLower());
 
         addJacobianBlock(_sys.getMatrix(tag),
-                         jacobianBlockMortar(Moose::PrimaryLower, i, j, tag),
+                         jacobianBlockMortar(Moose::PrimaryLower, i, j, LocalDataKey{}, tag),
                          *ivar,
                          *jvar,
                          ivar->dofIndices(),
@@ -3879,21 +3987,21 @@ Assembly::addJacobianNeighborLowerD()
       if (jacobianBlockNeighborUsed(tag, i, j) && _sys.hasMatrix(tag))
       {
         addJacobianBlock(_sys.getMatrix(tag),
-                         jacobianBlockNeighbor(Moose::ElementNeighbor, i, j, tag),
+                         jacobianBlockNeighbor(Moose::ElementNeighbor, i, j, LocalDataKey{}, tag),
                          *ivar,
                          *jvar,
                          ivar->dofIndices(),
                          jvar->dofIndicesNeighbor());
 
         addJacobianBlock(_sys.getMatrix(tag),
-                         jacobianBlockNeighbor(Moose::NeighborElement, i, j, tag),
+                         jacobianBlockNeighbor(Moose::NeighborElement, i, j, LocalDataKey{}, tag),
                          *ivar,
                          *jvar,
                          ivar->dofIndicesNeighbor(),
                          jvar->dofIndices());
 
         addJacobianBlock(_sys.getMatrix(tag),
-                         jacobianBlockNeighbor(Moose::NeighborNeighbor, i, j, tag),
+                         jacobianBlockNeighbor(Moose::NeighborNeighbor, i, j, LocalDataKey{}, tag),
                          *ivar,
                          *jvar,
                          ivar->dofIndicesNeighbor(),
@@ -3903,7 +4011,7 @@ Assembly::addJacobianNeighborLowerD()
 }
 
 void
-Assembly::addJacobianLowerD()
+Assembly::addJacobianLowerD(GlobalDataKey)
 {
   for (const auto & it : _cm_ff_entry)
   {
@@ -3916,21 +4024,21 @@ Assembly::addJacobianLowerD()
       if (jacobianBlockLowerUsed(tag, i, j) && _sys.hasMatrix(tag))
       {
         addJacobianBlock(_sys.getMatrix(tag),
-                         jacobianBlockMortar(Moose::LowerLower, i, j, tag),
+                         jacobianBlockMortar(Moose::LowerLower, i, j, LocalDataKey{}, tag),
                          *ivar,
                          *jvar,
                          ivar->dofIndicesLower(),
                          jvar->dofIndicesLower());
 
         addJacobianBlock(_sys.getMatrix(tag),
-                         jacobianBlockMortar(Moose::LowerSecondary, i, j, tag),
+                         jacobianBlockMortar(Moose::LowerSecondary, i, j, LocalDataKey{}, tag),
                          *ivar,
                          *jvar,
                          ivar->dofIndicesLower(),
                          jvar->dofIndices());
 
         addJacobianBlock(_sys.getMatrix(tag),
-                         jacobianBlockMortar(Moose::SecondaryLower, i, j, tag),
+                         jacobianBlockMortar(Moose::SecondaryLower, i, j, LocalDataKey{}, tag),
                          *ivar,
                          *jvar,
                          ivar->dofIndices(),
@@ -3940,7 +4048,7 @@ Assembly::addJacobianLowerD()
 }
 
 void
-Assembly::cacheJacobian()
+Assembly::cacheJacobian(GlobalDataKey)
 {
   for (const auto & it : _cm_ff_entry)
     cacheJacobianCoupledVarPair(*it.first, *it.second);
@@ -3952,7 +4060,8 @@ Assembly::cacheJacobian()
     cacheJacobianCoupledVarPair(*it.first, *it.second);
 }
 
-inline void
+// private method, so no key required
+void
 Assembly::cacheJacobianCoupledVarPair(const MooseVariableBase & ivar,
                                       const MooseVariableBase & jvar)
 {
@@ -3960,12 +4069,16 @@ Assembly::cacheJacobianCoupledVarPair(const MooseVariableBase & ivar,
   auto j = jvar.number();
   for (MooseIndex(_jacobian_block_used) tag = 0; tag < _jacobian_block_used.size(); tag++)
     if (jacobianBlockUsed(tag, i, j) && _sys.hasMatrix(tag))
-      cacheJacobianBlock(
-          jacobianBlock(i, j, tag), ivar, jvar, ivar.dofIndices(), jvar.dofIndices(), tag);
+      cacheJacobianBlock(jacobianBlock(i, j, LocalDataKey{}, tag),
+                         ivar,
+                         jvar,
+                         ivar.dofIndices(),
+                         jvar.dofIndices(),
+                         tag);
 }
 
 void
-Assembly::cacheJacobianNonlocal()
+Assembly::cacheJacobianNonlocal(GlobalDataKey)
 {
   for (const auto & it : _cm_nonlocal_entry)
   {
@@ -3977,7 +4090,7 @@ Assembly::cacheJacobianNonlocal()
          tag < _jacobian_block_nonlocal_used.size();
          tag++)
       if (jacobianBlockNonlocalUsed(tag, i, j) && _sys.hasMatrix(tag))
-        cacheJacobianBlockNonzero(jacobianBlockNonlocal(i, j, tag),
+        cacheJacobianBlockNonzero(jacobianBlockNonlocal(i, j, LocalDataKey{}, tag),
                                   *ivar,
                                   *jvar,
                                   ivar->dofIndices(),
@@ -3987,7 +4100,7 @@ Assembly::cacheJacobianNonlocal()
 }
 
 void
-Assembly::cacheJacobianNeighbor()
+Assembly::cacheJacobianNeighbor(GlobalDataKey)
 {
   for (const auto & it : _cm_ff_entry)
   {
@@ -4001,30 +4114,31 @@ Assembly::cacheJacobianNeighbor()
          tag++)
       if (jacobianBlockNeighborUsed(tag, i, j) && _sys.hasMatrix(tag))
       {
-        cacheJacobianBlock(jacobianBlockNeighbor(Moose::ElementNeighbor, i, j, tag),
+        cacheJacobianBlock(jacobianBlockNeighbor(Moose::ElementNeighbor, i, j, LocalDataKey{}, tag),
                            *ivar,
                            *jvar,
                            ivar->dofIndices(),
                            jvar->dofIndicesNeighbor(),
                            tag);
-        cacheJacobianBlock(jacobianBlockNeighbor(Moose::NeighborElement, i, j, tag),
+        cacheJacobianBlock(jacobianBlockNeighbor(Moose::NeighborElement, i, j, LocalDataKey{}, tag),
                            *ivar,
                            *jvar,
                            ivar->dofIndicesNeighbor(),
                            jvar->dofIndices(),
                            tag);
-        cacheJacobianBlock(jacobianBlockNeighbor(Moose::NeighborNeighbor, i, j, tag),
-                           *ivar,
-                           *jvar,
-                           ivar->dofIndicesNeighbor(),
-                           jvar->dofIndicesNeighbor(),
-                           tag);
+        cacheJacobianBlock(
+            jacobianBlockNeighbor(Moose::NeighborNeighbor, i, j, LocalDataKey{}, tag),
+            *ivar,
+            *jvar,
+            ivar->dofIndicesNeighbor(),
+            jvar->dofIndicesNeighbor(),
+            tag);
       }
   }
 }
 
 void
-Assembly::cacheJacobianMortar()
+Assembly::cacheJacobianMortar(GlobalDataKey)
 {
   for (const auto & it : _cm_ff_entry)
   {
@@ -4036,63 +4150,64 @@ Assembly::cacheJacobianMortar()
          tag++)
       if (jacobianBlockLowerUsed(tag, i, j) && _sys.hasMatrix(tag))
       {
-        cacheJacobianBlock(jacobianBlockMortar(Moose::LowerLower, i, j, tag),
+        cacheJacobianBlock(jacobianBlockMortar(Moose::LowerLower, i, j, LocalDataKey{}, tag),
                            *ivar,
                            *jvar,
                            ivar->dofIndicesLower(),
                            jvar->dofIndicesLower(),
                            tag);
 
-        cacheJacobianBlock(jacobianBlockMortar(Moose::LowerSecondary, i, j, tag),
+        cacheJacobianBlock(jacobianBlockMortar(Moose::LowerSecondary, i, j, LocalDataKey{}, tag),
                            *ivar,
                            *jvar,
                            ivar->dofIndicesLower(),
                            jvar->dofIndices(),
                            tag);
 
-        cacheJacobianBlock(jacobianBlockMortar(Moose::LowerPrimary, i, j, tag),
+        cacheJacobianBlock(jacobianBlockMortar(Moose::LowerPrimary, i, j, LocalDataKey{}, tag),
                            *ivar,
                            *jvar,
                            ivar->dofIndicesLower(),
                            jvar->dofIndicesNeighbor(),
                            tag);
 
-        cacheJacobianBlock(jacobianBlockMortar(Moose::SecondaryLower, i, j, tag),
+        cacheJacobianBlock(jacobianBlockMortar(Moose::SecondaryLower, i, j, LocalDataKey{}, tag),
                            *ivar,
                            *jvar,
                            ivar->dofIndices(),
                            jvar->dofIndicesLower(),
                            tag);
 
-        cacheJacobianBlock(jacobianBlockMortar(Moose::SecondarySecondary, i, j, tag),
-                           *ivar,
-                           *jvar,
-                           ivar->dofIndices(),
-                           jvar->dofIndices(),
-                           tag);
+        cacheJacobianBlock(
+            jacobianBlockMortar(Moose::SecondarySecondary, i, j, LocalDataKey{}, tag),
+            *ivar,
+            *jvar,
+            ivar->dofIndices(),
+            jvar->dofIndices(),
+            tag);
 
-        cacheJacobianBlock(jacobianBlockMortar(Moose::SecondaryPrimary, i, j, tag),
+        cacheJacobianBlock(jacobianBlockMortar(Moose::SecondaryPrimary, i, j, LocalDataKey{}, tag),
                            *ivar,
                            *jvar,
                            ivar->dofIndices(),
                            jvar->dofIndicesNeighbor(),
                            tag);
 
-        cacheJacobianBlock(jacobianBlockMortar(Moose::PrimaryLower, i, j, tag),
+        cacheJacobianBlock(jacobianBlockMortar(Moose::PrimaryLower, i, j, LocalDataKey{}, tag),
                            *ivar,
                            *jvar,
                            ivar->dofIndicesNeighbor(),
                            jvar->dofIndicesLower(),
                            tag);
 
-        cacheJacobianBlock(jacobianBlockMortar(Moose::PrimarySecondary, i, j, tag),
+        cacheJacobianBlock(jacobianBlockMortar(Moose::PrimarySecondary, i, j, LocalDataKey{}, tag),
                            *ivar,
                            *jvar,
                            ivar->dofIndicesNeighbor(),
                            jvar->dofIndices(),
                            tag);
 
-        cacheJacobianBlock(jacobianBlockMortar(Moose::PrimaryPrimary, i, j, tag),
+        cacheJacobianBlock(jacobianBlockMortar(Moose::PrimaryPrimary, i, j, LocalDataKey{}, tag),
                            *ivar,
                            *jvar,
                            ivar->dofIndicesNeighbor(),
@@ -4108,10 +4223,11 @@ Assembly::addJacobianBlockTags(SparseMatrix<Number> & jacobian,
                                unsigned int jvar,
                                const DofMap & dof_map,
                                std::vector<dof_id_type> & dof_indices,
+                               GlobalDataKey,
                                const std::set<TagID> & tags)
 {
   for (auto tag : tags)
-    addJacobianBlock(jacobian, ivar, jvar, dof_map, dof_indices, tag);
+    addJacobianBlock(jacobian, ivar, jvar, dof_map, dof_indices, GlobalDataKey{}, tag);
 }
 
 void
@@ -4120,6 +4236,7 @@ Assembly::addJacobianBlock(SparseMatrix<Number> & jacobian,
                            unsigned int jvar,
                            const DofMap & dof_map,
                            std::vector<dof_id_type> & dof_indices,
+                           GlobalDataKey,
                            TagID tag)
 {
   if (dof_indices.size() == 0)
@@ -4133,7 +4250,7 @@ Assembly::addJacobianBlock(SparseMatrix<Number> & jacobian,
 
   const unsigned int ivn = iv.number();
   const unsigned int jvn = jv.number();
-  auto & ke = jacobianBlock(ivn, jvn, tag);
+  auto & ke = jacobianBlock(ivn, jvn, LocalDataKey{}, tag);
 
   // It is guaranteed by design iv.number <= ivar since iv is obtained
   // through SystemBase::getVariable with ivar.
@@ -4170,11 +4287,13 @@ Assembly::addJacobianBlock(SparseMatrix<Number> & jacobian,
 
 void
 Assembly::addJacobianBlockNonlocal(SparseMatrix<Number> & jacobian,
-                                   unsigned int ivar,
-                                   unsigned int jvar,
+                                   const unsigned int ivar,
+                                   const unsigned int jvar,
                                    const DofMap & dof_map,
                                    const std::vector<dof_id_type> & idof_indices,
-                                   const std::vector<dof_id_type> & jdof_indices)
+                                   const std::vector<dof_id_type> & jdof_indices,
+                                   GlobalDataKey,
+                                   const TagID tag)
 {
   if (idof_indices.size() == 0 || jdof_indices.size() == 0)
     return;
@@ -4189,7 +4308,7 @@ Assembly::addJacobianBlockNonlocal(SparseMatrix<Number> & jacobian,
 
   const unsigned int ivn = iv.number();
   const unsigned int jvn = jv.number();
-  auto & keg = jacobianBlockNonlocal(ivn, jvn);
+  auto & keg = jacobianBlockNonlocal(ivn, jvn, LocalDataKey{}, tag);
 
   // It is guaranteed by design iv.number <= ivar since iv is obtained
   // through SystemBase::getVariable with ivar.
@@ -4225,12 +4344,29 @@ Assembly::addJacobianBlockNonlocal(SparseMatrix<Number> & jacobian,
 }
 
 void
+Assembly::addJacobianBlockNonlocalTags(SparseMatrix<Number> & jacobian,
+                                       const unsigned int ivar,
+                                       const unsigned int jvar,
+                                       const DofMap & dof_map,
+                                       const std::vector<dof_id_type> & idof_indices,
+                                       const std::vector<dof_id_type> & jdof_indices,
+                                       GlobalDataKey,
+                                       const std::set<TagID> & tags)
+{
+  for (auto tag : tags)
+    addJacobianBlockNonlocal(
+        jacobian, ivar, jvar, dof_map, idof_indices, jdof_indices, GlobalDataKey{}, tag);
+}
+
+void
 Assembly::addJacobianNeighbor(SparseMatrix<Number> & jacobian,
-                              unsigned int ivar,
-                              unsigned int jvar,
+                              const unsigned int ivar,
+                              const unsigned int jvar,
                               const DofMap & dof_map,
                               std::vector<dof_id_type> & dof_indices,
-                              std::vector<dof_id_type> & neighbor_dof_indices)
+                              std::vector<dof_id_type> & neighbor_dof_indices,
+                              GlobalDataKey,
+                              const TagID tag)
 {
   if (dof_indices.size() == 0 && neighbor_dof_indices.size() == 0)
     return;
@@ -4243,9 +4379,9 @@ Assembly::addJacobianNeighbor(SparseMatrix<Number> & jacobian,
 
   const unsigned int ivn = iv.number();
   const unsigned int jvn = jv.number();
-  auto & ken = jacobianBlockNeighbor(Moose::ElementNeighbor, ivn, jvn);
-  auto & kne = jacobianBlockNeighbor(Moose::NeighborElement, ivn, jvn);
-  auto & knn = jacobianBlockNeighbor(Moose::NeighborNeighbor, ivn, jvn);
+  auto & ken = jacobianBlockNeighbor(Moose::ElementNeighbor, ivn, jvn, LocalDataKey{}, tag);
+  auto & kne = jacobianBlockNeighbor(Moose::NeighborElement, ivn, jvn, LocalDataKey{}, tag);
+  auto & knn = jacobianBlockNeighbor(Moose::NeighborNeighbor, ivn, jvn, LocalDataKey{}, tag);
 
   // It is guaranteed by design iv.number <= ivar since iv is obtained
   // through SystemBase::getVariable with ivar.
@@ -4292,14 +4428,29 @@ Assembly::addJacobianNeighbor(SparseMatrix<Number> & jacobian,
 }
 
 void
-Assembly::addJacobianScalar()
+Assembly::addJacobianNeighborTags(SparseMatrix<Number> & jacobian,
+                                  const unsigned int ivar,
+                                  const unsigned int jvar,
+                                  const DofMap & dof_map,
+                                  std::vector<dof_id_type> & dof_indices,
+                                  std::vector<dof_id_type> & neighbor_dof_indices,
+                                  GlobalDataKey,
+                                  const std::set<TagID> & tags)
+{
+  for (const auto tag : tags)
+    addJacobianNeighbor(
+        jacobian, ivar, jvar, dof_map, dof_indices, neighbor_dof_indices, GlobalDataKey{}, tag);
+}
+
+void
+Assembly::addJacobianScalar(GlobalDataKey)
 {
   for (const auto & it : _cm_ss_entry)
     addJacobianCoupledVarPair(*it.first, *it.second);
 }
 
 void
-Assembly::addJacobianOffDiagScalar(unsigned int ivar)
+Assembly::addJacobianOffDiagScalar(unsigned int ivar, GlobalDataKey)
 {
   const std::vector<MooseVariableFEBase *> & vars = _sys.getVariables(_tid);
   MooseVariableScalar & var_i = _sys.getScalarVariable(_tid, ivar);
@@ -4308,7 +4459,8 @@ Assembly::addJacobianOffDiagScalar(unsigned int ivar)
 }
 
 void
-Assembly::cacheJacobian(numeric_index_type i, numeric_index_type j, Real value, TagID tag)
+Assembly::cacheJacobian(
+    numeric_index_type i, numeric_index_type j, Real value, LocalDataKey, TagID tag)
 {
   _cached_jacobian_rows[tag].push_back(i);
   _cached_jacobian_cols[tag].push_back(j);
@@ -4319,37 +4471,16 @@ void
 Assembly::cacheJacobian(numeric_index_type i,
                         numeric_index_type j,
                         Real value,
+                        LocalDataKey,
                         const std::set<TagID> & tags)
 {
   for (auto tag : tags)
     if (_sys.hasMatrix(tag))
-      cacheJacobian(i, j, value, tag);
+      cacheJacobian(i, j, value, LocalDataKey{}, tag);
 }
 
 void
-Assembly::cacheJacobianContribution(numeric_index_type i,
-                                    numeric_index_type j,
-                                    Real value,
-                                    TagID tag)
-{
-  mooseDeprecated("please use the corresponding cacheJacobian method instead.");
-
-  cacheJacobian(i, j, value, tag);
-}
-
-void
-Assembly::cacheJacobianContribution(numeric_index_type i,
-                                    numeric_index_type j,
-                                    Real value,
-                                    const std::set<TagID> & tags)
-{
-  mooseDeprecated("please use the corresponding cacheJacobian method instead.");
-
-  cacheJacobian(i, j, value, tags);
-}
-
-void
-Assembly::setCachedJacobian()
+Assembly::setCachedJacobian(GlobalDataKey)
 {
   for (MooseIndex(_cached_jacobian_rows) tag = 0; tag < _cached_jacobian_rows.size(); tag++)
     if (_sys.hasMatrix(tag))
@@ -4369,37 +4500,13 @@ Assembly::setCachedJacobian()
 }
 
 void
-Assembly::setCachedJacobianContributions()
-{
-  mooseDeprecated("please use setCachedJacobian instead");
-
-  setCachedJacobian();
-}
-
-void
-Assembly::zeroCachedJacobian()
+Assembly::zeroCachedJacobian(GlobalDataKey)
 {
   for (MooseIndex(_cached_jacobian_rows) tag = 0; tag < _cached_jacobian_rows.size(); tag++)
     if (_sys.hasMatrix(tag))
       _sys.getMatrix(tag).zero_rows(_cached_jacobian_rows[tag], 0.0);
 
   clearCachedJacobian();
-}
-
-void
-Assembly::zeroCachedJacobianContributions()
-{
-  mooseDeprecated("please use zeroCachedJacobian instead");
-
-  zeroCachedJacobian();
-}
-
-void
-Assembly::addCachedJacobianContributions()
-{
-  mooseDeprecated("please use addCachedJacobian instead");
-
-  addCachedJacobian();
 }
 
 void
@@ -4411,14 +4518,6 @@ Assembly::clearCachedJacobian()
     _cached_jacobian_cols[tag].clear();
     _cached_jacobian_values[tag].clear();
   }
-}
-
-void
-Assembly::clearCachedJacobianContributions()
-{
-  mooseDeprecated("please use clearCachedJacobian instead");
-
-  clearCachedJacobian();
 }
 
 void
@@ -4478,37 +4577,6 @@ Assembly::modifyArbitraryWeights(const std::vector<Real> & weights)
     _current_JxW[i] = weights[i];
 }
 
-void
-Assembly::processUnconstrainedResidualsAndJacobian(const std::vector<ADReal> & residuals,
-                                                   const std::vector<dof_id_type> & row_indices,
-                                                   const std::set<TagID> & vector_tags,
-                                                   const std::set<TagID> & matrix_tags,
-                                                   const Real scaling_factor)
-{
-  mooseAssert(residuals.size() == row_indices.size(),
-              "The number of residuals should match the number of dof indices");
-  mooseAssert(residuals.size() >= 1, "Why you calling me with no residuals?");
-
-  // First handle the residuals
-  if (computingResidual() && !vector_tags.empty())
-    for (const auto i : index_range(row_indices))
-      cacheResidual(row_indices[i], residuals[i].value() * scaling_factor, vector_tags);
-
-  if (computingJacobian() && !matrix_tags.empty())
-    for (const auto i : index_range(row_indices))
-    {
-      const auto row_index = row_indices[i];
-
-      const auto & sparse_derivatives = residuals[i].derivatives();
-      const auto & column_indices = sparse_derivatives.nude_indices();
-      const auto & raw_derivatives = sparse_derivatives.nude_data();
-
-      for (std::size_t j = 0; j < column_indices.size(); ++j)
-        cacheJacobian(
-            row_index, column_indices[j], raw_derivatives[j] * scaling_factor, matrix_tags);
-    }
-}
-
 template <>
 const typename OutputTools<VectorValue<Real>>::VariablePhiValue &
 Assembly::fePhi<VectorValue<Real>>(FEType type) const
@@ -4538,7 +4606,7 @@ template <>
 const typename OutputTools<VectorValue<Real>>::VariablePhiValue &
 Assembly::fePhiLower<VectorValue<Real>>(FEType type) const
 {
-  buildVectorFE(type);
+  buildVectorLowerDFE(type);
   return _vector_fe_shape_data_lower[type]->_phi;
 }
 
@@ -4546,7 +4614,7 @@ template <>
 const typename OutputTools<VectorValue<Real>>::VariablePhiValue &
 Assembly::feDualPhiLower<VectorValue<Real>>(FEType type) const
 {
-  buildVectorFE(type);
+  buildVectorDualLowerDFE(type);
   return _vector_fe_shape_data_dual_lower[type]->_phi;
 }
 
@@ -4554,7 +4622,7 @@ template <>
 const typename OutputTools<VectorValue<Real>>::VariablePhiGradient &
 Assembly::feGradPhiLower<VectorValue<Real>>(FEType type) const
 {
-  buildVectorFE(type);
+  buildVectorLowerDFE(type);
   return _vector_fe_shape_data_lower[type]->_grad_phi;
 }
 
@@ -4562,7 +4630,7 @@ template <>
 const typename OutputTools<VectorValue<Real>>::VariablePhiGradient &
 Assembly::feGradDualPhiLower<VectorValue<Real>>(FEType type) const
 {
-  buildVectorFE(type);
+  buildVectorDualLowerDFE(type);
   return _vector_fe_shape_data_dual_lower[type]->_grad_phi;
 }
 
@@ -4677,62 +4745,180 @@ Assembly::feCurlPhiFaceNeighbor<VectorValue<Real>>(FEType type) const
   return _vector_fe_shape_data_face_neighbor[type]->_curl_phi;
 }
 
-void
-Assembly::processResidualsAndJacobian(const std::vector<ADReal> & residuals,
-                                      const std::vector<dof_id_type> & input_row_indices,
-                                      const std::set<TagID> & vector_tags,
-                                      const std::set<TagID> & matrix_tags,
-                                      const Real scaling_factor)
+template <>
+const typename OutputTools<VectorValue<Real>>::VariablePhiDivergence &
+Assembly::feDivPhi<VectorValue<Real>>(FEType type) const
 {
-  // First handle the residuals
-  processResiduals(residuals, input_row_indices, vector_tags, scaling_factor);
+  _need_div[type] = true;
+  buildVectorFE(type);
+  return _vector_fe_shape_data[type]->_div_phi;
+}
 
-  //
-  // Now the Jacobian
-  //
+template <>
+const typename OutputTools<VectorValue<Real>>::VariablePhiDivergence &
+Assembly::feDivPhiFace<VectorValue<Real>>(FEType type) const
+{
+  _need_div[type] = true;
+  buildVectorFaceFE(type);
+  return _vector_fe_shape_data_face[type]->_div_phi;
+}
 
-  if (!computingJacobian() || matrix_tags.empty())
+template <>
+const typename OutputTools<VectorValue<Real>>::VariablePhiDivergence &
+Assembly::feDivPhiNeighbor<VectorValue<Real>>(FEType type) const
+{
+  _need_div[type] = true;
+  buildVectorNeighborFE(type);
+  return _vector_fe_shape_data_neighbor[type]->_div_phi;
+}
+
+template <>
+const typename OutputTools<VectorValue<Real>>::VariablePhiDivergence &
+Assembly::feDivPhiFaceNeighbor<VectorValue<Real>>(FEType type) const
+{
+  _need_div[type] = true;
+  buildVectorFaceNeighborFE(type);
+  return _vector_fe_shape_data_face_neighbor[type]->_div_phi;
+}
+
+const MooseArray<ADReal> &
+Assembly::adCurvatures() const
+{
+  _calculate_curvatures = true;
+  const Order helper_order = _mesh.hasSecondOrderElements() ? SECOND : FIRST;
+  const FEType helper_type(helper_order, LAGRANGE);
+  // Must prerequest the second derivatives. Sadly because there is only one _need_second_derivative
+  // map for both volumetric and face FE objects we must request both here
+  feSecondPhi<Real>(helper_type);
+  feSecondPhiFace<Real>(helper_type);
+  return _ad_curvatures;
+}
+
+void
+Assembly::helpersRequestData()
+{
+  for (unsigned int dim = 0; dim <= _mesh_dimension; dim++)
+  {
+    _holder_fe_helper[dim]->get_phi();
+    _holder_fe_helper[dim]->get_dphi();
+    _holder_fe_helper[dim]->get_xyz();
+    _holder_fe_helper[dim]->get_JxW();
+
+    _holder_fe_face_helper[dim]->get_phi();
+    _holder_fe_face_helper[dim]->get_dphi();
+    _holder_fe_face_helper[dim]->get_xyz();
+    _holder_fe_face_helper[dim]->get_JxW();
+    _holder_fe_face_helper[dim]->get_normals();
+
+    _holder_fe_face_neighbor_helper[dim]->get_xyz();
+    _holder_fe_face_neighbor_helper[dim]->get_JxW();
+    _holder_fe_face_neighbor_helper[dim]->get_normals();
+
+    _holder_fe_neighbor_helper[dim]->get_xyz();
+    _holder_fe_neighbor_helper[dim]->get_JxW();
+  }
+
+  for (unsigned int dim = 0; dim < _mesh_dimension; dim++)
+  {
+    // We need these computations in order to compute correct lower-d element volumes in curvilinear
+    // coordinates
+    _holder_fe_lower_helper[dim]->get_xyz();
+    _holder_fe_lower_helper[dim]->get_JxW();
+  }
+}
+
+void
+Assembly::havePRefinement(const std::vector<FEFamily> & disable_p_refinement_for_families)
+{
+  if (_have_p_refinement)
+    // Already performed tasks for p-refinement
     return;
 
-  const auto & compare_dofs = residuals[0].derivatives().nude_indices();
-#ifndef NDEBUG
-  auto compare_dofs_set = std::set<dof_id_type>(compare_dofs.begin(), compare_dofs.end());
+  const std::unordered_set<FEFamily> disable_families(disable_p_refinement_for_families.begin(),
+                                                      disable_p_refinement_for_families.end());
 
-  for (auto resid_it = residuals.begin() + 1; resid_it != residuals.end(); ++resid_it)
+  const Order helper_order = _mesh.hasSecondOrderElements() ? SECOND : FIRST;
+  const FEType helper_type(helper_order, LAGRANGE);
+  auto process_fe =
+      [&disable_families](const unsigned int num_dimensionalities, auto & fe_container)
   {
-    auto current_dofs_set = std::set<dof_id_type>(resid_it->derivatives().nude_indices().begin(),
-                                                  resid_it->derivatives().nude_indices().end());
-    mooseAssert(compare_dofs_set == current_dofs_set,
-                "We're going to see whether the dof sets are the same. IIRC the degree of freedom "
-                "dependence (as indicated by the dof index set held by the ADReal) has to be the "
-                "same for every residual passed to this method otherwise constrain_element_matrix "
-                "will not work.");
-  }
-#endif
-  auto column_indices = std::vector<dof_id_type>(compare_dofs.begin(), compare_dofs.end());
-
-  // If there's no derivatives then there is nothing to do. Moreover, if we pass zero size column
-  // indices to constrain_element_matrix then we will potentially get errors out of BLAS
-  if (!column_indices.size())
-    return;
-
-  // Need to make a copy because we might modify this in constrain_element_matrix
-  std::vector<dof_id_type> row_indices = input_row_indices;
-
-  DenseMatrix<Number> element_matrix(row_indices.size(), column_indices.size());
-  for (const auto i : index_range(row_indices))
+    if (!disable_families.empty())
+      for (const auto dim : make_range(num_dimensionalities))
+      {
+        auto fe_container_it = fe_container.find(dim);
+        if (fe_container_it != fe_container.end())
+          for (auto & [fe_type, fe_ptr] : fe_container_it->second)
+            if (disable_families.count(fe_type.family))
+              fe_ptr->add_p_level_in_reinit(false);
+      }
+  };
+  auto process_fe_and_helpers = [process_fe, &helper_type](auto & unique_helper_container,
+                                                           auto & helper_container,
+                                                           const unsigned int num_dimensionalities,
+                                                           const bool user_added_helper_type,
+                                                           auto & fe_container)
   {
-    const auto & sparse_derivatives = residuals[i].derivatives();
+    unique_helper_container.resize(num_dimensionalities);
+    for (const auto dim : make_range(num_dimensionalities))
+    {
+      auto & unique_helper = unique_helper_container[dim];
+      unique_helper = FEGenericBase<Real>::build(dim, helper_type);
+      // don't participate in p-refinement
+      unique_helper->add_p_level_in_reinit(false);
+      helper_container[dim] = unique_helper.get();
 
-    for (const auto j : index_range(column_indices))
-      element_matrix(i, j) = sparse_derivatives[column_indices[j]] * scaling_factor;
-  }
+      // If the user did not request the helper type then we should erase it from our FE container
+      // so that they're not penalized (in the "we should be able to do p-refinement sense") for our
+      // perhaps silly helpers
+      if (!user_added_helper_type)
+      {
+        auto & fe_container_dim = libmesh_map_find(fe_container, dim);
+        auto fe_it = fe_container_dim.find(helper_type);
+        mooseAssert(fe_it != fe_container_dim.end(), "We should have the helper type");
+        delete fe_it->second;
+        fe_container_dim.erase(fe_it);
+      }
+    }
 
-  _dof_map.constrain_element_matrix(element_matrix, row_indices, column_indices);
+    process_fe(num_dimensionalities, fe_container);
+  };
 
-  for (const auto i : index_range(row_indices))
-    for (const auto j : index_range(column_indices))
-      cacheJacobian(row_indices[i], column_indices[j], element_matrix(i, j), matrix_tags);
+  // Handle scalar field families
+  process_fe_and_helpers(_unique_fe_helper,
+                         _holder_fe_helper,
+                         _mesh_dimension + 1,
+                         _user_added_fe_of_helper_type,
+                         _fe);
+  process_fe_and_helpers(_unique_fe_face_helper,
+                         _holder_fe_face_helper,
+                         _mesh_dimension + 1,
+                         _user_added_fe_face_of_helper_type,
+                         _fe_face);
+  process_fe_and_helpers(_unique_fe_face_neighbor_helper,
+                         _holder_fe_face_neighbor_helper,
+                         _mesh_dimension + 1,
+                         _user_added_fe_face_neighbor_of_helper_type,
+                         _fe_face_neighbor);
+  process_fe_and_helpers(_unique_fe_neighbor_helper,
+                         _holder_fe_neighbor_helper,
+                         _mesh_dimension + 1,
+                         _user_added_fe_neighbor_of_helper_type,
+                         _fe_neighbor);
+  process_fe_and_helpers(_unique_fe_lower_helper,
+                         _holder_fe_lower_helper,
+                         _mesh_dimension,
+                         _user_added_fe_lower_of_helper_type,
+                         _fe_lower);
+  // Handle vector field families
+  process_fe(_mesh_dimension + 1, _vector_fe);
+  process_fe(_mesh_dimension + 1, _vector_fe_face);
+  process_fe(_mesh_dimension + 1, _vector_fe_neighbor);
+  process_fe(_mesh_dimension + 1, _vector_fe_face_neighbor);
+  process_fe(_mesh_dimension, _vector_fe_lower);
+
+  helpersRequestData();
+
+  _have_p_refinement = true;
 }
 
 template void coordTransformFactor<Point, Real>(const SubProblem & s,

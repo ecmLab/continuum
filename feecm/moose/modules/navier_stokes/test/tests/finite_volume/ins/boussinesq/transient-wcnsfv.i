@@ -113,7 +113,7 @@ hot_temp=310
     drho_dt = drho_dt
   []
   [mass]
-    type = INSFVMassAdvection
+    type = WCNSFVMassAdvection
     variable = pressure
     advected_interp_method = ${advected_interp_method}
     velocity_interp_method = ${velocity_interp_method}
@@ -239,7 +239,7 @@ hot_temp=310
   []
 []
 
-[Materials]
+[FunctorMaterials]
   [const_functor]
     type = ADGenericFunctorMaterial
     prop_names = 'cp k'
@@ -252,7 +252,7 @@ hot_temp=310
     pressure = pressure
   []
   [ins_fv]
-    type = INSFVEnthalpyMaterial
+    type = INSFVEnthalpyFunctorMaterial
     temperature = 'T'
     rho = ${rho}
   []

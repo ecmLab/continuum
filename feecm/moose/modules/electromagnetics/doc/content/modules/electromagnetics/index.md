@@ -43,3 +43,43 @@ electromagnetic simulations to other physical domains. Features include:
 - [Electrostatic Contact, Three Blocks](verification/electrostatic_contact_three_block.md) - Verification
   of electrostatic contact with a floating block sandwiched between a driven/powered block and a grounded
   block
+
+## Citing
+
+!! em-citation-start
+
+This paper documents the initial development, function, verification, and validation
+of the electromagnetics module.
+
+```
+@article{icenhour2024electromagnetics,
+  author = {Casey T. Icenhour and Alexander D. Lindsay and Cody J. Permann and Richard C. Martineau and David L. Green and Steven C. Shannon},
+  title = {The MOOSE electromagnetics module},
+  journal = {SoftwareX},
+  publisher = {Elsevier},
+  volume = {25},
+  pages = {101621},
+  year = {2024},
+  month = {February},
+  issn = {2352-7110},
+  doi = {https://doi.org/10.1016/j.softx.2023.101621},
+  url = {https://www.sciencedirect.com/science/article/pii/S2352711023003175}
+}
+```
+
+!! em-citation-end
+
+While the above paper is the main citation, the following PhD dissertation documents the initial
+development and capabilities of the electromagnetics module in greater detail and could be used
+alongside the paper above if module capabilities are used in the to-be-published work that are not
+covered therein.
+
+```
+@phdthesis{icenhourPHDelectromagnetics,
+  author = {Icenhour, Casey T.},
+  title = {Development and Validation of Open Source Software for Electromagnetics Simulation and Multiphysics Coupling},
+  school = {North Carolina State University},
+  year = {2023},
+  url = {https://www.lib.ncsu.edu/resolver/1840.20/40985}
+}
+```

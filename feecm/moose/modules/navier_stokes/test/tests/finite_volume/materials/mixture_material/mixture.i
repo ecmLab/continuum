@@ -28,12 +28,12 @@
 
 [AuxKernels]
   [cp_aux]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     functor = cp_mixture
     variable = cp
   []
   [k_aux]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     functor = k_mixture
     variable = k
   []
@@ -85,9 +85,9 @@
   []
 []
 
-[Materials]
+[FunctorMaterials]
   [eff_cp]
-    type = NSFVMixtureMaterial
+    type = NSFVMixtureFunctorMaterial
     phase_2_names = 'cp_solid k_solid'
     phase_1_names = 'cp_liquid k_liquid'
     prop_names = 'cp_mixture k_mixture'

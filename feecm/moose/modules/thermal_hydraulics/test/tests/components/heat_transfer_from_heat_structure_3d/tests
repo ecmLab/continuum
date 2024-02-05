@@ -9,7 +9,6 @@
     csvdiff = 'phy.conservation.csv'
     abs_zero = 1e-9
     recover = false
-    mesh_mode = 'replicated'
 
     requirement = 'The system shall conserve energy when using HeatTransferFromHeatStructure3D1Phase.'
   []
@@ -21,7 +20,6 @@
     abs_zero = 1e-6
     max_time = 6000
     recover = false
-    mesh_mode = 'replicated'
 
     requirement = 'The system shall allow to connect multiple flow channels to a single boundary in HeatTransferFromHeatStructure3D1Phase.'
     issues = '#19831 #20298'
@@ -35,7 +33,6 @@
     abs_zero = 1e-6
     max_time = 6000
     prereq = phy:conservation_ss
-    mesh_mode = 'replicated'
 
     requirement = 'The system shall allow to connect flow channels that have negative orientation to a HeatTransferFromHeatStructure3D1Phase component.'
     issues = '#19831 #19879'
@@ -72,7 +69,7 @@
     type = 'RunException'
     input = 'phy.conservation.i'
     cli_args = "Components/ht/boundary=asdf"
-    expect_err = "ht: The boundary 'asdf' \(.+\) was not found."
+    expect_err = "ht: The boundary 'asdf' does not exist on the component 'blk'."
 
     requirement = "The system shall throw an error if the heat structure boundary connected to a HeatTransferFromHeatStructure3D1Phase component doesn't exist."
   []

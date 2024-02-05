@@ -76,6 +76,10 @@ top_side_temperature = 150
 
     ambient_convection_alpha = 'h_cv'
     ambient_temperature = 'T_solid'
+
+    mass_advection_interpolation = 'average'
+    momentum_advection_interpolation = 'average'
+    energy_advection_interpolation = 'average'
   []
 []
 
@@ -112,7 +116,7 @@ top_side_temperature = 150
   []
 []
 
-[Materials]
+[FunctorMaterials]
   [constants]
     type = ADGenericFunctorMaterial
     prop_names = 'h_cv cp rho mu k'

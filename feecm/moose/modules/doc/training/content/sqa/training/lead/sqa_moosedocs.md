@@ -26,7 +26,7 @@ To allow for the design documentation to be complete, the content of the [!ac](M
 all modules enabled for an application must be added to the "config.yml" within
 the application "doc" directory.
 
-A basic application that uses the heat conduction module, should have a "Contents" section
+A basic application that uses the heat transfer module, should have a "Contents" section
 in the "config.yml" should be as follows.
 
 ```
@@ -153,7 +153,7 @@ Documents:
     software_requirements_specification: sqa/blackbear_srs.md
     software_design_description: sqa/blackbear_sdd.md
     software_test_plan: sqa/blackbear_stp.md
-    requirements_traceablity_matrix: sqa/blackbear_rtm.md
+    requirements_traceability_matrix: sqa/blackbear_rtm.md
     verification_validation_report: sqa/blackbear_vvr.md
     failure_analysis_report: sqa/blackbear_far.md
     safety_software_determination: sqa/inl_records.md#safety_software_determination
@@ -208,7 +208,7 @@ cd docs
 The [!ac](SQA) documentation and report information is added to the "config.yml" using the
 MooseDocs ["sqa"](MooseDocs/extensions/sqa.md optional=True) extension. This is accomplished by
 adding the extension to the "Extensions" section. For example, the following is what should be
-included for an application that includes the heat conduction module.
+included for an application that includes the heat transfer module.
 
 ```
     MooseDocs.extensions.sqa:
