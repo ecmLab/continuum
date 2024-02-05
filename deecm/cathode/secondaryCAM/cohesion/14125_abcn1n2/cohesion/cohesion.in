@@ -1,0 +1,96 @@
+
+#--------------------------Input Variables---------------------------------------------------------
+variable dt equal 1e-5
+variable nStepsRun    equal 5/${dt}
+variable writeOutEvery equal 0.2/${dt}
+variable thermofreq   equal 0.01/${dt}
+# material information
+variable cf_ww equal 1.0
+variable cf_pw equal 0.5
+variable cf_pp equal 0.5
+variable cof_ww equal 0.2
+variable cof_pw equal 0.2
+variable cof_pp equal 0.2
+variable corf_ww equal 0.0
+variable corf_pw equal 0.2
+variable corf_pp equal 0.2
+variable Yw equal 1e+7
+variable Yp equal 1e+7
+
+#--------------------------Box Information---------------------------------------------------------
+variable    skfstl equal 1/5000
+variable    x1y1 equal -1*${skfstl}*2500
+variable    x2y2 equal  1*${skfstl}*2500
+variable    z1 equal   -0.52*${skfstl}*2500
+variable    z2 equal    1*${skfstl}*2500
+
+#--------------------------Model Geometry---------------------------------------------------------
+variable    a0          equal 0.01
+variable    b0          equal 0.04
+variable    c0          equal 0.01
+variable    blockiness1 equal 2
+variable    blockiness2 equal 5
+
+#------------------General Settings for Granular Systems--------------------------------------------
+atom_style	superquadric
+atom_modify	map array
+boundary	f f f
+newton		off
+communicate	single vel yes
+units		si
+echo both
+
+#------------------------read the restart file------------------------------------------------------
+read_restart    pack.restart
+neighbor        0.0002 bin
+neigh_modify    delay 0
+
+#---------------------Material Properties-----------------------------------------------------------
+fix 		m1 all property/global youngsModulus peratomtype ${Yw} ${Yp}
+fix 		m2 all property/global poissonsRatio peratomtype 0.3 0.3
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 ${cf_ww} ${cf_pw} ${cf_pw} ${cf_pp}
+fix             m4 all property/global coefficientFriction peratomtypepair 2 ${cof_ww} ${cof_pw} ${cof_pw} ${cof_pp}
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 ${corf_ww} ${corf_pw} ${corf_pw} ${corf_pp}
+
+#New pair style
+pair_style gran model hertz tangential history rolling_friction epsd2 surface superquadric #Hertzian without cohesion
+pair_coeff	* *
+timestep ${dt}
+
+variable totaltime equal step*${dt}
+
+fix xwalls1 all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric primitive type 1 xplane ${x1y1}
+fix xwalls2 all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric primitive type 1 xplane ${x2y2}
+fix ywalls1 all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric primitive type 1 yplane ${x1y1}
+fix ywalls2 all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric primitive type 1 yplane ${x2y2}
+fix zwalls2 all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric primitive type 1 zplane ${z1}
+
+#fix pts1 all particletemplate/superquadric 15485863 atom_type 2 density constant 2500 shape constant ${a0} ${b0} ${c0} blockiness constant ${blockiness1} ${blockiness2}
+#fix pdd1 all particledistribution/discrete 86028157 1 pts1 1 
+
+#fix ins_mesh all mesh/surface/planar file ins_face.stl heal auto_remove_duplicates type 1 scale 0.0125
+#fix ins all insert/stream seed 86028121 distributiontemplate pdd1 &
+#                maxattempt 200 nparticles 1800 particlerate 180 overlapcheck yes all_in yes vel constant 0 0 -2.0 &
+#                insertion_face ins_mesh extrude_length 0.2
+
+
+#apply nve integration to all particles that are inserted as single particles
+fix		integr all nve/superquadric integration_scheme 1
+fix		gravi all  gravity 9.81 vector 0.0 0.0 -1.0
+
+variable time equal step*${dt}
+
+#output settings, include total thermal energy
+thermo_style	custom step atoms cpu spcpu time
+thermo		${thermofreq}
+thermo_modify	lost ignore norm no
+
+#insert the first particles so that dump is not empty
+run		1
+shell       mkdir post
+dump		dmp all custom/vtk ${writeOutEvery} cohesion/dump*.superq.vtk type mass x y z id vx vy vz fx fy fz omegax omegay omegaz radius shapex shapey shapez quat1 quat2 quat3 quat4 blockiness1 blockiness2 tqx tqy tqz angmomx angmomy angmomz
+dump_modify dmp label version_01
+
+run		${nStepsRun} 
+write_restart   cohesion.restart
+
