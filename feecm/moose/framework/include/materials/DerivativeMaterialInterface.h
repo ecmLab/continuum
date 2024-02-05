@@ -231,7 +231,7 @@ const GenericMaterialProperty<U, is_ad> &
 DerivativeMaterialInterface<T>::getDefaultMaterialProperty(const std::string & name)
 {
   // get the base property name
-  std::string prop_name = this->deducePropertyName(name);
+  std::string prop_name = this->getMaterialPropertyName(name);
 
   // Check if it's just a constant
   const auto * default_property =
@@ -259,7 +259,7 @@ DerivativeMaterialInterface<T>::declarePropertyDerivative(const std::string & ba
                                                           const std::vector<VariableName> & c)
 {
   std::vector<SymbolName> symbol_vector(c.begin(), c.end());
-  return declarePropertyDerivative(base, symbol_vector);
+  return declarePropertyDerivative<U, is_ad>(base, symbol_vector);
 }
 
 template <class T>
@@ -305,7 +305,7 @@ DerivativeMaterialInterface<T>::getMaterialPropertyDerivative(const std::string 
                                                               const std::vector<SymbolName> & c)
 {
   // get the base property name
-  std::string prop_name = this->deducePropertyName(base);
+  std::string prop_name = this->getMaterialPropertyName(base);
 
   /**
    * Check if base is a default property and shortcut to returning zero, as
@@ -327,7 +327,7 @@ DerivativeMaterialInterface<T>::getMaterialPropertyDerivative(const std::string 
                                                               const SymbolName & c3)
 {
   // get the base property name
-  std::string prop_name = this->deducePropertyName(base);
+  std::string prop_name = this->getMaterialPropertyName(base);
 
   /**
    * Check if base is a default property and shortcut to returning zero, as
@@ -463,13 +463,13 @@ DerivativeMaterialInterface<T>::validateCoupling(const MaterialPropertyName & ba
                                                  bool validate_aux)
 {
   // get the base property name
-  std::string prop_name = this->deducePropertyName(base);
+  std::string prop_name = this->getMaterialPropertyName(base);
   // list of potentially missing coupled variables
   std::vector<VariableName> missing;
 
   // iterate over all variables in the both the non-linear and auxiliary system (optional)
   validateCouplingHelper<U, is_ad>(
-      prop_name, c, _dmi_fe_problem.getNonlinearSystemBase().system(), missing);
+      prop_name, c, _dmi_fe_problem.getNonlinearSystemBase(/*nl_sys=*/0).system(), missing);
   if (validate_aux)
     validateCouplingHelper<U, is_ad>(
         prop_name, c, _dmi_fe_problem.getAuxiliarySystem().system(), missing);

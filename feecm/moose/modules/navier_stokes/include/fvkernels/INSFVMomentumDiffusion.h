@@ -12,6 +12,7 @@
 #include "MathFVUtils.h"
 #include "INSFVFluxKernel.h"
 #include "INSFVMomentumResidualObject.h"
+#include "INSFVVelocityVariable.h"
 
 class INSFVMomentumDiffusion : public INSFVFluxKernel
 {
@@ -26,7 +27,9 @@ protected:
    * Routine to compute this object's strong residual (e.g. not multiplied by area). This routine
    * should also populate the _ae and _an coefficients
    */
-  virtual ADReal computeStrongResidual();
+  virtual ADReal computeStrongResidual(const bool populate_a_coeffs);
+
+  virtual ADReal computeSegregatedContribution() override;
 
   /// The dynamic viscosity
   const Moose::Functor<ADReal> & _mu;
@@ -39,4 +42,17 @@ protected:
 
   /// The a coefficient for the neighbor
   ADReal _an = 0;
+
+  /// x-velocity
+  const Moose::Functor<ADReal> * const _u_var;
+  /// y-velocity
+  const Moose::Functor<ADReal> * const _v_var;
+  /// z-velocity
+  const Moose::Functor<ADReal> * const _w_var;
+
+  /// Boolean parameter to include the complete momentum expansion
+  const bool _complete_expansion;
+
+  /// dimension
+  const unsigned int _dim;
 };

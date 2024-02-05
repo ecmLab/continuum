@@ -48,18 +48,21 @@ CheckOutputAction::checkVariableOutput(const std::string & task)
 
   if (task == "add_variable")
   {
-    const auto & field_vars = _problem->getNonlinearSystemBase().getVariables(/*tid =*/0);
-    for (const auto & var : field_vars)
+    for (const auto i : make_range(_problem->numNonlinearSystems()))
     {
-      std::set<OutputName> outputs = var->getOutputs();
-      _app.getOutputWarehouse().checkOutputs(outputs);
-    }
+      const auto & field_vars = _problem->getNonlinearSystemBase(i).getVariables(/*tid =*/0);
+      for (const auto & var : field_vars)
+      {
+        std::set<OutputName> outputs = var->getOutputs();
+        _app.getOutputWarehouse().checkOutputs(outputs);
+      }
 
-    const auto & scalar_vars = _problem->getNonlinearSystemBase().getScalarVariables(/*tid =*/0);
-    for (const auto & var : scalar_vars)
-    {
-      std::set<OutputName> outputs = var->getOutputs();
-      _app.getOutputWarehouse().checkOutputs(outputs);
+      const auto & scalar_vars = _problem->getNonlinearSystemBase(i).getScalarVariables(/*tid =*/0);
+      for (const auto & var : scalar_vars)
+      {
+        std::set<OutputName> outputs = var->getOutputs();
+        _app.getOutputWarehouse().checkOutputs(outputs);
+      }
     }
   }
 
@@ -140,8 +143,5 @@ CheckOutputAction::checkPerfLogOutput()
   // If a Console outputter is found then all the correct handling of performance logs are
   // handled within the object(s), so do nothing
   if (!has_console)
-  {
-    Moose::perf_log.disable_logging();
     libMesh::perflog.disable_logging();
-  }
 }

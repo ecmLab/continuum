@@ -34,8 +34,8 @@
 #ifdef GEOCHEMISTRY_ENABLED
 #include "GeochemistryApp.h"
 #endif
-#ifdef HEAT_CONDUCTION_ENABLED
-#include "HeatConductionApp.h"
+#ifdef HEAT_TRANSFER_ENABLED
+#include "HeatTransferApp.h"
 #endif
 #ifdef LEVEL_SET_ENABLED
 #include "LevelSetApp.h"
@@ -92,20 +92,6 @@
 #include "ExternalPetscSolverApp.h"
 #endif
 
-///@{
-/**
- * Dummy methods to clear unused parameter warnings from compiler
- */
-void
-clearUnusedWarnings(Factory & /*factory*/)
-{
-}
-void
-clearUnusedWarnings(Syntax & /*syntax*/, ActionFactory & /*action_factory*/)
-{
-}
-///@}
-
 InputParameters
 ModulesApp::validParams()
 {
@@ -124,6 +110,90 @@ void
 ModulesApp::registerApps()
 {
   registerApp(ModulesApp);
+
+#ifdef CHEMICAL_REACTIONS_ENABLED
+  ChemicalReactionsApp::registerApps();
+#endif
+
+#ifdef CONTACT_ENABLED
+  ContactApp::registerApps();
+#endif
+
+#ifdef ELECTROMAGNETICS_ENABLED
+  ElectromagneticsApp::registerApps();
+#endif
+
+#ifdef FLUID_PROPERTIES_ENABLED
+  FluidPropertiesApp::registerApps();
+#endif
+
+#ifdef FUNCTIONAL_EXPANSION_TOOLS_ENABLED
+  FunctionalExpansionToolsApp::registerApps();
+#endif
+
+#ifdef HEAT_TRANSFER_ENABLED
+  HeatTransferApp::registerApps();
+#endif
+
+#ifdef LEVEL_SET_ENABLED
+  LevelSetApp::registerApps();
+#endif
+
+#ifdef MISC_ENABLED
+  MiscApp::registerApps();
+#endif
+
+#ifdef NAVIER_STOKES_ENABLED
+  NavierStokesApp::registerApps();
+#endif
+
+#ifdef PERIDYNAMICS_ENABLED
+  PeridynamicsApp::registerApps();
+#endif
+
+#ifdef PHASE_FIELD_ENABLED
+  PhaseFieldApp::registerApps();
+#endif
+
+#ifdef POROUS_FLOW_ENABLED
+  PorousFlowApp::registerApps();
+#endif
+
+#ifdef RAY_TRACING_ENABLED
+  RayTracingApp::registerApps();
+#endif
+
+#ifdef RDG_ENABLED
+  RdgApp::registerApps();
+#endif
+
+#ifdef REACTOR_ENABLED
+  ReactorApp::registerApps();
+#endif
+
+#ifdef RICHARDS_ENABLED
+  RichardsApp::registerApps();
+#endif
+
+#ifdef SOLID_PROPERTIES_ENABLED
+  SolidPropertiesApp::registerApps();
+#endif
+
+#ifdef STOCHASTIC_TOOLS_ENABLED
+  StochasticToolsApp::registerApps();
+#endif
+
+#ifdef TENSOR_MECHANICS_ENABLED
+  TensorMechanicsApp::registerApps();
+#endif
+
+#ifdef THERMAL_HYDRAULICS_ENABLED
+  ThermalHydraulicsApp::registerApps();
+#endif
+
+#ifdef XFEM_ENABLED
+  XFEMApp::registerApps();
+#endif
 }
 
 void
@@ -150,8 +220,8 @@ ModulesApp::registerObjects(Factory & factory)
   FunctionalExpansionToolsApp::registerObjects(factory);
 #endif
 
-#ifdef HEAT_CONDUCTION_ENABLED
-  HeatConductionApp::registerObjects(factory);
+#ifdef HEAT_TRANSFER_ENABLED
+  HeatTransferApp::registerObjects(factory);
 #endif
 
 #ifdef LEVEL_SET_ENABLED
@@ -214,7 +284,7 @@ ModulesApp::registerObjects(Factory & factory)
   XFEMApp::registerObjects(factory);
 #endif
 
-  clearUnusedWarnings(factory);
+  libmesh_ignore(factory);
 }
 
 void
@@ -241,8 +311,8 @@ ModulesApp::associateSyntax(Syntax & syntax, ActionFactory & action_factory)
   FunctionalExpansionToolsApp::associateSyntax(syntax, action_factory);
 #endif
 
-#ifdef HEAT_CONDUCTION_ENABLED
-  HeatConductionApp::associateSyntax(syntax, action_factory);
+#ifdef HEAT_TRANSFER_ENABLED
+  HeatTransferApp::associateSyntax(syntax, action_factory);
 #endif
 
 #ifdef LEVEL_SET_ENABLED
@@ -305,7 +375,7 @@ ModulesApp::associateSyntax(Syntax & syntax, ActionFactory & action_factory)
   XFEMApp::associateSyntax(syntax, action_factory);
 #endif
 
-  clearUnusedWarnings(syntax, action_factory);
+  libmesh_ignore(syntax, action_factory);
 }
 
 void
@@ -328,8 +398,8 @@ ModulesApp::registerExecFlags(Factory & factory)
   FluidPropertiesApp::registerExecFlags(factory);
 #endif
 
-#ifdef HEAT_CONDUCTION_ENABLED
-  HeatConductionApp::registerExecFlags(factory);
+#ifdef HEAT_TRANSFER_ENABLED
+  HeatTransferApp::registerExecFlags(factory);
 #endif
 
 #ifdef LEVEL_SET_ENABLED
@@ -392,12 +462,16 @@ ModulesApp::registerExecFlags(Factory & factory)
   XFEMApp::registerExecFlags(factory);
 #endif
 
-  clearUnusedWarnings(factory);
+  libmesh_ignore(factory);
 }
 
 void
 ModulesApp::registerAll(Factory & f, ActionFactory & af, Syntax & s)
 {
+  mooseDeprecated(
+      "\"registerAll\" in Modules is deprecated. Please update your *App.C file(s) to call the new "
+      "templated \"registerAllObjects\" method (e.g. ModulesApp::registerAllObjects<MyApp>(...))");
+
 #ifdef CHEMICAL_REACTIONS_ENABLED
   ChemicalReactionsApp::registerAll(f, af, s);
 #endif
@@ -422,8 +496,8 @@ ModulesApp::registerAll(Factory & f, ActionFactory & af, Syntax & s)
   GeochemistryApp::registerAll(f, af, s);
 #endif
 
-#ifdef HEAT_CONDUCTION_ENABLED
-  HeatConductionApp::registerAll(f, af, s);
+#ifdef HEAT_TRANSFER_ENABLED
+  HeatTransferApp::registerAll(f, af, s);
 #endif
 
 #ifdef LEVEL_SET_ENABLED
@@ -498,8 +572,7 @@ ModulesApp::registerAll(Factory & f, ActionFactory & af, Syntax & s)
   ExternalPetscSolverApp::registerAll(f, af, s);
 #endif
 
-  clearUnusedWarnings(f);
-  clearUnusedWarnings(s, af);
+  libmesh_ignore(f, s, af);
 }
 
 extern "C" void

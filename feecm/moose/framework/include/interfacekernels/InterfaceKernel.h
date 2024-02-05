@@ -48,22 +48,21 @@ public:
    * Using the passed DGResidual type, selects the correct test function space and residual block,
    * and then calls computeQpResidual
    */
-  virtual void computeElemNeighResidual(Moose::DGResidualType type) override;
+  virtual void computeElemNeighResidual(Moose::DGResidualType type);
 
   /**
    * Using the passed DGJacobian type, selects the correct test function and trial function spaces
    * and
    * jacobian block, and then calls computeQpJacobian
    */
-  virtual void computeElemNeighJacobian(Moose::DGJacobianType type) override;
+  virtual void computeElemNeighJacobian(Moose::DGJacobianType type);
 
   /**
    * Using the passed DGJacobian type, selects the correct test function and trial function spaces
    * and
    * jacobian block, and then calls computeQpOffDiagJacobian with the passed jvar
    */
-  virtual void computeOffDiagElemNeighJacobian(Moose::DGJacobianType type,
-                                               unsigned int jvar) override;
+  virtual void computeOffDiagElemNeighJacobian(Moose::DGJacobianType type, unsigned int jvar);
 
   /// Selects the correct Jacobian type and routine to call for the primary variable jacobian
   virtual void computeElementOffDiagJacobian(unsigned int jvar) override;
@@ -82,6 +81,22 @@ public:
 
   /// Compute residuals at quadrature points
   virtual Real computeQpResidual(Moose::DGResidualType type) = 0;
+
+  /**
+   * Put necessary evaluations depending on qp but independent on test functions here
+   */
+  virtual void initQpResidual(Moose::DGResidualType /* type */) {}
+
+  /**
+   * Put necessary evaluations depending on qp but independent on test and shape functions here
+   */
+  virtual void initQpJacobian(Moose::DGJacobianType /* type */) {}
+
+  /**
+   * Put necessary evaluations depending on qp but independent on test and shape functions here for
+   * off-diagonal Jacobian assembly
+   */
+  virtual void initQpOffDiagJacobian(Moose::DGJacobianType /* type */, unsigned int /* jvar */) {}
 
 protected:
   /// The primary side MooseVariable

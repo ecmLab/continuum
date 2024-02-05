@@ -21,10 +21,10 @@ public:
 
   TimePostprocessor(const InputParameters & parameters);
 
-  void initialize() override {}
-  void execute() override {}
+  virtual void initialize() override {}
+  virtual void execute() override {}
 
-  Real getValue() override;
+  virtual Real getValue() const override;
 
 protected:
   const FEProblemBase & _feproblem;

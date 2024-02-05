@@ -57,8 +57,8 @@ IterationAdaptiveDT::validParams()
       "Timestep to apply after time sync with function point. To be used in "
       "conjunction with 'force_step_every_function_point'.");
   params.addRequiredParam<Real>("dt", "The default timestep size between solves");
-  params.addParam<std::vector<Real>>("time_t", "The values of t");
-  params.addParam<std::vector<Real>>("time_dt", "The values of dt");
+  params.addParam<std::vector<Real>>("time_t", {}, "The values of t");
+  params.addParam<std::vector<Real>>("time_dt", {}, "The values of dt");
   params.addParam<Real>("growth_factor",
                         2.0,
                         "Factor to apply to timestep if easy convergence (if "
@@ -261,12 +261,20 @@ IterationAdaptiveDT::computeDT()
   {
     _sync_last_step = false;
     if (_post_function_sync_dt)
+    {
       dt = _post_function_sync_dt;
-    else
-      dt = _dt_old;
 
-    if (_verbose)
-      _console << "Setting dt to value used before sync: " << std::setw(9) << dt << std::endl;
+      if (_verbose)
+        _console << "Setting dt to 'post_function_sync_dt': " << std::setw(9) << dt << std::endl;
+    }
+    else
+    {
+      dt = _executioner.unconstrainedDT();
+
+      if (_verbose)
+        _console << "Setting dt to unconstrained value used before sync: " << std::setw(9) << dt
+                 << std::endl;
+    }
   }
   else if (_adaptive_timestepping)
     computeAdaptiveDT(dt);
@@ -552,8 +560,8 @@ IterationAdaptiveDT::acceptStep()
     _tfunc_times.erase(_tfunc_times.begin());
   }
 
-  _nl_its = _fe_problem.getNonlinearSystemBase().nNonlinearIterations();
-  _l_its = _fe_problem.getNonlinearSystemBase().nLinearIterations();
+  _nl_its = _fe_problem.getNonlinearSystemBase(/*nl_sys=*/0).nNonlinearIterations();
+  _l_its = _fe_problem.getNonlinearSystemBase(/*nl_sys=*/0).nLinearIterations();
 
   if ((_at_function_point || _executioner.atSyncPoint()) &&
       _dt + _timestep_tolerance < _executioner.unconstrainedDT())

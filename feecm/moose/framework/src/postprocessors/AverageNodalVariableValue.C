@@ -46,7 +46,7 @@ AverageNodalVariableValue::execute()
 }
 
 Real
-AverageNodalVariableValue::getValue()
+AverageNodalVariableValue::getValue() const
 {
   return _sum / _n;
 }
@@ -65,7 +65,7 @@ AverageNodalVariableValue::finalize()
 void
 AverageNodalVariableValue::threadJoin(const UserObject & y)
 {
-  const AverageNodalVariableValue & pps = static_cast<const AverageNodalVariableValue &>(y);
+  const auto & pps = static_cast<const AverageNodalVariableValue &>(y);
   _sum += pps._sum;
   _n += pps._n;
 }

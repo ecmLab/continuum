@@ -1,13 +1,16 @@
 # Making a Change to this package?
 # REMEMBER TO UPDATE the .yaml files for the following packages:
-#   petsc/
-#   libmesh-vtk/
-#   libmesh/
-#   template/
-#   moose/
-{% set build = 7 %}
-{% set strbuild = "build_" + build|string %}
+#   petsc/*
+#   libmesh-vtk/*
+#   peacock/*
+#
+# As well as any directions pertaining to modifying those files.
+# ALSO: Follow the directions in scripts/tests/versioner_hashes.yaml
+{% set build = 15 %}
 {% set version = "4.0.2" %}
+
+# permanent
+{% set strbuild = "build_" + build|string %}
 
 package:
   name: moose-mpich
@@ -23,38 +26,41 @@ build:
   pin_depends: strict
   run_exports:
     - {{ pin_subpackage('moose-mpich', max_pin='x.x') }}
+  script_env:
+    - REQUESTS_CA_BUNDLE
+    - SSL_CERT_FILE
 
 requirements:
   build:
-    - {{ base_mpich }}
-    - {{ base_mpicc }}
-    - {{ base_mpicxx }}
-    - {{ base_mpifort }}
-    - {{ moose_libgfortran }}
-    - {{ moose_libgfortran5 }}
+    - mpich {{ version }}
+    - mpich-mpicc {{ version }}
+    - mpich-mpicxx {{ version }}
+    - mpich-mpifort {{ version }}
     - {{ moose_hdf5 }}
-    - {{ moose_ld64 }}          # [osx]
-    - make
-    - libtool
-    - autoconf
-    - automake 1.16.1
-    - m4
-  host: []
+    - {{ moose_krb5 }}
+    - {{ moose_icu }}
+    - {{ moose_libclang }}
+    - {{ moose_libclang13 }}
+    - {{ moose_clangcc }}       # [osx]
+    - {{ moose_clangxx }}       # [osx]
+  host:
+    # TODO: Try to remove when this version settles down among other conda-forge packages
+    - openssl <3.2.0a           # [osx]
   run:
-    - {{ base_mpich }}
-    - {{ base_mpicc }}
-    - {{ base_mpicxx }}
-    - {{ base_mpifort }}
+    - mpich {{ version }}
+    - mpich-mpicc {{ version }}
+    - mpich-mpicxx {{ version }}
+    - mpich-mpifort {{ version }}
     - {{ moose_libgfortran }}
     - {{ moose_libgfortran5 }}
     - {{ moose_hdf5 }}
+    - {{ moose_krb5 }}
+    - {{ moose_icu }}
     - {{ moose_ld64 }}          # [osx]
-    - cmake
-    - make
-    - libtool
-    - autoconf
-    - automake 1.16.1
-    - m4
+    - {{ moose_libclang }}      # [osx]
+    - {{ moose_libclang13 }}    # [osx]
+    - {{ moose_clangcc }}       # [osx]
+    - {{ moose_clangxx }}       # [osx]
     - {{ moose_libxt }}         # [linux]
     - {{ moose_libsm }}         # [linux]
     - {{ moose_libx11 }}        # [linux]
@@ -64,7 +70,19 @@ requirements:
     - {{ moose_xorg_x11 }}      # [linux]
     - {{ moose_libglu }}        # [linux]
     - {{ moose_mesalib }}       # [linux]
+    - cmake
+    - make
+    - libtool
+    - autoconf
+    - automake 1.16.5
+    - m4
+    - zfp 0.5.5
+    - bison 3.4
     - mpi 1.0 mpich
+    # TODO: Try to remove when this version settles down among other conda-forge packages
+    - {{ pin_compatible('openssl', upper_bound='3.2') }} # [osx]
+  run_constrained:
+    - python <{{3.11}}
 
 test:
   commands:
@@ -83,3 +101,4 @@ about:
 extra:
   recipe-maintainers:
     - milljm
+    - cticenhour

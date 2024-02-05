@@ -76,7 +76,7 @@ ExtremeValueBase<T>::computeExtremeValue()
 
 template <class T>
 Real
-ExtremeValueBase<T>::getValue()
+ExtremeValueBase<T>::getValue() const
 {
   return _proxy_value.second;
 }
@@ -112,7 +112,7 @@ template <class T>
 void
 ExtremeValueBase<T>::threadJoin(const UserObject & y)
 {
-  const ExtremeValueBase<T> & pps = static_cast<const ExtremeValueBase<T> &>(y);
+  const auto & pps = static_cast<const ExtremeValueBase<T> &>(y);
 
   switch (_type)
   {

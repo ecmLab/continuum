@@ -7,48 +7,59 @@
 //* Licensed under LGPL 2.1, please see LICENSE for details
 //* https://www.gnu.org/licenses/lgpl-2.1.html
 
-// The output to JSON is currently limited to Reporter objects via the ReporterContext object and
-// the JSONOutput object.
-//
-// It is possible to create a general JSON based output of all RestartableData objects, which
-// already includes the "store/load" method overloadeds that use a nlohmann::json objects. However,
-// these function do nothing at the moment (see RestartableData<T>::store/load).
-//
-// The JSON library being used includes a "to_json" function that operates in the same fashion as
-// our dataLoad/Store functions, including the automatic container handling.
-//
-// To enable output of RestartableData general the following needs to be done.
-//
-//     1. RestartableData<T>::toJSON(nlohmann::json &) should call the storeHelper method located
-//        in this file
-//     2. RestartableData<T>::fromJSON(const nlohmann::json &) should call the loadHelper method
-//        located in this file
-//     3. Create the necessary overloads for the various types must be created using "to_json"
-//     4. Implement a means via Checkpoint to use the JSON format
-
 #pragma once
+
+#include "MooseError.h"
+
 #include "nlohmann/json.h"
+
+#include "libmesh/libmesh_common.h"
+
+#include <memory>
 
 class MooseApp;
 
-void to_json(nlohmann::json & json, const MooseApp & app); // MooseDocs:to_json
-
-template <typename T>
-void storeHelper(nlohmann::json & json, const T & value, void * context = nullptr);
-
-template <typename T>
-void loadHelper(const nlohmann::json & json, T & value, void * context = nullptr);
-
-template <typename T>
-void
-storeHelper(nlohmann::json & json, const T & value, void * /*context*/)
+namespace libMesh
 {
-  nlohmann::to_json(json, value);
+class Point;
+template <typename T>
+class DenseVector;
+template <typename T>
+class DenseMatrix;
 }
 
-template <typename T>
-void
-loadHelper(const nlohmann::json & json, T & value, void * /*context*/)
+// Overloads for to_json, which _must_ be overloaded in the namespace
+// in which the object is found in order to enable argument-dependent lookup.
+// See https://en.cppreference.com/w/cpp/language/adl for more information
+void to_json(nlohmann::json & json, const MooseApp & app); // MooseDocs:to_json
+
+namespace libMesh
 {
-  nlohmann::from_json(json, value);
+void to_json(nlohmann::json & json, const Point & p);
+void to_json(nlohmann::json & json, const DenseVector<Real> & vector);
+void to_json(nlohmann::json & json, const DenseMatrix<Real> & matrix);
+}
+
+namespace nlohmann
+{
+template <typename T>
+struct adl_serializer<std::unique_ptr<T>>
+{
+  /// Serializer that will output a unique ptr if it exists. We wrap this
+  /// with is_constructible_v so that we don't specialize types that
+  /// don't already have a specialization. This is required for some earlier
+  /// compilers, even though we're not using it at the moment
+  static void to_json(json & j, const std::unique_ptr<T> & v)
+  {
+    if constexpr (std::is_constructible_v<nlohmann::json, T>)
+    {
+      if (v)
+        j = *v;
+      else
+        j = nullptr;
+    }
+    else
+      mooseAssert(false, "Should not get to this");
+  }
+};
 }

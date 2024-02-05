@@ -42,8 +42,8 @@ DomainIntegralAction::validParams()
                                           integral_vec,
                                           "Domain integrals to calculate.  Choices are: " +
                                               integral_vec.getRawNames());
-  params.addParam<std::vector<BoundaryName>>("boundary",
-                                             "Boundary containing the crack front points");
+  params.addParam<std::vector<BoundaryName>>(
+      "boundary", {}, "Boundary containing the crack front points");
   params.addParam<std::vector<Point>>("crack_front_points", "Set of points to define crack front");
   params.addParam<std::string>(
       "order", "FIRST", "Specifies the order of the FE shape function to use for q AuxVariables");
@@ -59,10 +59,11 @@ DomainIntegralAction::validParams()
       "output_variable", "Variable values to be reported along the crack front");
   params.addParam<Real>("poissons_ratio", "Poisson's ratio");
   params.addParam<Real>("youngs_modulus", "Young's modulus");
-  params.addParam<std::vector<SubdomainName>>("block", "The block ids where integrals are defined");
-
+  params.addParam<std::vector<SubdomainName>>(
+      "block", {}, "The block ids where integrals are defined");
   params.addParam<std::vector<VariableName>>(
       "displacements",
+      {},
       "The displacements appropriate for the simulation geometry and coordinate system");
   params.addParam<VariableName>("temperature", "", "The temperature");
   params.addParam<MaterialPropertyName>(
@@ -73,6 +74,28 @@ DomainIntegralAction::validParams()
       "functionally_graded_youngs_modulus",
       "Spatially varying elasticity modulus variable. This input is required when "
       "using the functionally graded material capability.");
+  params.addCoupledVar("additional_eigenstrain_00",
+                       "Optional additional eigenstrain variable that will be accounted for in the "
+                       "interaction integral (component 00 or XX).");
+  params.addCoupledVar("additional_eigenstrain_01",
+                       "Optional additional eigenstrain variable that will be accounted for in the "
+                       "interaction integral (component 01 or XY).");
+  params.addCoupledVar("additional_eigenstrain_11",
+                       "Optional additional eigenstrain variable that will be accounted for in the "
+                       "interaction integral (component 11 or YY).");
+  params.addCoupledVar("additional_eigenstrain_22",
+                       "Optional additional eigenstrain variable that will be accounted for in the "
+                       "interaction integral (component 22 or ZZ).");
+  params.addCoupledVar("additional_eigenstrain_02",
+                       "Optional additional eigenstrain variable that will be accounted for in the "
+                       "interaction integral (component 02 or XZ).");
+  params.addCoupledVar("additional_eigenstrain_12",
+                       "Optional additional eigenstrain variable that will be accounted for in the "
+                       "interaction integral (component 12 or XZ).");
+  params.addParamNamesToGroup(
+      "additional_eigenstrain_00 additional_eigenstrain_01 additional_eigenstrain_11 "
+      "additional_eigenstrain_22 additional_eigenstrain_02 additional_eigenstrain_12",
+      "Generic eigenstrains for the computation of the interaction integral.");
   MooseEnum position_type("Angle Distance", "Distance");
   params.addParam<MooseEnum>(
       "position_type",
@@ -108,6 +131,17 @@ DomainIntegralAction::validParams()
   params.addParam<bool>("use_automatic_differentiation",
                         false,
                         "Flag to use automatic differentiation (AD) objects when possible");
+  params.addParam<bool>(
+      "used_by_xfem_to_grow_crack",
+      false,
+      "Flag to trigger domainIntregal vector postprocessors to be executed on nonlinear.  This "
+      "updates the values in the vector postprocessor which will allow the crack to grow in XFEM "
+      "cutter objects that use the domainIntegral vector postprocssor values as a growth "
+      "criterion.");
+  params.addParam<bool>("output_vpp",
+                        true,
+                        "Flag to control the vector postprocessor outputs. Select false to "
+                        "suppress the redundant csv files for each time step and ring");
   return params;
 }
 
@@ -144,7 +178,8 @@ DomainIntegralAction::DomainIntegralAction(const InputParameters & params)
     _incremental(getParam<bool>("incremental")),
     _convert_J_to_K(isParamValid("convert_J_to_K") ? getParam<bool>("convert_J_to_K") : false),
     _fgm_crack(false),
-    _use_ad(getParam<bool>("use_automatic_differentiation"))
+    _use_ad(getParam<bool>("use_automatic_differentiation")),
+    _used_by_xfem_to_grow_crack(getParam<bool>("used_by_xfem_to_grow_crack"))
 {
 
   if (isParamValid("functionally_graded_youngs_modulus_crack_dir_gradient") !=
@@ -220,6 +255,10 @@ DomainIntegralAction::DomainIntegralAction(const InputParameters & params)
 
   bool youngs_modulus_set(false);
   bool poissons_ratio_set(false);
+
+  // All domain integral types block restrict the objects created by this action.
+  _blocks = getParam<std::vector<SubdomainName>>("block");
+
   MultiMooseEnum integral_moose_enums = getParam<MultiMooseEnum>("integrals");
   for (unsigned int i = 0; i < integral_moose_enums.size(); ++i)
   {
@@ -239,16 +278,10 @@ DomainIntegralAction::DomainIntegralAction(const InputParameters & params)
             "DomainIntegral error: must set Poisson's ratio and Young's modulus for integral: ",
             integral_moose_enums[i]);
 
-      if (!(isParamValid("block")))
-        paramError("block",
-                   "DomainIntegral error: must set block ID or name for integral: ",
-                   integral_moose_enums[i]);
-
       _poissons_ratio = getParam<Real>("poissons_ratio");
       poissons_ratio_set = true;
       _youngs_modulus = getParam<Real>("youngs_modulus");
       youngs_modulus_set = true;
-      _blocks = getParam<std::vector<SubdomainName>>("block");
     }
 
     _integrals.insert(INTEGRAL(int(integral_moose_enums.get(i))));
@@ -340,7 +373,11 @@ DomainIntegralAction::act()
     const std::string uo_type_name("CrackFrontDefinition");
 
     InputParameters params = _factory.getValidParams(uo_type_name);
-    params.set<ExecFlagEnum>("execute_on") = {EXEC_INITIAL, EXEC_TIMESTEP_END};
+    if (_use_crack_front_points_provider && _used_by_xfem_to_grow_crack)
+      params.set<ExecFlagEnum>("execute_on") = {EXEC_INITIAL, EXEC_TIMESTEP_END, EXEC_NONLINEAR};
+    else
+      params.set<ExecFlagEnum>("execute_on") = {EXEC_INITIAL, EXEC_TIMESTEP_END};
+
     params.set<MooseEnum>("crack_direction_method") = _direction_method_moose_enum;
     params.set<MooseEnum>("crack_end_direction_method") = _end_direction_method_moose_enum;
     if (_have_crack_direction_vector)
@@ -415,7 +452,7 @@ DomainIntegralAction::act()
       params.set<MooseEnum>("order") = _order;
       params.set<MooseEnum>("family") = _family;
 
-      if (_treat_as_2d)
+      if (_treat_as_2d && _use_crack_front_points_provider == false)
       {
         std::ostringstream av_name_stream;
         av_name_stream << av_base_name << "_" << _ring_vec[ring_index];
@@ -465,7 +502,7 @@ DomainIntegralAction::act()
         params.set<unsigned int>("ring_index") = _ring_first + ring_index;
       }
 
-      if (_treat_as_2d)
+      if (_treat_as_2d && _use_crack_front_points_provider == false)
       {
         std::ostringstream ak_name_stream;
         ak_name_stream << ak_base_name << "_" << _ring_vec[ring_index];
@@ -529,7 +566,7 @@ DomainIntegralAction::act()
       InputParameters params = _factory.getValidParams(pp_type_name);
       for (unsigned int ring_index = 0; ring_index < _ring_vec.size(); ++ring_index)
       {
-        if (_treat_as_2d)
+        if (_treat_as_2d && _use_crack_front_points_provider == false)
         {
           params.set<VectorPostprocessorName>("vectorpostprocessor") =
               pp_base_name + "_2DVPP_" + Moose::stringify(_ring_vec[ring_index]);
@@ -563,7 +600,7 @@ DomainIntegralAction::act()
       InputParameters params = _factory.getValidParams(pp_type_name);
       for (unsigned int ring_index = 0; ring_index < _ring_vec.size(); ++ring_index)
       {
-        if (_treat_as_2d)
+        if (_treat_as_2d && _use_crack_front_points_provider == false)
         {
           params.set<VectorPostprocessorName>("vectorpostprocessor") =
               pp_base_name + "_2DVPP_" + Moose::stringify(_ring_vec[ring_index]);
@@ -597,7 +634,7 @@ DomainIntegralAction::act()
       InputParameters params = _factory.getValidParams(pp_type_name);
       params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_END;
       params.set<UserObjectName>("crack_front_definition") = uo_name;
-      if (_treat_as_2d)
+      if (_treat_as_2d && _use_crack_front_points_provider == false)
       {
         std::ostringstream pp_name_stream;
         pp_name_stream << ov_base_name << "_crack";
@@ -642,11 +679,14 @@ DomainIntegralAction::act()
         jintegral_selection = "CIntegral";
       }
 
-      if (_treat_as_2d)
+      if (_treat_as_2d && _use_crack_front_points_provider == false)
         vpp_base_name += "_2DVPP";
 
       const std::string vpp_type_name("JIntegral");
       InputParameters params = _factory.getValidParams(vpp_type_name);
+      if (!getParam<bool>("output_vpp"))
+        params.set<std::vector<OutputName>>("outputs") = {"none"};
+
       params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_END;
       params.set<UserObjectName>("crack_front_definition") = uo_name;
       params.set<std::vector<SubdomainName>>("block") = {_blocks};
@@ -691,8 +731,31 @@ DomainIntegralAction::act()
       std::string vpp_type_name(ad_prepend + "InteractionIntegral");
 
       InputParameters params = _factory.getValidParams(vpp_type_name);
+      if (!getParam<bool>("output_vpp"))
+        params.set<std::vector<OutputName>>("outputs") = {"none"};
+
+      if (_use_crack_front_points_provider && _used_by_xfem_to_grow_crack)
+        params.set<ExecFlagEnum>("execute_on") = {EXEC_TIMESTEP_END, EXEC_NONLINEAR};
+      else
+        params.set<ExecFlagEnum>("execute_on") = {EXEC_TIMESTEP_END};
+
+      if (isParamValid("additional_eigenstrain_00") && isParamValid("additional_eigenstrain_01") &&
+          isParamValid("additional_eigenstrain_11") && isParamValid("additional_eigenstrain_22"))
+      {
+        params.set<CoupledName>("additional_eigenstrain_00") =
+            getParam<CoupledName>("additional_eigenstrain_00");
+        params.set<CoupledName>("additional_eigenstrain_01") =
+            getParam<CoupledName>("additional_eigenstrain_01");
+        params.set<CoupledName>("additional_eigenstrain_11") =
+            getParam<CoupledName>("additional_eigenstrain_11");
+        params.set<CoupledName>("additional_eigenstrain_22") =
+            getParam<CoupledName>("additional_eigenstrain_22");
+      }
+
       params.set<UserObjectName>("crack_front_definition") = uo_name;
       params.set<bool>("use_displaced_mesh") = _use_displaced_mesh;
+      params.set<std::vector<SubdomainName>>("block") = {_blocks};
+
       if (_has_symmetry_plane)
         params.set<unsigned int>("symmetry_plane") = _symmetry_plane;
 
@@ -757,7 +820,7 @@ DomainIntegralAction::act()
             params.set<MooseEnum>("sif_mode") = "T";
             break;
         }
-        if (_treat_as_2d)
+        if (_treat_as_2d && _use_crack_front_points_provider == false)
           vpp_base_name += "_2DVPP";
         for (unsigned int ring_index = 0; ring_index < _ring_vec.size(); ++ring_index)
         {
@@ -773,19 +836,20 @@ DomainIntegralAction::act()
     if (_get_equivalent_k)
     {
       std::string vpp_base_name("Keq");
-      if (_treat_as_2d)
+      if (_treat_as_2d && _use_crack_front_points_provider == false)
         vpp_base_name += "_2DVPP";
       const std::string vpp_type_name("MixedModeEquivalentK");
       InputParameters params = _factory.getValidParams(vpp_type_name);
       params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_END;
       params.set<Real>("poissons_ratio") = _poissons_ratio;
+
       for (unsigned int ring_index = 0; ring_index < _ring_vec.size(); ++ring_index)
       {
         std::string ki_name = "II_KI_";
         std::string kii_name = "II_KII_";
         std::string kiii_name = "II_KIII_";
         params.set<unsigned int>("ring_index") = _ring_vec[ring_index];
-        if (_treat_as_2d)
+        if (_treat_as_2d && _use_crack_front_points_provider == false)
         {
           params.set<VectorPostprocessorName>("KI_vectorpostprocessor") =
               ki_name + "2DVPP_" + Moose::stringify(_ring_vec[ring_index]);
@@ -814,7 +878,7 @@ DomainIntegralAction::act()
       }
     }
 
-    if (!_treat_as_2d)
+    if (!_treat_as_2d || _use_crack_front_points_provider == true)
     {
       for (unsigned int i = 0; i < _output_variables.size(); ++i)
       {
@@ -857,7 +921,9 @@ DomainIntegralAction::act()
 
     for (auto ime : integral_moose_enums)
     {
-      if (ime == "JIntegral" || ime == "CIntegral" || ime == "KFromJIntegral")
+      if (ime == "JIntegral" || ime == "CIntegral" || ime == "KFromJIntegral" ||
+          ime == "InteractionIntegralKI" || ime == "InteractionIntegralKII" ||
+          ime == "InteractionIntegralKIII" || ime == "InteractionIntegralT")
         have_j_integral = true;
 
       if (ime == "CIntegral")

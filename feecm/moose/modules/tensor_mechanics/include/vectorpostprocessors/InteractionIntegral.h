@@ -10,9 +10,9 @@
 #pragma once
 
 #include "ElementVectorPostprocessor.h"
-#include "CrackFrontDefinition.h"
 
 // Forward Declarations
+class CrackFrontDefinition;
 
 /**
  * This vectorpostprocessor computes the Interaction Integral, which is
@@ -87,8 +87,10 @@ protected:
   std::size_t _ndisp;
   /// Pointer to the crack front definition object
   const CrackFrontDefinition * const _crack_front_definition;
-  /// Whether to treat a 3D model as 2D for computation of fracture integrals
+  /// Whether to treat a model as 2D for computation of fracture integrals
   bool _treat_as_2d;
+  /// Is the crack defined by an XFEM cutter mesh
+  bool _using_mesh_cutter;
   /// Reference to the stress tensor computed by the material models
   const GenericMaterialProperty<RankTwoTensor, is_ad> & _stress;
   /// Reference to the strain tensor computed by the material models
@@ -123,6 +125,20 @@ protected:
   std::size_t _ring_index;
   /// Derivative of the total eigenstrain with respect to temperature
   const GenericMaterialProperty<RankTwoTensor, is_ad> * const _total_deigenstrain_dT;
+  /// Whether the user chooses to add other eigenstrain influence (e.g. irradiation-induced)
+  bool _has_additional_eigenstrain;
+  /// Gradient used to add contribution to the interaction integral (XX)
+  const VariableGradient * _additional_eigenstrain_gradient_00;
+  /// Gradient used to add contribution to the interaction integral (XY)
+  const VariableGradient * _additional_eigenstrain_gradient_01;
+  /// Gradient used to add contribution to the interaction integral (YY)
+  const VariableGradient * _additional_eigenstrain_gradient_11;
+  /// Gradient used to add contribution to the interaction integral (ZZ)
+  const VariableGradient * _additional_eigenstrain_gradient_22;
+  /// Gradient used to add contribution to the interaction integral (XZ)
+  const VariableGradient * _additional_eigenstrain_gradient_02;
+  /// Gradient used to add contribution to the interaction integral (YZ)
+  const VariableGradient * _additional_eigenstrain_gradient_12;
   /// Vector of q function values for the nodes in the current element
   std::vector<Real> _q_curr_elem;
   /// Vector of shape function values for the current element

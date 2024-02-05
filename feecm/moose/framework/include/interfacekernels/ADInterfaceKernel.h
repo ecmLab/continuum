@@ -35,28 +35,27 @@ private:
    * Using the passed DGResidual type, selects the correct test function space and residual block,
    * and then calls computeQpResidual
    */
-  void computeElemNeighResidual(Moose::DGResidualType type) override final;
+  void computeElemNeighResidual(Moose::DGResidualType type);
 
   /**
    * Using the passed DGJacobian type, selects the correct test function and trial function spaces
    * and
    * jacobian block, and then calls computeQpJacobian
    */
-  void computeElemNeighJacobian(Moose::DGJacobianType type) override final;
+  void computeElemNeighJacobian(Moose::DGJacobianType type);
 
   /**
    * Using the passed DGJacobian type, selects the correct test function and trial function spaces
    * and
    * jacobian block, and then calls computeQpOffDiagJacobian with the passed jvar
    */
-  void computeOffDiagElemNeighJacobian(Moose::DGJacobianType type,
-                                       unsigned int jvar) override final;
+  void computeOffDiagElemNeighJacobian(Moose::DGJacobianType type, unsigned int jvar);
 
   /// Selects the correct Jacobian type and routine to call for the primary variable jacobian
-  void computeElementOffDiagJacobian(unsigned int jvar) override final;
+  virtual void computeElementOffDiagJacobian(unsigned int jvar) override final;
 
   /// Selects the correct Jacobian type and routine to call for the secondary variable jacobian
-  void computeNeighborOffDiagJacobian(unsigned int jvar) override final;
+  virtual void computeNeighborOffDiagJacobian(unsigned int jvar) override final;
 
   /// Computes the residual for the current side.
   void computeResidual() override final;
@@ -67,6 +66,11 @@ private:
 protected:
   /// Compute residuals at quadrature points
   virtual ADReal computeQpResidual(Moose::DGResidualType type) = 0;
+
+  /**
+   * Put necessary evaluations depending on qp but independent on test functions here
+   */
+  virtual void initQpResidual(Moose::DGResidualType /* type */) {}
 
   /// The primary side MooseVariable
   MooseVariableFE<T> & _var;
@@ -90,10 +94,10 @@ protected:
   const MooseArray<ADPoint> & _ad_q_point;
 
   /// shape function
-  const ADTemplateVariablePhiValue<T> & _phi;
+  const typename OutputTools<T>::VariablePhiValue & _phi;
 
   /// Side shape function.
-  const ADTemplateVariableTestValue<T> & _test;
+  const typename OutputTools<T>::VariableTestValue & _test;
 
   /// Gradient of side shape function
   const ADTemplateVariableTestGradient<T> & _grad_test;
@@ -108,13 +112,14 @@ protected:
   const ADTemplateVariableGradient<T> & _grad_neighbor_value;
 
   /// Side neighbor shape function.
-  const ADTemplateVariablePhiValue<T> & _phi_neighbor;
+  const typename OutputTools<T>::VariablePhiValue & _phi_neighbor;
 
   /// Side neighbor test function
-  const ADTemplateVariableTestValue<T> & _test_neighbor;
+  const typename OutputTools<T>::VariableTestValue & _test_neighbor;
 
-  /// Gradient of side neighbor shape function
-  const ADTemplateVariableTestGradient<T> & _grad_test_neighbor;
+  /// Gradient of side neighbor shape function. No AD because we have not implemented support for
+  /// neighbor AD FE data in Assembly
+  const typename OutputTools<T>::VariableTestGradient & _grad_test_neighbor;
 
   /// Holds residual entries as they are accumulated by this InterfaceKernel
   /// This variable is temporarily reserved for RattleSnake

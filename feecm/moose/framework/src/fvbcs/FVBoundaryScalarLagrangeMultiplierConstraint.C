@@ -12,6 +12,7 @@
 #include "MooseVariableScalar.h"
 #include "MooseVariableFV.h"
 #include "Assembly.h"
+#include "SystemBase.h"
 
 InputParameters
 FVBoundaryScalarLagrangeMultiplierConstraint::validParams()
@@ -38,7 +39,7 @@ FVBoundaryScalarLagrangeMultiplierConstraint::computeResidual(const FaceInfo & f
 {
   _face_info = &fi;
   _normal = fi.normal();
-  _face_type = fi.faceType(_var.name());
+  _face_type = fi.faceType(std::make_pair(_var.number(), _var.sys().number()));
 
   // For FV flux kernels, the normal is always oriented outward from the lower-id
   // element's perspective.  But for BCs, there is only a Jacobian
@@ -61,7 +62,10 @@ FVBoundaryScalarLagrangeMultiplierConstraint::computeResidual(const FaceInfo & f
   // LM
   const auto lm_r = MetaPhysicL::raw_value(computeQpResidual()) * fi.faceArea() * fi.faceCoord();
   mooseAssert(_lambda_var.dofIndices().size() == 1, "We should only have a single dof");
-  _assembly.processResidual(lm_r, _lambda_var.dofIndices()[0], _vector_tags);
+  addResiduals(_assembly,
+               std::array<Real, 1>{{lm_r}},
+               _lambda_var.dofIndices(),
+               _lambda_var.scalingFactor());
 }
 
 void
@@ -69,7 +73,7 @@ FVBoundaryScalarLagrangeMultiplierConstraint::computeJacobian(const FaceInfo & f
 {
   _face_info = &fi;
   _normal = fi.normal();
-  _face_type = fi.faceType(_var.name());
+  _face_type = fi.faceType(std::make_pair(_var.number(), _var.sys().number()));
 
   // For FV flux kernels, the normal is always oriented outward from the lower-id
   // element's perspective.  But for BCs, there is only a Jacobian
@@ -91,11 +95,14 @@ FVBoundaryScalarLagrangeMultiplierConstraint::computeJacobian(const FaceInfo & f
   mooseAssert(_lambda.size() == 1 && _lambda_var.order() == 1,
               "The lambda variable should be first order");
   const auto primal_r = _lambda[0] * (fi.faceArea() * fi.faceCoord());
-  _assembly.processResidualAndJacobian(primal_r, dof_indices[0], _vector_tags, _matrix_tags);
+  addResidualsAndJacobian(
+      _assembly, std::array<ADReal, 1>{{primal_r}}, dof_indices, _var.scalingFactor());
 
   // LM
   const auto lm_r = computeQpResidual() * (fi.faceArea() * fi.faceCoord());
   mooseAssert(_lambda_var.dofIndices().size() == 1, "We should only have one dof");
-  _assembly.processResidualAndJacobian(
-      lm_r, _lambda_var.dofIndices()[0], _vector_tags, _matrix_tags);
+  addResidualsAndJacobian(_assembly,
+                          std::array<ADReal, 1>{{lm_r}},
+                          _lambda_var.dofIndices(),
+                          _lambda_var.scalingFactor());
 }

@@ -55,7 +55,9 @@ ComputeIncrementalBeamStrain::validParams()
                                "supplied as either a number or a variable name.");
   params.addParam<bool>("large_strain", false, "Set to true if large strain are to be calculated.");
   params.addParam<std::vector<MaterialPropertyName>>(
-      "eigenstrain_names", "List of beam eigenstrains to be applied in this strain calculation.");
+      "eigenstrain_names",
+      {},
+      "List of beam eigenstrains to be applied in this strain calculation.");
   params.addParam<FunctionName>(
       "elasticity_prefactor",
       "Optional function to use as a scalar prefactor on the elasticity vector for the beam.");
@@ -95,7 +97,7 @@ ComputeIncrementalBeamStrain::ComputeIncrementalBeamStrain(const InputParameters
     _rot_eigenstrain(_eigenstrain_names.size()),
     _disp_eigenstrain_old(_eigenstrain_names.size()),
     _rot_eigenstrain_old(_eigenstrain_names.size()),
-    _nonlinear_sys(_fe_problem.getNonlinearSystemBase()),
+    _nonlinear_sys(_fe_problem.getNonlinearSystemBase(/*nl_sys_num=*/0)),
     _soln_disp_index_0(_ndisp),
     _soln_disp_index_1(_ndisp),
     _soln_rot_index_0(_ndisp),
@@ -141,7 +143,7 @@ ComputeIncrementalBeamStrain::initQpStatefulProperties()
 {
   // compute initial orientation of the beam for calculating initial rotation matrix
   const std::vector<RealGradient> * orientation =
-      &_subproblem.assembly(_tid).getFE(FEType(), 1)->get_dxyzdxi();
+      &_subproblem.assembly(_tid, _nonlinear_sys.number()).getFE(FEType(), 1)->get_dxyzdxi();
   RealGradient x_orientation = (*orientation)[0];
   x_orientation /= x_orientation.norm();
 

@@ -32,9 +32,12 @@ PorousFlowTemperatureTempl<is_ad>::PorousFlowTemperatureTempl(const InputParamet
   : PorousFlowMaterial(parameters),
 
     _num_pf_vars(_dictator.numVariables()),
-    _temperature_var(_nodal_material ? coupledGenericDofValue<is_ad>("temperature")
-                                     : coupledGenericValue<is_ad>("temperature")),
-    _grad_temperature_var(_nodal_material ? nullptr : &coupledGradient("temperature")),
+    _is_temp_nodal(isCoupled("temperature") ? getFieldVar("temperature", 0)->isNodal() : false),
+    _temperature_var(_nodal_material && _is_temp_nodal
+                         ? coupledGenericDofValue<is_ad>("temperature")
+                         : coupledGenericValue<is_ad>("temperature")),
+    _grad_temperature_var(_nodal_material ? nullptr
+                                          : &coupledGenericGradient<is_ad>("temperature")),
     _temperature_is_PF(_dictator.isPorousFlowVariable(coupled("temperature"))),
     _t_var_num(_temperature_is_PF ? _dictator.porousFlowVariableNum(coupled("temperature")) : 0),
 
@@ -46,9 +49,9 @@ PorousFlowTemperatureTempl<is_ad>::PorousFlowTemperatureTempl(const InputParamet
         : _nodal_material
             ? &declareProperty<std::vector<Real>>("dPorousFlow_temperature_nodal_dvar")
             : &declareProperty<std::vector<Real>>("dPorousFlow_temperature_qp_dvar")),
-    _grad_temperature((_nodal_material || is_ad)
-                          ? nullptr
-                          : &declareProperty<RealGradient>("PorousFlow_grad_temperature_qp")),
+    _grad_temperature((_nodal_material) ? nullptr
+                                        : &declareGenericProperty<RealGradient, is_ad>(
+                                              "PorousFlow_grad_temperature_qp")),
     _dgrad_temperature_dgradv(
         (_nodal_material || is_ad)
             ? nullptr
@@ -72,6 +75,9 @@ PorousFlowTemperatureTempl<is_ad>::computeQpProperties()
 {
   _temperature[_qp] = _temperature_var[_qp];
 
+  if (!_nodal_material)
+    (*_grad_temperature)[_qp] = (*_grad_temperature_var)[_qp];
+
   if (!is_ad)
   {
     (*_dtemperature_dvar)[_qp].assign(_num_pf_vars, 0.0);
@@ -81,7 +87,6 @@ PorousFlowTemperatureTempl<is_ad>::computeQpProperties()
 
     if (!_nodal_material)
     {
-      (*_grad_temperature)[_qp] = (*_grad_temperature_var)[_qp];
       (*_dgrad_temperature_dgradv)[_qp].assign(_num_pf_vars, 0.0);
       (*_dgrad_temperature_dv)[_qp].assign(_num_pf_vars, RealGradient());
       if (_temperature_is_PF)

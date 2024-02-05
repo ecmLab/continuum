@@ -37,10 +37,10 @@ The Tensor Mechanics module contains a wide variety of such models, including
 
 !alert note title=Compatible Inelastic +`StressUpdate`+ Material Models
 All of the inelastic material models that are compatible with
-+`ComputeMultipleInelasicStress`+ follow the nomenclature convention of +`StressUpdate`+
++`ComputeMultipleInelasticStress`+ follow the nomenclature convention of +`StressUpdate`+
 as a suffix to the class name.
 
-`ComputeMultipleInelasticStress` can accomodate as few as zero inelastic models (in which case the
+`ComputeMultipleInelasticStress` can accommodate as few as zero inelastic models (in which case the
 algorithm from [ComputeFiniteStrainElasticStress](/ComputeFiniteStrainElasticStress.md)
 is applied) to as many inelastic material models as is required by the physics.
 If more than one inelastic material model is supplied to `ComputeMultipleInelasticStress`,
@@ -156,7 +156,7 @@ In a purely elastic situation $H_{ijkl} = C_{ijkl}$ (the elasticity tensor), but
 the inelastic mapping of changes in the stress as a result of changes in the
 displacement variables is more complicated.
 In a plastic material model, the proposed values
-of displacements for the current time step where used to calculate a trial
+of displacements for the current time step were used to calculate a trial
 inadmissible stress, $\sigma_{trial}$, [eqn:trial_stress], that was brought back
 to the yield surface through a radial return algorithm. A slight change in the
 proposed displacement variables will produce a slightly different trial stress

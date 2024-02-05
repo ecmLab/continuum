@@ -22,9 +22,9 @@ protected:
   /**
    * Get the L2 Error.
    */
-  virtual Real getValue();
+  virtual Real getValue() const override;
 
-  virtual Real computeQpIntegral();
+  virtual Real computeQpIntegral() override;
 
   const VariableValue & _u_old;
 };

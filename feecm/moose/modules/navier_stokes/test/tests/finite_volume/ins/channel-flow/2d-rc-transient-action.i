@@ -54,14 +54,18 @@ h_fs = 0.01
 
     ambient_convection_alpha = 'h_cv'
     ambient_temperature = 'T_solid'
+
+    mass_advection_interpolation = 'average'
+    momentum_advection_interpolation = 'average'
+    energy_advection_interpolation = 'average'
   []
 []
 
-[Materials]
+[FunctorMaterials]
   [constants]
     type = ADGenericFunctorMaterial
-    prop_names = 'h_cv T_solid rho mu cp k dcp_dt'
-    prop_values = '${h_fs} ${T_solid} ${rho} ${mu} ${cp} ${k} 0'
+    prop_names = 'h_cv T_solid rho mu cp k'
+    prop_values = '${h_fs} ${T_solid} ${rho} ${mu} ${cp} ${k}'
   []
 []
 

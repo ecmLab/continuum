@@ -22,13 +22,16 @@ Predictor::validParams()
   params.addRequiredParam<Real>("scale",
                                 "The scale factor for the predictor (can range from 0 to 1)");
   params.addParam<std::vector<Real>>(
-      "skip_times", "Skip the predictor if the current solution time is in this list of times");
+      "skip_times", {}, "Skip the predictor if the current solution time is in this list of times");
   params.addParam<std::vector<Real>>(
       "skip_times_old",
+      {},
       "Skip the predictor if the previous solution time is in this list of times");
   params.addParam<bool>("skip_after_failed_timestep",
                         false,
                         "Skip prediction in a repeated time step after a failed time step");
+  params.addParam<NonlinearSystemName>(
+      "nl_sys", "nl0", "The nonlinear system that this predictor should be applied to.");
 
   params.registerBase("Predictor");
 
@@ -39,7 +42,8 @@ Predictor::Predictor(const InputParameters & parameters)
   : MooseObject(parameters),
     Restartable(this, "Predictors"),
     _fe_problem(*getCheckedPointerParam<FEProblemBase *>("_fe_problem_base")),
-    _nl(_fe_problem.getNonlinearSystemBase()),
+    _nl(_fe_problem.getNonlinearSystemBase(
+        _fe_problem.nlSysNum(getParam<NonlinearSystemName>("nl_sys")))),
     _t_step(_fe_problem.timeStep()),
     _dt(_fe_problem.dt()),
     _dt_old(_fe_problem.dtOld()),

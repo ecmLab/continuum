@@ -14,6 +14,8 @@
 
 #include "libmesh/system.h"
 
+class NonlinearSystemBase;
+
 /**
  * A structure for storing data related to top residuals
  *  @see TopResidualDebugOutput::printTopResiduals()
@@ -82,7 +84,7 @@ protected:
   /**
    * Perform the debugging output
    */
-  virtual void output(const ExecFlagType & type) override;
+  virtual void output() override;
 
   /**
    * Prints the n top residuals for the variables in the system
@@ -103,6 +105,9 @@ protected:
 
   /// Number of residuals to display
   unsigned int _num_residuals;
+
+  /// Reference to MOOSE's nonlinear system
+  NonlinearSystemBase & _nl;
 
   /// Reference to libMesh system
   System & _sys;

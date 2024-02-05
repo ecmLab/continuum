@@ -29,6 +29,7 @@ SingleMatrixPreconditioner::validParams()
 
   params.addParam<std::vector<NonlinearVariableName>>(
       "coupled_groups",
+      {},
       "List multiple space separated groups of comma separated variables. "
       "Off-diagonal jacobians will be generated for all pairs within a group.");
   params.addParam<bool>(
@@ -43,7 +44,7 @@ SingleMatrixPreconditioner::validParams()
 SingleMatrixPreconditioner::SingleMatrixPreconditioner(const InputParameters & params)
   : MoosePreconditioner(params)
 {
-  NonlinearSystemBase & nl = _fe_problem.getNonlinearSystemBase();
+  NonlinearSystemBase & nl = _fe_problem.getNonlinearSystemBase(_nl_sys_num);
   unsigned int n_vars = nl.nVariables();
   const auto & libmesh_system = nl.system();
   auto cm = std::make_unique<CouplingMatrix>(n_vars);
@@ -65,8 +66,7 @@ SingleMatrixPreconditioner::SingleMatrixPreconditioner(const InputParameters & p
 
     // off-diagonal entries from the coupled_groups parameters
     const auto & all_vars = nl.getVariableNames();
-    auto groups = getParam<std::vector<NonlinearVariableName>>("coupled_groups");
-    for (const auto & group : groups)
+    for (const auto & group : getParam<std::vector<NonlinearVariableName>>("coupled_groups"))
     {
       std::vector<VariableName> vars;
       MooseUtils::tokenize(group, vars, 1, ",");
@@ -96,13 +96,7 @@ SingleMatrixPreconditioner::SingleMatrixPreconditioner(const InputParameters & p
         (*cm)(i, j) = 1;
   }
 
-  for (const auto i : make_range(_fe_problem.numNonlinearSystems()))
-  {
-    if (i == libMesh::cast_int<unsigned int>(_fe_problem.numNonlinearSystems() - 1))
-      _fe_problem.setCouplingMatrix(std::move(cm), i);
-    else
-      _fe_problem.setCouplingMatrix(std::make_unique<CouplingMatrix>(*cm), i);
-  }
+  setCouplingMatrix(std::move(cm));
   if (getParam<bool>("trust_my_coupling"))
     _fe_problem.trustUserCouplingMatrix();
 }

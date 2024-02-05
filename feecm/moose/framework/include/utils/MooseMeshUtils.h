@@ -18,11 +18,28 @@
 
 namespace MooseMeshUtils
 {
-// Changes the old ID to new ID in the mesh given in parameters
+/**
+ * Changes the old boundary ID to a new ID in the mesh
+ *
+ * @param mesh the mesh
+ * @param old_id the old boundary id
+ * @param new_id the new boundary id
+ * @param delete_prev whether to delete the previous boundary id from the mesh
+ */
 void changeBoundaryId(MeshBase & mesh,
                       const libMesh::boundary_id_type old_id,
                       const libMesh::boundary_id_type new_id,
                       bool delete_prev);
+
+/**
+ * Changes the old subdomain ID to a new ID in the mesh
+ *
+ * @param mesh the mesh
+ * @param old_id the old subdomain id
+ * @param new_id the new subdomain id
+ */
+void
+changeSubdomainId(MeshBase & mesh, const subdomain_id_type old_id, const subdomain_id_type new_id);
 
 /**
  * Gets the boundary IDs with their names.
@@ -86,18 +103,6 @@ SubdomainID getSubdomainID(const SubdomainName & subdomain_name, const MeshBase 
  *
  * @param mesh The mesh
  * @param subdomain_name The names of the subdomains
- * @param mesh_subdomains All the subdomain IDs that exist on the mesh
- * @return The subdomain ids from the passed subdomain names.
- */
-std::vector<subdomain_id_type> getSubdomainIDs(const libMesh::MeshBase & mesh,
-                                               const std::vector<SubdomainName> & subdomain_name,
-                                               const std::set<SubdomainID> & mesh_subdomains);
-
-/**
- * Get the associated subdomainIDs for the subdomain names that are passed in.
- *
- * @param mesh The mesh
- * @param subdomain_name The names of the subdomains
  * @return The subdomain ids from the passed subdomain names.
  */
 std::vector<subdomain_id_type> getSubdomainIDs(const libMesh::MeshBase & mesh,
@@ -147,6 +152,37 @@ coordTransformFactor(const P & point,
   }
 }
 
+/**
+ * Computes the distance to a general axis
+ *
+ * @param[in] point  Point for which to compute distance from axis
+ * @param[in] origin  Axis starting point
+ * @param[in] direction  Axis direction
+ */
+template <typename P, typename C>
+C
+computeDistanceToAxis(const P & point, const Point & origin, const RealVectorValue & direction)
+{
+  return (point - origin).cross(direction).norm();
+}
+
+/**
+ * Computes a coordinate transformation factor for a general axisymmetric axis
+ *
+ * @param[in] point  The libMesh \p Point in space where we are evaluating the factor
+ * @param[in] axis  The pair of values defining the general axisymmetric axis.
+ *                  Respectively, the values are the axis starting point and direction.
+ * @param[out] factor  The coordinate transformation factor
+ */
+template <typename P, typename C>
+void
+coordTransformFactorRZGeneral(const P & point,
+                              const std::pair<Point, RealVectorValue> & axis,
+                              C & factor)
+{
+  factor = 2 * M_PI * computeDistanceToAxis<P, C>(point, axis.first, axis.second);
+}
+
 inline void
 computeFaceInfoFaceCoord(FaceInfo & fi,
                          const Moose::CoordinateSystemType coord_type,
@@ -159,9 +195,9 @@ computeFaceInfoFaceCoord(FaceInfo & fi,
  * Crate a new set of element-wise IDs by finding unique combinations of existing extra ID values
  *
  * This function finds the unique combinations by recursively calling itself for extra ID inputs. In
- * the recursive calling, the new unique combitnations is determined by combining the extra ID value
+ * the recursive calling, the new unique combinations is determined by combining the extra ID value
  * of current level and the unique combination determined in the previous level in recursion. In the
- * lowest level of recursion, the base combination is set by the unqiue ID values of the
+ * lowest level of recursion, the base combination is set by the unique ID values of the
  * corresponding extra ID.
  *
  * @param mesh input mesh
@@ -169,7 +205,7 @@ computeFaceInfoFaceCoord(FaceInfo & fi,
  * @param extra_ids extra ids
  * @return map of element id to new extra id
  **/
-std::map<dof_id_type, dof_id_type>
+std::unordered_map<dof_id_type, dof_id_type>
 getExtraIDUniqueCombinationMap(const MeshBase & mesh,
                                const std::set<SubdomainID> & block_ids,
                                std::vector<ExtraElementIDName> extra_ids);
@@ -240,4 +276,17 @@ bool hasBoundaryID(MeshBase & input_mesh, const BoundaryID & id);
  * @param boundary name
  */
 bool hasBoundaryName(MeshBase & input_mesh, const BoundaryName & name);
+
+/**
+ * Convert a list of sides in the form of a vector of pairs of node ids into a list of ordered nodes
+ * based on connectivity
+ * @param node_assm vector of pairs of node ids that represent the sides
+ * @param elem_id_list vector of element ids that represent the elements that contain the sides
+ * @param ordered_node_list vector of node ids that represent the ordered nodes
+ * @param ordered_elem_id_list vector of element corresponding to the ordered nodes
+ * */
+void makeOrderedNodeList(std::vector<std::pair<dof_id_type, dof_id_type>> & node_assm,
+                         std::vector<dof_id_type> & elem_id_list,
+                         std::vector<dof_id_type> & ordered_node_list,
+                         std::vector<dof_id_type> & ordered_elem_id_list);
 }

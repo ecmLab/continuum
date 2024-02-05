@@ -74,7 +74,7 @@ CriticalTimeStep::finalize()
 }
 
 Real
-CriticalTimeStep::getValue()
+CriticalTimeStep::getValue() const
 {
   return _critical_time;
 }
@@ -82,6 +82,6 @@ CriticalTimeStep::getValue()
 void
 CriticalTimeStep::threadJoin(const UserObject & y)
 {
-  const CriticalTimeStep & pps = static_cast<const CriticalTimeStep &>(y);
+  const auto & pps = static_cast<const CriticalTimeStep &>(y);
   _critical_time += pps._critical_time;
 }

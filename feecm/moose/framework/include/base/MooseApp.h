@@ -12,17 +12,21 @@
 // MOOSE includes
 #include "Moose.h"
 #include "Parser.h"
+#include "Builder.h"
 #include "ActionWarehouse.h"
 #include "Factory.h"
 #include "ActionFactory.h"
 #include "OutputWarehouse.h"
 #include "RestartableData.h"
+#include "RestartableDataMap.h"
 #include "ConsoleStreamInterface.h"
 #include "PerfGraph.h"
 #include "PerfGraphInterface.h"
 #include "TheWarehouse.h"
 #include "RankMap.h"
 #include "MeshGeneratorSystem.h"
+#include "RestartableDataReader.h"
+#include "Backup.h"
 
 #include "libmesh/parallel_object.h"
 #include "libmesh/mesh_base.h"
@@ -34,12 +38,12 @@
 #include <set>
 #include <unordered_set>
 #include <typeindex>
+#include <filesystem>
 
 // Forward declarations
 class Executioner;
 class Executor;
 class NullExecutor;
-class Backup;
 class FEProblemBase;
 class InputParameterWarehouse;
 class SystemInfo;
@@ -84,6 +88,7 @@ public:
   };
 
   static const RestartableDataMapName MESH_META_DATA;
+  static const std::string MESH_META_DATA_SUFFIX;
 
   static InputParameters validParams();
 
@@ -205,9 +210,9 @@ public:
   const ActionWarehouse & actionWarehouse() const { return _action_warehouse; }
 
   /**
-   * Returns a writable reference to the parser
+   * Returns a writable reference to the builder
    */
-  Parser & parser() { return _parser; }
+  Moose::Builder & builder() { return _builder; }
 
   /**
    * Returns a writable reference to the syntax object.
@@ -215,17 +220,14 @@ public:
   Syntax & syntax() { return _syntax; }
 
   /**
-   * Set the input file name.
+   * @return the input file names set in the Parser
    */
-  void setInputFileName(const std::string & input_file_name);
+  const std::vector<std::string> & getInputFileNames() const;
 
   /**
-   * Returns the input file name that was set with setInputFileName
+   * @return The last input filename set (if any)
    */
-  std::string getInputFileName() const
-  {
-    return _input_filenames.empty() ? "" : _input_filenames.back();
-  }
+  const std::string & getLastInputFileName() const;
 
   /**
    * Override the selection of the output file base name.
@@ -345,6 +347,12 @@ public:
   void addExecutorParams(const std::string & type,
                          const std::string & name,
                          const InputParameters & params);
+
+  /**
+   * Deprecated helper function to link the new added Builder back to Parser. This function will be
+   *removed after new Parser and builder are merged
+   **/
+  Moose::Builder & parser();
 
 private:
   /**
@@ -475,11 +483,6 @@ public:
    */
   bool isSplitMesh() const;
 
-  /**
-   * Whether or not we are running with pre-split (distributed mesh)
-   */
-  bool isUseSplit() const;
-
   ///@{
   /**
    * Return true if the recovery file base is set
@@ -507,22 +510,9 @@ public:
   void setRestartRecoverFileBase(const std::string & file_base)
   {
     if (file_base.empty())
-      _restart_recover_base = MooseUtils::getLatestAppCheckpointFileBase(getCheckpointFiles());
+      _restart_recover_base = MooseUtils::getLatestCheckpointFilePrefix(getCheckpointFiles());
     else
       _restart_recover_base = file_base;
-  }
-
-  /**
-   * The suffix for the recovery file.
-   */
-  std::string getRestartRecoverFileSuffix() const { return _restart_recover_suffix; }
-
-  /**
-   * mutator for recover_suffix
-   */
-  void setRestartRecoverFileSuffix(const std::string & file_suffix)
-  {
-    _restart_recover_suffix = file_suffix;
   }
 
   /**
@@ -581,7 +571,8 @@ public:
                               const std::string & library_name);
   void dynamicAppRegistration(const std::string & app_name,
                               std::string library_path,
-                              const std::string & library_name);
+                              const std::string & library_name,
+                              bool lib_load_deps);
   ///@}
 
   /**
@@ -598,9 +589,14 @@ public:
   std::string libNameToAppName(const std::string & library_name) const;
 
   /**
-   * Return the loaded library filenames in a std::set
+   * Return the paths of loaded libraries
    */
   std::set<std::string> getLoadedLibraryPaths() const;
+
+  /**
+   * Return the paths searched by MOOSE when loading libraries
+   */
+  std::set<std::string> getLibrarySearchPaths(const std::string & library_path_from_param) const;
 
   /**
    * Get the InputParameterWarehouse for MooseObjects
@@ -611,11 +607,20 @@ public:
    * Register a piece of restartable data.  This is data that will get
    * written / read to / from a restart file.
    *
-   * @param name The full (unique) name.
    * @param data The actual data object.
    * @param tid The thread id of the object.  Use 0 if the object is not threaded.
    * @param read_only Restrict the data for read-only
    * @param metaname (optional) register the data to the meta data storage (tid must be 0)
+   */
+  RestartableDataValue & registerRestartableData(std::unique_ptr<RestartableDataValue> data,
+                                                 THREAD_ID tid,
+                                                 bool read_only,
+                                                 const RestartableDataMapName & metaname = "");
+
+  /*
+   * Deprecated method to register a piece of restartable data.
+   *
+   * Use the call without a data name instead.
    */
   RestartableDataValue & registerRestartableData(const std::string & name,
                                                  std::unique_ptr<RestartableDataValue> data,
@@ -641,18 +646,54 @@ public:
    */
   RestartableDataValue & getRestartableMetaData(const std::string & name,
                                                 const RestartableDataMapName & metaname,
-                                                THREAD_ID tid) const;
+                                                THREAD_ID tid);
+
+  /**
+   * Loads the restartable meta data for \p name if it is available with the folder base \p
+   * folder_base
+   */
+  void possiblyLoadRestartableMetaData(const RestartableDataMapName & name,
+                                       const std::filesystem::path & folder_base);
+  /**
+   * Loads all available restartable meta data if it is available with the folder base \p
+   * folder_base
+   */
+  void loadRestartableMetaData(const std::filesystem::path & folder_base);
+
+  /**
+   * Writes the restartable meta data for \p name with a folder base of \p folder_base
+   *
+   * @return The files that were written
+   */
+  std::vector<std::filesystem::path>
+  writeRestartableMetaData(const RestartableDataMapName & name,
+                           const std::filesystem::path & folder_base);
+  /**
+   * Writes all available restartable meta data with a file base of \p file_base
+   *
+   * @return The files that were written
+   */
+  std::vector<std::filesystem::path>
+  writeRestartableMetaData(const std::filesystem::path & folder_base);
 
   /**
    * Return reference to the restartable data object
-   * @return A const reference to the restartable data object
+   * @return A reference to the restartable data object
    */
-  const RestartableDataMaps & getRestartableData() const { return _restartable_data; }
+  ///@{
+  const std::vector<RestartableDataMap> & getRestartableData() const { return _restartable_data; }
+  std::vector<RestartableDataMap> & getRestartableData() { return _restartable_data; }
+  ///@}
 
   /**
    * Return a reference to restartable data for the specific type flag.
    */
-  const RestartableDataMap & getRestartableDataMap(const RestartableDataMapName & name) const;
+  RestartableDataMap & getRestartableDataMap(const RestartableDataMapName & name);
+
+  /**
+   * @return Whether or not the restartable data has the given name registered.
+   */
+  bool hasRestartableDataMap(const RestartableDataMapName & name) const;
 
   /**
    * Reserve a location for storing custom RestartableDataMap objects.
@@ -666,29 +707,92 @@ public:
   void registerRestartableDataMapName(const RestartableDataMapName & name, std::string suffix = "");
 
   /**
+   * @return The output name for the restartable data with name \p name
+   */
+  const std::string & getRestartableDataMapName(const RestartableDataMapName & name) const;
+
+  /**
    * Return a reference to the recoverable data object
    * @return A const reference to the recoverable data
    */
   const DataNames & getRecoverableData() const { return _recoverable_data_names; }
 
   /**
-   * Create a Backup from the current App. A Backup contains all the data necessary to be able to
-   * restore the state of an App.
+   * Backs up the application to the folder \p folder_base
    *
-   * This method should be overridden in external or MOOSE-wrapped applications.
+   * @return The files that are written in the backup
    */
-  virtual std::shared_ptr<Backup> backup();
+  std::vector<std::filesystem::path> backup(const std::filesystem::path & folder_base);
+  /**
+   * Backs up the application memory in a Backup.
+   *
+   * @return The backup
+   */
+  std::unique_ptr<Backup> backup();
 
   /**
-   * Restore a Backup. This sets the App's state.
-   *
-   * @param backup The Backup holding the data for the app
-   * @param for_restart Whether this restoration is explicitly for the first restoration of restart
-   * data.
-   *
-   * This method should be overridden in external or MOOSE-wrapped applications.
+   * Insertion point for other apps that is called before backup()
    */
-  virtual void restore(std::shared_ptr<Backup> backup, bool for_restart = false);
+  virtual void preBackup() {}
+
+  /**
+   * Restore an application from file
+
+   * @param folder_base The backup folder base
+   * @param for_restart Whether this restoration is explicitly for the first restoration of restart
+   * data
+   *
+   * You must call finalizeRestore() after this in order to finalize the restoration.
+   * The restore process is kept open in order to restore additional data after
+   * the initial restore (that is, the restoration of data that has already been declared).
+   */
+  void restore(const std::filesystem::path & folder_base, const bool for_restart);
+
+  /**
+   * Restore an application from the backup \p backup
+   *
+   * @param backup The backup
+   * @param for_restart Whether this restoration is explicitly for the first restoration of restart
+   * data
+   *
+   * You must call finalizeRestore() after this in order to finalize the restoration.
+   * The restore process is kept open in order to restore additional data after
+   * the initial restore (that is, the restoration of data that has already been declared).
+   */
+  void restore(std::unique_ptr<Backup> backup, const bool for_restart);
+
+  /**
+   * Insertion point for other apps that is called after restore()
+   *
+   * @param for_restart Whether this restoration is explicitly for the
+   * first restoration of restart data
+   */
+  virtual void postRestore(const bool /* for_restart */) {}
+
+  /**
+   * Restores from a "initial" backup, that is, one set in _initial_backup.
+   *
+   * @param for_restart Whether this restoration is explicitly for the first restoration of restart
+   * data
+   *
+   * This is only used for restoration of multiapp subapps, which have been given
+   * a Backup from their parent on initialization. Said Backup is passed to this app
+   * via the "_initial_backup" private input parameter.
+   *
+   * See restore() for more information
+   */
+  void restoreFromInitialBackup(const bool for_restart);
+
+  /**
+   * Finalizes (closes) the restoration process done in restore().
+   *
+   * @return The underlying Backup that was used to do the restoration (if any, will be null when
+   * backed up from file); can be ignored to destruct it
+   *
+   * This releases access to the stream in which the restore was loaded from
+   * and makes it no longer possible to restore additional data.
+   */
+  std::unique_ptr<Backup> finalizeRestore();
 
   /**
    * Returns a string to be printed at the beginning of a simulation
@@ -718,7 +822,7 @@ public:
   const MooseMesh * masterMesh() const { return _master_mesh; }
 
   /**
-   * Returns a pointer to the master mesh
+   * Returns a pointer to the master displaced mesh
    */
   const MooseMesh * masterDisplacedMesh() const { return _master_displaced_mesh; }
 
@@ -828,6 +932,14 @@ public:
    */
   bool addRelationshipManager(std::shared_ptr<RelationshipManager> relationship_manager);
 
+  /// The file suffix for the checkpoint mesh
+  static const std::string & checkpointSuffix();
+  /// The file suffix for meta data (header and data)
+  static std::filesystem::path metaDataFolderBase(const std::filesystem::path & folder_base,
+                                                  const std::string & map_suffix);
+  /// The file suffix for restartable data
+  std::filesystem::path restartFolderBase(const std::filesystem::path & folder_base) const;
+
 private:
   /**
    * Purge this relationship manager from meshes and DofMaps and finally from us. This method is
@@ -874,13 +986,14 @@ public:
   const ExecFlagEnum & getExecuteOnEnum() const { return _execute_flags; }
 
   /**
-   * Method for setting the backup object to be restored at a later time. This method is called
-   * during simulation restart or recover before the application is completely setup. The backup
-   * object set here, will be restored when needed by a call to restoreCachedBackup().
+   * @return Whether or not this app currently has an "initial" backup
    *
-   * @param backup The Backup holding the data for the app.
+   * See _initial_backup and restoreFromInitialBackup() for more info.
    */
-  void setBackupObject(std::shared_ptr<Backup> backup);
+  bool hasInitialBackup() const
+  {
+    return _initial_backup != nullptr && *_initial_backup != nullptr;
+  }
 
   /**
    * Whether to enable automatic scaling by default
@@ -909,19 +1022,9 @@ public:
    *
    * These are MOOSE internal functions and should not be used otherwise.
    */
-  std::unordered_map<RestartableDataMapName,
-                     std::pair<RestartableDataMap, std::string>>::const_iterator
-  getRestartableDataMapBegin() const
-  {
-    return _restartable_meta_data.begin();
-  }
+  auto getRestartableDataMapBegin() { return _restartable_meta_data.begin(); }
 
-  std::unordered_map<RestartableDataMapName,
-                     std::pair<RestartableDataMap, std::string>>::const_iterator
-  getRestartableDataMapEnd() const
-  {
-    return _restartable_meta_data.end();
-  }
+  auto getRestartableDataMapEnd() { return _restartable_meta_data.end(); }
   ///@}
 
   /**
@@ -951,16 +1054,6 @@ public:
 
 protected:
   /**
-   * Whether or not this MooseApp has cached a Backup to use for restart / recovery
-   */
-  bool hasCachedBackup() const { return _cached_backup.get(); }
-
-  /**
-   * Restore from a cached backup
-   */
-  void restoreCachedBackup();
-
-  /**
    * Helper method for dynamic loading of objects
    */
   void dynamicRegistration(const Parameters & params);
@@ -969,7 +1062,9 @@ protected:
    * Recursively loads libraries and dependencies in the proper order to fully register a
    * MOOSE application that may have several dependencies. REQUIRES: dynamic linking loader support.
    */
-  void loadLibraryAndDependencies(const std::string & library_filename, const Parameters & params);
+  void loadLibraryAndDependencies(const std::string & library_filename,
+                                  const Parameters & params,
+                                  bool load_dependencies = true);
 
   /// Constructor is protected so that this object is constructed through the AppFactory object
   MooseApp(InputParameters parameters);
@@ -1003,9 +1098,6 @@ protected:
 
   /// The MPI communicator this App is going to use
   const std::shared_ptr<Parallel::Communicator> _comm;
-
-  /// Input file names used
-  std::vector<std::string> _input_filenames;
 
   /// The output file basename
   std::string _output_file_base;
@@ -1048,10 +1140,13 @@ protected:
   OutputWarehouse _output_warehouse;
 
   /// Parser for parsing the input file
-  Parser _parser;
+  const std::shared_ptr<Parser> _parser;
+
+  /// Builder for building app related parser tree
+  Moose::Builder _builder;
 
   /// Where the restartable data is held (indexed on tid)
-  RestartableDataMaps _restartable_data;
+  std::vector<RestartableDataMap> _restartable_data;
 
   /**
    * Data names that will only be read from the restart file during RECOVERY.
@@ -1143,9 +1238,6 @@ protected:
   /// The base name to restart/recover from.  If blank then we will find the newest checkpoint file.
   std::string _restart_recover_base;
 
-  /// The file suffix to restart/recover from.  If blank then we will use the binary restart suffix.
-  std::string _restart_recover_suffix;
-
   /// Whether or not this simulation should only run half its transient (useful for testing recovery)
   bool _half_transient;
 
@@ -1171,10 +1263,11 @@ protected:
   struct DynamicLibraryInfo
   {
     void * library_handle;
+    std::string full_path;
     std::unordered_set<std::string> entry_symbols;
   };
 
-  /// The library, registration method and the handle to the method
+  /// The library archive (name only), registration method and the handle to the method
   std::unordered_map<std::string, DynamicLibraryInfo> _lib_handles;
 
 private:
@@ -1324,8 +1417,7 @@ private:
   /// The system that manages the MeshGenerators
   MeshGeneratorSystem _mesh_generator_system;
 
-  /// Cache for a Backup to use for restart / recovery
-  std::shared_ptr<Backup> _cached_backup;
+  RestartableDataReader _rd_reader;
 
   /**
    * Execution flags for this App. Note: These are copied on purpose instead of maintaining a
@@ -1335,6 +1427,9 @@ private:
    * registered.
    */
   const ExecFlagEnum _execute_flags;
+
+  /// Cache output buffer so the language server can turn it off then back on
+  std::streambuf * _output_buffer_cache;
 
   /// Whether to turn on automatic scaling by default
   const bool _automatic_automatic_scaling;
@@ -1353,6 +1448,12 @@ private:
 
   /// Registration for interface objects
   std::map<std::type_index, std::unique_ptr<InterfaceRegistryObjectsBase>> _interface_registry;
+
+  /// The backup for use in initial setup; this will get set from the _initial_backup
+  /// input parameter that typically gets set from a MultiApp that has a backup
+  /// This is a pointer to a pointer because at the time of construction of the app,
+  /// the backup will not be filled yet.
+  std::unique_ptr<Backup> * const _initial_backup;
 
   // Allow FEProblemBase to set the recover/restart state, so make it a friend
   friend class FEProblemBase;

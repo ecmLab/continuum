@@ -11,6 +11,7 @@
 
 #include "FEProblem.h"
 #include "SubProblem.h"
+#include "SystemBase.h"
 
 registerMooseObject("MooseApp", NumLinearIterations);
 
@@ -28,7 +29,7 @@ NumLinearIterations::NumLinearIterations(const InputParameters & parameters)
 }
 
 Real
-NumLinearIterations::getValue()
+NumLinearIterations::getValue() const
 {
-  return _subproblem.nLinearIterations();
+  return _subproblem.nLinearIterations(_sys.number());
 }

@@ -411,3 +411,157 @@ TEST(InputParameters, getControllablePairs)
         << "Failed with unexpected error message: " << msg;
   }
 }
+
+TEST(InputParameters, getParamList)
+{
+  std::vector<std::string> num_words{"zero", "one", "two", "three"};
+
+  InputParameters p = emptyInputParameters();
+  p.addParam<std::vector<std::string>>("first", num_words, "");
+  p.addParam<std::vector<int>>("second", std::vector<int>{0, 1, 2, 3}, "");
+
+  std::set<std::string> param_list({"first", "second"});
+  EXPECT_EQ(p.getParametersList(), param_list);
+}
+
+TEST(InputParameters, transferParameters)
+{
+  // Add parameters of various types to p1
+  InputParameters p1 = emptyInputParameters();
+  p1.addRequiredParam<Real>("r1", "Required 1");
+  p1.addRequiredRangeCheckedParam<Real>("r2", "r2 > 0", "Required 2");
+  p1.addRequiredCoupledVar("r3", "Required 3");
+  MooseEnum options("option1 option2");
+  MultiMooseEnum several_options("option1 option2");
+  p1.addRequiredParam<MooseEnum>("r4", options, "Required 4");
+  p1.addRequiredParam<MultiMooseEnum>("r5", several_options, "Required 5");
+  p1.addParam<Real>("o1", 3, "Optional 1");
+  p1.addRangeCheckedParam<Real>("o2", "o2 > 0", "Optional 2");
+  p1.addCoupledVar("o3", "Optional 3");
+  p1.addParam<MooseEnum>("o4", options, "Optional 4");
+  p1.addParam<MultiMooseEnum>("o5", several_options, "Optional 5");
+  p1.addParam<Real>("od1", "Optional with default 1");
+  p1.addRangeCheckedParam<Real>("od2", "od2 > 0", "Optional with default 2");
+  p1.addCoupledVar("od3a", 1., "Optional with default 3a");
+  p1.addCoupledVar("od3b", {1., 2.}, "Optional with default 3b");
+
+  // Params with modified attributes
+  p1.declareControllable("r1");
+  p1.addPrivateParam<Real>("private", 2);
+
+  // Transfer them all to p2
+  InputParameters p2 = emptyInputParameters();
+  p2.transferParam<Real>(p1, "r1");
+  p2.transferParam<Real>(p1, "r2");
+  p2.transferParam<std::vector<VariableName>>(p1, "r3");
+  p2.transferParam<MooseEnum>(p1, "r4");
+  p2.transferParam<MultiMooseEnum>(p1, "r5");
+  p2.transferParam<Real>(p1, "o1");
+  p2.transferParam<Real>(p1, "o2");
+  p2.transferParam<std::vector<VariableName>>(p1, "o3");
+  p2.transferParam<MooseEnum>(p1, "o4");
+  p2.transferParam<MultiMooseEnum>(p1, "o5");
+  p2.transferParam<Real>(p1, "od1");
+  p2.transferParam<Real>(p1, "od2");
+  p2.transferParam<std::vector<VariableName>>(p1, "od3a");
+  p2.transferParam<std::vector<VariableName>>(p1, "od3b");
+  p2.transferParam<Real>(p1, "private");
+
+  // Check that all the parameters match
+  // Same parameters
+  EXPECT_EQ(p1.have_parameter<Real>("r1"), p2.have_parameter<Real>("r1"));
+  EXPECT_EQ(p1.have_parameter<Real>("r2"), p2.have_parameter<Real>("r2"));
+  EXPECT_EQ(p1.hasCoupledValue("r3"), p2.hasCoupledValue("r3"));
+  EXPECT_EQ(p1.have_parameter<MooseEnum>("r4"), p2.have_parameter<MooseEnum>("r4"));
+  EXPECT_EQ(p1.have_parameter<MultiMooseEnum>("r5"), p2.have_parameter<MultiMooseEnum>("r5"));
+  EXPECT_EQ(p1.have_parameter<Real>("o1"), p2.have_parameter<Real>("o1"));
+  EXPECT_EQ(p1.have_parameter<Real>("o2"), p2.have_parameter<Real>("o2"));
+  EXPECT_EQ(p1.hasCoupledValue("o3"), p2.hasCoupledValue("o3"));
+  EXPECT_EQ(p1.have_parameter<MooseEnum>("o4"), p2.have_parameter<MooseEnum>("o4"));
+  EXPECT_EQ(p1.have_parameter<MultiMooseEnum>("o5"), p2.have_parameter<MultiMooseEnum>("o5"));
+  EXPECT_EQ(p1.have_parameter<Real>("od1"), p2.have_parameter<Real>("od1"));
+  EXPECT_EQ(p1.have_parameter<Real>("od2"), p2.have_parameter<Real>("od2"));
+  EXPECT_EQ(p1.hasDefaultCoupledValue("od3a"), p2.hasDefaultCoupledValue("od3a"));
+  EXPECT_EQ(p1.hasDefaultCoupledValue("od3b"), p2.hasDefaultCoupledValue("od3b"));
+
+  // Same required status
+  EXPECT_EQ(p1.isParamRequired("r1"), p2.isParamRequired("r1"));
+  EXPECT_EQ(p1.isParamRequired("r2"), p2.isParamRequired("r2"));
+  EXPECT_EQ(p1.isParamRequired("r3"), p2.isParamRequired("r3"));
+  EXPECT_EQ(p1.isParamRequired("r4"), p2.isParamRequired("r4"));
+  EXPECT_EQ(p1.isParamRequired("r5"), p2.isParamRequired("r5"));
+  EXPECT_EQ(p1.isParamRequired("o1"), p2.isParamRequired("o1"));
+  EXPECT_EQ(p1.isParamRequired("o2"), p2.isParamRequired("o2"));
+  EXPECT_EQ(p1.isParamRequired("o3"), p2.isParamRequired("o3"));
+  EXPECT_EQ(p1.isParamRequired("o4"), p2.isParamRequired("o4"));
+  EXPECT_EQ(p1.isParamRequired("o5"), p2.isParamRequired("o5"));
+  EXPECT_EQ(p1.isParamRequired("od1"), p2.isParamRequired("od1"));
+  EXPECT_EQ(p1.isParamRequired("od2"), p2.isParamRequired("od2"));
+  EXPECT_EQ(p1.isParamRequired("od3a"), p2.isParamRequired("od3a"));
+  EXPECT_EQ(p1.isParamRequired("od3b"), p2.isParamRequired("od3b"));
+
+  // Same private status
+  EXPECT_EQ(p1.isPrivate("r1"), p2.isPrivate("r1"));
+  EXPECT_EQ(p1.isPrivate("private"), p2.isPrivate("private"));
+
+  // Same controllable status
+  EXPECT_EQ(p1.isControllable("r1"), p2.isControllable("r1"));
+  EXPECT_EQ(p1.isControllable("r2"), p2.isControllable("r2"));
+
+  // Same defaults
+  EXPECT_EQ(p1.get<Real>("od1"), p2.get<Real>("od1"));
+  EXPECT_EQ(p1.get<Real>("od2"), p2.get<Real>("od2"));
+  EXPECT_EQ(p1.defaultCoupledValue("od3a"), p2.defaultCoupledValue("od3a"));
+  // EXPECT_EQ(p1.defaultCoupledValue("od3b", 1), p2.defaultCoupledValue("od3b", 1));
+
+  // Same docstrings
+  EXPECT_EQ(p1.getDocString("r1"), p2.getDocString("r1"));
+  EXPECT_EQ(p1.getDocString("r2"), p2.getDocString("r2"));
+  EXPECT_EQ(p1.getDocString("r3"), p2.getDocString("r3"));
+  EXPECT_EQ(p1.getDocString("r4"), p2.getDocString("r4"));
+  EXPECT_EQ(p1.getDocString("r5"), p2.getDocString("r5"));
+  EXPECT_EQ(p1.getDocString("o1"), p2.getDocString("o1"));
+  EXPECT_EQ(p1.getDocString("o2"), p2.getDocString("o2"));
+  EXPECT_EQ(p1.getDocString("o3"), p2.getDocString("o3"));
+  EXPECT_EQ(p1.getDocString("o4"), p2.getDocString("o4"));
+  EXPECT_EQ(p1.getDocString("o5"), p2.getDocString("o5"));
+  EXPECT_EQ(p1.getDocString("od1"), p2.getDocString("od1"));
+  EXPECT_EQ(p1.getDocString("od2"), p2.getDocString("od2"));
+  EXPECT_EQ(p1.getDocString("od3a"), p2.getDocString("od3a"));
+  EXPECT_EQ(p1.getDocString("od3b"), p2.getDocString("od3b"));
+}
+
+TEST(InputParameters, noDefaultValueError)
+{
+  InputParameters params = emptyInputParameters();
+  params.addParam<Real>("dummy_real", "a dummy real");
+  params.addParam<std::vector<Real>>("dummy_vector", "a dummy vector");
+
+  // Throw an error message when no default value is provided
+  try
+  {
+    params.getParamHelper<Real>("dummy_real", params, static_cast<Real *>(0));
+    FAIL() << "failed to get the parameter because the default value is missing";
+  }
+  catch (const std::exception & e)
+  {
+    std::string msg(e.what());
+    ASSERT_TRUE(msg.find("The parameter \"dummy_real\" is being retrieved before being set.") !=
+                std::string::npos)
+        << "Failed with unexpected error message: " << msg;
+  }
+
+  try
+  {
+    params.getParamHelper<std::vector<Real>>(
+        "dummy_vector", params, static_cast<std::vector<Real> *>(0));
+    FAIL() << "failed to get the parameter because the default value is missing";
+  }
+  catch (const std::exception & e)
+  {
+    std::string msg(e.what());
+    ASSERT_TRUE(msg.find("The parameter \"dummy_vector\" is being retrieved before being set.") !=
+                std::string::npos)
+        << "Failed with unexpected error message: " << msg;
+  }
+}

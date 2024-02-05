@@ -78,7 +78,7 @@ inlet_velocity = 0.001
     drho_dt = drho_dt
   []
   [mass]
-    type = INSFVMassAdvection
+    type = WCNSFVMassAdvection
     variable = pressure
     advected_interp_method = ${advected_interp_method}
     velocity_interp_method = ${velocity_interp_method}
@@ -144,9 +144,10 @@ inlet_velocity = 0.001
   [temp_time]
     type = WCNSFVEnergyTimeDerivative
     variable = T_fluid
-    cp = cp
     rho = rho
     drho_dt = drho_dt
+    h = h
+    dh_dt = dh_dt
   []
   [temp_conduction]
     type = FVDiffusion
@@ -196,6 +197,8 @@ inlet_velocity = 0.001
     boundary = 'left'
     velocity_pp = 'inlet_u'
     rho = 'rho'
+    vel_x = vel_x
+    vel_y = vel_y
   []
   [inlet_u]
     type = WCNSFVMomentumFluxBC
@@ -204,6 +207,8 @@ inlet_velocity = 0.001
     velocity_pp = 'inlet_u'
     rho = 'rho'
     momentum_component = 'x'
+    vel_x = vel_x
+    vel_y = vel_y
   []
   [inlet_v]
     type = WCNSFVMomentumFluxBC
@@ -212,15 +217,20 @@ inlet_velocity = 0.001
     velocity_pp = 0
     rho = 'rho'
     momentum_component = 'y'
+    vel_x = vel_x
+    vel_y = vel_y
   []
   [inlet_T]
     type = WCNSFVEnergyFluxBC
     variable = T_fluid
+    T_fluid = T_fluid
     boundary = 'left'
     velocity_pp = 'inlet_u'
     temperature_pp = 'inlet_T'
     rho = 'rho'
     cp = 'cp'
+    vel_x = vel_x
+    vel_y = vel_y
   []
   [inlet_scalar]
     type = WCNSFVScalarFluxBC
@@ -228,6 +238,10 @@ inlet_velocity = 0.001
     boundary = 'left'
     scalar_value_pp = 'inlet_scalar_value'
     velocity_pp = 'inlet_u'
+    vel_x = vel_x
+    vel_y = vel_y
+    rho = rho
+    passive_scalar = scalar
   []
 
   [outlet_p]
@@ -279,7 +293,7 @@ inlet_velocity = 0.001
   []
 []
 
-[Materials]
+[FunctorMaterials]
   [const_functor]
     type = ADGenericFunctorMaterial
     prop_names = 'cp k'
@@ -292,7 +306,7 @@ inlet_velocity = 0.001
     pressure = pressure
   []
   [ins_fv]
-    type = INSFVEnthalpyMaterial
+    type = INSFVEnthalpyFunctorMaterial
     temperature = 'T_fluid'
     rho = ${rho}
   []

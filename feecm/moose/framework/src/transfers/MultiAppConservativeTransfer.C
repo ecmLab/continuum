@@ -32,6 +32,7 @@ MultiAppConservativeTransfer::validParams()
 
   params.addParam<std::vector<PostprocessorName>>(
       "to_postprocessors_to_be_preserved",
+      {},
       "The name of the Postprocessor in the to-app to evaluate an adjusting factor.");
   params.addParam<bool>("allow_skipped_adjustment",
                         false,
@@ -47,11 +48,15 @@ MultiAppConservativeTransfer::validParams()
 
 MultiAppConservativeTransfer::MultiAppConservativeTransfer(const InputParameters & parameters)
   : MultiAppFieldTransfer(parameters),
-    _from_var_names(getParam<std::vector<VariableName>>("source_variable")),
+    _from_var_names(isParamValid("source_variable")
+                        ? getParam<std::vector<VariableName>>("source_variable")
+                        : std::vector<VariableName>()),
     _to_var_names(getParam<std::vector<AuxVariableName>>("variable")),
     _preserve_transfer(isParamValid("from_postprocessors_to_be_preserved")),
     _from_postprocessors_to_be_preserved(
-        getParam<std::vector<PostprocessorName>>("from_postprocessors_to_be_preserved")),
+        _preserve_transfer
+            ? getParam<std::vector<PostprocessorName>>("from_postprocessors_to_be_preserved")
+            : std::vector<PostprocessorName>{}),
     _to_postprocessors_to_be_preserved(
         getParam<std::vector<PostprocessorName>>("to_postprocessors_to_be_preserved")),
     _use_nearestpoint_pps(false),
@@ -153,23 +158,26 @@ MultiAppConservativeTransfer::initialSetup()
     const auto multi_app = hasFromMultiApp() ? getFromMultiApp() : getToMultiApp();
 
     // Let us check execute_on here. Users need to specify execute_on='transfer' in their input
-    // files for the postprocessors that are used to compute conversative qualities Master app
-    FEProblemBase & master_problem = multi_app->problemBase();
+    // files for the postprocessors that are used to compute the quantities to conserve in the
+    // Parent app
+    FEProblemBase & parent_problem = multi_app->problemBase();
     std::vector<PostprocessorName> pps_empty;
-    // PPs for master app
-    auto & master_pps =
+    // PPs for parent app
+    auto & parent_app_pps =
         _current_direction == TO_MULTIAPP ? pps_empty : _to_postprocessors_to_be_preserved;
-    for (auto & master_pp : master_pps)
+    for (auto & pp : parent_app_pps)
     {
-      // Get out all execute_on options for master pp
-      auto & execute_on = master_problem.getUserObjectBase(master_pp).getExecuteOnEnum();
-      // Check if master app has transfer execute_on
+      // Get out all execute_on options for parent app source pp
+      auto & execute_on = parent_problem.getUserObjectBase(pp).getExecuteOnEnum();
+      const auto & type = parent_problem.getUserObjectBase(pp).type();
+      // Check if parent app has transfer execute_on
       if (!execute_on.contains(EXEC_TRANSFER))
-        mooseError("execute_on='transfer' is required in the conversative transfer for ",
-                   master_pp,
-                   ".\n"
-                   "Please add execute_on='transfer' into input file, and also \n"
-                   "make sure that execute_on options are not hardcoded in the code \n");
+        mooseError(
+            "execute_on='transfer' is required in the conservative transfer for " + type + " '",
+            pp,
+            "' computed in the parent application.\n"
+            "Please add execute_on='transfer' to this postprocessor in the input file.\n"
+            "For a custom postprocessor, make sure that execute_on options are not hardcoded.");
     }
 
     // Sub apps
@@ -187,13 +195,17 @@ MultiAppConservativeTransfer::initialSetup()
       {
         // Get out of all execute_on options for sub pp
         auto & execute_on = sub_problem.getUserObjectBase(sub_pp).getExecuteOnEnum();
+        const auto & type = sub_problem.getUserObjectBase(sub_pp).type();
         // Check if sub pp has transfer execute_on
         if (!execute_on.contains(EXEC_TRANSFER))
-          mooseError("execute_on='transfer' is required in the conversative transfer for ",
-                     sub_pp,
-                     ". \n"
-                     "Please add execute_on='transfer' into input file, and also \n"
-                     "make sure that execute_on options are not hardcoded in the code \n");
+          mooseError(
+              "execute_on='transfer' is required in the conservative transfer for " + type + " '",
+              sub_pp,
+              "' in child application '" + multi_app->name() +
+                  "'. \n"
+                  "Please add execute_on='transfer' to this postprocessor in the input file.\n"
+                  "For a custom postprocessor, make sure that execute_on options are not "
+                  "hardcoded.");
       }
     }
   }
@@ -219,16 +231,16 @@ MultiAppConservativeTransfer::postExecute()
         if (getToMultiApp()->hasLocalApp(i))
         {
           if (_use_nearestpoint_pps)
-            adjustTransferedSolutionNearestPoint(i,
-                                                 &from_problem,
-                                                 _from_postprocessors_to_be_preserved[0],
-                                                 getToMultiApp()->appProblemBase(i),
-                                                 _to_postprocessors_to_be_preserved[0]);
+            adjustTransferredSolutionNearestPoint(i,
+                                                  &from_problem,
+                                                  _from_postprocessors_to_be_preserved[0],
+                                                  getToMultiApp()->appProblemBase(i),
+                                                  _to_postprocessors_to_be_preserved[0]);
           else
-            adjustTransferedSolution(&from_problem,
-                                     _from_postprocessors_to_be_preserved[i],
-                                     getToMultiApp()->appProblemBase(i),
-                                     _to_postprocessors_to_be_preserved[0]);
+            adjustTransferredSolution(&from_problem,
+                                      _from_postprocessors_to_be_preserved[i],
+                                      getToMultiApp()->appProblemBase(i),
+                                      _to_postprocessors_to_be_preserved[0]);
         }
     }
 
@@ -242,14 +254,14 @@ MultiAppConservativeTransfer::postExecute()
       for (unsigned int i = 0; i < getFromMultiApp()->numGlobalApps(); i++)
       {
         if (_use_nearestpoint_pps)
-          adjustTransferedSolutionNearestPoint(
+          adjustTransferredSolutionNearestPoint(
               i,
               getFromMultiApp()->hasLocalApp(i) ? &getFromMultiApp()->appProblemBase(i) : nullptr,
               _from_postprocessors_to_be_preserved[0],
               to_problem,
               _to_postprocessors_to_be_preserved[0]);
         else
-          adjustTransferedSolution(
+          adjustTransferredSolution(
               getFromMultiApp()->hasLocalApp(i) ? &getFromMultiApp()->appProblemBase(i) : nullptr,
               _from_postprocessors_to_be_preserved[0],
               to_problem,
@@ -265,7 +277,7 @@ MultiAppConservativeTransfer::postExecute()
 }
 
 void
-MultiAppConservativeTransfer::adjustTransferedSolutionNearestPoint(
+MultiAppConservativeTransfer::adjustTransferredSolutionNearestPoint(
     unsigned int i,
     FEProblemBase * from_problem,
     PostprocessorName & from_postprocessor,
@@ -278,7 +290,7 @@ MultiAppConservativeTransfer::adjustTransferedSolutionNearestPoint(
   else
     from_adjuster = 0;
 
-  /* Everyone on master side should know this value, and use it to scale the solution */
+  /* Everyone on the parent application side should know this value; use it to scale the solution */
   if (_current_direction == FROM_MULTIAPP)
   {
     /* In this case, only one subapp has value, and other subapps' must be zero.
@@ -383,10 +395,10 @@ MultiAppConservativeTransfer::adjustTransferedSolutionNearestPoint(
 }
 
 void
-MultiAppConservativeTransfer::adjustTransferedSolution(FEProblemBase * from_problem,
-                                                       PostprocessorName & from_postprocessor,
-                                                       FEProblemBase & to_problem,
-                                                       PostprocessorName & to_postprocessor)
+MultiAppConservativeTransfer::adjustTransferredSolution(FEProblemBase * from_problem,
+                                                        PostprocessorName & from_postprocessor,
+                                                        FEProblemBase & to_problem,
+                                                        PostprocessorName & to_postprocessor)
 {
   PostprocessorValue from_adjuster = 0;
   if (from_problem)
@@ -394,7 +406,7 @@ MultiAppConservativeTransfer::adjustTransferedSolution(FEProblemBase * from_prob
   else
     from_adjuster = 0;
 
-  /* Everyone on master side should know this value, and use it to scale the solution */
+  /* Everyone on the parent side should know this value; use it to scale the solution */
   if (_current_direction == FROM_MULTIAPP)
   {
     /* In this case, only one subapp has value, and other subapps' must be zero.
@@ -414,7 +426,7 @@ MultiAppConservativeTransfer::adjustTransferedSolution(FEProblemBase * from_prob
   // Compute to-postprocessor to have the adjuster
   to_problem.computeUserObjectByName(EXEC_TRANSFER, Moose::POST_AUX, to_postprocessor);
 
-  // Now we should have the right adjuster based on the transfered solution
+  // Now we should have the right adjuster based on the transferred solution
   const auto to_adjuster = to_problem.getPostprocessorValueByName(to_postprocessor);
 
   // decide if the adjustment should be performed
@@ -450,8 +462,7 @@ MultiAppConservativeTransfer::adjustTransferedSolution(FEProblemBase * from_prob
         for (auto element : neighbor_elements->second)
         {
           auto & elem = to_mesh.elem_ref(element);
-          if (blockids.find(elem.subdomain_id()) != blockids.end() ||
-              blockids.find(Moose::ANY_BLOCK_ID) != blockids.end())
+          if (blockids.find(elem.subdomain_id()) != blockids.end())
           {
             scale_current_node = true;
             break;
@@ -482,8 +493,7 @@ MultiAppConservativeTransfer::adjustTransferedSolution(FEProblemBase * from_prob
       if (pps)
       {
         auto & blockids = pps->blockIDs();
-        if (blockids.find(elem->subdomain_id()) != blockids.end() ||
-            blockids.find(Moose::ANY_BLOCK_ID) != blockids.end())
+        if (blockids.find(elem->subdomain_id()) != blockids.end())
         {
           scale_current_element = true;
         }

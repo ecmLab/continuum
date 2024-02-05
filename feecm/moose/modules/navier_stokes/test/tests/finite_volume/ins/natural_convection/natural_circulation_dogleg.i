@@ -69,6 +69,7 @@ head = ${fparse height * density * gravity}
     outlet_boundaries = 'top'
     momentum_outlet_types = 'fixed-pressure'
     pressure_function = '0'
+    energy_advection_interpolation = 'average'
     momentum_advection_interpolation = 'upwind'
     mass_advection_interpolation = 'upwind'
     friction_blocks = '1'
@@ -85,7 +86,7 @@ head = ${fparse height * density * gravity}
   nl_rel_tol = 1e-8
 []
 
-[Materials]
+[FunctorMaterials]
   [props]
     type = ADGenericFunctorMaterial
     prop_names = 'rho'

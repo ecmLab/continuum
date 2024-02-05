@@ -6,7 +6,7 @@ This user object may load data sorted in four different ways. The read modes are
 [!param](/UserObjects/PropertyReadFile/read_type) parameter.
 
 - In +element+ mode, the file read contains [!param](/UserObjects/PropertyReadFile/nprop) values for each element in the mesh.
-- In +grain+/+voronoi+ mode, a Voronoi tessellation with [!param](/UserObjects/PropertyReadFile/nvoronoi) random centers is either created randomly or read from the first columns of the `CSV` file, depending on the [!param](/UserObjects/PropertyReadFile/use_random_voronoi) parameter. The file read should still contain [!param](/UserObjects/PropertyReadFile/nprop) columns, even though 1-3 columns may be used for the Voronoi tesselation positions.
+- In +grain+/+voronoi+ mode, a Voronoi tessellation with [!param](/UserObjects/PropertyReadFile/nvoronoi) random centers is either created randomly or read from the first columns of the `CSV` file, depending on the [!param](/UserObjects/PropertyReadFile/use_random_voronoi) parameter. The file read should still contain [!param](/UserObjects/PropertyReadFile/nprop) columns, even though 1-3 columns may be used for the Voronoi tessellation positions.
 - In +block+ mode, the file read contains [!param](/UserObjects/PropertyReadFile/nprop) values for each block in the mesh. [!param](/UserObjects/PropertyReadFile/nblock) is the number of blocks in the mesh.
 - In +node+ mode, the file read contains [!param](/UserObjects/PropertyReadFile/nprop) values for each node in the mesh.
 
@@ -28,6 +28,14 @@ is taken and the grain ID is determined as the ID of the Voronoi center closest
 to the element centroid.
 
 An example of a MOOSE object using the `PropertyReadFile` is the [PiecewiseConstantFromCSV.md] function.
+
+If specifying multiple files to the [!param](/UserObjects/PropertyReadFile/prop_file_name)
+parameter, a new file will be read every time the object is initialized, which happens right before
+user objects are executed. The [!param](/UserObjects/PropertyReadFile/execute_on) parameter should be used to control the frequency of these executions. The user object will always read the first file at construction time, and, as an exception, will not read a new file on its first execution.
+If all data files have been read, the last file specified is used.
+
+!alert note
+When using multiple files, please note the data from the files is not concatenated. Every time a new file is read, the old data is removed from consideration.
 
 ## Example input syntax
 

@@ -50,14 +50,13 @@ ComputeWeightedGapCartesianLMMechanicalContact::validParams()
   params.addCoupledVar("disp_z", "The z displacement variable");
   params.addParam<Real>(
       "c", 1e6, "Parameter for balancing the size of the gap and contact pressure");
-  params.set<bool>("interpolate_normals") = false;
   params.addRequiredCoupledVar("lm_x",
                                "Mechanical contact Lagrange multiplier along the x Cartesian axis");
   params.addRequiredCoupledVar(
       "lm_y", "Mechanical contact Lagrange multiplier along the y Cartesian axis.");
   params.addCoupledVar("lm_z",
                        "Mechanical contact Lagrange multiplier along the z Cartesian axis.");
-
+  params.set<bool>("interpolate_normals") = false;
   params.addParam<bool>(
       "normalize_c",
       false,
@@ -86,11 +85,6 @@ ComputeWeightedGapCartesianLMMechanicalContact::ComputeWeightedGapCartesianLMMec
     _disp_y_var(getVar("disp_y", 0)),
     _disp_z_var(_has_disp_z ? getVar("disp_z", 0) : nullptr)
 {
-  if (_interpolate_normals)
-    paramError("interpolate_normals",
-               "This version of normal mechanical contact does not allow mortar interpolation of "
-               "geometric vectors");
-
   _lm_vars.push_back(getVar("lm_x", 0));
   _lm_vars.push_back(getVar("lm_y", 0));
 
@@ -167,8 +161,7 @@ ComputeWeightedGapCartesianLMMechanicalContact::computeQpProperties()
 void
 ComputeWeightedGapCartesianLMMechanicalContact::computeQpIProperties()
 {
-  mooseAssert(_normals.size() ==
-                  (_interpolate_normals ? _test[_i].size() : _lower_secondary_elem->n_nodes()),
+  mooseAssert(_normals.size() == _lower_secondary_elem->n_nodes(),
               "Making sure that _normals is the expected size");
 
   // Get the _dof_to_weighted_gap map
@@ -254,7 +247,7 @@ void
 ComputeWeightedGapCartesianLMMechanicalContact::post()
 {
   Moose::Mortar::Contact::communicateGaps(
-      _dof_to_weighted_gap, this->processor_id(), _mesh, _nodal, _normalize_c, _communicator);
+      _dof_to_weighted_gap, _mesh, _nodal, _normalize_c, _communicator, false);
 
   for (const auto & pr : _dof_to_weighted_gap)
   {
@@ -273,7 +266,7 @@ ComputeWeightedGapCartesianLMMechanicalContact::incorrectEdgeDroppingPost(
     const std::unordered_set<const Node *> & inactive_lm_nodes)
 {
   Moose::Mortar::Contact::communicateGaps(
-      _dof_to_weighted_gap, this->processor_id(), _mesh, _nodal, _normalize_c, _communicator);
+      _dof_to_weighted_gap, _mesh, _nodal, _normalize_c, _communicator, false);
 
   for (const auto & pr : _dof_to_weighted_gap)
   {
@@ -296,6 +289,9 @@ ComputeWeightedGapCartesianLMMechanicalContact::enforceConstraintOnDof(const Dof
 
   const auto dof_index_x = dof->dof_number(_sys.number(), _lm_vars[0]->number(), 0);
   const auto dof_index_y = dof->dof_number(_sys.number(), _lm_vars[1]->number(), 0);
+  const Real scaling_factor_x = _lm_vars[0]->scalingFactor();
+  const Real scaling_factor_y = _lm_vars[1]->scalingFactor();
+  Real scaling_factor_z = 1;
 
   ADReal lm_x = (*_sys.currentSolution())(dof_index_x);
   ADReal lm_y = (*_sys.currentSolution())(dof_index_y);
@@ -310,6 +306,7 @@ ComputeWeightedGapCartesianLMMechanicalContact::enforceConstraintOnDof(const Dof
     dof_index_z = dof->dof_number(_sys.number(), _lm_vars[2]->number(), 0);
     lm_z = (*_sys.currentSolution())(dof_index_z);
     Moose::derivInsert(lm_z.derivatives(), dof_index_z, 1.);
+    scaling_factor_z = _lm_vars[2]->scalingFactor();
   }
 
   ADReal normal_pressure_value =
@@ -355,22 +352,27 @@ ComputeWeightedGapCartesianLMMechanicalContact::enforceConstraintOnDof(const Dof
 
   libmesh_ignore(component_normal);
 
-  _assembly.processResidualAndJacobian(
-      normal_dof_residual,
-      component_normal == 0 ? dof_index_x : (component_normal == 1 ? dof_index_y : dof_index_z),
-      _vector_tags,
-      _matrix_tags);
+  addResidualsAndJacobian(
+      _assembly,
+      std::array<ADReal, 1>{{normal_dof_residual}},
+      std::array<dof_id_type, 1>{{component_normal == 0
+                                      ? dof_index_x
+                                      : (component_normal == 1 ? dof_index_y : dof_index_z)}},
+      component_normal == 0 ? scaling_factor_x
+                            : (component_normal == 1 ? scaling_factor_y : scaling_factor_z));
 
-  _assembly.processResidualAndJacobian(
-      tangential_dof_residual,
-      (component_normal == 0 || component_normal == 2) ? dof_index_y : dof_index_x,
-      _vector_tags,
-      _matrix_tags);
+  addResidualsAndJacobian(
+      _assembly,
+      std::array<ADReal, 1>{{tangential_dof_residual}},
+      std::array<dof_id_type, 1>{
+          {(component_normal == 0 || component_normal == 2) ? dof_index_y : dof_index_x}},
+      (component_normal == 0 || component_normal == 2) ? scaling_factor_y : scaling_factor_x);
 
   if (_has_disp_z)
-    _assembly.processResidualAndJacobian(
-        tangential_pressure_value_dir,
-        (component_normal == 0 || component_normal == 1) ? dof_index_z : dof_index_x,
-        _vector_tags,
-        _matrix_tags);
+    addResidualsAndJacobian(
+        _assembly,
+        std::array<ADReal, 1>{{tangential_pressure_value_dir}},
+        std::array<dof_id_type, 1>{
+            {(component_normal == 0 || component_normal == 1) ? dof_index_z : dof_index_x}},
+        (component_normal == 0 || component_normal == 1) ? scaling_factor_z : scaling_factor_x);
 }

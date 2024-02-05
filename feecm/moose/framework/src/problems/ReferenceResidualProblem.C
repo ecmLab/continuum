@@ -48,6 +48,7 @@ ReferenceResidualProblem::validParams()
       "provided, separated by semicolon)");
   params.addParam<std::vector<NonlinearVariableName>>(
       "converge_on",
+      {},
       "If supplied, use only these variables in the individual variable convergence check");
   MooseEnum Lnorm("global_L2 local_L2 global_Linf local_Linf", "global_L2");
   params.addParam<MooseEnum>(
@@ -70,6 +71,17 @@ ReferenceResidualProblem::validParams()
                          "by the absolute reference "
                          "vector to the L-infinity norm of the absolute reference vector to "
                          "determine relative convergence");
+
+  MooseEnum zero_ref_res("zero_tolerance relative_tolerance", "relative_tolerance");
+  params.addParam<MooseEnum>("zero_reference_residual_treatment",
+                             zero_ref_res,
+                             "Determine behavior if a reference residual value of zero is present "
+                             "for a particular variable.");
+  zero_ref_res.addDocumentation("zero_tolerance",
+                                "Solve is treated as converged if the residual is zero");
+  zero_ref_res.addDocumentation(
+      "relative_tolerance",
+      "Solve is treated as converged if the residual is below the relative tolerance");
   return params;
 }
 
@@ -77,7 +89,10 @@ ReferenceResidualProblem::ReferenceResidualProblem(const InputParameters & param
   : FEProblem(params),
     _use_group_variables(false),
     _reference_vector(nullptr),
-    _converge_on(getParam<std::vector<NonlinearVariableName>>("converge_on"))
+    _converge_on(getParam<std::vector<NonlinearVariableName>>("converge_on")),
+    _zero_ref_type(
+        params.get<MooseEnum>("zero_reference_residual_treatment").getEnum<ZeroReferenceType>()),
+    _reference_vector_tag_id(Moose::INVALID_TAG_ID)
 {
   if (params.isParamValid("solution_variables"))
   {
@@ -117,8 +132,8 @@ ReferenceResidualProblem::ReferenceResidualProblem(const InputParameters & param
       paramError(
           "nl_sys_names",
           "reference residual problem does not currently support multiple nonlinear systems");
-    _reference_vector =
-        &getNonlinearSystemBase(0).getVector(getVectorTagID(getParam<TagName>("reference_vector")));
+    _reference_vector_tag_id = getVectorTagID(getParam<TagName>("reference_vector"));
+    _reference_vector = &getNonlinearSystemBase(0).getVector(_reference_vector_tag_id);
   }
   else
     mooseInfo("Neither the `reference_residual_variables` nor `reference_vector` parameter is "
@@ -168,7 +183,7 @@ ReferenceResidualProblem::ReferenceResidualProblem(const InputParameters & param
 void
 ReferenceResidualProblem::initialSetup()
 {
-  NonlinearSystemBase & nonlinear_sys = getNonlinearSystemBase();
+  NonlinearSystemBase & nonlinear_sys = getNonlinearSystemBase(/*nl_sys=*/0);
   AuxiliarySystem & aux_sys = getAuxiliarySystem();
   System & s = nonlinear_sys.system();
   auto & as = aux_sys.sys();
@@ -381,9 +396,9 @@ ReferenceResidualProblem::initialSetup()
 void
 ReferenceResidualProblem::updateReferenceResidual()
 {
-  NonlinearSystemBase & nonlinear_sys = getNonlinearSystemBase();
+  mooseAssert(_current_nl_sys, "This should be non-null");
   AuxiliarySystem & aux_sys = getAuxiliarySystem();
-  System & s = nonlinear_sys.system();
+  System & s = _current_nl_sys->system();
   auto & as = aux_sys.sys();
 
   std::fill(_group_resid.begin(), _group_resid.end(), 0.0);
@@ -399,19 +414,19 @@ ReferenceResidualProblem::updateReferenceResidual()
     const auto group = _variable_group_num_index[i];
     if (_local_norm)
     {
-      mooseAssert(nonlinear_sys.RHS().size() == (*_reference_vector).size(),
+      mooseAssert(_current_nl_sys->RHS().size() == (*_reference_vector).size(),
                   "Sizes of nonlinear RHS and reference vector should be the same.");
       mooseAssert((*_reference_vector).size(), "Reference vector must be provided.");
       // Add a tiny number to the reference to prevent a divide by zero.
       auto ref = _reference_vector->clone();
       ref->add(std::numeric_limits<Number>::min());
-      auto div = nonlinear_sys.RHS().clone();
+      auto div = _current_nl_sys->RHS().clone();
       *div /= *ref;
       resid = Utility::pow<2>(s.calculate_norm(*div, _soln_vars[i], _norm_type));
     }
     else
     {
-      resid = Utility::pow<2>(s.calculate_norm(nonlinear_sys.RHS(), _soln_vars[i], _norm_type));
+      resid = Utility::pow<2>(s.calculate_norm(_current_nl_sys->RHS(), _soln_vars[i], _norm_type));
       if (_reference_vector)
       {
         const auto ref_resid = s.calculate_norm(*_reference_vector, _soln_vars[i], _norm_type);
@@ -481,7 +496,8 @@ ReferenceResidualProblem::nonlinearConvergenceSetup()
         const auto ref_var_name =
             _reference_vector ? _group_soln_var_names[i] + "_ref" : _group_ref_resid_var_names[i];
         out << "  " << std::setw(maxwrv + 2) << ref_var_name + ":" << std::setw(8)
-            << _group_ref_resid[i] << "  (" << std::setw(8) << _group_resid[i] / _group_ref_resid[i]
+            << _group_ref_resid[i] << "  (" << std::setw(8)
+            << (_group_ref_resid[i] ? _group_resid[i] / _group_ref_resid[i] : _group_resid[i])
             << ")";
       }
       out << '\n';
@@ -525,12 +541,26 @@ ReferenceResidualProblem::checkConvergenceIndividVars(const Real fnorm,
                                                       const Real rtol,
                                                       const Real initial_residual_before_preset_bcs)
 {
+  // Convergence is checked via:
+  // 1) if group residual is less than group reference residual by relative tolerance
+  // 2) if group residual is less than absolute tolerance
+  // 3) if group reference residual is zero and:
+  //   3.1) Convergence type is ZERO_TOLERANCE and group residual is zero (rare, but possible, and
+  //        historically implemented way)
+  //   3.2) Convergence type is RELATIVE_TOLERANCE and group residual
+  //        is less than relative tolerance. (i.e., using the relative tolerance to check group
+  //        convergence in an absolute way)
+
   bool convergedRelative = true;
   if (_group_resid.size() > 0)
   {
     for (unsigned int i = 0; i < _group_resid.size(); ++i)
       convergedRelative &=
-          ((_group_resid[i] < _group_ref_resid[i] * rtol) || (_group_resid[i] < abstol));
+          (_group_resid[i] < _group_ref_resid[i] * rtol || _group_resid[i] < abstol ||
+           (_group_ref_resid[i] == 0.0 &&
+            ((_zero_ref_type == ZeroReferenceType::ZERO_TOLERANCE && _group_resid[i] == 0.0) ||
+             (_zero_ref_type == ZeroReferenceType::RELATIVE_TOLERANCE &&
+              _group_resid[i] <= rtol))));
   }
 
   else if (fnorm > initial_residual_before_preset_bcs * rtol)

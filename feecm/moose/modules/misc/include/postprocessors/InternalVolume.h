@@ -29,11 +29,11 @@ public:
 
   InternalVolume(const InputParameters & parameters);
 
-  void initialSetup();
+  virtual void initialSetup() override;
 
 protected:
-  virtual Real computeQpIntegral();
-  virtual Real getValue();
+  virtual Real computeQpIntegral() override;
+  virtual Real getValue() const override;
 
   const unsigned int _component;
   const Real _scale;

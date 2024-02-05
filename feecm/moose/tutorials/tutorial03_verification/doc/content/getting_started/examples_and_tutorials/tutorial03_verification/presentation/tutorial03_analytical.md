@@ -104,11 +104,11 @@ System.
 
 ## Practice: Run
 
-Executing the simulation is straightforward, simply execute the heat conduction module executable
+Executing the simulation is straightforward, simply execute the heat transfer module executable
 with the input file included using the "-i" option as follows.
 
 ```
-~/projects/moose/modules/heat_conduction/heat_conduction-opt -i 1d_analytical.i
+~/projects/moose/modules/heat_transfer/heat_conduction-opt -i 1d_analytical.i
 ```
 
 !---
@@ -134,7 +134,7 @@ then the names in "vars" can be used in the definition of the equation in the "v
 
 ### $L_2$ Error
 
-The $L_2$-norm of the differnce between the computed and exact solution
+The $L_2$-norm of the difference between the computed and exact solution
 can be computed using the `NodalL2Error` object. This is created within the `[Postprocessors]` block
 along with the average element size.
 

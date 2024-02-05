@@ -51,7 +51,7 @@ PhysicsBasedPreconditioner::validParams()
 PhysicsBasedPreconditioner::PhysicsBasedPreconditioner(const InputParameters & params)
   : MoosePreconditioner(params),
     Preconditioner<Number>(MoosePreconditioner::_communicator),
-    _nl(_fe_problem.getNonlinearSystemBase())
+    _nl(_fe_problem.getNonlinearSystemBase(_nl_sys_num))
 {
   const auto & libmesh_system = _nl.system();
   unsigned int num_systems = _nl.system().n_vars();
@@ -62,8 +62,7 @@ PhysicsBasedPreconditioner::PhysicsBasedPreconditioner(const InputParameters & p
   _pre_type.resize(num_systems);
 
   { // Setup the Coupling Matrix so MOOSE knows what we're doing
-    NonlinearSystemBase & nl = _fe_problem.getNonlinearSystemBase();
-    unsigned int n_vars = nl.nVariables();
+    unsigned int n_vars = _nl.nVariables();
 
     // The coupling matrix is held and released by FEProblemBase, so it is not released in this
     // object
@@ -95,7 +94,7 @@ PhysicsBasedPreconditioner::PhysicsBasedPreconditioner(const InputParameters & p
           (*cm)(i, j) = 1;
     }
 
-    _fe_problem.setCouplingMatrix(std::move(cm));
+    setCouplingMatrix(std::move(cm));
   }
 
   // PC types
@@ -113,16 +112,20 @@ PhysicsBasedPreconditioner::PhysicsBasedPreconditioner(const InputParameters & p
   unsigned int n_vars = _nl.system().n_vars();
 
   // off-diagonal entries
-  const std::vector<NonlinearVariableName> & odr =
-      getParam<std::vector<NonlinearVariableName>>("off_diag_row");
-  const std::vector<NonlinearVariableName> & odc =
-      getParam<std::vector<NonlinearVariableName>>("off_diag_column");
   std::vector<std::vector<unsigned int>> off_diag(n_vars);
-  for (const auto i : index_range(odr))
+  if (isParamValid("off_diag_row") && isParamValid("off_diag_column"))
   {
-    unsigned int row = _nl.system().variable_number(odr[i]);
-    unsigned int column = _nl.system().variable_number(odc[i]);
-    off_diag[row].push_back(column);
+    const std::vector<NonlinearVariableName> & odr =
+        getParam<std::vector<NonlinearVariableName>>("off_diag_row");
+    const std::vector<NonlinearVariableName> & odc =
+        getParam<std::vector<NonlinearVariableName>>("off_diag_column");
+
+    for (const auto i : index_range(odr))
+    {
+      unsigned int row = _nl.system().variable_number(odr[i]);
+      unsigned int column = _nl.system().variable_number(odc[i]);
+      off_diag[row].push_back(column);
+    }
   }
   // Add all of the preconditioning systems
   for (unsigned int var = 0; var < n_vars; var++)
@@ -230,7 +233,7 @@ PhysicsBasedPreconditioner::setup()
     }
   }
 
-  _fe_problem.computeJacobianBlocks(blocks);
+  _fe_problem.computeJacobianBlocks(blocks, _nl.number());
 
   // cleanup
   for (auto & block : blocks)

@@ -58,7 +58,7 @@ ADComputeFiniteShellStrain::computeProperties()
   // (in isoparametric space).
   FEType fe_type(Utility::string_to_enum<Order>("First"),
                  Utility::string_to_enum<FEFamily>("LAGRANGE"));
-  auto & fe = _fe_problem.assembly(_tid).getFE(fe_type, dim);
+  auto & fe = _fe_problem.assembly(_tid, /*nl_sys_num=*/0).getFE(fe_type, dim);
   _dphidxi_map = fe->get_fe_map().get_dphidxi_map();
   _dphideta_map = fe->get_fe_map().get_dphideta_map();
   _phi_map = fe->get_fe_map().get_phi_map();
@@ -108,6 +108,12 @@ ADComputeFiniteShellStrain::computeProperties()
       (*_strain_increment[j])[i](2, 0) = (*_strain_increment[j])[i](0, 2);
       (*_strain_increment[j])[i](2, 1) = (*_strain_increment[j])[i](1, 2);
       (*_total_strain[j])[i] = (*_total_strain_old[j])[i] + (*_strain_increment[j])[i];
+      for (unsigned int ii = 0; ii < 3; ++ii)
+        for (unsigned int jj = 0; jj < 3; ++jj)
+          _unrotated_total_strain(ii, jj) = MetaPhysicL::raw_value((*_total_strain[j])[i](ii, jj));
+      (*_total_global_strain[j])[i] = (*_contravariant_transformation_matrix[j])[i] *
+                                      _unrotated_total_strain *
+                                      (*_contravariant_transformation_matrix[j])[i].transpose();
     }
   }
 }

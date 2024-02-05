@@ -55,6 +55,10 @@ inlet_v = 0.001
     pressure_function = '${outlet_pressure}'
 
     external_heat_source = 'power_density'
+
+    mass_advection_interpolation = 'average'
+    momentum_advection_interpolation = 'average'
+    energy_advection_interpolation = 'average'
   []
 []
 
@@ -71,7 +75,7 @@ inlet_v = 0.001
   []
 []
 
-[Materials]
+[FunctorMaterials]
   [const_functor]
     type = ADGenericFunctorMaterial
     prop_names = 'cp k mu'

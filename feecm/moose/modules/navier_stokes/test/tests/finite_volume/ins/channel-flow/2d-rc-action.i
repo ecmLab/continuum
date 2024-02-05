@@ -37,7 +37,7 @@ rho = 1.1
   []
 []
 
-[Materials]
+[FunctorMaterials]
   [const]
     type = ADGenericFunctorMaterial
     prop_names = 'rho mu'
@@ -56,4 +56,9 @@ rho = 1.1
 [Outputs]
   exodus = true
   csv = true
+
+  [restart]
+    type = Checkpoint
+    additional_execute_on = 'FINAL'
+  []
 []

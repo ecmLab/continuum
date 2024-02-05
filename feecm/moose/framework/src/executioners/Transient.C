@@ -147,10 +147,11 @@ Transient::Transient(const InputParameters & parameters)
   : Executioner(parameters),
     _problem(_fe_problem),
     _feproblem_solve(*this),
-    _nl(_fe_problem.getNonlinearSystemBase()),
+    _nl(_fe_problem.getNonlinearSystemBase(/*nl_sys=*/0)),
     _aux(_fe_problem.getAuxiliarySystem()),
     _check_aux(getParam<bool>("check_aux")),
     _time_scheme(getParam<MooseEnum>("scheme").getEnum<Moose::TimeIntegratorType>()),
+    _time_stepper(nullptr),
     _t_step(_problem.timeStep()),
     _time(_problem.time()),
     _time_old(_problem.timeOld()),
@@ -177,8 +178,6 @@ Transient::Transient(const InputParameters & parameters)
     _target_time(declareRecoverableData<Real>("target_time", -std::numeric_limits<Real>::max())),
     _use_multiapp_dt(getParam<bool>("use_multiapp_dt")),
     _solution_change_norm(declareRecoverableData<Real>("solution_change_norm", 0.0)),
-    _sln_diff(_check_aux ? _aux.addVector("sln_diff", false, PARALLEL)
-                         : _nl.addVector("sln_diff", false, PARALLEL)),
     _normalize_solution_diff_norm_by_dt(getParam<bool>("normalize_solution_diff_norm_by_dt"))
 {
   _fixed_point_solve->setInnerSolve(_feproblem_solve);
@@ -211,7 +210,7 @@ Transient::Transient(const InputParameters & parameters)
 
   if (_app.halfTransient()) // Cut timesteps and end_time in half...
   {
-    _end_time /= 2.0;
+    _end_time = (_start_time + _end_time) / 2.0;
     _num_steps /= 2.0;
 
     if (_num_steps == 0) // Always do one step in the first half
@@ -222,31 +221,10 @@ Transient::Transient(const InputParameters & parameters)
 void
 Transient::init()
 {
-  if (!_time_stepper.get())
-  {
-    InputParameters pars = _app.getFactory().getValidParams("ConstantDT");
-    pars.set<SubProblem *>("_subproblem") = &_problem;
-    pars.set<Transient *>("_executioner") = this;
-
-    /**
-     * We have a default "dt" set in the Transient parameters but it's possible for users to set
-     * other parameters explicitly that could provide a better calculated "dt". Rather than provide
-     * difficult to understand behavior using the default "dt" in this case, we'll calculate "dt"
-     * properly.
-     */
-    if (!_pars.isParamSetByAddParam("end_time") && !_pars.isParamSetByAddParam("num_steps") &&
-        _pars.isParamSetByAddParam("dt"))
-      pars.set<Real>("dt") = (getParam<Real>("end_time") - getParam<Real>("start_time")) /
-                             static_cast<Real>(getParam<unsigned int>("num_steps"));
-    else
-      pars.set<Real>("dt") = getParam<Real>("dt");
-
-    pars.set<bool>("reset_dt") = getParam<bool>("reset_dt");
-    _time_stepper = _app.getFactory().create<TimeStepper>("ConstantDT", "TimeStepper", pars);
-  }
-
   _problem.execute(EXEC_PRE_MULTIAPP_SETUP);
   _problem.initialSetup();
+
+  mooseAssert(getTimeStepper(), "No time stepper was set");
 
   /**
    * If this is a restart run, the user may want to override the start time, which we already set in
@@ -758,8 +736,12 @@ Transient::relativeSolutionDifferenceNorm()
       _check_aux ? _aux.solution() : *_nl.currentSolution();
   const NumericVector<Number> & old_solution = _check_aux ? _aux.solutionOld() : _nl.solutionOld();
 
-  _sln_diff = current_solution;
-  _sln_diff -= old_solution;
+  return current_solution.l2_norm_diff(old_solution) / current_solution.l2_norm();
+}
 
-  return (_sln_diff.l2_norm() / current_solution.l2_norm());
+void
+Transient::setTimeStepper(TimeStepper & ts)
+{
+  mooseAssert(!_time_stepper, "Already set");
+  _time_stepper = &ts;
 }
