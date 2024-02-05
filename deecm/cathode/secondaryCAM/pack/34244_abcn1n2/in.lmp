@@ -1,0 +1,101 @@
+variable    skfstl equal 1/5000
+
+variable    x1y1 equal -1*${skfstl}*2500
+variable    x2y2 equal  1*${skfstl}*2500
+variable    z1 equal   -1*${skfstl}*2500
+variable    z2 equal    1*${skfstl}*2500
+
+#variable v equal 0.008 #lifting speed
+variable    a0          equal 0.01
+variable    b0          equal 0.04
+variable    c0          equal 0.02
+variable    blockiness1 equal 4
+variable    blockiness2 equal 4
+
+echo both
+
+atom_style	superquadric
+atom_modify	map array
+
+boundary	f f f
+newton		off
+communicate	single vel yes
+units		si
+
+region		reg block ${x1y1} ${x2y2} ${x1y1} ${x2y2} ${z1} ${z2}  units box 
+create_box	2 reg
+
+neighbor	0.002 bin
+neigh_modify	delay 0
+
+variable dt equal 1e-5
+variable nStepsRun    equal 1/${dt}
+variable writeOutEvery equal 0.1/${dt}
+variable thermofreq   equal 0.01/${dt}
+
+variable cf_ww equal 1.0
+variable cf_pw equal 0.5
+variable cf_pp equal 0.5
+
+variable cof_ww equal 0.2
+variable cof_pw equal 0.2
+variable cof_pp equal 0.2
+
+variable corf_ww equal 0.
+variable corf_pw equal 0.2
+variable corf_pp equal 0.2
+
+variable Yw equal 1e+7
+variable Yp equal 1e+7
+
+#Material properties required for new pair styles
+fix 		m1 all property/global youngsModulus peratomtype ${Yw} ${Yp}
+fix 		m2 all property/global poissonsRatio peratomtype 0.3 0.3
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 ${cf_ww} ${cf_pw} ${cf_pw} ${cf_pp}
+fix             m4 all property/global coefficientFriction peratomtypepair 2 ${cof_ww} ${cof_pw} ${cof_pw} ${cof_pp}
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 ${corf_ww} ${corf_pw} ${corf_pw} ${corf_pp}
+
+#New pair style
+pair_style gran model hertz tangential history rolling_friction epsd2 surface superquadric #Hertzian without cohesion
+pair_coeff	* *
+timestep ${dt}
+
+variable totaltime equal step*${dt}
+
+#fix zwalls2 all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric primitive type 1 zplane 0
+
+fix Bsphere all mesh/surface file sphere.stl type 2 scale 0.0125
+fix wall all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric mesh n_meshes 1 meshes Bsphere
+
+fix pts1 all particletemplate/superquadric 15485863 atom_type 2 density constant 2500 shape constant ${a0} ${b0} ${c0} blockiness constant ${blockiness1} ${blockiness2}
+fix pdd1 all particledistribution/discrete 86028157 1 pts1 1 
+
+fix ins_mesh all mesh/surface/planar file ins_face.stl heal auto_remove_duplicates type 1 scale 0.0125
+fix ins all insert/stream seed 86028121 distributiontemplate pdd1 &
+                maxattempt 200 nparticles 1 particlerate 1 overlapcheck yes all_in yes vel constant 0 0 -0.75 &
+                insertion_face ins_mesh extrude_length 0.2
+
+group		nve_group region reg
+
+#apply nve integration to all particles that are inserted as single particles
+fix		integr all nve/superquadric integration_scheme 1
+fix		gravi all  gravity 9.81 vector 0.0 0.0 -1.0
+
+variable time equal step*${dt}
+
+#output settings, include total thermal energy
+thermo_style	custom step atoms cpu spcpu time
+thermo		${thermofreq}
+thermo_modify	lost ignore norm no
+
+#insert the first particles so that dump is not empty
+run		1
+shell       mkdir post
+dump		dmp all custom/vtk ${writeOutEvery} post/dump*.superq.vtk type mass x y z id vx vy vz fx fy fz omegax omegay omegaz radius shapex shapey shapez quat1 quat2 quat3 quat4 blockiness1 blockiness2 tqx tqy tqz angmomx angmomy angmomz
+#dump		dmp all custom ${writeOutEvery} post/rigid*.dump id type x y z quat1 quat2 quat3 quat4 vx vy vz fx fy fz blockiness1
+dump_modify dmp label version_01
+dump 		dumpstlSphere all stl ${writeOutEvery} post/dump_Sphere*.stl Bsphere
+
+run		${nStepsRun} upto
+unfix ins
+run       50000

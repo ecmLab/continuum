@@ -1,0 +1,427 @@
+LIGGGHTS (Version LIGGGHTS-PUBLIC 3.8.0, compiled 2018-08-29-09:25:30 by howietu, git commit 28301df8853491784b1d8b90533ea89b8c6af1e8)
+
+#--------------------------Input Variables---------------------------------------------------------
+variable dt equal 1e-5
+variable nStepsRun    equal 5/${dt}
+variable nStepsRun    equal 5/1e-05
+variable writeOutEvery equal 0.2/${dt}
+variable writeOutEvery equal 0.2/1e-05
+variable thermofreq   equal 0.01/${dt}
+variable thermofreq   equal 0.01/1e-05
+# material information
+variable cf_ww equal 1.0
+variable cf_pw equal 0.5
+variable cf_pp equal 0.5
+variable cof_ww equal 0.2
+variable cof_pw equal 0.2
+variable cof_pp equal 0.2
+variable corf_ww equal 0.0
+variable corf_pw equal 0.2
+variable corf_pp equal 0.2
+variable Yw equal 1e+7
+variable Yp equal 1e+7
+
+#--------------------------Box Information---------------------------------------------------------
+variable    skfstl equal 1/5000
+variable    x1y1 equal -1*${skfstl}*2500
+variable    x1y1 equal -1*0.0002*2500
+variable    x2y2 equal  1*${skfstl}*2500
+variable    x2y2 equal  1*0.0002*2500
+variable    z1 equal   -0.52*${skfstl}*2500
+variable    z1 equal   -0.52*0.0002*2500
+variable    z2 equal    1*${skfstl}*2500
+variable    z2 equal    1*0.0002*2500
+
+#--------------------------Model Geometry---------------------------------------------------------
+variable    a0          equal 0.01
+variable    b0          equal 0.04
+variable    c0          equal 0.01
+variable    blockiness1 equal 2
+variable    blockiness2 equal 5
+
+#------------------General Settings for Granular Systems--------------------------------------------
+atom_style	superquadric
+atom_modify	map array
+boundary	f f f
+newton		off
+communicate	single vel yes
+units		si
+echo both
+
+#------------------------read the restart file------------------------------------------------------
+read_restart    pack.restart
+  orthogonal box = (-0.5 -0.5 -0.5) to (0.5 0.5 0.5)
+  4 by 4 by 5 MPI processor grid
+WARNING: 
+	The contact model you specified is not located in any whitelist.
+	Because of this the model will be run in an unoptimized version (increasing runtime by up to 20%).
+	In order to optimize this model you have the following options:
+		(i)  Run the genAutoExamplesWhitelist.sh script in your LIGGGHTS(R) source folder to automatically parse the input script
+		(ii) Add the model combination by hand to your style_contact_model_user.whitelist that can be found in your LIGGGHTS(R) source folder
+	If you perform one of the steps above LIGGGHTS(R) needs to be recompiled to generate the optimized code.
+
+ (../contact_models.h:364)
+  1797 atoms
+neighbor        0.0002 bin
+neigh_modify    delay 0
+
+#---------------------Material Properties-----------------------------------------------------------
+fix 		m1 all property/global youngsModulus peratomtype ${Yw} ${Yp}
+fix 		m1 all property/global youngsModulus peratomtype 10000000 ${Yp}
+fix 		m1 all property/global youngsModulus peratomtype 10000000 10000000
+fix 		m2 all property/global poissonsRatio peratomtype 0.3 0.3
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 ${cf_ww} ${cf_pw} ${cf_pw} ${cf_pp}
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 1 ${cf_pw} ${cf_pw} ${cf_pp}
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 1 0.5 ${cf_pw} ${cf_pp}
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 1 0.5 0.5 ${cf_pp}
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 1 0.5 0.5 0.5
+fix             m4 all property/global coefficientFriction peratomtypepair 2 ${cof_ww} ${cof_pw} ${cof_pw} ${cof_pp}
+fix             m4 all property/global coefficientFriction peratomtypepair 2 0.2 ${cof_pw} ${cof_pw} ${cof_pp}
+fix             m4 all property/global coefficientFriction peratomtypepair 2 0.2 0.2 ${cof_pw} ${cof_pp}
+fix             m4 all property/global coefficientFriction peratomtypepair 2 0.2 0.2 0.2 ${cof_pp}
+fix             m4 all property/global coefficientFriction peratomtypepair 2 0.2 0.2 0.2 0.2
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 ${corf_ww} ${corf_pw} ${corf_pw} ${corf_pp}
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 0 ${corf_pw} ${corf_pw} ${corf_pp}
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 0 0.2 ${corf_pw} ${corf_pp}
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 0 0.2 0.2 ${corf_pp}
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 0 0.2 0.2 0.2
+
+#New pair style
+pair_style gran model hertz tangential history rolling_friction epsd2 surface superquadric #Hertzian without cohesion
+WARNING: 
+	The contact model you specified is not located in any whitelist.
+	Because of this the model will be run in an unoptimized version (increasing runtime by up to 20%).
+	In order to optimize this model you have the following options:
+		(i)  Run the genAutoExamplesWhitelist.sh script in your LIGGGHTS(R) source folder to automatically parse the input script
+		(ii) Add the model combination by hand to your style_contact_model_user.whitelist that can be found in your LIGGGHTS(R) source folder
+	If you perform one of the steps above LIGGGHTS(R) needs to be recompiled to generate the optimized code.
+
+ (../contact_models.h:364)
+pair_coeff	* *
+timestep ${dt}
+timestep 1e-05
+
+variable totaltime equal step*${dt}
+variable totaltime equal step*1e-05
+
+fix zwalls2 all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric primitive type 1 zplane ${z1}
+fix zwalls2 all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric primitive type 1 zplane -0.26
+WARNING: 
+	The contact model you specified is not located in any whitelist.
+	Because of this the model will be run in an unoptimized version (increasing runtime by up to 20%).
+	In order to optimize this model you have the following options:
+		(i)  Run the genAutoExamplesWhitelist.sh script in your LIGGGHTS(R) source folder to automatically parse the input script
+		(ii) Add the model combination by hand to your style_contact_model_user.whitelist that can be found in your LIGGGHTS(R) source folder
+	If you perform one of the steps above LIGGGHTS(R) needs to be recompiled to generate the optimized code.
+
+ (../contact_models.h:364)
+
+#fix Bsphere all mesh/surface file sphere.stl type 2 scale 0.0125
+#fix wall all wall/gran model hertz tangential history rolling_friction epsd2 surface superquadric mesh n_meshes 1 meshes Bsphere
+
+#fix pts1 all particletemplate/superquadric 15485863 atom_type 2 density constant 2500 shape constant ${a0} ${b0} ${c0} blockiness constant ${blockiness1} ${blockiness2}
+#fix pdd1 all particledistribution/discrete 86028157 1 pts1 1
+
+#fix ins_mesh all mesh/surface/planar file ins_face.stl heal auto_remove_duplicates type 1 scale 0.0125
+#fix ins all insert/stream seed 86028121 distributiontemplate pdd1 #                maxattempt 200 nparticles 1800 particlerate 180 overlapcheck yes all_in yes vel constant 0 0 -2.0 #                insertion_face ins_mesh extrude_length 0.2
+
+
+#apply nve integration to all particles that are inserted as single particles
+fix		integr all nve/superquadric integration_scheme 1
+fix		gravi all  gravity 9.81 vector 0.0 0.0 -1.0
+
+variable time equal step*${dt}
+variable time equal step*1e-05
+
+#output settings, include total thermal energy
+thermo_style	custom step atoms cpu spcpu time
+thermo		${thermofreq}
+thermo		1000
+thermo_modify	lost ignore norm no
+
+#insert the first particles so that dump is not empty
+run		1
+Resetting global state of Fix contacthistory Style contacthistory from restart file info
+Resetting per-atom state of Fix contacthistory Style contacthistory from restart file info
+Setting up run at Sun Sep  2 11:53:25 2018
+
+Memory usage per processor = 11.9023 Mbytes
+    Step    Atoms            CPU          S/CPU           Time 
+ 1300000     1797              0              0              0 
+ 1300001     1797    0.058761836      17.017166          1e-05 
+Loop time of 0.0311908 on 80 procs for 1 steps with 1797 atoms, finish time Sun Sep  2 11:53:25 2018
+
+
+Pair  time (%) = 0.000416984 (1.33688)
+Neigh time (%) = 0 (0)
+Comm  time (%) = 0.000109817 (0.352083)
+Outpt time (%) = 0.00475552 (15.2466)
+Other time (%) = 0.0259085 (83.0645)
+
+Nlocal:    22.4625 ave 271 max 0 min
+Histogram: 68 0 2 5 1 0 0 0 0 4
+Nghost:    81.3875 ave 616 max 0 min
+Histogram: 60 8 0 0 0 7 1 0 0 4
+Neighs:    813.888 ave 9973 max 0 min
+Histogram: 68 0 4 4 0 0 0 0 0 4
+
+Total # of neighbors = 65111
+Ave neighs/atom = 36.2332
+Neighbor list builds = 0
+Dangerous builds = 0
+shell       mkdir post
+dump		dmp all custom/vtk ${writeOutEvery} cohesion/dump*.superq.vtk type mass x y z id vx vy vz fx fy fz omegax omegay omegaz radius shapex shapey shapez quat1 quat2 quat3 quat4 blockiness1 blockiness2 tqx tqy tqz angmomx angmomy angmomz
+dump		dmp all custom/vtk 20000 cohesion/dump*.superq.vtk type mass x y z id vx vy vz fx fy fz omegax omegay omegaz radius shapex shapey shapez quat1 quat2 quat3 quat4 blockiness1 blockiness2 tqx tqy tqz angmomx angmomy angmomz
+dump_modify dmp label version_01
+
+run		${nStepsRun}
+run		500000
+Setting up run at Sun Sep  2 11:53:25 2018
+
+Memory usage per processor = 11.9023 Mbytes
+    Step    Atoms            CPU          S/CPU           Time 
+ 1300001     1797              0              0          1e-05 
+ 1301000     1797      8.4521484      118.19474           0.01 
+ 1302000     1797      25.681588      58.040192           0.02 
+ 1303000     1797      33.038377      135.92887           0.03 
+ 1304000     1797      40.037129      142.88265           0.04 
+ 1305000     1797      46.823004      147.36493           0.05 
+ 1306000     1797      53.369566      152.75193           0.06 
+ 1307000     1797      59.829358       154.8037           0.07 
+ 1308000     1797      66.053214      160.67215           0.08 
+ 1309000     1797       72.10282      165.30002           0.09 
+ 1310000     1797      77.963754      170.62128            0.1 
+ 1311000     1797      83.700079      174.32764           0.11 
+ 1312000     1797      89.488088      172.77093           0.12 
+ 1313000     1797      95.293132      172.26402           0.13 
+ 1314000     1797      101.46415      162.04774           0.14 
+ 1315000     1797      107.99876      153.03142           0.15 
+ 1316000     1797      114.89915      144.91937           0.16 
+ 1317000     1797      122.19105      137.13835           0.17 
+ 1318000     1797      131.84116      103.62576           0.18 
+ 1319000     1797      139.54966      129.72702           0.19 
+ 1320000     1797      148.23749      115.10349            0.2 
+ 1321000     1797      162.25616      71.333468           0.21 
+ 1322000     1797      170.08343      127.75836           0.22 
+ 1323000     1797       177.7853      129.83863           0.23 
+ 1324000     1797      185.61911      127.65182           0.24 
+ 1325000     1797       193.4453      127.77617           0.25 
+ 1326000     1797      201.25121      128.10802           0.26 
+ 1327000     1797      209.01334      128.83064           0.27 
+ 1328000     1797      223.37137      69.647452           0.28 
+ 1329000     1797      230.86646      133.42061           0.29 
+ 1330000     1797      238.05769      139.05824            0.3 
+ 1331000     1795      245.21181      139.77951           0.31 
+ 1332000     1794      252.19914      143.11624           0.32 
+ 1333000     1791      260.22833      124.54559           0.33 
+ 1334000     1787      266.91478       149.5562           0.34 
+ 1335000     1783      273.43785      153.30205           0.35 
+ 1336000     1776      282.31678      112.62614           0.36 
+ 1337000     1769      288.38259      164.85848           0.37 
+ 1338000     1754      294.30208       168.9335           0.38 
+ 1339000     1747       300.0929      172.68701           0.39 
+ 1340000     1733      357.28682      17.484376            0.4 
+ 1341000     1713      362.80044      181.36929           0.41 
+ 1342000     1698      368.24186      183.77535           0.42 
+ 1343000     1681      373.57803      187.40026           0.43 
+ 1344000     1666      378.64292      197.43781           0.44 
+ 1345000     1644      383.60544      201.51059           0.45 
+ 1346000     1625       388.4196      207.72023           0.46 
+ 1347000     1610      393.19201      209.53801           0.47 
+ 1348000     1588      397.80413      216.82022           0.48 
+ 1349000     1568      402.31827      221.52585           0.49 
+ 1350000     1547      406.71951      227.20884            0.5 
+ 1351000     1529      411.01311      232.90495           0.51 
+ 1352000     1513      415.24079      236.53598           0.52 
+ 1353000     1491      427.04729      84.699152           0.53 
+ 1354000     1473      431.06884      248.65999           0.54 
+ 1355000     1456      436.23454      193.58459           0.55 
+ 1356000     1442      443.75583      132.95587           0.56 
+ 1357000     1424      447.56718      262.37462           0.57 
+ 1358000     1410      451.38455       261.9602           0.58 
+ 1359000     1392      570.07628      8.4251866           0.59 
+ 1360000     1374      573.81132      267.73526            0.6 
+ 1361000     1356      577.47931      272.62862           0.61 
+ 1362000     1339      581.10146      276.07954           0.62 
+ 1363000     1323      584.70517      277.49178           0.63 
+ 1364000     1315      588.28865      279.05821           0.64 
+ 1365000     1303      591.84182      281.43846           0.65 
+ 1366000     1297      595.38348      282.35341           0.66 
+ 1367000     1287      598.93284       281.7414           0.67 
+ 1368000     1275      602.47893      282.00079           0.68 
+ 1369000     1264      605.97683      285.88575           0.69 
+ 1370000     1260      609.43994      288.75743            0.7 
+ 1371000     1250      612.85381      292.92319           0.71 
+ 1372000     1244      616.22911      296.27013           0.72 
+ 1373000     1236      619.55451      300.71576           0.73 
+ 1374000     1230      622.86252      302.29651           0.74 
+ 1375000     1221      626.10951      307.97728           0.75 
+ 1376000     1215       629.3236      311.13036           0.76 
+ 1377000     1203      632.50502      314.32438           0.77 
+ 1378000     1196      635.67531       315.4286           0.78 
+ 1379000     1190      638.83378      316.60953           0.79 
+ 1380000     1186      641.95851      320.02762            0.8 
+ 1381000     1183      645.02399      326.21297           0.81 
+ 1382000     1180      648.22609      312.29532           0.82 
+ 1383000     1180      651.34438      320.68852           0.83 
+ 1384000     1173      654.41164       326.0234           0.84 
+ 1385000     1170      657.45186      328.92375           0.85 
+ 1386000     1169      660.43025      335.75143           0.86 
+ 1387000     1165      663.33159      344.66849           0.87 
+ 1388000     1163      666.15174      354.59099           0.88 
+ 1389000     1163      669.00901      349.98527           0.89 
+ 1390000     1161      671.81348      356.57299            0.9 
+ 1391000     1160      674.60437      358.30929           0.91 
+ 1392000     1158       677.3773      360.62831           0.92 
+ 1393000     1157      680.04951      374.22248           0.93 
+ 1394000     1157       682.6368      386.50419           0.94 
+ 1395000     1156       685.1633      395.80489           0.95 
+ 1396000     1156      687.81028      377.78867           0.96 
+ 1397000     1156      690.61356      356.72506           0.97 
+ 1398000     1156      693.29067      373.53691           0.98 
+ 1399000     1155      695.95968      374.67087           0.99 
+ 1400000     1155      698.62066      375.80158              1 
+ 1401000     1155      701.20106      387.53773           1.01 
+ 1402000     1154      703.73518      394.61339           1.02 
+ 1403000     1154      706.21944      402.53473           1.03 
+ 1404000     1154      708.67636      407.01349           1.04 
+ 1405000     1154      711.07947      416.12847           1.05 
+ 1406000     1154      713.40213      430.54021           1.06 
+ 1407000     1154      715.68068      438.87635           1.07 
+ 1408000     1154      717.92391       445.7852           1.08 
+ 1409000     1154       720.1242      454.48606           1.09 
+ 1410000     1154      722.31275      456.92276            1.1 
+ 1411000     1153      724.46848      463.88005           1.11 
+ 1412000     1153      726.63338      461.91406           1.12 
+ 1413000     1153      728.77438      467.07174           1.13 
+ 1414000     1153      730.91106      468.01546           1.14 
+ 1415000     1153      733.03496      470.83219           1.15 
+ 1416000     1153      735.14827      473.19307           1.16 
+ 1417000     1153      737.34414      455.39861           1.17 
+ 1418000     1153      739.56616      450.04152           1.18 
+ 1419000     1153      741.73435      461.21488           1.19 
+ 1420000     1153      743.87583      466.96648            1.2 
+ 1421000     1153      745.94704      482.81005           1.21 
+ 1422000     1153       748.0065      485.56266           1.22 
+ 1423000     1153      750.05571      487.99368           1.23 
+ 1424000     1153      752.10298      488.45607           1.24 
+ 1425000     1153      754.13967      490.99124           1.25 
+ 1426000     1153      756.17714      490.80428           1.26 
+ 1427000     1153      758.17234      501.20316           1.27 
+ 1428000     1153      760.17891      498.36465           1.28 
+ 1429000     1153      762.15625      505.73047           1.29 
+ 1430000     1153      764.13811      504.57594            1.3 
+ 1431000     1153      766.10121      509.39717           1.31 
+ 1432000     1153      768.06483      509.26406           1.32 
+ 1433000     1153      770.02788      509.41181           1.33 
+ 1434000     1153      771.97365       513.9359           1.34 
+ 1435000     1153      773.91425      515.30389           1.35 
+ 1436000     1153      775.84454      518.05571           1.36 
+ 1437000     1153      777.77381      518.33243           1.37 
+ 1438000     1153      779.69249      521.18962           1.38 
+ 1439000     1153      781.61134      521.14672           1.39 
+ 1440000     1153      783.55468      514.57908            1.4 
+ 1441000     1153      785.50161      513.62752           1.41 
+ 1442000     1153      787.49642      501.30157           1.42 
+ 1443000     1153      789.47715      504.86381           1.43 
+ 1444000     1153      791.45314      506.07524           1.44 
+ 1445000     1153      793.41011      510.99456           1.45 
+ 1446000     1153      795.36774      510.82161           1.46 
+ 1447000     1153      797.30415      516.41853           1.47 
+ 1448000     1153      799.23813      517.06933           1.48 
+ 1449000     1153      801.15259      522.33945           1.49 
+ 1450000     1153      803.06021      524.21481            1.5 
+ 1451000     1153      804.96409      525.24275           1.51 
+ 1452000     1153      806.86388       526.3748           1.52 
+ 1453000     1153      808.76034      527.29782           1.53 
+ 1454000     1153      810.65715      527.20096           1.54 
+ 1455000     1153       812.5508      528.07984           1.55 
+ 1456000     1153      814.44019      529.27225           1.56 
+ 1457000     1153       816.3314      528.76249           1.57 
+ 1458000     1153      818.22153      529.06433           1.58 
+ 1459000     1153      820.10715       530.3287           1.59 
+ 1460000     1153      822.01397      524.43338            1.6 
+ 1461000     1153      823.89664      531.15915           1.61 
+ 1462000     1153      825.77925      531.17993           1.62 
+ 1463000     1153      827.66008      531.67787           1.63 
+ 1464000     1153      829.54074      531.73002           1.64 
+ 1465000     1153      831.41985      532.16607           1.65 
+ 1466000     1153      833.29804      532.42867           1.66 
+ 1467000     1153      835.17417      533.01029           1.67 
+ 1468000     1153      837.04824      533.59976           1.68 
+ 1469000     1153      838.92042      534.13472           1.69 
+ 1470000     1153      840.79157      534.43214            1.7 
+ 1471000     1153      842.66481      533.83441           1.71 
+ 1472000     1153      844.53576      534.48824           1.72 
+ 1473000     1153      846.40609      534.66348           1.73 
+ 1474000     1153      848.27624      534.71641           1.74 
+ 1475000     1153      850.14557      534.95069           1.75 
+ 1476000     1153       852.0167      534.43877           1.76 
+ 1477000     1153      853.88292      535.84213           1.77 
+ 1478000     1153      855.75219      534.96719           1.78 
+ 1479000     1153      857.61969      535.47479           1.79 
+ 1480000     1153      859.51255      528.30237            1.8 
+ 1481000     1153      861.41542      525.52002           1.81 
+ 1482000     1153      864.72264      302.36891           1.82 
+ 1483000     1153      866.59957      532.78465           1.83 
+ 1484000     1153      868.46907      534.90307           1.84 
+ 1485000     1153      870.33878      534.84304           1.85 
+ 1486000     1153      872.20739      535.15757           1.86 
+ 1487000     1153      874.07477      535.50911           1.87 
+ 1488000     1153      875.94167      535.64793           1.88 
+ 1489000     1153      877.81043      535.11312           1.89 
+ 1490000     1153      879.67617      535.98156            1.9 
+ 1491000     1153      881.54162      536.06362           1.91 
+ 1492000     1153      883.40657      536.20741           1.92 
+ 1493000     1153      885.27399      535.49858           1.93 
+ 1494000     1153      887.14015      535.85881           1.94 
+ 1495000     1153      889.00556      536.07438           1.95 
+ 1496000     1153      890.87189      535.81129           1.96 
+ 1497000     1153      892.74102      535.00957           1.97 
+ 1498000     1153      894.60769       535.7124           1.98 
+ 1499000     1153      896.47414      535.77767           1.99 
+ 1500000     1153      898.36455      528.98295              2 
+ 1501000     1153      900.23305      535.18925           2.01 
+ 1502000     1153      902.10308      534.75197           2.02 
+ 1503000     1153       903.9747      534.29603           2.03 
+ 1504000     1153      905.84388      534.99544           2.04 
+ 1505000     1153      907.71353      534.85753           2.05 
+ 1506000     1153      909.58081      535.53807           2.06 
+ 1507000     1153      911.44824      535.49648           2.07 
+ 1508000     1153      913.31694      535.13129           2.08 
+ 1509000     1153      915.18168      536.26856           2.09 
+ 1510000     1153      917.04922      535.46384            2.1 
+ 1511000     1153      918.91468      536.05908           2.11 
+ 1512000     1153      920.78078      535.87816           2.12 
+ 1513000     1153      922.64604       536.1184           2.13 
+ 1514000     1153      924.51397      535.35252           2.14 
+ 1515000     1153       926.3789      536.21323           2.15 
+ 1516000     1153      928.24425      536.09083           2.16 
+ 1517000     1153      930.10824      536.48489           2.17 
+ 1518000     1153        931.973      536.26216           2.18 
+ 1519000     1153      933.83986      535.65846           2.19 
+ 1520000     1153       935.7286      529.45248            2.2 
+ 1521000     1153      937.59268      536.45676           2.21 
+ 1522000     1153      939.45933      535.71903           2.22 
+ 1523000     1153      941.32273      536.65398           2.23 
+ 1524000     1153      943.18654      536.53667           2.24 
+ 1525000     1153      945.05009      536.61066           2.25 
+ 1526000     1153      946.91425      536.43412           2.26 
+ 1527000     1153      948.77522      537.35345           2.27 
+ 1528000     1153      950.63308       538.2535           2.28 
+ 1529000     1153      952.48888      538.85253           2.29 
+ 1530000     1153      954.34462      538.86788            2.3 
+ 1531000     1153      956.19984      539.02073           2.31 
+ 1532000     1153      958.05354      539.46142           2.32 
+ 1533000     1153       959.9066      539.64564           2.33 
+ 1534000     1153      961.76011      539.51839           2.34 
+ 1535000     1153      963.61605      538.80889           2.35 
+ 1536000     1153      965.47119      539.04496           2.36 
+ 1537000     1153      967.32664      538.95155           2.37 
+ 1538000     1153      969.18183      539.02897           2.38 
+ 1539000     1153      971.03502       539.6099           2.39 
+ 1540000     1153      972.91265       532.5855            2.4 
+ 1541000     1153      974.76882      538.74489           2.41 
+ 1542000     1153      976.62241      539.49374           2.42 
+ 1543000     1153        978.476      539.49338           2.43 
+ 1544000     1153      980.32918       539.6127           2.44 

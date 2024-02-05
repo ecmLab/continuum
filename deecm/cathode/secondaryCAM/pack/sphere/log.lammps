@@ -1,0 +1,5 @@
+LAMMPS (29 Oct 2020)
+#------------------General Settings for Granular Systems--------------------------------------------
+atom_style	granular
+ERROR: Unrecognized atom style 'granular' (../atom.cpp:706)
+Last command: atom_style	granular
