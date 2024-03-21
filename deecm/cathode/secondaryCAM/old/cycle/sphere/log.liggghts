@@ -1,0 +1,2514 @@
+LIGGGHTS (Version LIGGGHTS-PUBLIC 3.8.0, compiled 2023-04-28-19:34:04 by howard, git commit bbd23c8521fe0a4f3f5bfd0d3dc9a7dddd68d90b)
+#------------------General Settings for Granular Systems--------------------------------------------
+atom_style	granular
+atom_modify	map           array
+boundary	f f f
+newton		off
+communicate	single        vel       yes
+units		si
+neighbor        0.0002        bin
+neigh_modify    delay         0
+echo            both
+variable        dt            equal     1e-5
+variable        nStepsRun     equal     1.0/${dt}
+variable        nStepsRun     equal     1.0/1e-05
+variable        writeOutEvery equal     0.2/${dt}
+variable        writeOutEvery equal     0.2/1e-05
+variable        thermofreq    equal     0.01/${dt}
+variable        thermofreq    equal     0.01/1e-05
+timestep        ${dt}
+timestep        1e-05
+
+#--------------------------Box Information---------------------------------------------------------
+variable       skfstl        equal     1/5000
+variable       x1y1          equal    -1*${skfstl}*2500
+variable       x1y1          equal    -1*0.0002*2500
+variable       x2y2          equal     1*${skfstl}*2500
+variable       x2y2          equal     1*0.0002*2500
+variable       z1            equal    -0.5*${skfstl}*2500
+variable       z1            equal    -0.5*0.0002*2500
+variable       z2            equal     1*${skfstl}*2500
+variable       z2            equal     1*0.0002*2500
+
+#--------------------------Model Geometry---------------------------------------------------------
+variable        r0            equal     0.02
+variable        grwth         equal     0.01                   # Overall growth of each direction
+variable        grwFq         equal     1000                    # The growth frequncy, every # of steps
+variable        grwNs         equal     20                      # The total number of growth step
+variable        grwRt         equal     ${grwth}/${grwNs}       # Growth rate at each growth step
+variable        grwRt         equal     0.01/${grwNs}       
+variable        grwRt         equal     0.01/20       
+
+#--------------------------Material Information---------------------------------------------------------
+variable        cf_pp         equal     1.0
+variable        cf_pw         equal     0.2
+variable        cf_ww         equal     0.2
+variable        cof_pp        equal     0.2
+variable        cof_pw        equal     0.1
+variable        cof_ww        equal     0.1
+variable        corf_pp       equal     0.
+variable        corf_pw       equal     0.2
+variable        corf_ww       equal     0.2
+variable        Yp            equal     1e+7
+variable        Yw            equal     5.1e+6
+
+#---------------------Generate Box----------------------------------------
+#region          reg block ${x1y1} ${x2y2} ${x1y1} ${x2y2} ${z1} ${z2}  units box
+#create_box      2 reg
+read_restart    cohesion.restart
+WARNING: Restart file version does not match LIGGGHTS version (../read_restart.cpp:507)
+WARNING: Restart file used different # of processors (../read_restart.cpp:574)
+  orthogonal box = (-0.5 -0.5 -0.25) to (0.5 0.5 0.5)
+  1 by 1 by 1 MPI processor grid
+  1174 atoms
+
+#---------------------Assign Material Properties to particle and wall----------------------------------------
+fix 		m1 all property/global youngsModulus peratomtype ${Yp} ${Yw}
+fix 		m1 all property/global youngsModulus peratomtype 10000000 ${Yw}
+fix 		m1 all property/global youngsModulus peratomtype 10000000 5100000
+fix 		m2 all property/global poissonsRatio peratomtype 0.3 0.3
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 ${cf_pp} ${cf_pw} ${cf_pw} ${cf_ww}
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 1 ${cf_pw} ${cf_pw} ${cf_ww}
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 1 0.2 ${cf_pw} ${cf_ww}
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 1 0.2 0.2 ${cf_ww}
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 1 0.2 0.2 0.2
+fix             m4 all property/global coefficientFriction peratomtypepair 2 ${cof_pp} ${cof_pw} ${cof_pw} ${cof_ww}
+fix             m4 all property/global coefficientFriction peratomtypepair 2 0.2 ${cof_pw} ${cof_pw} ${cof_ww}
+fix             m4 all property/global coefficientFriction peratomtypepair 2 0.2 0.1 ${cof_pw} ${cof_ww}
+fix             m4 all property/global coefficientFriction peratomtypepair 2 0.2 0.1 0.1 ${cof_ww}
+fix             m4 all property/global coefficientFriction peratomtypepair 2 0.2 0.1 0.1 0.1
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 ${corf_pp} ${corf_pw} ${corf_pw} ${corf_ww}
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 0 ${corf_pw} ${corf_pw} ${corf_ww}
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 0 0.2 ${corf_pw} ${corf_ww}
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 0 0.2 0.2 ${corf_ww}
+fix             m5 all property/global coefficientRollingFriction peratomtypepair 2 0 0.2 0.2 0.2
+fix             m6 all property/global cohesionEnergyDensity peratomtypepair 2 900000 0 0 0
+
+#Define pair style
+pair_style gran model hertz tangential history cohesion sjkr #Hertzian with cohesion
+pair_coeff	* *
+
+#fix Bsphere all mesh/surface file sphere.stl type 2 scale 0.0125
+#fix wall all wall/gran model hertz tangential history rolling_friction epsd2 mesh n_meshes 1 meshes Bsphere
+
+fix xwalls1 all wall/gran model hertz tangential history primitive type 1 xplane ${x1y1}
+fix xwalls1 all wall/gran model hertz tangential history primitive type 1 xplane -0.5
+Resetting global state of Fix history_xwalls1 Style property/atom from restart file info
+Resetting per-atom state of Fix history_xwalls1 Style property/atom from restart file info
+fix xwalls2 all wall/gran model hertz tangential history primitive type 1 xplane ${x2y2}
+fix xwalls2 all wall/gran model hertz tangential history primitive type 1 xplane 0.5
+Resetting global state of Fix history_xwalls2 Style property/atom from restart file info
+Resetting per-atom state of Fix history_xwalls2 Style property/atom from restart file info
+fix ywalls1 all wall/gran model hertz tangential history primitive type 1 yplane ${x1y1}
+fix ywalls1 all wall/gran model hertz tangential history primitive type 1 yplane -0.5
+Resetting global state of Fix history_ywalls1 Style property/atom from restart file info
+Resetting per-atom state of Fix history_ywalls1 Style property/atom from restart file info
+fix ywalls2 all wall/gran model hertz tangential history primitive type 1 yplane ${x2y2}
+fix ywalls2 all wall/gran model hertz tangential history primitive type 1 yplane 0.5
+Resetting global state of Fix history_ywalls2 Style property/atom from restart file info
+Resetting per-atom state of Fix history_ywalls2 Style property/atom from restart file info
+fix zwalls2 all wall/gran model hertz tangential history primitive type 1 zplane ${z1}
+fix zwalls2 all wall/gran model hertz tangential history primitive type 1 zplane -0.25
+Resetting global state of Fix history_zwalls2 Style property/atom from restart file info
+Resetting per-atom state of Fix history_zwalls2 Style property/atom from restart file info
+
+#fix pts1 all particletemplate/sphere 15485863 atom_type 1 density constant 2500 radius constant ${r0}
+#fix pdd1 all particledistribution/discrete 86028157 1 pts1 1
+
+#fix ins_mesh all mesh/surface/planar file ins_face.stl heal auto_remove_duplicates type 2 scale 0.0125
+#fix ins all insert/stream seed 86028121 distributiontemplate pdd1 #                maxattempt 200 nparticles 1200 particlerate 180 overlapcheck yes all_in yes vel constant 0 0 -2.0 #                insertion_face ins_mesh extrude_length 0.2
+
+#apply nve integration to all particles
+fix		integr all nve/sphere
+fix		gravi all  gravity 9.81 vector 0.0 0.0 -1.0
+
+#------------------------Output Settings------------------------------------------------------
+# Output to screen
+compute        ker   all   erotate/sphere            # Compute the rotational kinetic energy of all particles
+compute        prs   all   pressure thermo_temp                  # Total pressure on ghost particles
+thermo_style	custom step atoms ke c_ker vol c_prs
+thermo		${thermofreq}
+thermo		1000
+thermo_modify	lost ignore norm no
+# Output to file
+dump              2 all custom ${writeOutEvery} post/cycle.lmp id type x y z radius fx fy fz
+dump              2 all custom 20000 post/cycle.lmp id type x y z radius fx fy fz
+dump_modify       2 format "%7.0g %4.0g %15.10g %15.10g %15.10g %15.10g %15.10g %15.10g %15.10g"
+#dump		dmp all custom/vtk ${writeOutEvery} post/dump*.sphere.vtk type mass x y z id vx vy vz fx fy fz omegax omegay omegaz radius
+#dump            dumpSphere all stl ${writeOutEvery} post/dump_Sphere*.stl Bsphere
+
+#------------------------Run the calculation------------------------------------------------------
+# 1. Run first period: relax the system
+run		${writeOutEvery}
+run		20000
+Resetting global state of Fix contacthistory Style contacthistory from restart file info
+Resetting per-atom state of Fix contacthistory Style contacthistory from restart file info
+Setting up run at Fri Apr 28 19:48:54 2023
+
+Memory usage per processor = 9.74419 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2000000     1174     0.13269721    0.017948776           0.75      83.632757 
+ 2001000     1174     0.13394827    0.017985735           0.75      79.699807 
+ 2002000     1174     0.13059795     0.01775092           0.75      78.213425 
+ 2003000     1174     0.12154149    0.018149301           0.75      77.326925 
+ 2004000     1174     0.10977006    0.017935929           0.75      73.059421 
+ 2005000     1174     0.10125252    0.018046833           0.75      72.991187 
+ 2006000     1174    0.097806417    0.017557512           0.75      74.866649 
+ 2007000     1174    0.096537179    0.017854707           0.75      75.296522 
+ 2008000     1174    0.096674762    0.018040371           0.75      77.450105 
+ 2009000     1174    0.091870778    0.017738879           0.75      80.987862 
+ 2010000     1174    0.082414209    0.018468985           0.75      82.415216 
+ 2011000     1174    0.069848501    0.017521145           0.75      82.904838 
+ 2012000     1174     0.06142446    0.017281092           0.75      85.879141 
+ 2013000     1174    0.057925409    0.017831722           0.75      85.791392 
+ 2014000     1174    0.057976427    0.018500002           0.75      82.184594 
+ 2015000     1174    0.058967639    0.017629521           0.75      78.971293 
+ 2016000     1174    0.055075412    0.018083496           0.75      79.886515 
+ 2017000     1174    0.047409635    0.018105257           0.75      77.374733 
+ 2018000     1174    0.038391324    0.017797628           0.75      73.021085 
+ 2019000     1174     0.03138876    0.018174307           0.75      73.964697 
+ 2020000     1174    0.031545925    0.018051348           0.75      74.539848 
+Loop time of 7.20817 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:49:01 2023
+
+
+Pair  time (%) = 6.57484 (91.2137)
+Neigh time (%) = 0.120333 (1.66939)
+Comm  time (%) = 0.00473077 (0.0656306)
+Outpt time (%) = 0.00300238 (0.0416524)
+Other time (%) = 0.505262 (7.00958)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4040 ave 4040 max 4040 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4040
+Ave neighs/atom = 3.44123
+Neighbor list builds = 164
+Dangerous builds = 0
+# 2. Run second period: growth the particle in all direction
+variable          nt   equal    1
+label  loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+1*${grwRt})
+  variable        dd    equal   2*(0.02+1*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.041
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:49:01 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2020000     1174     0.03397151    0.020423444           0.75       1739.447 
+ 2021000     1174      20.743362      2.7682147           0.75      -30.58402 
+ 2022000     1174      9.1358657      2.5502635           0.75     -331.84722 
+ 2023000     1174      12.808092      2.4571611           0.75      62.760695 
+ 2024000     1174      9.6988973      2.2743632           0.75      365.44498 
+ 2025000     1174      7.3696219      2.0222944           0.75      134.38538 
+ 2026000     1174      7.2859761      1.9357531           0.75     -111.31355 
+ 2027000     1174      4.9106861      1.7285799           0.75     -28.580183 
+ 2028000     1174      6.3576897      1.6257853           0.75      109.94964 
+ 2029000     1174      4.0281211      1.5210578           0.75      92.684529 
+ 2030000     1174      6.1200492      1.5291458           0.75       60.01543 
+ 2031000     1174      4.6006706      1.4106535           0.75      54.315999 
+ 2032000     1174       5.227583       1.374795           0.75       53.51609 
+ 2033000     1174      3.8448249      1.2787764           0.75      124.66718 
+ 2034000     1174      3.4263036      1.1902338           0.75      234.00981 
+ 2035000     1174      2.9377601      1.0999164           0.75       127.1206 
+ 2036000     1174       3.180212      1.0410688           0.75      35.360369 
+ 2037000     1174      3.3859977      1.0579999           0.75       141.1062 
+ 2038000     1174      3.7030575      1.0697043           0.75      177.59557 
+ 2039000     1174      3.1067243      1.0191098           0.75      31.069196 
+ 2040000     1174      3.2017776     0.92786007           0.75     -9.2165337 
+Loop time of 9.12373 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:49:10 2023
+
+
+Pair  time (%) = 6.82533 (74.8085)
+Neigh time (%) = 1.58123 (17.3309)
+Comm  time (%) = 0.0167076 (0.183123)
+Outpt time (%) = 0.00282746 (0.0309902)
+Other time (%) = 0.697641 (7.64644)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4087 ave 4087 max 4087 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4087
+Ave neighs/atom = 3.48126
+Neighbor list builds = 2144
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   1+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+2*${grwRt})
+  variable        dd    equal   2*(0.02+2*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.042
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:49:10 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2040000     1174      3.4418145      1.0466697           0.75      1723.2953 
+ 2041000     1174      23.939357       3.568227           0.75    -0.81045084 
+ 2042000     1174       10.30955      2.9594755           0.75     -456.06717 
+ 2043000     1174      14.650129      2.8375478           0.75      5.3412928 
+ 2044000     1174      10.953826      2.7318262           0.75       401.9738 
+ 2045000     1174      8.5997709      2.4311343           0.75      172.10695 
+ 2046000     1174      8.3558818      2.2857137           0.75     -158.10625 
+ 2047000     1174      6.2975321      2.1764744           0.75     -60.494794 
+ 2048000     1174      7.6633547      1.9518135           0.75      128.35547 
+ 2049000     1174      5.8777315      1.8636025           0.75      183.06691 
+ 2050000     1174      7.4187132      1.7273516           0.75      75.243221 
+ 2051000     1174      5.0051829      1.6913614           0.75       73.83002 
+ 2052000     1174      5.6355266      1.5596144           0.75       110.7385 
+ 2053000     1174      3.8790724      1.5344182           0.75      176.98595 
+ 2054000     1174      4.2327056      1.4951103           0.75      227.59285 
+ 2055000     1174      3.7907453      1.2921594           0.75      142.62561 
+ 2056000     1174       4.482774       1.210168           0.75      39.370278 
+ 2057000     1174       4.231385      1.1269216           0.75      100.86309 
+ 2058000     1174      4.2239892       1.242404           0.75      150.74426 
+ 2059000     1174      3.2476305      1.1131198           0.75      71.642084 
+ 2060000     1174      3.2967848      1.0869115           0.75     -37.393218 
+Loop time of 9.284 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:49:20 2023
+
+
+Pair  time (%) = 6.95487 (74.9124)
+Neigh time (%) = 1.60385 (17.2755)
+Comm  time (%) = 0.016846 (0.181452)
+Outpt time (%) = 0.00310632 (0.0334589)
+Other time (%) = 0.705326 (7.59722)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4101 ave 4101 max 4101 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4101
+Ave neighs/atom = 3.49319
+Neighbor list builds = 2156
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   2+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+3*${grwRt})
+  variable        dd    equal   2*(0.02+3*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.043
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:49:20 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2060000     1174      3.5379207      1.2226159           0.75      1782.7266 
+ 2061000     1174      23.529373      3.8458128           0.75     -15.791339 
+ 2062000     1174      10.908252      3.1687937           0.75     -474.82589 
+ 2063000     1174       14.66157      3.2223884           0.75      37.942108 
+ 2064000     1174      11.632191      3.0681504           0.75      440.58861 
+ 2065000     1174      9.6629059      2.8732135           0.75      187.55912 
+ 2066000     1174      9.3464154      2.5287622           0.75      -141.5987 
+ 2067000     1174      6.8383375       2.424394           0.75     -40.503246 
+ 2068000     1174      8.8935041      2.2206782           0.75      159.36187 
+ 2069000     1174       5.612229      2.1015429           0.75      220.52378 
+ 2070000     1174      7.9491964      2.1079415           0.75      89.868757 
+ 2071000     1174       4.833704      1.8283868           0.75      47.008935 
+ 2072000     1174      6.4758919       1.900527           0.75      88.743277 
+ 2073000     1174      4.2700417      1.6671118           0.75      200.62209 
+ 2074000     1174      5.1400279       1.586039           0.75      223.60346 
+ 2075000     1174      4.1849517      1.5302233           0.75      91.393006 
+ 2076000     1174      4.7065828      1.4428373           0.75      15.863834 
+ 2077000     1174      4.1788673      1.4449048           0.75      140.83639 
+ 2078000     1174      4.3608588      1.3631683           0.75      219.83215 
+ 2079000     1174      3.4981933      1.2688429           0.75      69.958653 
+ 2080000     1174       3.656887      1.2385786           0.75     -31.518807 
+Loop time of 9.60701 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:49:29 2023
+
+
+Pair  time (%) = 7.25346 (75.5017)
+Neigh time (%) = 1.60455 (16.7019)
+Comm  time (%) = 0.0177943 (0.185222)
+Outpt time (%) = 0.00325102 (0.0338401)
+Other time (%) = 0.727954 (7.57732)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4121 ave 4121 max 4121 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4121
+Ave neighs/atom = 3.51022
+Neighbor list builds = 2089
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   3+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+4*${grwRt})
+  variable        dd    equal   2*(0.02+4*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.044
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:49:29 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2080000     1174       3.917998      1.3894556           0.75      1880.8046 
+ 2081000     1174      24.143525      4.1078025           0.75      34.190343 
+ 2082000     1174      11.939236      3.4197129           0.75     -464.81615 
+ 2083000     1174      15.555348      3.2982163           0.75      25.682989 
+ 2084000     1174      12.685056      3.2868992           0.75      451.66642 
+ 2085000     1174      10.460112      2.9673939           0.75      234.09935 
+ 2086000     1174      9.6717509      2.7889279           0.75     -140.05095 
+ 2087000     1174      7.2059124      2.3316439           0.75      -72.52832 
+ 2088000     1174      8.9723746      2.4261898           0.75      129.91164 
+ 2089000     1174       6.372037      2.3394853           0.75      230.01451 
+ 2090000     1174      8.0217651      2.1794884           0.75      77.162663 
+ 2091000     1174       6.099706      1.9137965           0.75      59.416989 
+ 2092000     1174      6.5465968      1.8277273           0.75      99.351981 
+ 2093000     1174      6.0449126      1.8365785           0.75      168.09384 
+ 2094000     1174       4.798452      1.7318569           0.75      252.23971 
+ 2095000     1174      4.9696147      1.6489992           0.75      168.76077 
+ 2096000     1174      4.0225841      1.5166115           0.75      31.333642 
+ 2097000     1174      4.7172189      1.3951856           0.75      113.59484 
+ 2098000     1174      4.5102289      1.4196021           0.75       261.3888 
+ 2099000     1174      4.3122726      1.3596732           0.75      154.85782 
+ 2100000     1174      4.1237158       1.310241           0.75     -39.847615 
+Loop time of 9.88076 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:49:39 2023
+
+
+Pair  time (%) = 7.43852 (75.2829)
+Neigh time (%) = 1.65899 (16.7901)
+Comm  time (%) = 0.0194195 (0.196538)
+Outpt time (%) = 0.00301662 (0.0305302)
+Other time (%) = 0.760814 (7.69996)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4137 ave 4137 max 4137 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4137
+Ave neighs/atom = 3.52385
+Neighbor list builds = 2098
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   4+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+5*${grwRt})
+  variable        dd    equal   2*(0.02+5*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.045
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:49:39 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2100000     1174      4.4113167      1.4660554           0.75      1964.2674 
+ 2101000     1174      26.721589       4.117188           0.75     -17.960842 
+ 2102000     1174      12.356178      3.6469124           0.75     -533.19078 
+ 2103000     1174      18.997289      3.4017469           0.75      35.079308 
+ 2104000     1174      12.583373      3.3770661           0.75      539.05939 
+ 2105000     1174      12.608816      3.2354941           0.75      230.81324 
+ 2106000     1174      9.7196148      2.7511329           0.75     -214.83186 
+ 2107000     1174      8.9144461      2.6573589           0.75      -81.96519 
+ 2108000     1174      9.7971496      2.5206539           0.75       183.9091 
+ 2109000     1174      8.0398637      2.3777081           0.75      239.10358 
+ 2110000     1174      8.9718599      2.0963223           0.75      41.943397 
+ 2111000     1174      7.9698559      2.0805662           0.75       47.06789 
+ 2112000     1174      6.8770044       1.878488           0.75      182.30062 
+ 2113000     1174      7.3397178      1.9866541           0.75      198.98912 
+ 2114000     1174       4.734562      1.8362677           0.75      244.31773 
+ 2115000     1174      5.6829146      1.8245237           0.75      193.84107 
+ 2116000     1174      4.5764498      1.5355468           0.75      96.827197 
+ 2117000     1174      5.3569552      1.5661634           0.75      123.47374 
+ 2118000     1174      5.5165695      1.4343164           0.75      243.72888 
+ 2119000     1174      5.0838489      1.4370977           0.75      165.06298 
+ 2120000     1174      4.8357586      1.3922962           0.75      10.254288 
+Loop time of 10.0051 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:49:49 2023
+
+
+Pair  time (%) = 7.4997 (74.9587)
+Neigh time (%) = 1.71509 (17.1422)
+Comm  time (%) = 0.0190033 (0.189936)
+Outpt time (%) = 0.00303298 (0.0303143)
+Other time (%) = 0.768283 (7.67891)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4150 ave 4150 max 4150 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4150
+Ave neighs/atom = 3.53492
+Neighbor list builds = 2178
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   5+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+6*${grwRt})
+  variable        dd    equal   2*(0.02+6*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.046
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:49:49 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2120000     1174      5.1653597      1.5540258           0.75      2115.3964 
+ 2121000     1174      31.462083       4.576955           0.75     -12.616003 
+ 2122000     1174      11.995122      3.6939576           0.75     -614.51065 
+ 2123000     1174      22.063933      3.6602947           0.75     -9.5082819 
+ 2124000     1174      13.954386      3.6753628           0.75       640.9524 
+ 2125000     1174      14.329036      3.5399293           0.75      299.85716 
+ 2126000     1174      11.727299      3.0437059           0.75       -267.106 
+ 2127000     1174      10.126496      2.8773337           0.75     -176.15825 
+ 2128000     1174      11.333515      2.5933498           0.75      181.61473 
+ 2129000     1174      9.7797239      2.7095061           0.75      328.04977 
+ 2130000     1174       9.648609      2.4134907           0.75      72.956821 
+ 2131000     1174      10.154303      2.3517651           0.75     -6.0795295 
+ 2132000     1174      6.9740182      2.1978271           0.75      157.83344 
+ 2133000     1174      9.2731724       2.205058           0.75      254.11938 
+ 2134000     1174      4.5943603      1.9004185           0.75      273.66806 
+ 2135000     1174      7.3503477      2.0080185           0.75      222.64113 
+ 2136000     1174      5.0535966      1.7315772           0.75        126.699 
+ 2137000     1174      7.0441992      1.8720417           0.75      119.00276 
+ 2138000     1174      6.0648696      1.6483781           0.75      208.22071 
+ 2139000     1174      6.5537885      1.6084163           0.75       244.5417 
+ 2140000     1174      5.0228207      1.4943004           0.75      57.330704 
+Loop time of 9.92838 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:49:59 2023
+
+
+Pair  time (%) = 7.52333 (75.776)
+Neigh time (%) = 1.63261 (16.4439)
+Comm  time (%) = 0.0182478 (0.183794)
+Outpt time (%) = 0.00300411 (0.0302578)
+Other time (%) = 0.75119 (7.56608)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4165 ave 4165 max 4165 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4165
+Ave neighs/atom = 3.5477
+Neighbor list builds = 2091
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   6+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+7*${grwRt})
+  variable        dd    equal   2*(0.02+7*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.047
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:49:59 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2140000     1174      5.3575687      1.6639415           0.75      2275.9386 
+ 2141000     1174      36.268334      4.6083883           0.75     -55.569542 
+ 2142000     1174      12.066654      3.9693872           0.75     -698.24348 
+ 2143000     1174      24.912251      3.7420668           0.75     -77.415392 
+ 2144000     1174      15.444762      3.7681984           0.75      720.18202 
+ 2145000     1174      15.911491      3.6549435           0.75        399.041 
+ 2146000     1174      13.052863      3.1787621           0.75     -299.02797 
+ 2147000     1174      11.077875      2.8831325           0.75     -254.19644 
+ 2148000     1174      11.987356      2.8198176           0.75      189.71515 
+ 2149000     1174       11.88753      2.8131847           0.75      406.43346 
+ 2150000     1174      10.349351      2.6588412           0.75      141.01257 
+ 2151000     1174      11.424465      2.4439888           0.75     -38.901904 
+ 2152000     1174      7.7465601      2.3888229           0.75      156.55089 
+ 2153000     1174      9.7176714        2.39635           0.75      256.77258 
+ 2154000     1174      5.5740893      2.0734004           0.75      329.80495 
+ 2155000     1174      7.6426509      2.0364565           0.75      269.88433 
+ 2156000     1174      5.7342858      1.8305083           0.75      174.21666 
+ 2157000     1174      7.3988331      1.8437703           0.75      82.976056 
+ 2158000     1174      6.5754196      1.8323396           0.75      173.83763 
+ 2159000     1174       7.173569      1.8187611           0.75      257.97736 
+ 2160000     1174       5.262626      1.5532467           0.75      130.95472 
+Loop time of 9.85383 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:50:09 2023
+
+
+Pair  time (%) = 7.45032 (75.6084)
+Neigh time (%) = 1.63221 (16.5643)
+Comm  time (%) = 0.0177866 (0.180505)
+Outpt time (%) = 0.00304735 (0.0309256)
+Other time (%) = 0.750454 (7.61587)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4174 ave 4174 max 4174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4174
+Ave neighs/atom = 3.55537
+Neighbor list builds = 2080
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   7+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+8*${grwRt})
+  variable        dd    equal   2*(0.02+8*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.048
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:50:09 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2160000     1174      5.6057361      1.7256683           0.75      2459.0974 
+ 2161000     1174      41.650584      4.6285471           0.75      13.383332 
+ 2162000     1174      14.094307      4.1755854           0.75     -792.35305 
+ 2163000     1174      25.264872      3.9622191           0.75     -222.81725 
+ 2164000     1174      19.734239      3.9923066           0.75      691.77643 
+ 2165000     1174      15.310021      3.6953009           0.75      632.64576 
+ 2166000     1174      16.335098      3.2111545           0.75     -213.22207 
+ 2167000     1174       11.86393      3.1827006           0.75     -367.21762 
+ 2168000     1174      13.450449      2.9536136           0.75      98.928743 
+ 2169000     1174      14.005515      3.0557336           0.75      466.05597 
+ 2170000     1174      10.732803       2.814302           0.75      296.78879 
+ 2171000     1174      12.792924       2.533778           0.75      5.0368052 
+ 2172000     1174       9.094239      2.4913486           0.75      79.929568 
+ 2173000     1174      10.055796      2.5264852           0.75      220.79829 
+ 2174000     1174      8.3124897       2.381206           0.75       361.5456 
+ 2175000     1174      7.6910261      2.2323727           0.75      353.94614 
+ 2176000     1174      8.0164314      2.2430641           0.75      190.28323 
+ 2177000     1174      7.2253618      2.0175777           0.75       71.61273 
+ 2178000     1174      7.6985777      1.9495489           0.75      98.647929 
+ 2179000     1174      7.4929628      1.9045726           0.75      253.85957 
+ 2180000     1174      6.2299689      1.8410797           0.75      255.23598 
+Loop time of 9.7654 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:50:19 2023
+
+
+Pair  time (%) = 7.3717 (75.488)
+Neigh time (%) = 1.62764 (16.6674)
+Comm  time (%) = 0.0176321 (0.180557)
+Outpt time (%) = 0.00306674 (0.0314041)
+Other time (%) = 0.745361 (7.63267)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4182 ave 4182 max 4182 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4182
+Ave neighs/atom = 3.56218
+Neighbor list builds = 2113
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   8+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+9*${grwRt})
+  variable        dd    equal   2*(0.02+9*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.049
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:50:19 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2180000     1174      6.6275102      2.0410179           0.75       2710.702 
+ 2181000     1174      47.085769      5.2199615           0.75      121.28055 
+ 2182000     1174      17.442264       4.423825           0.75     -872.90189 
+ 2183000     1174      24.959042      4.2751696           0.75     -356.57947 
+ 2184000     1174      25.313297      4.4558136           0.75       650.5744 
+ 2185000     1174      14.625853      3.9261926           0.75      783.99943 
+ 2186000     1174      18.813056      3.6250287           0.75     -69.934316 
+ 2187000     1174      13.439308      3.5721659           0.75     -415.96739 
+ 2188000     1174       13.84739      3.3237918           0.75     -40.574296 
+ 2189000     1174      15.368606      3.2623771           0.75      396.44728 
+ 2190000     1174      11.808582      3.0929395           0.75      435.89863 
+ 2191000     1174      13.404081       2.949898           0.75      99.621691 
+ 2192000     1174      11.237002      2.8240496           0.75      42.099998 
+ 2193000     1174      9.1408569      2.5947104           0.75        166.824 
+ 2194000     1174      10.546026      2.7362913           0.75      333.78418 
+ 2195000     1174      7.2541773      2.4764529           0.75       399.8879 
+ 2196000     1174      9.2034962      2.7013472           0.75      294.75802 
+ 2197000     1174      8.2210861      2.3951427           0.75      103.08224 
+ 2198000     1174      8.5801562      2.3092859           0.75      67.215885 
+ 2199000     1174        8.10748      2.2936389           0.75      202.90141 
+ 2200000     1174      8.0900017      2.1274947           0.75      320.56765 
+Loop time of 10.0227 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:50:29 2023
+
+
+Pair  time (%) = 7.42785 (74.1099)
+Neigh time (%) = 1.80896 (18.0485)
+Comm  time (%) = 0.0186337 (0.185914)
+Outpt time (%) = 0.00352284 (0.0351485)
+Other time (%) = 0.763782 (7.62049)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4196 ave 4196 max 4196 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4196
+Ave neighs/atom = 3.57411
+Neighbor list builds = 2334
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   9+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+10*${grwRt})
+  variable        dd    equal   2*(0.02+10*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.05
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:50:29 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2200000     1174       8.595485      2.3536296           0.75      2891.9471 
+ 2201000     1174      48.881135      5.4651305           0.75      279.41558 
+ 2202000     1174      22.762063      4.8086365           0.75     -891.75776 
+ 2203000     1174      23.529865      4.2447681           0.75     -491.52498 
+ 2204000     1174       31.42689      4.9041964           0.75      537.72559 
+ 2205000     1174      15.591261      4.4102116           0.75      937.45238 
+ 2206000     1174      21.080965      3.9120381           0.75      141.06852 
+ 2207000     1174      16.340298      3.8125952           0.75     -443.51566 
+ 2208000     1174       13.69496      3.4525052           0.75     -227.48523 
+ 2209000     1174      18.043008      3.3851812           0.75      286.56245 
+ 2210000     1174      13.726544      3.3176802           0.75      601.14715 
+ 2211000     1174      15.413239      3.0085446           0.75      254.97911 
+ 2212000     1174      13.573712      2.9183483           0.75      17.024656 
+ 2213000     1174      10.622484      2.9005697           0.75      23.776588 
+ 2214000     1174      11.880221      2.9111498           0.75      287.66097 
+ 2215000     1174      8.8627186      2.5819102           0.75      515.58137 
+ 2216000     1174      10.610264      2.4673251           0.75      451.59806 
+ 2217000     1174      9.6806073      2.3679916           0.75      109.29251 
+ 2218000     1174      9.5346357      2.4459503           0.75     -28.956883 
+ 2219000     1174      9.6587653      2.2403082           0.75      182.21624 
+ 2220000     1174      9.4634359       2.163027           0.75      401.64502 
+Loop time of 10.2061 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:50:39 2023
+
+
+Pair  time (%) = 7.5522 (73.9968)
+Neigh time (%) = 1.85241 (18.15)
+Comm  time (%) = 0.0193476 (0.189568)
+Outpt time (%) = 0.00334927 (0.0328163)
+Other time (%) = 0.77881 (7.63082)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4207 ave 4207 max 4207 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4207
+Ave neighs/atom = 3.58348
+Neighbor list builds = 2337
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   10+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+11*${grwRt})
+  variable        dd    equal   2*(0.02+11*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.051
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:50:39 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2220000     1174      10.042674      2.3881566           0.75      3085.9979 
+ 2221000     1174      52.352334      5.2215966           0.75      375.66612 
+ 2222000     1174       27.40122       4.980203           0.75     -906.44862 
+ 2223000     1174      23.987164      4.4735443           0.75     -551.27685 
+ 2224000     1174      35.536316       5.353724           0.75      399.29564 
+ 2225000     1174      18.121333      4.7016834           0.75      948.70315 
+ 2226000     1174      22.077146       4.202659           0.75      337.25486 
+ 2227000     1174       18.78212      3.9868474           0.75      -418.6168 
+ 2228000     1174       13.54475      3.4209381           0.75     -388.29713 
+ 2229000     1174      20.482196      3.5538475           0.75      175.30956 
+ 2230000     1174      15.731071       3.388374           0.75      624.95619 
+ 2231000     1174      17.205558      3.3036545           0.75        406.458 
+ 2232000     1174      16.100839      3.1237945           0.75      67.611034 
+ 2233000     1174      11.823833      2.8373579           0.75     -40.408434 
+ 2234000     1174      14.201752      2.8069357           0.75      217.23161 
+ 2235000     1174      10.111404      2.6652727           0.75      591.51076 
+ 2236000     1174      11.601742       2.629358           0.75      619.47496 
+ 2237000     1174      10.921775      2.5591226           0.75      201.07521 
+ 2238000     1174      10.166185      2.3827935           0.75     -71.911411 
+ 2239000     1174       12.37787       2.384595           0.75      140.21657 
+ 2240000     1174      9.7861728      2.1953432           0.75      426.84295 
+Loop time of 10.283 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:50:49 2023
+
+
+Pair  time (%) = 7.55104 (73.4319)
+Neigh time (%) = 1.91442 (18.6172)
+Comm  time (%) = 0.0197967 (0.192518)
+Outpt time (%) = 0.0033538 (0.0326149)
+Other time (%) = 0.794436 (7.72569)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4218 ave 4218 max 4218 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4218
+Ave neighs/atom = 3.59284
+Neighbor list builds = 2476
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   11+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+12*${grwRt})
+  variable        dd    equal   2*(0.02+12*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.052
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:50:49 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2240000     1174      10.373191      2.4191805           0.75      3211.1482 
+ 2241000     1174       55.09656      5.7133647           0.75      545.61258 
+ 2242000     1174      31.938316       5.171021           0.75     -872.44721 
+ 2243000     1174      23.197991      4.5829944           0.75     -695.29403 
+ 2244000     1174      38.277705      5.4253082           0.75      292.62571 
+ 2245000     1174      21.322472      5.2057855           0.75      965.64941 
+ 2246000     1174      21.731743      4.8641145           0.75      552.97914 
+ 2247000     1174      23.063865      4.1212478           0.75     -348.60614 
+ 2248000     1174         13.783      3.9175063           0.75     -500.69799 
+ 2249000     1174      22.636462      3.9060495           0.75      36.658052 
+ 2250000     1174       18.85584      3.8250523           0.75      586.54341 
+ 2251000     1174      17.588411      3.4401313           0.75      610.43125 
+ 2252000     1174      20.678474      3.5717418           0.75      170.72308 
+ 2253000     1174      12.026705      3.1959258           0.75       -54.8027 
+ 2254000     1174       16.26373      3.2192091           0.75      126.21151 
+ 2255000     1174      11.181529      3.0232622           0.75      496.48391 
+ 2256000     1174      10.741021      2.9378104           0.75      803.04525 
+ 2257000     1174      14.432954      2.9128383           0.75      414.98232 
+ 2258000     1174      9.9794804      2.5175586           0.75     -63.668741 
+ 2259000     1174      14.901875      2.7662511           0.75     -11.026027 
+ 2260000     1174      12.073561      2.3386762           0.75      399.46465 
+Loop time of 10.0237 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:50:59 2023
+
+
+Pair  time (%) = 7.39969 (73.8218)
+Neigh time (%) = 1.83862 (18.3427)
+Comm  time (%) = 0.0186643 (0.186201)
+Outpt time (%) = 0.00307944 (0.0307215)
+Other time (%) = 0.763667 (7.61861)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4208 ave 4208 max 4208 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4208
+Ave neighs/atom = 3.58433
+Neighbor list builds = 2408
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   12+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+13*${grwRt})
+  variable        dd    equal   2*(0.02+13*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.053
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:50:59 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2260000     1174      12.783594      2.5723658           0.75      3288.6068 
+ 2261000     1174       54.30055      5.9043789           0.75      761.80063 
+ 2262000     1174        38.9704      5.3156429           0.75     -828.18847 
+ 2263000     1174      21.279695      4.6832891           0.75     -793.11677 
+ 2264000     1174      40.299769      5.2615597           0.75      155.22705 
+ 2265000     1174      24.430481      5.5518694           0.75      972.23766 
+ 2266000     1174      18.288136      4.6894325           0.75      708.18914 
+ 2267000     1174      27.648318      4.6418921           0.75     -222.76275 
+ 2268000     1174      13.592538      4.2376869           0.75     -579.47188 
+ 2269000     1174      20.406521      4.0968298           0.75     -154.61398 
+ 2270000     1174      25.041929      4.0680597           0.75      496.05151 
+ 2271000     1174      14.700191      3.6278363           0.75      745.64103 
+ 2272000     1174      26.198759      3.7966965           0.75      348.51516 
+ 2273000     1174      13.810849      3.2021129           0.75     -50.381661 
+ 2274000     1174      15.442111      3.3681176           0.75     -31.439246 
+ 2275000     1174      16.534591      3.2491291           0.75      422.92472 
+ 2276000     1174      7.9025188      2.9396202           0.75       888.0166 
+ 2277000     1174      17.028083      2.9827463           0.75      712.54358 
+ 2278000     1174      11.541129       2.673515           0.75      54.217741 
+ 2279000     1174       13.23249      2.6249477           0.75     -215.83311 
+ 2280000     1174      18.303277      2.6366729           0.75      234.26673 
+Loop time of 9.81644 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:51:09 2023
+
+
+Pair  time (%) = 7.30299 (74.3955)
+Neigh time (%) = 1.74575 (17.784)
+Comm  time (%) = 0.0177355 (0.180672)
+Outpt time (%) = 0.00299084 (0.0304676)
+Other time (%) = 0.746968 (7.60936)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4204 ave 4204 max 4204 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4204
+Ave neighs/atom = 3.58092
+Neighbor list builds = 2313
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   13+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+14*${grwRt})
+  variable        dd    equal   2*(0.02+14*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.054
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:51:09 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2280000     1174      19.358982      2.8949809           0.75      3195.3429 
+ 2281000     1174      43.376948      5.7837189           0.75      970.05691 
+ 2282000     1174      43.545842       5.687949           0.75     -584.74746 
+ 2283000     1174      22.613316      4.8090327           0.75      -826.1809 
+ 2284000     1174      35.391566      5.3189752           0.75     -5.4035809 
+ 2285000     1174      29.294239      5.6681998           0.75      818.55281 
+ 2286000     1174      13.663742      4.7043763           0.75      761.40517 
+ 2287000     1174      27.393468      4.8740709           0.75     -36.106067 
+ 2288000     1174      15.704316      4.1516536           0.75     -552.95976 
+ 2289000     1174      15.511581      3.8892051           0.75     -287.32128 
+ 2290000     1174      27.929745      4.0892704           0.75         228.72 
+ 2291000     1174      15.276538      3.8098839           0.75      800.23125 
+ 2292000     1174      25.471397      3.6677517           0.75      621.42819 
+ 2293000     1174      20.326584      3.5536897           0.75      90.176765 
+ 2294000     1174      13.075448       3.059355           0.75     -134.41017 
+ 2295000     1174      19.237003      3.1146422           0.75      206.48269 
+ 2296000     1174      9.3383609      2.9106634           0.75      877.72794 
+ 2297000     1174      12.827081      2.7785045           0.75      1046.1726 
+ 2298000     1174      16.262842      3.1771518           0.75      347.21057 
+ 2299000     1174      11.046612      2.6836105           0.75     -233.02263 
+ 2300000     1174       19.46259      2.7662106           0.75      33.405086 
+Loop time of 9.90241 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:51:19 2023
+
+
+Pair  time (%) = 7.42833 (75.0154)
+Neigh time (%) = 1.70373 (17.2052)
+Comm  time (%) = 0.0176508 (0.178247)
+Outpt time (%) = 0.0034233 (0.0345704)
+Other time (%) = 0.749272 (7.56657)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4196 ave 4196 max 4196 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4196
+Ave neighs/atom = 3.57411
+Neighbor list builds = 2193
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   14+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+15*${grwRt})
+  variable        dd    equal   2*(0.02+15*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.055
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:51:19 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2300000     1174      20.563992      3.0320048           0.75      3068.5262 
+ 2301000     1174      40.119036      5.9690752           0.75      947.31387 
+ 2302000     1174        39.5425      5.6257223           0.75     -378.11393 
+ 2303000     1174      28.670289      5.0764719           0.75     -703.68553 
+ 2304000     1174      30.636231      5.0860262           0.75      29.858204 
+ 2305000     1174      29.756239      5.5250457           0.75      671.37089 
+ 2306000     1174      14.464493      5.0725687           0.75      618.77156 
+ 2307000     1174      21.678329      5.0486023           0.75      26.934733 
+ 2308000     1174      18.235132      4.6095989           0.75     -382.38606 
+ 2309000     1174      12.646489       4.031507           0.75     -301.12633 
+ 2310000     1174      26.720783      4.1680852           0.75      59.039706 
+ 2311000     1174      19.511868      3.8759701           0.75       605.5799 
+ 2312000     1174       24.05329      3.7783865           0.75      628.47827 
+ 2313000     1174        25.4523      3.8984122           0.75      334.01435 
+ 2314000     1174      15.993373      3.3378366           0.75       35.99248 
+ 2315000     1174      18.711856      3.3520255           0.75      61.004994 
+ 2316000     1174      11.355982      3.1077646           0.75      717.94511 
+ 2317000     1174      10.232529      3.1165615           0.75      1164.3183 
+ 2318000     1174      15.533437      3.0325479           0.75      702.64487 
+ 2319000     1174      13.202451      2.9297974           0.75     -58.038329 
+ 2320000     1174       17.84218      2.8756507           0.75     -80.122275 
+Loop time of 10.0778 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:51:29 2023
+
+
+Pair  time (%) = 7.57683 (75.1831)
+Neigh time (%) = 1.71405 (17.0081)
+Comm  time (%) = 0.0182669 (0.181258)
+Outpt time (%) = 0.00322692 (0.03202)
+Other time (%) = 0.765458 (7.59546)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4195 ave 4195 max 4195 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4195
+Ave neighs/atom = 3.57325
+Neighbor list builds = 2217
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   15+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+16*${grwRt})
+  variable        dd    equal   2*(0.02+16*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.056
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:51:29 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2320000     1174      18.833192      3.1467541           0.75      3035.0315 
+ 2321000     1174      42.099532      5.9940561           0.75       818.1614 
+ 2322000     1174      38.935064      5.4794785           0.75     -324.35775 
+ 2323000     1174      32.726477      5.6337992           0.75     -601.21405 
+ 2324000     1174      32.732563       5.143025           0.75      100.34977 
+ 2325000     1174       29.12749      5.3263231           0.75       657.3117 
+ 2326000     1174      15.335186      5.0617887           0.75      509.71472 
+ 2327000     1174      19.266961      4.6729666           0.75     -65.644692 
+ 2328000     1174      16.660679      4.5960235           0.75     -345.38201 
+ 2329000     1174      12.362056      4.0392404           0.75     -208.67707 
+ 2330000     1174      23.339574      4.4214584           0.75      28.812885 
+ 2331000     1174      22.623953      3.9543153           0.75      403.22016 
+ 2332000     1174      25.382885      3.8516315           0.75      538.34712 
+ 2333000     1174      28.474527      3.6997567           0.75      408.95258 
+ 2334000     1174      21.949254      3.5427954           0.75      166.30148 
+ 2335000     1174      21.119026      3.3523336           0.75      103.67906 
+ 2336000     1174      13.323177      3.2463644           0.75      591.41009 
+ 2337000     1174      10.556102      3.3131565           0.75      1076.2293 
+ 2338000     1174      13.209629      3.1019341           0.75      955.93333 
+ 2339000     1174      14.214072      2.8862232           0.75      296.53872 
+ 2340000     1174      17.698164      2.7957457           0.75     -13.216881 
+Loop time of 9.92559 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:51:39 2023
+
+
+Pair  time (%) = 7.48457 (75.4068)
+Neigh time (%) = 1.66304 (16.7551)
+Comm  time (%) = 0.0177996 (0.17933)
+Outpt time (%) = 0.0032798 (0.0330439)
+Other time (%) = 0.756902 (7.62576)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4199 ave 4199 max 4199 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4199
+Ave neighs/atom = 3.57666
+Neighbor list builds = 2145
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   16+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+17*${grwRt})
+  variable        dd    equal   2*(0.02+17*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.057
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:51:39 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2340000     1174      18.663311      3.0544414           0.75      3224.4775 
+ 2341000     1174      49.220143      6.2098183           0.75      745.41595 
+ 2342000     1174      45.682499      5.9545085           0.75     -393.20665 
+ 2343000     1174      38.820731      5.4206403           0.75     -533.19837 
+ 2344000     1174      39.760855      5.5508118           0.75      149.44785 
+ 2345000     1174      32.969657      5.4034043           0.75      664.32084 
+ 2346000     1174       18.02354      5.0379283           0.75      452.69123 
+ 2347000     1174      19.385693      4.7710101           0.75     -110.23525 
+ 2348000     1174       17.94438      4.9320871           0.75      -332.3001 
+ 2349000     1174       12.68621      3.9551617           0.75     -182.44649 
+ 2350000     1174      21.529782      4.3431259           0.75      19.204479 
+ 2351000     1174      23.300904      4.1172802           0.75      189.42748 
+ 2352000     1174      28.402412       4.174822           0.75      388.90571 
+ 2353000     1174      32.748595       3.817811           0.75      448.81256 
+ 2354000     1174      30.481723      3.5544116           0.75       237.9706 
+ 2355000     1174      29.212409       3.544653           0.75      83.650243 
+ 2356000     1174      20.049969      3.1985781           0.75      464.42435 
+ 2357000     1174      12.147267       3.077199           0.75      1094.2921 
+ 2358000     1174      12.454409      3.1836902           0.75      1101.3249 
+ 2359000     1174      12.366596      2.9040245           0.75       592.4281 
+ 2360000     1174      16.835754      2.8314343           0.75      208.03779 
+Loop time of 9.82115 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:51:49 2023
+
+
+Pair  time (%) = 7.32098 (74.543)
+Neigh time (%) = 1.73925 (17.7092)
+Comm  time (%) = 0.0172344 (0.175482)
+Outpt time (%) = 0.0030923 (0.0314861)
+Other time (%) = 0.740601 (7.54087)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4212 ave 4212 max 4212 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4212
+Ave neighs/atom = 3.58773
+Neighbor list builds = 2280
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   17+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+18*${grwRt})
+  variable        dd    equal   2*(0.02+18*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.058
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:51:49 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2360000     1174      17.737483      3.0886748           0.75      3589.6023 
+ 2361000     1174      56.630133      6.5213569           0.75      869.61775 
+ 2362000     1174      55.798508      6.1125511           0.75     -381.94785 
+ 2363000     1174      51.014821      5.6987071           0.75     -557.50827 
+ 2364000     1174       51.64685      5.4906339           0.75      221.12284 
+ 2365000     1174      44.132763      5.6062978           0.75       786.8413 
+ 2366000     1174      26.960501      4.9130396           0.75      505.71259 
+ 2367000     1174      22.470802       4.887376           0.75     -174.72138 
+ 2368000     1174      21.250321      4.7394854           0.75     -364.14503 
+ 2369000     1174       13.71275      4.7376762           0.75     -225.83821 
+ 2370000     1174      17.822152      4.4766702           0.75      117.01167 
+ 2371000     1174      21.975519       4.156738           0.75      125.91891 
+ 2372000     1174      26.299347      4.0706128           0.75      176.64136 
+ 2373000     1174      36.976372      4.2688812           0.75       193.3466 
+ 2374000     1174       37.56184      3.6079321           0.75      230.13266 
+ 2375000     1174      45.096709      3.6539837           0.75      154.35149 
+ 2376000     1174      38.966141      3.5488174           0.75       301.4546 
+ 2377000     1174       25.19593      3.4272783           0.75      882.88328 
+ 2378000     1174      18.955273      3.4900243           0.75      1154.2157 
+ 2379000     1174      11.192815      3.0705159           0.75      938.65444 
+ 2380000     1174      11.604359      3.0859385           0.75      555.36635 
+Loop time of 9.85003 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:51:59 2023
+
+
+Pair  time (%) = 7.28999 (74.0098)
+Neigh time (%) = 1.79456 (18.2188)
+Comm  time (%) = 0.0178742 (0.181463)
+Outpt time (%) = 0.00297028 (0.0301551)
+Other time (%) = 0.744639 (7.55976)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4234 ave 4234 max 4234 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4234
+Ave neighs/atom = 3.60647
+Neighbor list builds = 2392
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   18+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+19*${grwRt})
+  variable        dd    equal   2*(0.02+19*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.059
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:51:59 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2380000     1174      12.214993      3.3613006           0.75      4117.7896 
+ 2381000     1174      57.977017      6.3665748           0.75      1132.3897 
+ 2382000     1174      62.875857      6.0058398           0.75     -220.05124 
+ 2383000     1174      66.432261      6.1268559           0.75     -508.82172 
+ 2384000     1174      68.652012      5.3408233           0.75       251.4347 
+ 2385000     1174       61.76015      5.7831541           0.75      858.37988 
+ 2386000     1174      42.814957      5.1700295           0.75      571.06789 
+ 2387000     1174      31.263546      4.7806007           0.75     -80.646799 
+ 2388000     1174      27.804444      5.0980324           0.75     -417.75705 
+ 2389000     1174      18.420824      4.3290313           0.75     -286.27732 
+ 2390000     1174      16.345539      4.3542688           0.75      178.66857 
+ 2391000     1174       18.71038      4.3881269           0.75      151.18467 
+ 2392000     1174      20.301018      4.1560001           0.75      35.657665 
+ 2393000     1174      30.628224      4.4169915           0.75     -58.378739 
+ 2394000     1174      34.476285      3.7073843           0.75      125.91197 
+ 2395000     1174      48.181559      3.6664039           0.75      134.76525 
+ 2396000     1174      56.385829      3.6923976           0.75      116.70136 
+ 2397000     1174      49.541785      3.4373492           0.75      431.06805 
+ 2398000     1174      43.347314      3.3625133           0.75      943.69707 
+ 2399000     1174      29.541746      3.5179329           0.75      1087.3931 
+ 2400000     1174      12.118887        3.02644           0.75      887.95741 
+Loop time of 10.0212 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:52:09 2023
+
+
+Pair  time (%) = 7.3787 (73.631)
+Neigh time (%) = 1.86929 (18.6534)
+Comm  time (%) = 0.0184861 (0.18447)
+Outpt time (%) = 0.0031165 (0.0310992)
+Other time (%) = 0.751587 (7.49998)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4270 ave 4270 max 4270 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4270
+Ave neighs/atom = 3.63714
+Neighbor list builds = 2478
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   19+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop2
+  variable        dd    equal   2*(${r0}+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+${nt}*${grwRt})
+  variable        dd    equal   2*(0.02+20*${grwRt})
+  variable        dd    equal   2*(0.02+20*0.0005)
+  set            type  1  diameter  ${dd}
+  set            type  1  diameter  0.06
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:52:09 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2400000     1174      12.745605      3.2917607           0.75      4617.1438 
+ 2401000     1174      49.130984      6.7280979           0.75      1446.3633 
+ 2402000     1174      52.776084      6.2024958           0.75       3.286625 
+ 2403000     1174      62.335916      6.1241809           0.75     -345.56383 
+ 2404000     1174       73.47072      5.6888805           0.75      259.51409 
+ 2405000     1174      72.399996      5.6259917           0.75      1005.7241 
+ 2406000     1174      61.661506      5.6432959           0.75      794.82853 
+ 2407000     1174      45.126757      4.8999134           0.75      102.09534 
+ 2408000     1174      33.228494        5.17013           0.75     -392.65469 
+ 2409000     1174      26.516553      4.8392388           0.75     -373.03675 
+ 2410000     1174      22.044425      4.4264394           0.75      131.73545 
+ 2411000     1174      15.499117      4.0937991           0.75      338.30863 
+ 2412000     1174      16.234917      4.0784215           0.75      79.198328 
+ 2413000     1174      24.880372      4.0714264           0.75     -244.84563 
+ 2414000     1174      27.942091      4.1094605           0.75     -102.51273 
+ 2415000     1174      34.328583      3.7843603           0.75      162.91502 
+ 2416000     1174      52.481208      3.9488408           0.75      283.97057 
+ 2417000     1174      53.265844      3.6659152           0.75      387.09955 
+ 2418000     1174      51.018624       3.571207           0.75      496.92113 
+ 2419000     1174      44.779797       3.615999           0.75      743.29763 
+ 2420000     1174       27.72646      3.2048552           0.75       815.5947 
+Loop time of 10.0688 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:52:19 2023
+
+
+Pair  time (%) = 7.41458 (73.6389)
+Neigh time (%) = 1.87482 (18.62)
+Comm  time (%) = 0.0185279 (0.184012)
+Outpt time (%) = 0.0026778 (0.0265949)
+Other time (%) = 0.758227 (7.53043)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4265 ave 4265 max 4265 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4265
+Ave neighs/atom = 3.63288
+Neighbor list builds = 2480
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   20+1
+  if "${nt} > ${grwNs}" then "jump cycle.in loop3"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(21-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(21-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(21-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.059
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:52:19 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2420000     1174      26.363114      2.9465392           0.75     -2284.9573 
+ 2421000     1174       50.64883       6.304858           0.75      324.02545 
+ 2422000     1174      39.168228      6.9539645           0.75      1929.3897 
+ 2423000     1174      19.565781      6.3268112           0.75      2197.2183 
+ 2424000     1174      43.140987      5.7922224           0.75      1031.2283 
+ 2425000     1174      40.342037      6.0020429           0.75     -217.65998 
+ 2426000     1174      30.423004       5.152109           0.75     -458.17029 
+ 2427000     1174      47.615614      5.1205137           0.75     -56.804123 
+ 2428000     1174      41.330701        5.51573           0.75      903.01225 
+ 2429000     1174      24.264335      4.8156556           0.75      1234.4148 
+ 2430000     1174      33.236098      4.8161311           0.75      261.80052 
+ 2431000     1174      19.725344      4.4712716           0.75     -676.80709 
+ 2432000     1174      15.112332      4.2503232           0.75      -710.5656 
+ 2433000     1174      24.456871      4.3878835           0.75      33.028916 
+ 2434000     1174      17.409517      4.1332946           0.75      699.02615 
+ 2435000     1174      23.163425      4.2125938           0.75      700.11211 
+ 2436000     1174       30.98222      3.8494455           0.75      172.24479 
+ 2437000     1174       24.50118      3.5120837           0.75     -287.87177 
+ 2438000     1174      30.506897      3.5966908           0.75     -55.444636 
+ 2439000     1174      29.872382      3.9166574           0.75      581.60599 
+ 2440000     1174      17.352661      3.3565545           0.75       1220.231 
+Loop time of 10.0699 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:52:29 2023
+
+
+Pair  time (%) = 7.41285 (73.6136)
+Neigh time (%) = 1.86888 (18.559)
+Comm  time (%) = 0.0183852 (0.182575)
+Outpt time (%) = 0.00330214 (0.032792)
+Other time (%) = 0.766536 (7.61212)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4280 ave 4280 max 4280 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4280
+Ave neighs/atom = 3.64566
+Neighbor list builds = 2455
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   21+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(22-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(22-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(22-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.058
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:52:29 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2440000     1174      16.485192      3.0815812           0.75     -1864.9016 
+ 2441000     1174      38.326548      6.3503963           0.75      520.76436 
+ 2442000     1174      24.748138      6.0748179           0.75      1440.9745 
+ 2443000     1174      23.600129      5.9876905           0.75      1257.9484 
+ 2444000     1174      19.994079      5.5842599           0.75      373.51975 
+ 2445000     1174       21.94137      5.3276345           0.75      34.897489 
+ 2446000     1174      21.514187      5.3452459           0.75      309.82489 
+ 2447000     1174      19.640177      4.9541472           0.75      552.36888 
+ 2448000     1174      24.518728      4.7411089           0.75      531.46744 
+ 2449000     1174      19.591108      4.8932596           0.75      275.58628 
+ 2450000     1174      18.646293      4.6196406           0.75      220.63081 
+ 2451000     1174      14.806015      3.9413366           0.75      190.70499 
+ 2452000     1174      15.088207      4.1152228           0.75       218.5751 
+ 2453000     1174      13.702523      3.9534499           0.75    0.021648082 
+ 2454000     1174      9.0910244      3.3403534           0.75       39.05226 
+ 2455000     1174      16.431017      3.7941045           0.75      287.65376 
+ 2456000     1174      13.196326      3.4465721           0.75      416.40682 
+ 2457000     1174      14.926094       3.471211           0.75      219.85105 
+ 2458000     1174      15.590791      3.1961178           0.75      141.64236 
+ 2459000     1174      14.852329       3.004183           0.75      356.12642 
+ 2460000     1174      13.107612      3.0837475           0.75      666.46625 
+Loop time of 9.96382 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:52:39 2023
+
+
+Pair  time (%) = 7.58715 (76.147)
+Neigh time (%) = 1.60969 (16.1553)
+Comm  time (%) = 0.0164628 (0.165226)
+Outpt time (%) = 0.00323687 (0.0324862)
+Other time (%) = 0.747288 (7.50001)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4258 ave 4258 max 4258 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4258
+Ave neighs/atom = 3.62692
+Neighbor list builds = 2066
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   22+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(23-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(23-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(23-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.057
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:52:39 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2460000     1174      12.441254      2.8269174           0.75     -2224.6002 
+ 2461000     1174      37.153197       5.981227           0.75      88.760977 
+ 2462000     1174      30.065857      6.1158535           0.75      1366.2456 
+ 2463000     1174      24.628985      5.9045779           0.75      1325.5045 
+ 2464000     1174      23.430659      5.3928314           0.75      284.19588 
+ 2465000     1174      24.772861      5.4668032           0.75     -140.04526 
+ 2466000     1174      15.147005      4.9600265           0.75      149.38882 
+ 2467000     1174      21.563822      4.7369211           0.75      467.05295 
+ 2468000     1174      17.513474      4.8257034           0.75      611.76191 
+ 2469000     1174      19.204176      4.5003588           0.75      683.48157 
+ 2470000     1174      20.448955      4.5442343           0.75      408.43691 
+ 2471000     1174      13.491919      3.8419107           0.75      57.967193 
+ 2472000     1174       18.57966      4.0500357           0.75     -93.793376 
+ 2473000     1174      13.769021      3.6044442           0.75       134.1023 
+ 2474000     1174      10.938074      3.7332054           0.75      511.16849 
+ 2475000     1174      15.473156      3.5780659           0.75      453.28174 
+ 2476000     1174      11.196205      3.4183025           0.75      87.494714 
+ 2477000     1174      11.029209      3.2662961           0.75     -186.56819 
+ 2478000     1174      14.007692      3.2384266           0.75      89.603411 
+ 2479000     1174      13.028187      3.1878007           0.75      651.02512 
+ 2480000     1174      10.923128      2.9219342           0.75      760.38813 
+Loop time of 9.89685 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:52:49 2023
+
+
+Pair  time (%) = 7.43887 (75.164)
+Neigh time (%) = 1.69317 (17.1081)
+Comm  time (%) = 0.0168116 (0.169869)
+Outpt time (%) = 0.0030999 (0.0313221)
+Other time (%) = 0.744901 (7.52665)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4273 ave 4273 max 4273 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4273
+Ave neighs/atom = 3.63969
+Neighbor list builds = 2191
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   23+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(24-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(24-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(24-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.056
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:52:49 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2480000     1174      10.358254      2.6744611           0.75     -2059.0531 
+ 2481000     1174      30.048323      5.8104124           0.75     -164.22944 
+ 2482000     1174       30.50732      5.7510779           0.75      909.02526 
+ 2483000     1174      21.788106      5.5763419           0.75      1197.2094 
+ 2484000     1174      23.792869      5.3299272           0.75      409.68593 
+ 2485000     1174      23.215699      5.0453455           0.75      -54.78502 
+ 2486000     1174      13.028533      4.6138164           0.75      45.744351 
+ 2487000     1174      17.491704      4.3178395           0.75      345.47152 
+ 2488000     1174       17.02607      4.5260208           0.75      771.61129 
+ 2489000     1174      14.044352      3.8256163           0.75      866.54555 
+ 2490000     1174      18.901698      4.0826963           0.75      442.04343 
+ 2491000     1174      14.355577      3.4397537           0.75     -43.287451 
+ 2492000     1174      16.775668      3.5196771           0.75     -75.838038 
+ 2493000     1174       14.28578       3.497976           0.75      226.57772 
+ 2494000     1174      10.479329      3.2738434           0.75      488.06112 
+ 2495000     1174      13.792205      3.0919495           0.75      412.92989 
+ 2496000     1174      8.6272449      2.9137421           0.75     -5.8884085 
+ 2497000     1174      8.8332281      2.8270728           0.75     -223.08019 
+ 2498000     1174      13.320184      2.7954375           0.75      37.858581 
+ 2499000     1174      9.5517407      2.5322295           0.75      536.37571 
+ 2500000     1174      12.271446      2.6417959           0.75      590.40384 
+Loop time of 9.7732 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:52:58 2023
+
+
+Pair  time (%) = 7.43788 (76.1049)
+Neigh time (%) = 1.5847 (16.2148)
+Comm  time (%) = 0.0161635 (0.165386)
+Outpt time (%) = 0.00317516 (0.0324885)
+Other time (%) = 0.731278 (7.48248)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4269 ave 4269 max 4269 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4269
+Ave neighs/atom = 3.63629
+Neighbor list builds = 2056
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   24+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(25-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(25-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(25-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.055
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:52:58 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2500000     1174      11.625716      2.4141963           0.75     -2098.2433 
+ 2501000     1174      33.627713      5.3142178           0.75     -186.10662 
+ 2502000     1174      30.806509      5.4982213           0.75      986.56547 
+ 2503000     1174       24.68503       5.477438           0.75      1147.9511 
+ 2504000     1174       28.10108      4.8192201           0.75      310.78301 
+ 2505000     1174      22.327494      5.0515045           0.75     -115.84904 
+ 2506000     1174       12.92591      4.5122741           0.75      74.476516 
+ 2507000     1174      18.849069      4.6358677           0.75      489.46687 
+ 2508000     1174      16.609974      4.7484552           0.75      831.31994 
+ 2509000     1174      14.520682      3.8096602           0.75      854.67912 
+ 2510000     1174       22.49007      4.0416272           0.75      333.38774 
+ 2511000     1174      16.221696      3.5944078           0.75     -111.86092 
+ 2512000     1174      18.408609      3.6977441           0.75      -108.6655 
+ 2513000     1174      14.733258      3.4532301           0.75      189.68623 
+ 2514000     1174      11.548825      3.2313422           0.75      481.82678 
+ 2515000     1174      12.161258      3.1317058           0.75      344.33532 
+ 2516000     1174      8.3442766      2.8730743           0.75     -77.858021 
+ 2517000     1174      10.952612      2.7825214           0.75     -271.39858 
+ 2518000     1174      12.501657      2.6948648           0.75      38.912767 
+ 2519000     1174      11.072252      2.6831077           0.75      532.09327 
+ 2520000     1174      15.757951      2.6773605           0.75      565.84502 
+Loop time of 9.77647 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:53:08 2023
+
+
+Pair  time (%) = 7.42443 (75.9418)
+Neigh time (%) = 1.59657 (16.3308)
+Comm  time (%) = 0.0166716 (0.170528)
+Outpt time (%) = 0.00347383 (0.0355325)
+Other time (%) = 0.735326 (7.52139)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4270 ave 4270 max 4270 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4270
+Ave neighs/atom = 3.63714
+Neighbor list builds = 2111
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   25+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(26-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(26-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(26-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.054
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:53:08 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2520000     1174      14.913959      2.4426554           0.75     -2025.7513 
+ 2521000     1174      34.273321      5.2053857           0.75     -216.20635 
+ 2522000     1174      32.803225      5.3423809           0.75      1004.0565 
+ 2523000     1174      25.286749      5.2536522           0.75      1166.8776 
+ 2524000     1174      29.053105      4.5891898           0.75      276.69959 
+ 2525000     1174      19.002998      4.5097181           0.75      -124.3203 
+ 2526000     1174      11.889527      4.2942903           0.75      94.814182 
+ 2527000     1174      21.232087      4.5083092           0.75      568.10476 
+ 2528000     1174      14.821765      4.3256709           0.75      990.94657 
+ 2529000     1174      19.661528      3.7296187           0.75      767.33354 
+ 2530000     1174      22.952614       3.562995           0.75      72.980955 
+ 2531000     1174      16.516012      3.5843055           0.75     -255.73479 
+ 2532000     1174       20.30342      3.6057748           0.75     -80.743508 
+ 2533000     1174      14.187913      3.3153717           0.75      316.89802 
+ 2534000     1174      10.943071      3.2292538           0.75      522.50883 
+ 2535000     1174      12.328432        3.11947           0.75      109.70001 
+ 2536000     1174      8.2404052      2.7942882           0.75     -232.21757 
+ 2537000     1174      13.340282      2.6641307           0.75     -290.10123 
+ 2538000     1174      12.835336      2.5505384           0.75      239.29078 
+ 2539000     1174      14.187755      2.7048057           0.75       664.7795 
+ 2540000     1174      17.743605      2.4720266           0.75      343.46336 
+Loop time of 9.91473 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:53:18 2023
+
+
+Pair  time (%) = 7.46172 (75.259)
+Neigh time (%) = 1.69141 (17.0596)
+Comm  time (%) = 0.0169923 (0.171384)
+Outpt time (%) = 0.00311496 (0.0314175)
+Other time (%) = 0.74149 (7.47867)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4261 ave 4261 max 4261 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4261
+Ave neighs/atom = 3.62947
+Neighbor list builds = 2180
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   26+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(27-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(27-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(27-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.053
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:53:18 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2540000     1174      16.775991      2.2514572           0.75     -2100.5759 
+ 2541000     1174      37.691149      5.0789342           0.75     -290.32043 
+ 2542000     1174      38.041564      5.8397589           0.75      1028.4871 
+ 2543000     1174      25.319619      5.2484429           0.75      1209.7904 
+ 2544000     1174      30.687894      4.9372238           0.75      311.19836 
+ 2545000     1174       19.43771      4.6581628           0.75     -147.16307 
+ 2546000     1174      12.668538      4.3429689           0.75      51.453799 
+ 2547000     1174      24.639899      4.2898241           0.75      488.61112 
+ 2548000     1174      14.968278      4.2273851           0.75      1003.7391 
+ 2549000     1174      23.442225      4.1618861           0.75      681.95377 
+ 2550000     1174       22.03097      3.5252965           0.75     -31.749737 
+ 2551000     1174      15.622234      3.2589564           0.75     -377.73605 
+ 2552000     1174      20.597291      3.3629053           0.75     -37.110501 
+ 2553000     1174      11.705898      3.2007894           0.75      432.09017 
+ 2554000     1174       12.24564      3.1188321           0.75      492.19668 
+ 2555000     1174      11.634808      2.9629031           0.75     -36.449738 
+ 2556000     1174       8.353192      2.6387248           0.75     -365.32984 
+ 2557000     1174      15.512249      2.8308151           0.75     -210.63741 
+ 2558000     1174      13.202472      2.4783926           0.75      504.76877 
+ 2559000     1174      15.651027      2.5640215           0.75      654.77051 
+ 2560000     1174      16.743073      2.4917915           0.75      146.83789 
+Loop time of 10.106 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:53:28 2023
+
+
+Pair  time (%) = 7.58823 (75.0866)
+Neigh time (%) = 1.73884 (17.206)
+Comm  time (%) = 0.0176513 (0.174662)
+Outpt time (%) = 0.00323635 (0.0320241)
+Other time (%) = 0.758012 (7.50064)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4251 ave 4251 max 4251 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4251
+Ave neighs/atom = 3.62095
+Neighbor list builds = 2236
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   27+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(28-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(28-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(28-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.052
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:53:28 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2560000     1174      15.813121      2.2654218           0.75      -2155.148 
+ 2561000     1174      40.055901      5.0368048           0.75     -303.46318 
+ 2562000     1174      39.935531       5.515919           0.75       1083.498 
+ 2563000     1174      23.022095       4.923931           0.75      1219.0952 
+ 2564000     1174      32.282874      5.0379354           0.75      243.54418 
+ 2565000     1174      17.144631      4.5664318           0.75     -166.33618 
+ 2566000     1174      14.965676      4.2398193           0.75     -23.526179 
+ 2567000     1174      26.434781      4.3191973           0.75      514.70271 
+ 2568000     1174      14.528497      3.9722213           0.75       981.0885 
+ 2569000     1174      25.137563      4.0588093           0.75       513.2672 
+ 2570000     1174       18.34248      3.6684505           0.75     -215.20033 
+ 2571000     1174      14.961797      3.3420203           0.75     -279.91682 
+ 2572000     1174      18.606893      3.3754814           0.75      79.569642 
+ 2573000     1174      9.1610635      3.3049559           0.75      481.16336 
+ 2574000     1174      14.235076        3.14232           0.75      378.56865 
+ 2575000     1174      10.050647      2.9324126           0.75     -180.17676 
+ 2576000     1174      10.572382      2.5826604           0.75     -335.23209 
+ 2577000     1174      15.440781      2.7765469           0.75      58.826506 
+ 2578000     1174      12.225729      2.5943828           0.75      620.40294 
+ 2579000     1174      17.122027      2.7698565           0.75      459.41981 
+ 2580000     1174      12.097631      2.3997739           0.75       9.346266 
+Loop time of 10.2324 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:53:39 2023
+
+
+Pair  time (%) = 7.56485 (73.9303)
+Neigh time (%) = 1.87183 (18.2931)
+Comm  time (%) = 0.0186061 (0.181835)
+Outpt time (%) = 0.00324591 (0.0317219)
+Other time (%) = 0.773879 (7.56302)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4241 ave 4241 max 4241 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4241
+Ave neighs/atom = 3.61244
+Neighbor list builds = 2392
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   28+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(29-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(29-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(29-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.051
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:53:39 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2580000     1174      11.413027      2.1777322           0.75     -2165.4649 
+ 2581000     1174      42.776279       5.297623           0.75     -149.89671 
+ 2582000     1174      35.671984      5.5456334           0.75      1202.9072 
+ 2583000     1174      22.192802      5.1870335           0.75      1146.9193 
+ 2584000     1174      32.714306      5.2604846           0.75      21.757471 
+ 2585000     1174      14.405967      4.3239581           0.75     -318.23561 
+ 2586000     1174      19.382378      4.1693102           0.75    -0.50498388 
+ 2587000     1174      23.271757      4.2013316           0.75      652.74177 
+ 2588000     1174      14.478192      3.8758428           0.75      868.09782 
+ 2589000     1174      24.216147      3.4602902           0.75       217.5424 
+ 2590000     1174      13.474709      3.0016743           0.75     -307.65755 
+ 2591000     1174      17.399375       3.183176           0.75      -164.2777 
+ 2592000     1174       14.99166      3.1907436           0.75       269.1252 
+ 2593000     1174      10.469581      3.0280795           0.75      538.65288 
+ 2594000     1174       14.67494      2.8873679           0.75      194.66578 
+ 2595000     1174      8.5602543      2.5619548           0.75     -305.28935 
+ 2596000     1174       13.72974      2.7028518           0.75      -223.4165 
+ 2597000     1174      12.250798      2.4739857           0.75      367.84186 
+ 2598000     1174      12.353841      2.5500007           0.75      672.44792 
+ 2599000     1174      13.247638      2.3561406           0.75       199.9512 
+ 2600000     1174      8.6010776      2.3029461           0.75     -120.07772 
+Loop time of 10.1551 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:53:49 2023
+
+
+Pair  time (%) = 7.52173 (74.0687)
+Neigh time (%) = 1.84714 (18.1893)
+Comm  time (%) = 0.0185298 (0.182469)
+Outpt time (%) = 0.00307439 (0.0302744)
+Other time (%) = 0.764596 (7.52921)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4233 ave 4233 max 4233 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4233
+Ave neighs/atom = 3.60562
+Neighbor list builds = 2426
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   29+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(30-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(30-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(30-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.05
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:53:49 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2600000     1174      8.1049876      2.0858492           0.75     -2176.1856 
+ 2601000     1174      48.098454      4.8822577           0.75     -37.887333 
+ 2602000     1174      26.606415      5.6374301           0.75      1391.8737 
+ 2603000     1174      28.122165       4.886722           0.75      923.32761 
+ 2604000     1174       29.24616      4.7910998           0.75     -296.96953 
+ 2605000     1174       14.49849      4.1074709           0.75     -385.25028 
+ 2606000     1174      23.363074      4.0935889           0.75      167.45952 
+ 2607000     1174      17.654865      4.2022102           0.75      817.28834 
+ 2608000     1174      17.366649      3.5755318           0.75      611.34912 
+ 2609000     1174      20.185041      3.4659603           0.75     -19.839433 
+ 2610000     1174      11.129356      2.9353308           0.75     -274.09061 
+ 2611000     1174      18.715294      2.9273573           0.75      27.617177 
+ 2612000     1174      10.372914      2.8413229           0.75      410.43729 
+ 2613000     1174      14.111197      2.6786686           0.75      444.77711 
+ 2614000     1174      11.238184      2.7888226           0.75     -29.831755 
+ 2615000     1174      9.2027076      2.4480608           0.75     -259.18552 
+ 2616000     1174      12.572035      2.5907938           0.75     -21.803343 
+ 2617000     1174      9.2608202      2.3537741           0.75      560.32339 
+ 2618000     1174        12.2626      2.3356822           0.75      470.64787 
+ 2619000     1174       9.689034      2.1903164           0.75       -65.1107 
+ 2620000     1174      8.7594403      2.0635532           0.75      -115.5345 
+Loop time of 10.0917 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:53:59 2023
+
+
+Pair  time (%) = 7.43638 (73.6884)
+Neigh time (%) = 1.87779 (18.6073)
+Comm  time (%) = 0.0182397 (0.180741)
+Outpt time (%) = 0.00313119 (0.0310276)
+Other time (%) = 0.756116 (7.49249)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4243 ave 4243 max 4243 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4243
+Ave neighs/atom = 3.61414
+Neighbor list builds = 2451
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   30+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(31-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(31-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(31-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.049
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:53:59 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2620000     1174      8.2443151      1.8652886           0.75     -2086.1034 
+ 2621000     1174      50.874336      5.1016478           0.75      149.14044 
+ 2622000     1174      19.078598      4.7673494           0.75      1522.8854 
+ 2623000     1174      34.979942      4.7030981           0.75      541.79834 
+ 2624000     1174      22.421694       4.326177           0.75     -572.55043 
+ 2625000     1174      17.720608      4.0105041           0.75     -304.28961 
+ 2626000     1174      23.122813      3.7201073           0.75      475.06132 
+ 2627000     1174      15.076915      3.7106613           0.75      820.46713 
+ 2628000     1174      18.284959      3.4635131           0.75      347.51334 
+ 2629000     1174      15.042842      3.0252946           0.75     -173.14928 
+ 2630000     1174      13.488649      2.8199604           0.75     -109.33073 
+ 2631000     1174      17.552151      2.9533331           0.75      252.89192 
+ 2632000     1174      9.8914836      2.6346565           0.75      472.92323 
+ 2633000     1174      15.047228      2.6501269           0.75      254.81534 
+ 2634000     1174      7.5734559      2.1266709           0.75     -170.95517 
+ 2635000     1174      11.249329      2.3283702           0.75     -198.98956 
+ 2636000     1174      9.9599426       2.220463           0.75      216.57232 
+ 2637000     1174      9.5189852      2.2143039           0.75      560.25214 
+ 2638000     1174      10.864906      2.1596879           0.75      162.31905 
+ 2639000     1174      7.8495836      2.0153476           0.75     -201.54408 
+ 2640000     1174      9.0610049      1.9807317           0.75      69.589764 
+Loop time of 10.1476 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:54:09 2023
+
+
+Pair  time (%) = 7.46308 (73.5451)
+Neigh time (%) = 1.89571 (18.6813)
+Comm  time (%) = 0.0184886 (0.182197)
+Outpt time (%) = 0.0031732 (0.0312704)
+Other time (%) = 0.767164 (7.56004)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4263 ave 4263 max 4263 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4263
+Ave neighs/atom = 3.63118
+Neighbor list builds = 2442
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   31+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(32-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(32-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(32-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.048
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:54:09 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2640000     1174      8.5174941      1.7866992           0.75      -1868.796 
+ 2641000     1174      44.163105        5.06459           0.75       387.2474 
+ 2642000     1174      15.836802      4.4256782           0.75      1364.5205 
+ 2643000     1174      32.635409      4.3472498           0.75      153.56758 
+ 2644000     1174      17.282619       3.778245           0.75     -580.24636 
+ 2645000     1174      18.933394      3.7378554           0.75     -51.335653 
+ 2646000     1174      19.374567      3.4768759           0.75      644.02755 
+ 2647000     1174      12.246472      3.4841912           0.75       653.1698 
+ 2648000     1174       18.52712      3.2948438           0.75      127.21983 
+ 2649000     1174      10.294586       2.946291           0.75     -144.62525 
+ 2650000     1174      15.162684      2.8408276           0.75      41.873087 
+ 2651000     1174      12.144677      2.5599969           0.75      321.10077 
+ 2652000     1174      10.436998      2.8204377           0.75      385.43808 
+ 2653000     1174      11.379863      2.4763936           0.75      32.794364 
+ 2654000     1174      7.2785473       2.223317           0.75     -224.13057 
+ 2655000     1174      10.847347      2.2457995           0.75     -17.966984 
+ 2656000     1174      7.8475992       2.180325           0.75      415.56769 
+ 2657000     1174      9.5299845      2.1354574           0.75      330.86314 
+ 2658000     1174      9.0771857      1.9525802           0.75     -121.75138 
+ 2659000     1174      7.3720258      1.8386405           0.75     -99.892547 
+ 2660000     1174      9.2960306      1.9675459           0.75      361.67617 
+Loop time of 10.0413 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:54:19 2023
+
+
+Pair  time (%) = 7.45201 (74.2136)
+Neigh time (%) = 1.81035 (18.029)
+Comm  time (%) = 0.018022 (0.179478)
+Outpt time (%) = 0.00316957 (0.0315653)
+Other time (%) = 0.757752 (7.54636)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4285 ave 4285 max 4285 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4285
+Ave neighs/atom = 3.64991
+Neighbor list builds = 2352
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   32+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(33-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(33-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(33-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.047
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:54:19 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2660000     1174      8.7270488      1.7709568           0.75       -1576.79 
+ 2661000     1174      30.984199      4.2966543           0.75      445.55315 
+ 2662000     1174      14.595728      3.8539728           0.75      1087.0328 
+ 2663000     1174       23.25447      3.6835162           0.75     -46.334822 
+ 2664000     1174      13.023974      3.4226527           0.75     -438.40177 
+ 2665000     1174      15.914382      3.2992639           0.75      211.02797 
+ 2666000     1174      14.347646      3.2306753           0.75      557.76158 
+ 2667000     1174      10.750105      2.9073034           0.75      382.65534 
+ 2668000     1174      14.607362      2.8694176           0.75      79.010424 
+ 2669000     1174      7.7519392      2.6341456           0.75     -11.161824 
+ 2670000     1174      14.317504      2.8241117           0.75      67.936305 
+ 2671000     1174      7.5019798      2.2405569           0.75      285.62964 
+ 2672000     1174      11.003262      2.3567323           0.75      309.66682 
+ 2673000     1174      6.6542322      2.0985858           0.75     -45.236202 
+ 2674000     1174      7.6118437       2.051524           0.75      -185.7083 
+ 2675000     1174      8.3274632      1.9345537           0.75      126.37863 
+ 2676000     1174      6.2480771      1.9474835           0.75      457.09448 
+ 2677000     1174      9.1703696      1.8395195           0.75      97.735923 
+ 2678000     1174      5.3324823      1.7514949           0.75     -178.59988 
+ 2679000     1174      8.2593497      1.7154782           0.75      158.74436 
+ 2680000     1174      4.9966521      1.7339204           0.75      540.09603 
+Loop time of 9.99501 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:54:29 2023
+
+
+Pair  time (%) = 7.5079 (75.1165)
+Neigh time (%) = 1.71859 (17.1945)
+Comm  time (%) = 0.0175593 (0.17568)
+Outpt time (%) = 0.00306395 (0.0306548)
+Other time (%) = 0.747901 (7.48274)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4315 ave 4315 max 4315 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4315
+Ave neighs/atom = 3.67547
+Neighbor list builds = 2197
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   33+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(34-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(34-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(34-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.046
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:54:29 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2680000     1174      4.6844546      1.5571449           0.75     -1363.4563 
+ 2681000     1174      22.054207      4.2750284           0.75      198.55468 
+ 2682000     1174       12.10162      3.9107713           0.75      826.18363 
+ 2683000     1174      15.298631      3.4368637           0.75      64.619926 
+ 2684000     1174      12.026439      3.3250033           0.75     -271.48941 
+ 2685000     1174      10.992591      3.0793904           0.75      191.99342 
+ 2686000     1174      11.009556      3.0127962           0.75      395.00615 
+ 2687000     1174       8.463573      2.7163653           0.75      323.61039 
+ 2688000     1174      10.465511       2.712078           0.75       145.9574 
+ 2689000     1174      7.2680708      2.4243537           0.75      -3.145808 
+ 2690000     1174      9.7069862      2.4117045           0.75      94.419058 
+ 2691000     1174      6.5061104      2.2107405           0.75      279.05724 
+ 2692000     1174      8.3384721       2.171036           0.75      197.32779 
+ 2693000     1174      5.1485102      1.9860957           0.75     -50.302422 
+ 2694000     1174      7.2160828      1.9311852           0.75     -100.91006 
+ 2695000     1174       5.645408      1.7567724           0.75      238.92398 
+ 2696000     1174      6.2777407      1.7756717           0.75      321.99898 
+ 2697000     1174      6.1714431      1.7057521           0.75     -73.360144 
+ 2698000     1174      5.1952967      1.6218225           0.75     -67.899556 
+ 2699000     1174      6.2312425      1.5717523           0.75      329.87227 
+ 2700000     1174      4.2404479      1.4959478           0.75      389.99824 
+Loop time of 9.75214 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:54:39 2023
+
+
+Pair  time (%) = 7.39567 (75.8364)
+Neigh time (%) = 1.60951 (16.5041)
+Comm  time (%) = 0.0168562 (0.172846)
+Outpt time (%) = 0.00296854 (0.0304399)
+Other time (%) = 0.72714 (7.4562)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4304 ave 4304 max 4304 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4304
+Ave neighs/atom = 3.6661
+Neighbor list builds = 2105
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   34+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(35-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(35-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(35-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.045
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:54:39 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2700000     1174      3.9698654      1.3402625           0.75     -1397.1178 
+ 2701000     1174      23.949426      3.8922775           0.75      31.028675 
+ 2702000     1174       13.36011      3.6354613           0.75      835.76096 
+ 2703000     1174      14.830444      3.3984404           0.75      127.63192 
+ 2704000     1174      13.858245      3.1207239           0.75     -238.20858 
+ 2705000     1174       9.934154      2.7676613           0.75      83.649575 
+ 2706000     1174      11.972011      2.7981224           0.75      326.37315 
+ 2707000     1174      7.5692577      2.5726113           0.75      389.51445 
+ 2708000     1174      9.9989094      2.5288703           0.75      194.18454 
+ 2709000     1174      8.1978493      2.3360939           0.75     -51.094158 
+ 2710000     1174       8.891148      2.1540608           0.75      35.076999 
+ 2711000     1174      7.1110574      2.1629375           0.75      293.11857 
+ 2712000     1174      8.8254527      1.9833607           0.75         242.77 
+ 2713000     1174      4.9038695      1.8563904           0.75     -110.15269 
+ 2714000     1174      7.3855639      1.8892683           0.75     -134.96714 
+ 2715000     1174       5.292846      1.7703914           0.75      282.57935 
+ 2716000     1174      6.6915708       1.685973           0.75      261.02157 
+ 2717000     1174      6.0636534      1.6731305           0.75     -89.934428 
+ 2718000     1174      5.5542505      1.5542873           0.75      6.6313164 
+ 2719000     1174      6.3948587      1.5647038           0.75      283.90327 
+ 2720000     1174      4.4514652      1.5323753           0.75      274.52268 
+Loop time of 10.0102 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:54:49 2023
+
+
+Pair  time (%) = 7.47172 (74.6411)
+Neigh time (%) = 1.76573 (17.6393)
+Comm  time (%) = 0.0179321 (0.179139)
+Outpt time (%) = 0.00301946 (0.0301639)
+Other time (%) = 0.751794 (7.51029)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4301 ave 4301 max 4301 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4301
+Ave neighs/atom = 3.66354
+Neighbor list builds = 2284
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   35+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(36-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(36-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(36-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.044
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:54:49 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2720000     1174      4.1612468      1.3695124           0.75       -1406.05 
+ 2721000     1174      25.791278      3.9154641           0.75       93.35232 
+ 2722000     1174      14.417724      3.9093852           0.75      810.75926 
+ 2723000     1174      16.111504       3.381405           0.75      76.211792 
+ 2724000     1174      13.580518       3.309194           0.75     -229.71448 
+ 2725000     1174      10.479876      2.9953632           0.75      100.29482 
+ 2726000     1174      12.132401      2.7614694           0.75      339.12471 
+ 2727000     1174      8.0357814      2.4856917           0.75      376.72584 
+ 2728000     1174      10.381226      2.4370699           0.75      96.023154 
+ 2729000     1174      8.2668553      2.1535156           0.75     -69.913421 
+ 2730000     1174      9.2884387      2.2448152           0.75      82.555275 
+ 2731000     1174      7.0940051      2.1411171           0.75      317.82556 
+ 2732000     1174      7.7907537      1.9684412           0.75      147.76995 
+ 2733000     1174      5.7933223      1.8980534           0.75     -185.28472 
+ 2734000     1174       6.707138      1.7689077           0.75     -33.171714 
+ 2735000     1174      5.5403924      1.6811109           0.75      341.22502 
+ 2736000     1174      7.1127658      1.6125826           0.75      114.51472 
+ 2737000     1174      5.0528885      1.5482198           0.75     -103.49665 
+ 2738000     1174      7.0711516      1.5278176           0.75      94.783092 
+ 2739000     1174      3.9564792      1.4741402           0.75      322.42866 
+ 2740000     1174       5.990949      1.5675401           0.75      194.82788 
+Loop time of 10.187 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:54:59 2023
+
+
+Pair  time (%) = 7.47579 (73.3857)
+Neigh time (%) = 1.92011 (18.8486)
+Comm  time (%) = 0.0190522 (0.187025)
+Outpt time (%) = 0.00316482 (0.0310673)
+Other time (%) = 0.768872 (7.54759)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4296 ave 4296 max 4296 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4296
+Ave neighs/atom = 3.65928
+Neighbor list builds = 2460
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   36+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(37-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(37-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(37-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.043
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:54:59 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2740000     1174      5.5916883      1.3973254           0.75     -1389.4831 
+ 2741000     1174      25.690402      3.6998859           0.75      50.803848 
+ 2742000     1174      14.198682      3.6835502           0.75       795.1292 
+ 2743000     1174      17.822512      3.1172121           0.75      81.385906 
+ 2744000     1174      12.651739      2.8726727           0.75     -274.32787 
+ 2745000     1174      11.555135      2.7137301           0.75        38.6564 
+ 2746000     1174      12.641873      2.6016591           0.75      357.27212 
+ 2747000     1174      8.5638484      2.3573189           0.75      385.51311 
+ 2748000     1174      10.718078      2.1930077           0.75     -6.6237466 
+ 2749000     1174      7.4269925      2.0251478           0.75     -144.59222 
+ 2750000     1174      10.700604      2.1387422           0.75      152.38281 
+ 2751000     1174      6.9278199      1.8406281           0.75      384.06429 
+ 2752000     1174      7.6172764      1.7092838           0.75      54.377574 
+ 2753000     1174      5.9467914      1.6635774           0.75     -239.38116 
+ 2754000     1174      7.1887548      1.5830546           0.75      59.037643 
+ 2755000     1174      5.4358604      1.6964599           0.75      376.93746 
+ 2756000     1174      6.9896389      1.5713492           0.75      42.662749 
+ 2757000     1174      4.8641307      1.4872639           0.75     -129.82324 
+ 2758000     1174      6.9081771      1.4910999           0.75      121.33466 
+ 2759000     1174      4.0697387       1.456297           0.75      342.08963 
+ 2760000     1174      6.1016247      1.4260698           0.75      146.76437 
+Loop time of 10.2231 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:55:09 2023
+
+
+Pair  time (%) = 7.47798 (73.1477)
+Neigh time (%) = 1.9594 (19.1664)
+Comm  time (%) = 0.0191683 (0.1875)
+Outpt time (%) = 0.00306993 (0.0300292)
+Other time (%) = 0.763501 (7.46837)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4294 ave 4294 max 4294 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4294
+Ave neighs/atom = 3.65758
+Neighbor list builds = 2542
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   37+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(38-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(38-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(38-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.042
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:55:09 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2760000     1174       5.685753      1.2677831           0.75     -1346.9709 
+ 2761000     1174      26.316403      3.3061168           0.75     -6.3743076 
+ 2762000     1174      12.833506      3.2938572           0.75      802.83973 
+ 2763000     1174      17.999423      2.9689514           0.75      36.690224 
+ 2764000     1174      11.595206      2.7588532           0.75     -316.76571 
+ 2765000     1174      12.407352      2.5221054           0.75       66.02983 
+ 2766000     1174      11.226382      2.5723398           0.75      398.53645 
+ 2767000     1174      10.108173      2.1701229           0.75      304.20626 
+ 2768000     1174      8.5662683      2.0080669           0.75     -40.363985 
+ 2769000     1174      8.8249941      1.7664923           0.75      -95.48776 
+ 2770000     1174      8.8070655      1.6970858           0.75      198.08378 
+ 2771000     1174      8.3095411      1.6391447           0.75      368.29254 
+ 2772000     1174      6.6990213      1.5299005           0.75     -45.628675 
+ 2773000     1174      6.6469666      1.4867453           0.75      -253.0031 
+ 2774000     1174      6.3774409      1.4332809           0.75      203.33675 
+ 2775000     1174      6.1445302      1.5249791           0.75       323.0318 
+ 2776000     1174      6.2618384      1.4074167           0.75     -106.45218 
+ 2777000     1174      5.3334248      1.3227047           0.75     -117.13719 
+ 2778000     1174      6.0504472      1.3794534           0.75      273.87227 
+ 2779000     1174      5.1600644      1.3202484           0.75      265.90517 
+ 2780000     1174      4.4939339      1.2683532           0.75     -12.662053 
+Loop time of 10.2665 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:55:19 2023
+
+
+Pair  time (%) = 7.41936 (72.2678)
+Neigh time (%) = 2.04525 (19.9217)
+Comm  time (%) = 0.0200909 (0.195694)
+Outpt time (%) = 0.00315687 (0.0307492)
+Other time (%) = 0.778625 (7.58413)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4279 ave 4279 max 4279 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4279
+Ave neighs/atom = 3.6448
+Neighbor list builds = 2646
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   38+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(39-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(39-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(39-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.041
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:55:19 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2780000     1174      4.1805207      1.1243799           0.75     -1387.4266 
+ 2781000     1174      30.778521      3.1735082           0.75      80.291916 
+ 2782000     1174       13.40701      3.3341465           0.75      804.43336 
+ 2783000     1174      19.725354      2.7721328           0.75     -109.51969 
+ 2784000     1174      11.275287       2.478049           0.75     -293.37348 
+ 2785000     1174      14.146717      2.5374015           0.75      158.04063 
+ 2786000     1174      9.7837832      2.3048512           0.75      374.52425 
+ 2787000     1174      12.592647      2.2295461           0.75       196.0298 
+ 2788000     1174      6.0362444       1.792618           0.75     -63.198835 
+ 2789000     1174       10.48876      1.8281385           0.75     -55.522662 
+ 2790000     1174      6.6080047      1.6647171           0.75      285.86275 
+ 2791000     1174      8.7946106      1.5440942           0.75      247.51438 
+ 2792000     1174      5.6908838      1.4169612           0.75      -174.6498 
+ 2793000     1174      7.1448189      1.5711213           0.75     -122.54821 
+ 2794000     1174      5.1404644      1.3897222           0.75      350.23354 
+ 2795000     1174       6.761207      1.3645033           0.75      131.75763 
+ 2796000     1174       4.109527      1.2501059           0.75     -203.82134 
+ 2797000     1174       6.666412       1.259377           0.75      80.138023 
+ 2798000     1174      4.0833266      1.2865022           0.75      339.26721 
+ 2799000     1174      5.5501068      1.2093666           0.75      62.138131 
+ 2800000     1174      3.7093036      1.1345867           0.75     -46.092631 
+Loop time of 10.3329 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:55:30 2023
+
+
+Pair  time (%) = 7.48289 (72.4178)
+Neigh time (%) = 2.04442 (19.7855)
+Comm  time (%) = 0.020126 (0.194775)
+Outpt time (%) = 0.00308958 (0.0299003)
+Other time (%) = 0.782419 (7.57208)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4273 ave 4273 max 4273 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4273
+Ave neighs/atom = 3.63969
+Neighbor list builds = 2595
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   39+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop3
+  variable        dd    equal   2*(0.03-(${nt}-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(40-${grwNs})*${grwRt})
+  variable        dd    equal   2*(0.03-(40-20)*${grwRt})
+  variable        dd    equal   2*(0.03-(40-20)*0.0005)
+  set             type  1  diameter  ${dd}
+  set             type  1  diameter  0.04
+  1174 settings made for diameter
+  run		  ${writeOutEvery}
+  run		  20000
+Setting up run at Fri Apr 28 19:55:30 2023
+
+Memory usage per processor = 9.74456 Mbytes
+    Step    Atoms         KinEng            ker         Volume            prs 
+ 2800000     1174      3.4444572      1.0028093           0.75     -1342.7383 
+ 2801000     1174      32.582843      3.2504875           0.75      257.74566 
+ 2802000     1174      14.847819      2.8613569           0.75      736.23673 
+ 2803000     1174      19.495255      2.7875349           0.75      -263.6035 
+ 2804000     1174      10.699659      2.2770834           0.75     -218.85506 
+ 2805000     1174      15.885181      2.2589902           0.75      249.00359 
+ 2806000     1174      7.0313503       2.018686           0.75      345.08159 
+ 2807000     1174      13.239954      2.0989581           0.75      96.856358 
+ 2808000     1174      5.7943936      1.5998843           0.75     -95.409086 
+ 2809000     1174      9.8759848      1.6973783           0.75       50.24857 
+ 2810000     1174      7.1150689       1.588516           0.75      335.63747 
+ 2811000     1174      7.6256805      1.4736315           0.75      104.37543 
+ 2812000     1174      5.7363931      1.3995978           0.75     -234.78008 
+ 2813000     1174      6.7423427      1.2734014           0.75      79.429759 
+ 2814000     1174      4.8972524       1.303965           0.75      331.37514 
+ 2815000     1174      6.0481018      1.2523491           0.75     -89.815056 
+ 2816000     1174      4.6197785      1.1934805           0.75     -125.38968 
+ 2817000     1174      5.1662915      1.1856017           0.75      264.82849 
+ 2818000     1174      5.0746395      1.1801282           0.75      175.62088 
+ 2819000     1174      4.3331832      1.1642592           0.75     -67.262652 
+ 2820000     1174      3.8515721      1.1028801           0.75      82.802156 
+Loop time of 10.2046 on 1 procs for 20000 steps with 1174 atoms, finish time Fri Apr 28 19:55:40 2023
+
+
+Pair  time (%) = 7.4703 (73.205)
+Neigh time (%) = 1.94846 (19.0938)
+Comm  time (%) = 0.0193559 (0.189677)
+Outpt time (%) = 0.00300349 (0.0294326)
+Other time (%) = 0.763515 (7.48205)
+
+Nlocal:    1174 ave 1174 max 1174 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Nghost:    0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Neighs:    4289 ave 4289 max 4289 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 4289
+Ave neighs/atom = 3.65332
+Neighbor list builds = 2474
+Dangerous builds = 0
+  variable        nt    equal   ${nt}+1
+  variable        nt    equal   40+1
+  if "${nt} > 40" then "jump cycle.in loop4"
+jump cycle.in loop4
+write_restart   cycle.restart
