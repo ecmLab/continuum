@@ -86,7 +86,7 @@ TorqueReaction::execute()
 }
 
 Real
-TorqueReaction::getValue()
+TorqueReaction::getValue() const
 {
   return _sum;
 }
@@ -100,6 +100,6 @@ TorqueReaction::finalize()
 void
 TorqueReaction::threadJoin(const UserObject & y)
 {
-  const TorqueReaction & pps = static_cast<const TorqueReaction &>(y);
+  const auto & pps = static_cast<const TorqueReaction &>(y);
   _sum += pps._sum;
 }

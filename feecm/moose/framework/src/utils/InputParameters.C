@@ -15,6 +15,7 @@
 #include "MooseUtils.h"
 #include "MultiMooseEnum.h"
 #include "ExecFlagEnum.h"
+#include "MooseObject.h"
 
 #include "libmesh/utility.h"
 #include "libmesh/simple_range.h"
@@ -84,44 +85,48 @@ InputParameters::set_attributes(const std::string & name_in, bool inserted_only)
 
   if (!inserted_only)
   {
+    auto & metadata = _params[name];
     /**
      * "._set_by_add_param" and ".deprecated_params" are not populated until after
      * the default value has already been set in libMesh (first callback to this
      * method). Therefore if a variable is in/not in one of these sets, you can
      * be assured it was put there outside of the "addParam*()" calls.
      */
-    _params[name]._set_by_add_param = false;
+    metadata._set_by_add_param = false;
 
     // valid_params don't make sense for MooseEnums
     if (!have_parameter<MooseEnum>(name) && !have_parameter<MultiMooseEnum>(name))
-      _params[name]._valid = true;
-
-    if (_show_deprecated_message)
-    {
-      auto emit_deprecation_message =
-          [this](const auto & deprecated_name, const auto & deprecation_message)
-      {
-        const auto current_show_trace = Moose::show_trace;
-        Moose::show_trace = false;
-        moose::internal::mooseDeprecatedStream(Moose::out,
-                                               false,
-                                               false,
-                                               errorPrefix(deprecated_name),
-                                               ":\n",
-                                               deprecation_message,
-                                               "\n");
-        Moose::show_trace = current_show_trace;
-      };
-
-      if (_params.count(name) && !libmesh_map_find(_params, name)._deprecation_message.empty())
-        emit_deprecation_message(name,
-                                 "The parameter '" + name + "' is deprecated.\n" +
-                                     libmesh_map_find(_params, name)._deprecation_message);
-      else if (auto it = _old_to_new_name_and_dep.find(name_in);
-               it != _old_to_new_name_and_dep.end() && !it->second.second.empty())
-        emit_deprecation_message(name_in, it->second.second);
-    }
+      metadata._valid = true;
   }
+}
+
+bool
+InputParameters::attemptPrintDeprecated(const std::string & name_in)
+{
+  const auto name = checkForRename(name_in);
+  if (_show_deprecated_message)
+  {
+    auto emit_deprecation_message =
+        [this](const auto & deprecated_name, const auto & deprecation_message)
+    {
+      // This is user-facing, no need for a backtrace
+      const auto current_show_trace = Moose::show_trace;
+      Moose::show_trace = false;
+      moose::internal::mooseDeprecatedStream(
+          Moose::out, false, true, errorPrefix(deprecated_name), ":\n", deprecation_message, "\n");
+      Moose::show_trace = current_show_trace;
+      return true;
+    };
+
+    if (_params.count(name) && !libmesh_map_find(_params, name)._deprecation_message.empty())
+      return emit_deprecation_message(name,
+                                      "The parameter '" + name + "' is deprecated.\n" +
+                                          libmesh_map_find(_params, name)._deprecation_message);
+    else if (auto it = _old_to_new_name_and_dep.find(name_in);
+             it != _old_to_new_name_and_dep.end() && !it->second.second.empty())
+      return emit_deprecation_message(name_in, it->second.second);
+  }
+  return false;
 }
 
 std::string
@@ -216,8 +221,9 @@ InputParameters::addCoupledVar(const std::string & name, Real value, const std::
 {
   addParam<std::vector<VariableName>>(name, doc_string);
   _coupled_vars.insert(name);
-  _params[name]._coupled_default.assign(1, value);
-  _params[name]._have_coupled_default = true;
+  auto & metadata = _params[name];
+  metadata._coupled_default.assign(1, value);
+  metadata._have_coupled_default = true;
 
   // Set the doc string for any associated deprecated coupled var
   setDeprecatedVarDocString(name, doc_string);
@@ -231,8 +237,9 @@ InputParameters::addCoupledVar(const std::string & name,
   // std::vector<VariableName>(1, Moose::stringify(value)),
   addParam<std::vector<VariableName>>(name, doc_string);
   _coupled_vars.insert(name);
-  _params[name]._coupled_default = value;
-  _params[name]._have_coupled_default = true;
+  auto & metadata = _params[name];
+  metadata._coupled_default = value;
+  metadata._have_coupled_default = true;
 
   // Set the doc string for any associated deprecated coupled var
   setDeprecatedVarDocString(name, doc_string);
@@ -348,6 +355,15 @@ InputParameters::isParamRequired(const std::string & name_in) const
   return _params.count(name) > 0 && _params.at(name)._required;
 }
 
+void
+InputParameters::makeParamNotRequired(const std::string & name_in)
+{
+  const auto name = checkForRename(name_in);
+
+  if (_params.count(name))
+    _params[name]._required = false;
+}
+
 bool
 InputParameters::isParamValid(const std::string & name_in) const
 {
@@ -449,6 +465,15 @@ InputParameters::registerSystemAttributeName(const std::string & value)
 {
   InputParameters::set<std::string>("_moose_warehouse_system_name") = value;
   _params["_moose_warehouse_system_name"]._is_private = true;
+}
+
+const std::string &
+InputParameters::getSystemAttributeName() const
+{
+  mooseAssert(have_parameter<std::string>("_moose_warehouse_system_name"),
+              "SystemAttributeName is not available! Call 'registerSystemAttributeName' (usually "
+              "in the validParams function) before you try accessing it!");
+  return Parameters::get<std::string>("_moose_warehouse_system_name");
 }
 
 void
@@ -577,6 +602,35 @@ InputParameters::checkParams(const std::string & parsing_syntax)
 
   if (!oss.str().empty())
     mooseError(oss.str());
+}
+
+bool
+InputParameters::isRangeChecked(const std::string & param_name) const
+{
+  const auto name = checkForRename(param_name);
+  return !_params.find(name)->second._range_function.empty();
+}
+
+std::string
+InputParameters::rangeCheckedFunction(const std::string & param_name) const
+{
+  const auto name = checkForRename(param_name);
+  return _params.at(name)._range_function;
+}
+
+bool
+InputParameters::hasDefault(const std::string & param_name) const
+{
+  const auto name = checkForRename(param_name);
+  if (hasDefaultCoupledValue(name))
+    return true;
+  // If it has a default, it's already valid
+  else if (isParamSetByAddParam(name))
+    return true;
+  else if (isParamValid(name))
+    mooseError("No way to know if the parameter", param_name, "has a default");
+  else
+    return false;
 }
 
 bool
@@ -770,7 +824,6 @@ InputParameters::applyParameters(const InputParameters & common,
   {
     // Common parameter name
     const std::string & common_name = it.first;
-
     // Continue to next parameter, if the current is in list of  excluded parameters
     if (std::find(exclude.begin(), exclude.end(), common_name) != exclude.end())
       continue;
@@ -915,7 +968,9 @@ InputParameters::isParamSetByUser(const std::string & name_in) const
     return false;
   else
     // If the parameters is not located in the list, then it was set by the user
-    return _params.count(name) > 0 && !_params.at(name)._set_by_add_param;
+    // If the parameter is private, and present in global params, it is ignored, therefore not set
+    return _params.count(name) > 0 && !_params.at(name)._set_by_add_param &&
+           !_params.at(name)._is_private;
 }
 
 const std::string &
@@ -935,8 +990,9 @@ InputParameters::addRequiredParam<MooseEnum>(const std::string & name,
                                              const std::string & doc_string)
 {
   InputParameters::set<MooseEnum>(name) = moose_enum; // valid parameter is set by set_attributes
-  _params[name]._required = true;
-  _params[name]._doc_string = doc_string;
+  auto & metadata = _params[name];
+  metadata._required = true;
+  metadata._doc_string = doc_string;
 }
 
 template <>
@@ -947,8 +1003,9 @@ InputParameters::addRequiredParam<MultiMooseEnum>(const std::string & name,
 {
   InputParameters::set<MultiMooseEnum>(name) =
       moose_enum; // valid parameter is set by set_attributes
-  _params[name]._required = true;
-  _params[name]._doc_string = doc_string;
+  auto & metadata = _params[name];
+  metadata._required = true;
+  metadata._doc_string = doc_string;
 }
 
 template <>
@@ -960,8 +1017,9 @@ InputParameters::addRequiredParam<std::vector<MooseEnum>>(
 {
   InputParameters::set<std::vector<MooseEnum>>(name) =
       moose_enums; // valid parameter is set by set_attributes
-  _params[name]._required = true;
-  _params[name]._doc_string = doc_string;
+  auto & metadata = _params[name];
+  metadata._required = true;
+  metadata._doc_string = doc_string;
 }
 
 template <>
@@ -1138,7 +1196,8 @@ template <>
 const MooseEnum &
 InputParameters::getParamHelper<MooseEnum>(const std::string & name_in,
                                            const InputParameters & pars,
-                                           const MooseEnum *)
+                                           const MooseEnum *,
+                                           const MooseObject * /* = nullptr */)
 {
   const auto name = pars.checkForRename(name_in);
   return pars.get<MooseEnum>(name);
@@ -1148,7 +1207,8 @@ template <>
 const MultiMooseEnum &
 InputParameters::getParamHelper<MultiMooseEnum>(const std::string & name_in,
                                                 const InputParameters & pars,
-                                                const MultiMooseEnum *)
+                                                const MultiMooseEnum *,
+                                                const MooseObject * /* = nullptr */)
 {
   const auto name = pars.checkForRename(name_in);
   return pars.get<MultiMooseEnum>(name);
@@ -1198,6 +1258,15 @@ InputParameters::getGroupParameters(const std::string & group) const
     if (it->second._group == group)
       names.emplace(it->first);
   return names;
+}
+
+std::set<std::string>
+InputParameters::getParametersList() const
+{
+  std::set<std::string> param_set;
+  for (auto it = _params.begin(); it != _params.end(); ++it)
+    param_set.emplace(it->first);
+  return param_set;
 }
 
 std::set<std::string>
@@ -1265,6 +1334,8 @@ InputParameters::renameParamInternal(const std::string & old_name,
   auto new_metadata = std::move(params_it->second);
   if (!docstring.empty())
     new_metadata._doc_string = docstring;
+  else
+    new_metadata._doc_string = params_it->second._doc_string;
   _params.emplace(new_name, std::move(new_metadata));
   _params.erase(params_it);
 
@@ -1352,4 +1423,10 @@ InputParameters::paramAliases(const std::string & param_name) const
     aliases.push_back(pr.second);
 
   return aliases;
+}
+
+void
+InputParameters::callMooseErrorHelper(const MooseObject & object, const std::string & error)
+{
+  object.mooseError(error);
 }

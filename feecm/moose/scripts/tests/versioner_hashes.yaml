@@ -77,3 +77,115 @@ db176aaa92d1fd79b2d92ad8979633f9b7ce65b7: # 23581
   petsc: 64a9a7e
   libmesh: 5070cbf
   moose: a555101
+d8b61c7117f9eb62d2ffed085d132ca38da30f77: # 24092
+  mpich: b896b5d
+  petsc: 64a9a7e
+  libmesh: af654a2
+  moose: 6e7dd42
+802cbf52725cd834d183187c07e838f54a80d9c1: # 24094
+  mpich: b896b5d
+  petsc: 64a9a7e
+  libmesh: e3dc480
+  moose: 2ca6f07
+6de86fc66afd7f9ec2b4d86b6f4c79c9c0d23eb6: # 23944
+  mpich: 3f5079a
+  petsc: c87a36a
+  libmesh: 01c4efc
+  moose: 6a2ff2b
+  wasp: df5c734
+86c049007cb0fd2018ae7bd99b675dee471395d1: # 25178
+  mpich: 3f5079a
+  petsc: c87a36a
+  libmesh: 15eb45b
+  moose: 149aab1
+  wasp: df5c734
+fbdfe0b21aa567c79f7f89808720231977987a12: # 24661
+  mpich: ad09ba0
+  petsc: 5f5cbe4
+  libmesh: 8cee284
+  moose: fa5ad3e
+  wasp: 0052bf7
+82cf41d48de9759bea5ee71f443a96ee0e9ad5a9: # 24661 fix
+  mpich: ad09ba0
+  petsc: 5f5cbe4
+  libmesh: d5b4a94
+  moose: 3ba4cc1
+  wasp: 0052bf7
+fa4c2347f80a3859d2bf68d92f52341331274f34: # 25370
+  mpich: ac902f8
+  petsc: 9fe2e73
+  libmesh: 26585cd
+  moose: fc4e3b7
+  wasp: 76657f9
+f480c8e2b021faeaf15f0173dc96454bc0354a74: #25457
+  mpich: ac902f8
+  petsc: 9fe2e73
+  libmesh: ede12e5
+  moose: 6bc1745
+  wasp: 76657f9
+26f548b6027b8e4d2f75807b57ffac09b63681e9: #23502
+  mpich: 842b979
+  petsc: 65a21f7
+  libmesh: 2c6ee09
+  moose: 5ba7952
+  wasp: 76657f9
+0f1df701b2ce3e8b1adcaa7ec5df70a5c104a278: #25287
+  mpich: 842b979
+  petsc: 89eff16
+  libmesh: 0159201
+  moose: 5b9710d
+  wasp: 76657f9
+d5e3e09267e1f2b47684a089150bec587178e1cf: #25784
+  mpich: eb12394
+  petsc: 0dc4680
+  libmesh: 50463c4
+  moose: c4f76e3
+  wasp: 115cc07
+51256fa4a39494a745318d0bcc1cbdcd0bcb69f6: #25844
+  mpich: eb12394
+  petsc: 0dc4680
+  libmesh: 50463c4
+  moose: 1004c01
+  wasp: 2fdee60
+87623a8b91df7ff9e5aafa296bcc9f62afa4391d: #25878
+  mpich: eb12394
+  petsc: 0dc4680
+  libmesh: 50463c4
+  moose: 176f779
+  wasp: 2fdee60
+48886cc54d59c608feeb74572833469b892477c1: #25939
+  mpich: e018192
+  petsc: a7b458a
+  libmesh: 9ed7d66
+  moose: c223a73
+  wasp: 3740200
+cc86332aae2bed3d2a7574c697dfaa3540f75edb: #26023 #25992
+  mpich: a3cf7c4
+  petsc: 6d6b91e
+  libmesh: 5b1363b
+  moose: 2e50f83
+  wasp: 3740200
+a2e8814e28b97171ff4a06e5343063fed6763dd0: #26102
+  mpich: 702900f
+  petsc: 684d2af
+  libmesh: bad5b94
+  moose-dev: 9831cd1
+  wasp: 91987a3
+0ad6cc9cb950aeb65dbaa97436650e5968d42bfa: #26327
+  mpich: 702900f
+  petsc: 684d2af
+  libmesh: bad5b94
+  moose-dev: 6b7bb74
+  wasp: 91987a3
+85f27a758ebb558b09df27385cecadf76b375058: #26374
+  mpich: 702900f
+  petsc: 684d2af
+  libmesh: bad5b94
+  moose-dev: 2cdf24d
+  wasp: 91987a3
+d5ed287fadcea6167a6c9d75924f1c11007ab51d: #26383
+  mpich: 702900f
+  petsc: 684d2af
+  libmesh: bad5b94
+  moose-dev: f8a2f21
+  wasp: 91987a3

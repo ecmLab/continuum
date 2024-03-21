@@ -17,9 +17,9 @@ class RealComponentParameterValuePostprocessor : public GeneralPostprocessor
 public:
   RealComponentParameterValuePostprocessor(const InputParameters & parameters);
 
-  virtual void initialize();
-  virtual Real getValue();
-  virtual void execute();
+  virtual void initialize() override;
+  virtual Real getValue() const override;
+  virtual void execute() override;
 
 protected:
   FEProblemBase & _fe_problem;

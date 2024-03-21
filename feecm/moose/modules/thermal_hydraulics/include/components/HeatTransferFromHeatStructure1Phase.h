@@ -11,7 +11,7 @@
 
 #include "HeatTransferFromTemperature1Phase.h"
 #include "HSBoundaryInterface.h"
-#include "FlowChannelAlignment.h"
+#include "MeshAlignment.h"
 
 /**
  * Connects a 1-phase flow channel and a heat structure
@@ -28,24 +28,24 @@ public:
 protected:
   virtual const FEType & getFEType() override;
 
-  virtual void preSetupMesh() override;
   virtual void setupMesh() override;
   virtual void check() const override;
 
   /**
-   * Gets the "master side" (heat structure) boundary name for this connection
+   * Gets the heat structure boundary name for this connection
    *
-   * @return The boundary name of the master side
+   * @return The boundary name of the heat structure side
    */
-  const BoundaryName & getMasterSideName() const;
+  const BoundaryName & getHeatStructureSideName() const;
   /**
-   * Gets the "slave side" (flow channel) nodeset name for this connection
+   * Gets the flow channel nodeset name for this connection
    *
-   * @return The nodeset name for the slave side
+   * @return The nodeset name for the channel side
    */
-  const BoundaryName & getSlaveSideName() const;
+  const BoundaryName & getChannelSideName() const;
 
-  FlowChannelAlignment _fch_alignment;
+  /// Mesh alignment
+  MeshAlignment _mesh_alignment;
 
 public:
   static InputParameters validParams();

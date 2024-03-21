@@ -32,6 +32,7 @@ class MooseVariableFE;
 typedef MooseVariableFE<Real> MooseVariable;
 typedef MooseVariableFE<VectorValue<Real>> VectorMooseVariable;
 class MooseEnum;
+class MultiMooseEnum;
 
 // Forward declare classes in libMesh
 namespace libMesh
@@ -50,7 +51,7 @@ class Adaptivity : public ConsoleStreamInterface,
                    public libMesh::ParallelObject
 {
 public:
-  Adaptivity(FEProblemBase & subproblem);
+  Adaptivity(FEProblemBase & fe_problem);
   virtual ~Adaptivity();
 
   /**
@@ -127,6 +128,14 @@ public:
    * @param flag The flag to recompute markers
    */
   void setRecomputeMarkersFlag(const bool flag) { _recompute_markers_during_cycles = flag; }
+
+  /**
+   * Indicate whether the kind of adaptivity we're doing is p-refinement
+   * @param doing_p_refinement Whether we're doing p-refinement
+   * @param disable_p_refinement_for_families Families to disable p-refinement for
+   */
+  void doingPRefinement(bool doing_p_refinement,
+                        const MultiMooseEnum & disable_p_refinement_for_families);
 
   /**
    * Adapts the mesh based on the error estimator used
@@ -245,7 +254,7 @@ public:
   bool isAdaptivityDue();
 
 protected:
-  FEProblemBase & _subproblem;
+  FEProblemBase & _fe_problem;
   MooseMesh & _mesh;
 
   /// on/off flag reporting if the adaptivity is being used
@@ -302,6 +311,8 @@ protected:
 
   /// Stores pointers to ErrorVectors associated with indicator field names
   std::map<std::string, std::unique_ptr<ErrorVector>> _indicator_field_to_error_vector;
+
+  bool _p_refinement_flag = false;
 };
 
 template <typename T>

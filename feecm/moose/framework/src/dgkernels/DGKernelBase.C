@@ -36,16 +36,17 @@ DGKernelBase::validParams()
                         "the case this is true but no displacements "
                         "are provided in the Mesh block the "
                         "undisplaced mesh will still be used.");
-  params.addPrivateParam<bool>("_use_undisplaced_reference_points", false);
   params.addParamNamesToGroup("use_displaced_mesh", "Advanced");
 
   params.addParam<std::vector<AuxVariableName>>(
       "save_in",
+      {},
       "The name of auxiliary variables to save this Kernel's residual contributions to. "
       " Everything about that variable must match everything about this variable (the "
       "type, what blocks it's on, etc.)");
   params.addParam<std::vector<AuxVariableName>>(
       "diag_save_in",
+      {},
       "The name of auxiliary variables to save this Kernel's diagonal Jacobian "
       "contributions to. Everything about that variable must match everything "
       "about this variable (the type, what blocks it's on, etc.)");

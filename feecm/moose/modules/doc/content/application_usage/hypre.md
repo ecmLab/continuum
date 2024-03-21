@@ -43,11 +43,11 @@ If MOOSE detects that you're using Hypre BoomerAMG and running in 3D it will aut
 
 If you're reading this far, then you've probably run into a real problem.  Either you're not getting the speed/scalability you want, or you're not getting convergence.  I'll try to put these in order of importance (in my opinion) and give you some guidance for each one.
 
-In general, speeding up BoomerAMG or improving scalability typically comes from doing _more_ coarsening.  As a reminder: the first thing to do is make sure you have `-pc_hypre_boomeramg_strong_threshold` set appropriately for your problem (see above).  Even if you have it set to `0.25` (for 2D) or `0.7` (for 3D) you might try increasing it some to try to find that sweet spot between effeciency and effectiveness.
+In general, speeding up BoomerAMG or improving scalability typically comes from doing _more_ coarsening.  As a reminder: the first thing to do is make sure you have `-pc_hypre_boomeramg_strong_threshold` set appropriately for your problem (see above).  Even if you have it set to `0.25` (for 2D) or `0.7` (for 3D) you might try increasing it some to try to find that sweet spot between efficiency and effectiveness.
 
 ### Timing
 
-Before venturing futher, you will definitely want to turn on the performance log ("perf log").  You do that by putting `print_perf_log = true` in the `[Outputs]` block in your input file.  At the end of the solve it will print out a table showing times.
+Before venturing further, you will definitely want to turn on the performance log ("perf log").  You do that by putting `print_perf_log = true` in the `[Outputs]` block in your input file.  At the end of the solve it will print out a table showing times.
 
 For preconditioning what you want to pay attention to is the `Total Time With Sub` column.  The total time during the nonlinear solve is in the `solve()` row.  Your objective should be to reduce that.  `solve()` is mainly a combination of three things: `compute_residual()`, `compute_jacobian()` and the preconditioner (with a little going to the linear/nonlinear solver in PETSc).
 
@@ -71,13 +71,13 @@ As mentioned before, speeding up Hypre is usually done by doing more coarsening.
 
 There are a lot more options other than `Falgout`, `HMIS` and `PMIS` - but I'm not going to list them here because those are really the ones you will want to use.
 
-#### Agressive Coarsening
+#### Aggressive Coarsening
 
 Another option that can do a lot of coarsening is "Aggressive Coarsening".  BoomerAMG actually has many parameters surrounding this - but currently only 2 are available to us as PETSc options: `-pc_hypre_boomeramg_agg_nl` and `-pc_hypre_boomeramg_agg_num_paths`.
 
 `-pc_hypre_boomeramg_agg_nl` is the number of coarsening levels to apply "aggressive coarsening" to.  Aggressive coarsening does just what you think it does: it tries even harder to remove matrix entries.  The way it does this is looking at "second-order" connections: does there exist a path from one important entry to another important entry *through* several other entries.  By looking at these pathways the algorithm will decide whether or not to keep an entry.  Doing more aggressive coarsening will result in less time spent in BoomerAMG (and a lot less communication done) but will also impact the effectiveness of the preconditioner by quite a lot - so it's a balance.
 
-`-pc_hypre_boomeramg_agg_num_paths` is the number of pathways to consider to find a connection and keep something.  That means increasing this value will _reduce_ the ammount of aggressive coarsening happening in each aggressive coarsening level.  What this means is that a higher `-pc_hypre_boomeramg_agg_num_paths` will improve accuracy/effectiveness but slow things down.  So it's a balance.
+`-pc_hypre_boomeramg_agg_num_paths` is the number of pathways to consider to find a connection and keep something.  That means increasing this value will _reduce_ the amount of aggressive coarsening happening in each aggressive coarsening level.  What this means is that a higher `-pc_hypre_boomeramg_agg_num_paths` will improve accuracy/effectiveness but slow things down.  So it's a balance.
 
 By default aggressive coarsening is off (`-pc_hypre_boomeramg_agg_nl 0`), so to turn it on set `-pc_hypre_boomeramg_agg_nl` to something higher than zero.  I recommend 2 or 3 to start with, but even 4 can be ok in 3D.  `-pc_hypre_boomeramg_agg_num_paths` defaults to `1`: which is the most aggressive setting.  If the aggressive coarsening levels are causing too many linear iterations, try increasing the number of paths _first_.  Go up to about 4,5 or 6 and see if it helps reduce the number of linear iterations.  If it doesn't, then you may need to back off on the number of aggressive coarsening levels you are doing.  All a balancing act...
 
@@ -95,7 +95,7 @@ There are *many* more options here, but I'm not going to enumerate them for now.
 
 #### P Max
 
-I'm going to be honest: I don't quite understand what `-pc_hypre_boomeramg_P_max` does exactly.  I've read about it - but I still can't quite get it.  The description from PETSc is: "Max elements per row for interpolation operator".  Setting this low (~2) seems to do a good job.  Setting it higher seems to make the solve less accurate.  However: that goes against my intuition - which is why I don't quite understand what's going on.  If someone knows please email `moose-users` with a good eplanation!
+I'm going to be honest: I don't quite understand what `-pc_hypre_boomeramg_P_max` does exactly.  I've read about it - but I still can't quite get it.  The description from PETSc is: "Max elements per row for interpolation operator".  Setting this low (~2) seems to do a good job.  Setting it higher seems to make the solve less accurate.  However: that goes against my intuition - which is why I don't quite understand what's going on.  If someone knows please email `moose-users` with a good explanation!
 
 ### Putting it All Together
 

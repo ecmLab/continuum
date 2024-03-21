@@ -92,7 +92,7 @@ public:
   /**
    * Get the current time.
    */
-  virtual Real getTime() { return _time; };
+  virtual Real getTime() const { return _time; };
 
   /**
    * Get the current target time
@@ -119,14 +119,15 @@ public:
    * Pointer to the TimeStepper
    * @return Pointer to the time stepper for this Executioner
    */
-  TimeStepper * getTimeStepper() { return _time_stepper.get(); }
+  TimeStepper * getTimeStepper() { return _time_stepper; }
+  const TimeStepper * getTimeStepper() const { return _time_stepper; }
 
   /**
    * Set the timestepper to use.
    *
    * @param ts The TimeStepper to use
    */
-  void setTimeStepper(std::shared_ptr<TimeStepper> ts) { _time_stepper = ts; }
+  void setTimeStepper(TimeStepper & ts);
 
   /**
    * Get the name of the timestepper.
@@ -143,7 +144,7 @@ public:
    * Get the time scheme used
    * @return MooseEnum with the time scheme
    */
-  Moose::TimeIntegratorType getTimeScheme() { return _time_scheme; }
+  Moose::TimeIntegratorType getTimeScheme() const { return _time_scheme; }
 
   /**
    * Get the set of sync times
@@ -167,10 +168,16 @@ public:
    * Return the start time
    * @return The start time
    */
-  Real getStartTime() { return _start_time; }
+  Real getStartTime() const { return _start_time; }
 
   /**
    * Get the end time
+   * @return The end time
+   */
+  Real getEndTime() const { return _end_time; }
+
+  /**
+   * Get a modifiable reference to the end time
    * @return The end time
    */
   Real & endTime() { return _end_time; }
@@ -232,7 +239,7 @@ protected:
   const bool _check_aux;
 
   Moose::TimeIntegratorType _time_scheme;
-  std::shared_ptr<TimeStepper> _time_stepper;
+  TimeStepper * _time_stepper;
 
   /// Current timestep.
   int & _t_step;
@@ -285,9 +292,6 @@ protected:
   bool _use_multiapp_dt;
 
   Real & _solution_change_norm;
-
-  /// The difference of current and old solutions
-  NumericVector<Number> & _sln_diff;
 
   void setupTimeIntegrator();
 

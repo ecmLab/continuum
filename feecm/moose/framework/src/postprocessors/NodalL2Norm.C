@@ -41,7 +41,7 @@ NodalL2Norm::execute()
 }
 
 Real
-NodalL2Norm::getValue()
+NodalL2Norm::getValue() const
 {
   return std::sqrt(_sum_of_squares);
 }
@@ -49,7 +49,7 @@ NodalL2Norm::getValue()
 void
 NodalL2Norm::threadJoin(const UserObject & y)
 {
-  const NodalL2Norm & pps = static_cast<const NodalL2Norm &>(y);
+  const auto & pps = static_cast<const NodalL2Norm &>(y);
   _sum_of_squares += pps._sum_of_squares;
 }
 

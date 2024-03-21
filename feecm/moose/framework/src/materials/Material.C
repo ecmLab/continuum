@@ -35,8 +35,10 @@ Material::Material(const InputParameters & parameters)
     MaterialPropertyInterface(this, blockIDs(), boundaryIDs()),
     _bnd(_material_data_type != Moose::BLOCK_MATERIAL_DATA),
     _neighbor(_material_data_type == Moose::NEIGHBOR_MATERIAL_DATA),
-    _q_point(_bnd ? _assembly.qPointsFace() : _assembly.qPoints()),
-    _qrule(_bnd ? _assembly.qRuleFace() : _assembly.qRule()),
+    _q_point(_bnd ? (_neighbor ? _assembly.qPointsFaceNeighbor() : _assembly.qPointsFace())
+                  : _assembly.qPoints()),
+    _qrule(_bnd ? (_neighbor ? _assembly.qRuleNeighbor() : _assembly.qRuleFace())
+                : _assembly.qRule()),
     _JxW(_bnd ? _assembly.JxWFace() : _assembly.JxW()),
     _current_elem(_neighbor ? _assembly.neighbor() : _assembly.elem()),
     _current_subdomain_id(_neighbor ? _assembly.currentNeighborSubdomainID()
@@ -89,14 +91,14 @@ Material::subdomainSetup()
 
     MaterialProperties & props = materialData().props();
     for (const auto & prop_id : _supplied_prop_ids)
-      props[prop_id]->resize(nqp);
+      props[prop_id].resize(nqp);
 
     _qp = 0;
     computeQpProperties();
 
     for (const auto & prop_id : _supplied_prop_ids)
       for (decltype(nqp) qp = 1; qp < nqp; ++qp)
-        props[prop_id]->qpCopy(qp, props[prop_id], 0);
+        props[prop_id].qpCopy(qp, props[prop_id], 0);
   }
 }
 
@@ -108,7 +110,7 @@ Material::computeProperties()
 
   // Reference to *all* the MaterialProperties in the MaterialData object, not
   // just the ones for this Material.
-  MaterialProperties & props = _material_data->props();
+  MaterialProperties & props = _material_data.props();
 
   // If this Material ist set to be constant over elements, we take the
   // value computed for _qp == 0 and use it at all the quadrature points
@@ -124,7 +126,7 @@ Material::computeProperties()
     {
       auto nqp = _qrule->n_points();
       for (decltype(nqp) qp = 1; qp < nqp; ++qp)
-        props[prop_id]->qpCopy(qp, props[prop_id], 0);
+        props[prop_id].qpCopy(qp, props[prop_id], 0);
     }
   }
   else
@@ -171,4 +173,12 @@ Material::resolveOptionalProperties()
 {
   for (auto & proxy : _optional_property_proxies)
     proxy->resolve(*this);
+}
+
+void
+Material::checkMaterialProperty(const std::string & name, const unsigned int state)
+{
+  // Avoid performing duplicate checks for triple block/face/neighbor materials
+  if (boundaryRestricted() || !_bnd)
+    MaterialPropertyInterface::checkMaterialProperty(name, state);
 }

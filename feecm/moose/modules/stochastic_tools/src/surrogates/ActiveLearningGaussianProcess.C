@@ -40,8 +40,8 @@ ActiveLearningGaussianProcess::validParams()
       "tao_options", "", "Command line options for PETSc/TAO hyperparameter optimization");
   params.addParam<bool>(
       "show_optimization_details", false, "Switch to show TAO or Adam solver results");
-  params.addParam<std::vector<std::string>>("tune_parameters",
-                                            "Select hyperparameters to be tuned");
+  params.addParam<std::vector<std::string>>(
+      "tune_parameters", {}, "Select hyperparameters to be tuned");
   params.addParam<std::vector<Real>>(
       "tuning_min", std::vector<Real>(), "Minimum allowable tuning value");
   params.addParam<std::vector<Real>>(
@@ -91,8 +91,6 @@ ActiveLearningGaussianProcess::reTrain(const std::vector<std::vector<Real>> & in
                ").");
   if (inputs.empty())
     mooseError("There is no data for retraining.");
-  if (outputs.size() < _optimization_opts.batch_size)
-    paramError("batch_size", "Batch size cannot be greater than the training data set size.");
 
   RealEigenMatrix training_data;
   _training_params.setZero(outputs.size(), inputs[0].size());

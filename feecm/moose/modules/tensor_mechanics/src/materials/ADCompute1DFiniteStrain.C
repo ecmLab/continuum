@@ -44,9 +44,6 @@ ADCompute1DFiniteStrain::computeProperties()
     Fbar(1, 1) = computeGradDispYYOld();
     Fbar(2, 2) = computeGradDispZZOld();
 
-    _deformation_gradient[_qp] = A;
-    _deformation_gradient[_qp].addIa(1.0); // Gauss point deformation gradient
-	
     A -= Fbar; // very nearly A = gradU - gradUold, adapted to cylindrical coords
 
     Fbar.addIa(1.0); // Fbar = ( I + gradUold)

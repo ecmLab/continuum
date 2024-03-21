@@ -49,7 +49,7 @@ FiniteDifferencePreconditioner::FiniteDifferencePreconditioner(const InputParame
     mooseWarning("Finite differencing to assemble the Jacobian is MUCH MUCH slower than forming "
                  "the Jacobian by hand, so don't complain about performance if you use it!");
 
-  NonlinearSystemBase & nl = _fe_problem.getNonlinearSystemBase();
+  NonlinearSystemBase & nl = _fe_problem.getNonlinearSystemBase(_nl_sys_num);
   unsigned int n_vars = nl.nVariables();
 
   std::unique_ptr<CouplingMatrix> cm = std::make_unique<CouplingMatrix>(n_vars);
@@ -68,16 +68,18 @@ FiniteDifferencePreconditioner::FiniteDifferencePreconditioner(const InputParame
 
     // off-diagonal entries
     std::vector<std::vector<unsigned int>> off_diag(n_vars);
-    for (const auto i : index_range(getParam<std::vector<NonlinearVariableName>>("off_diag_row")))
-    {
-      unsigned int row =
-          nl.getVariable(0, getParam<std::vector<NonlinearVariableName>>("off_diag_row")[i])
-              .number();
-      unsigned int column =
-          nl.getVariable(0, getParam<std::vector<NonlinearVariableName>>("off_diag_column")[i])
-              .number();
-      (*cm)(row, column) = 1;
-    }
+    if (isParamValid("off_diag_row") && isParamValid("off_diag_column"))
+
+      for (const auto i : index_range(getParam<std::vector<NonlinearVariableName>>("off_diag_row")))
+      {
+        unsigned int row =
+            nl.getVariable(0, getParam<std::vector<NonlinearVariableName>>("off_diag_row")[i])
+                .number();
+        unsigned int column =
+            nl.getVariable(0, getParam<std::vector<NonlinearVariableName>>("off_diag_column")[i])
+                .number();
+        (*cm)(row, column) = 1;
+      }
 
     // TODO: handle coupling entries between NL-vars and SCALAR-vars
   }
@@ -88,7 +90,7 @@ FiniteDifferencePreconditioner::FiniteDifferencePreconditioner(const InputParame
         (*cm)(i, j) = 1;
   }
 
-  _fe_problem.setCouplingMatrix(std::move(cm));
+  setCouplingMatrix(std::move(cm));
 
   bool implicit_geometric_coupling = getParam<bool>("implicit_geometric_coupling");
 

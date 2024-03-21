@@ -2,7 +2,7 @@
 //* https://www.mooseframework.org
 //*
 //* All rights reserved, see COPYRIGHT for full restrictions
-//* https://github.com/idaholab/moose/blob/main/COPYRIGHT
+//* https://github.com/idaholab/moose/blob/master/COPYRIGHT
 //*
 //* Licensed under LGPL 2.1, please see LICENSE for details
 //* https://www.gnu.org/licenses/lgpl-2.1.html
@@ -19,6 +19,7 @@
 #include "libmesh/fe.h"
 
 registerMooseObject("MooseApp", QuadraturePointMultiApp);
+// TODO: Deprecate and use Positions system
 
 InputParameters
 QuadraturePointMultiApp::validParams()
@@ -30,6 +31,7 @@ QuadraturePointMultiApp::validParams()
       "default quadrature, in the parent mesh.");
   params.suppressParameter<std::vector<Point>>("positions");
   params.suppressParameter<std::vector<FileName>>("positions_file");
+  params.suppressParameter<std::vector<PositionsName>>("positions_objects");
   return params;
 }
 

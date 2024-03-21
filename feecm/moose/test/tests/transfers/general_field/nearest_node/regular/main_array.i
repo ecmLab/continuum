@@ -70,38 +70,42 @@
 
 [Transfers]
   [to_sub]
-    type = MultiAppGeneralFieldNearestNodeTransfer
+    type = MultiAppGeneralFieldNearestLocationTransfer
     to_multi_app = sub
     source_variable = 'to_sub to_sub'
     source_variable_components = '1 0'
     variable = 'from_main from_main'
     target_variable_components = '0 1'
+    source_type = 'nodes nodes'
   []
 
   [to_sub_elem]
-    type = MultiAppGeneralFieldNearestNodeTransfer
+    type = MultiAppGeneralFieldNearestLocationTransfer
     to_multi_app = sub
     source_variable = 'to_sub_elem to_sub_elem'
     source_variable_components = '1 0'
     variable = 'from_main_elem from_main_elem'
     target_variable_components = '0 1'
+    source_type = 'centroids centroids'
   []
 
   [from_sub]
-    type = MultiAppGeneralFieldNearestNodeTransfer
+    type = MultiAppGeneralFieldNearestLocationTransfer
     from_multi_app = sub
     source_variable = 'to_main to_main'
     source_variable_components = '1 0'
     variable = 'from_sub from_sub'
     target_variable_components = '0 1'
+    source_type = 'nodes nodes'
   []
 
   [from_sub_elem]
-    type = MultiAppGeneralFieldNearestNodeTransfer
+    type = MultiAppGeneralFieldNearestLocationTransfer
     from_multi_app = sub
     source_variable = 'to_main_elem to_main_elem'
     source_variable_components = '1 0'
     variable = 'from_sub_elem from_sub_elem'
     target_variable_components = '0 1'
+    source_type = 'centroids centroids'
   []
 []

@@ -17,7 +17,7 @@ NodalEnergyFluxPostprocessor::validParams()
   InputParameters params = NodalPostprocessor::validParams();
   params.addRequiredCoupledVar("arhouA", "alpha*rho*u*A");
   params.addRequiredCoupledVar("H", "Specific total enthalpy");
-
+  params.addClassDescription("Compute the energy flux from the sum of the nodal energy fluxes");
   return params;
 }
 
@@ -39,7 +39,7 @@ NodalEnergyFluxPostprocessor::execute()
 }
 
 PostprocessorValue
-NodalEnergyFluxPostprocessor::getValue()
+NodalEnergyFluxPostprocessor::getValue() const
 {
   return _value;
 }
@@ -53,7 +53,6 @@ NodalEnergyFluxPostprocessor::finalize()
 void
 NodalEnergyFluxPostprocessor::threadJoin(const UserObject & uo)
 {
-  const NodalEnergyFluxPostprocessor & niep =
-      dynamic_cast<const NodalEnergyFluxPostprocessor &>(uo);
+  const auto & niep = static_cast<const NodalEnergyFluxPostprocessor &>(uo);
   _value += niep._value;
 }

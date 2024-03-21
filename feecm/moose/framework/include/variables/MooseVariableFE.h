@@ -140,6 +140,11 @@ public:
    */
   bool computingCurl() const override final;
 
+  /**
+   * Whether or not this variable is computing the divergence
+   */
+  bool computingDiv() const override final;
+
   bool isNodal() const override { return _element_data->isNodal(); }
   bool hasDoFsOnNodes() const override { return _element_data->hasDoFsOnNodes(); }
   FEContinuity getContinuity() const override { return _element_data->getContinuity(); };
@@ -197,6 +202,7 @@ public:
   }
   const FieldVariablePhiSecond & secondPhi() const override final;
   const FieldVariablePhiCurl & curlPhi() const override final;
+  const FieldVariablePhiDivergence & divPhi() const override final;
 
   const FieldVariablePhiValue & phiFace() const override final { return _element_data->phiFace(); }
   const FieldVariablePhiGradient & gradPhiFace() const override final
@@ -209,6 +215,7 @@ public:
   }
   const FieldVariablePhiSecond & secondPhiFace() const override final;
   const FieldVariablePhiCurl & curlPhiFace() const;
+  const FieldVariablePhiDivergence & divPhiFace() const;
 
   const FieldVariablePhiValue & phiNeighbor() const override final { return _neighbor_data->phi(); }
   const FieldVariablePhiGradient & gradPhiNeighbor() const override final
@@ -221,6 +228,7 @@ public:
   }
   const FieldVariablePhiSecond & secondPhiNeighbor() const override final;
   const FieldVariablePhiCurl & curlPhiNeighbor() const;
+  const FieldVariablePhiDivergence & divPhiNeighbor() const;
 
   const FieldVariablePhiValue & phiFaceNeighbor() const override final
   {
@@ -236,8 +244,9 @@ public:
   }
   const FieldVariablePhiSecond & secondPhiFaceNeighbor() const override final;
   const FieldVariablePhiCurl & curlPhiFaceNeighbor() const;
+  const FieldVariablePhiDivergence & divPhiFaceNeighbor() const;
 
-  const FieldVariablePhiValue & phiLower() const { return _lower_data->phi(); }
+  virtual const FieldVariablePhiValue & phiLower() const override { return _lower_data->phi(); }
   const FieldVariablePhiGradient & gradPhiLower() const { return _lower_data->gradPhi(); }
 
   const ADTemplateVariableTestGradient<OutputShape> & adGradPhi() const
@@ -270,7 +279,7 @@ public:
   {
     return _element_data->vectorTagDofValue(tag);
   }
-  const FieldVariableValue & matrixTagValue(TagID tag) const
+  const FieldVariableValue & matrixTagValue(TagID tag) const override
   {
     return _element_data->matrixTagValue(tag);
   }
@@ -319,6 +328,14 @@ public:
   const FieldVariableCurl & curlSln() const { return _element_data->curlSln(Moose::Current); }
   const FieldVariableCurl & curlSlnOld() const { return _element_data->curlSln(Moose::Old); }
   const FieldVariableCurl & curlSlnOlder() const { return _element_data->curlSln(Moose::Older); }
+
+  /// element divergence
+  const FieldVariableDivergence & divSln() const { return _element_data->divSln(Moose::Current); }
+  const FieldVariableDivergence & divSlnOld() const { return _element_data->divSln(Moose::Old); }
+  const FieldVariableDivergence & divSlnOlder() const
+  {
+    return _element_data->divSln(Moose::Older);
+  }
 
   /// AD
   const ADTemplateVariableValue<OutputType> & adSln() const override
@@ -451,6 +468,20 @@ public:
   const FieldVariableCurl & curlSlnOlderNeighbor() const
   {
     return _neighbor_data->curlSln(Moose::Older);
+  }
+
+  /// neighbor solution divergence
+  const FieldVariableDivergence & divSlnNeighbor() const
+  {
+    return _neighbor_data->divSln(Moose::Current);
+  }
+  const FieldVariableDivergence & divSlnOldNeighbor() const
+  {
+    return _neighbor_data->divSln(Moose::Old);
+  }
+  const FieldVariableDivergence & divSlnOlderNeighbor() const
+  {
+    return _neighbor_data->divSln(Moose::Older);
   }
 
   /// neighbor dots
@@ -659,7 +690,7 @@ public:
   }
 
   const DoFValue & nodalVectorTagValue(TagID tag) const override;
-  const DoFValue & nodalMatrixTagValue(TagID tag) const;
+  const DoFValue & nodalMatrixTagValue(TagID tag) const override;
 
   const typename Moose::ADType<OutputType>::type & adNodalValue() const;
 
@@ -670,8 +701,12 @@ public:
 
   void setActiveTags(const std::set<TagID> & vtags) override;
 
+  virtual void meshChanged() override;
+  virtual void residualSetup() override;
+  virtual void jacobianSetup() override;
+
 protected:
-  usingMooseVariableBaseMembers;
+  usingMooseVariableFieldMembers;
 
   /// Holder for all the data associated with the "main" element
   std::unique_ptr<MooseVariableData<OutputType>> _element_data;
@@ -682,21 +717,112 @@ protected:
   /// Holder for all the data associated with the lower dimeensional element
   std::unique_ptr<MooseVariableData<OutputType>> _lower_data;
 
-private:
   using MooseVariableField<OutputType>::evaluate;
+  using MooseVariableField<OutputType>::evaluateGradient;
+  using MooseVariableField<OutputType>::evaluateDot;
+  using MooseVariableField<OutputType>::evaluateGradDot;
   using ElemArg = Moose::ElemArg;
   using ElemQpArg = Moose::ElemQpArg;
   using ElemSideQpArg = Moose::ElemSideQpArg;
   using FaceArg = Moose::FaceArg;
+  using StateArg = Moose::StateArg;
+  using NodeArg = Moose::NodeArg;
+  using ElemPointArg = Moose::ElemPointArg;
 
-  ValueType evaluate(const ElemArg &, unsigned int) const override final
-  {
-    mooseError("Elem functor overload not yet implemented for finite element variables");
-  }
-  ValueType evaluate(const FaceArg &, unsigned int) const override final
-  {
-    mooseError("Face info functor overload not yet implemented for finite element variables");
-  }
+  /**
+   * A common method that both evaluate(FaceArg) and evaluateDot(FaceArg) can call. A value
+   * evaluation vs dot evaluation is delineated via the passed-in \p cache_data, e.g. if the
+   * passed-in cache data is the sln data member then this will return a value evaluation and if the
+   * cache data is the dot data member then this will return a dot evaluation
+   */
+  ValueType
+  faceEvaluate(const FaceArg &, const StateArg &, const std::vector<ValueType> & cache_data) const;
+
+  ValueType evaluate(const ElemQpArg & elem_qp, const StateArg & state) const override final;
+  ValueType evaluate(const ElemSideQpArg & elem_side_qp,
+                     const StateArg & state) const override final;
+  ValueType evaluate(const ElemArg &, const StateArg &) const override final;
+  ValueType evaluate(const ElemPointArg &, const StateArg &) const override final;
+  ValueType evaluate(const NodeArg & node_arg, const StateArg & state) const override final;
+  ValueType evaluate(const FaceArg &, const StateArg &) const override final;
+
+  GradientType evaluateGradient(const ElemQpArg & elem_qp, const StateArg & state) const override;
+  GradientType evaluateGradient(const ElemSideQpArg & elem_side_qp,
+                                const StateArg & state) const override final;
+  GradientType evaluateGradient(const ElemArg &, const StateArg &) const override final;
+
+  DotType evaluateDot(const ElemQpArg & elem_qp, const StateArg & state) const override final;
+  DotType evaluateDot(const ElemSideQpArg & elem_side_qp,
+                      const StateArg & state) const override final;
+  DotType evaluateDot(const ElemArg &, const StateArg &) const override final;
+  DotType evaluateDot(const FaceArg &, const StateArg &) const override final;
+
+  GradientType evaluateGradDot(const ElemArg &, const StateArg &) const override final;
+
+private:
+  /**
+   * Compute the solution, gradient, time derivative, and gradient of the time derivative with
+   * provided shape functions
+   */
+  template <typename Shapes, typename Solution, typename GradShapes, typename GradSolution>
+  void computeSolution(const Elem * elem,
+                       unsigned int n_qp,
+                       const StateArg & state,
+                       const Shapes & phi,
+                       Solution & local_soln,
+                       const GradShapes & grad_phi,
+                       GradSolution & grad_local_soln,
+                       Solution & dot_local_soln,
+                       GradSolution & grad_dot_local_soln) const;
+
+  /**
+   * Evaluate solution and gradient for the \p elem_qp argument
+   */
+  void
+  evaluateOnElement(const ElemQpArg & elem_qp, const StateArg & state, bool cache_eligible) const;
+
+  /**
+   * Evaluate solution and gradient for the \p elem_side_qp argument
+   */
+  void evaluateOnElementSide(const ElemSideQpArg & elem_side_qp,
+                             const StateArg & state,
+                             bool cache_eligible) const;
+
+  /// Keep track of the current elem-qp functor element in order to enable local caching (e.g. if we
+  /// call evaluate on the same element, but just with a different quadrature point, we can return
+  /// previously computed results indexed at the different qp
+  mutable const Elem * _current_elem_qp_functor_elem = nullptr;
+
+  /// The values of the solution for the \p _current_elem_qp_functor_elem
+  mutable std::vector<ValueType> _current_elem_qp_functor_sln;
+
+  /// The values of the gradient for the \p _current_elem_qp_functor_elem
+  mutable std::vector<GradientType> _current_elem_qp_functor_gradient;
+
+  /// The values of the time derivative for the \p _current_elem_qp_functor_elem
+  mutable std::vector<DotType> _current_elem_qp_functor_dot;
+
+  /// The values of the gradient of the time derivative for the \p _current_elem_qp_functor_elem
+  mutable std::vector<GradientType> _current_elem_qp_functor_grad_dot;
+
+  /// Keep track of the current elem-side-qp functor element and side in order to enable local
+  /// caching (e.g. if we call evaluate with the same element and side, but just with a different
+  /// quadrature point, we can return previously computed results indexed at the different qp
+  mutable std::pair<const Elem *, unsigned int> _current_elem_side_qp_functor_elem_side{
+      nullptr, libMesh::invalid_uint};
+
+  /// The values of the solution for the \p _current_elem_side_qp_functor_elem_side
+  mutable std::vector<ValueType> _current_elem_side_qp_functor_sln;
+
+  /// The values of the gradient for the \p _current_elem_side_qp_functor_elem_side
+  mutable std::vector<GradientType> _current_elem_side_qp_functor_gradient;
+
+  /// The values of the time derivative for the \p _current_elem_side_qp_functor_elem_side
+  mutable std::vector<DotType> _current_elem_side_qp_functor_dot;
+
+  /// The values of the gradient of the time derivative for the \p
+  /// _current_elem_side_qp_functor_elem_side
+  mutable std::vector<GradientType> _current_elem_side_qp_functor_grad_dot;
 };
 
 template <typename OutputType>

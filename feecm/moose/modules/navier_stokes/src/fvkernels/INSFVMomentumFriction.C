@@ -42,21 +42,39 @@ INSFVMomentumFriction::INSFVMomentumFriction(const InputParameters & parameters)
     mooseError("INSFVMomentumFriction should be provided with at least one friction coefficiant!");
 }
 
+ADReal
+INSFVMomentumFriction::computeCoefficient(const Moose::ElemArg & elem_arg,
+                                          const Moose::StateArg & state)
+{
+  ADReal coefficient = 0.0;
+  if (_linear_friction)
+    coefficient += (*_linear_friction)(elem_arg, determineState());
+  if (_quadratic_friction)
+    coefficient += (*_quadratic_friction)(elem_arg, state) * std::abs(_u_functor(elem_arg, state));
+
+  return coefficient;
+}
+
+ADReal
+INSFVMomentumFriction::computeSegregatedContribution()
+{
+  const auto & elem_arg = makeElemArg(_current_elem);
+  const auto state = determineState();
+
+  return raw_value(computeCoefficient(elem_arg, state)) * _u_functor(elem_arg, state);
+}
+
 void
 INSFVMomentumFriction::gatherRCData(const Elem & elem)
 {
   const auto & elem_arg = makeElemArg(&elem);
+  const auto state = determineState();
 
-  ADReal coefficient = 0.0;
-  if (_linear_friction)
-    coefficient += (*_linear_friction)(elem_arg);
-  if (_quadratic_friction)
-    coefficient += (*_quadratic_friction)(elem_arg)*std::abs(_u_functor(elem_arg));
-
+  ADReal coefficient = computeCoefficient(elem_arg, state);
   coefficient *= _assembly.elementVolume(&elem);
 
   _rc_uo.addToA(&elem, _index, coefficient);
 
   const auto dof_number = elem.dof_number(_sys.number(), _var.number(), 0);
-  processResidualAndJacobian(coefficient * _u_functor(elem_arg), dof_number);
+  addResidualAndJacobian(coefficient * _u_functor(elem_arg, state), dof_number);
 }

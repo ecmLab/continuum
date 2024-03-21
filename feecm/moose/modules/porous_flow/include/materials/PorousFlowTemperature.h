@@ -29,11 +29,14 @@ protected:
   /// Number of PorousFlow variables
   const unsigned int _num_pf_vars;
 
+  /// Flag for nodal temperature
+  const bool _is_temp_nodal;
+
   /// Variable value of temperature at quadpoints or nodes
   const GenericVariableValue<is_ad> & _temperature_var;
 
   /// Gradient(_temperature at quadpoints)
-  const VariableGradient * const _grad_temperature_var;
+  const GenericVariableGradient<is_ad> * const _grad_temperature_var;
 
   /// Whether the temperature coupled variable is a PorousFlow variable
   const bool _temperature_is_PF;
@@ -48,7 +51,7 @@ protected:
   MaterialProperty<std::vector<Real>> * const _dtemperature_dvar;
 
   /// Grad(temperature) at the quadpoints (not needed for nodal_materials)
-  MaterialProperty<RealGradient> * const _grad_temperature;
+  GenericMaterialProperty<RealGradient, is_ad> * const _grad_temperature;
 
   /// d(grad temperature)/d(grad PorousFlow variable) at the quadpoints
   MaterialProperty<std::vector<Real>> * const _dgrad_temperature_dgradv;

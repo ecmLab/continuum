@@ -119,27 +119,27 @@ Ny = 5
     execute_on = 'TIMESTEP_END'
   []
   [rho_out]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     functor = 'rho_mixture'
     variable = 'density'
   []
   [th_cond_out]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     functor = 'k_mixture'
     variable = 'th_cond'
   []
   [cp_out]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     functor = 'cp_mixture'
     variable = 'cp_var'
   []
   [darcy_out]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     functor = 'Darcy_coefficient'
     variable = 'darcy_coef'
   []
   [fch_out]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     functor = 'Forchheimer_coefficient'
     variable = 'fch_coef'
   []
@@ -244,8 +244,8 @@ Ny = 5
   [T_time]
     type = INSFVEnergyTimeDerivative
     variable = T
-    cp = cp_mixture
     rho = rho_mixture
+    dh_dt = dh_dt
   []
   [energy_advection]
     type = INSFVEnergyAdvection
@@ -336,22 +336,22 @@ Ny = 5
   []
 []
 
-[Materials]
+[FunctorMaterials]
   [ins_fv]
-    type = INSFVEnthalpyMaterial
+    type = INSFVEnthalpyFunctorMaterial
     rho = rho_mixture
     cp = cp_mixture
     temperature = 'T'
   []
   [eff_cp]
-    type = NSFVMixtureMaterial
+    type = NSFVMixtureFunctorMaterial
     phase_2_names = '${cp_solid} ${k_solid} ${rho_solid}'
     phase_1_names = '${cp_liquid} ${k_liquid} ${rho_liquid}'
     prop_names = 'cp_mixture k_mixture rho_mixture'
     phase_1_fraction = fl
   []
   [mushy_zone_resistance]
-    type = INSFVMushyPorousFrictionMaterial
+    type = INSFVMushyPorousFrictionFunctorMaterial
     liquid_fraction = 'fl'
     mu = '${mu}'
     rho_l = '${rho_liquid}'

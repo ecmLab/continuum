@@ -24,7 +24,8 @@ associateSyntax(Syntax & syntax)
   syntax.registerActionSyntax("AddComponentAction", "Components/*", "THM:add_component");
   syntax.registerActionSyntax("AddComponentAction", "Components/*/*", "THM:add_component");
   syntax.registerActionSyntax("AddClosuresAction", "Closures/*", "THM:add_closures");
-  syntax.registerActionSyntax("THMAddControlAction", "ControlLogic/*", "add_control");
+  syntax.registerActionSyntax("THMAddControlAction", "ControlLogic/*", "THM:add_control_logic");
+  syntax.registerTaskName("THM:add_control_logic", "THMControl", false);
   syntax.registerActionSyntax("AddIterationCountPostprocessorsAction", "Debug");
   syntax.registerActionSyntax("PostprocessorAsControlAction", "Postprocessors/*");
   syntax.registerActionSyntax("THMDebugAction", "Debug");
@@ -47,6 +48,7 @@ registerActions(Syntax & syntax)
   registerTask("THM:init_components", true);
   registerTask("THM:identify_loops", true);
   registerTask("THM:add_variables", true);
+  registerTask("THM:add_control_logic", true);
   registerTask("THM:setup_output", true);
   registerTask("THM:add_component_moose_objects", true);
   registerTask("THM:integrity_check", true);
@@ -67,7 +69,7 @@ registerActions(Syntax & syntax)
     syntax.addDependency("THM:add_heat_structure_material", "add_function");
     syntax.addDependency("THM:output_vector_velocity", "setup_mesh");
     syntax.addDependency("THM:add_closures", "setup_mesh");
-    syntax.addDependency("THM:add_component", "THM:output_vector_velocity");
+    syntax.addDependency("THM:init_components", "THM:output_vector_velocity");
     syntax.addDependency("THM:debug_action", "setup_mesh");
     syntax.addDependency("THM:init_simulation", "THM:add_component");
     syntax.addDependency("add_mesh_generator", "THM:add_component");
@@ -89,6 +91,7 @@ registerActions(Syntax & syntax)
     syntax.addDependency("THM:setup_output", "add_output");
     syntax.addDependency("THM:add_component_moose_objects", "add_material");
     syntax.addDependency("check_output", "THM:add_component_moose_objects");
+    syntax.addDependency("THM:add_control_logic", "add_control");
     syntax.addDependency("THM:control_data_integrity_check", "check_integrity");
     syntax.addDependency("add_user_object", "THM:add_variables");
     syntax.addDependency("add_output_aux_variables", "THM:add_component_moose_objects");
@@ -96,6 +99,8 @@ registerActions(Syntax & syntax)
     syntax.addDependency("THM:print_component_loops", "THM:control_data_integrity_check");
     syntax.addDependency("THM:preconditioning_integrity_check", "check_integrity");
     syntax.addDependency("THM:add_relationship_managers", "add_geometric_rm");
+    syntax.addDependency("THM:add_relationship_managers", "THM:add_component");
+    syntax.addDependency("THM:init_simulation", "THM:add_relationship_managers");
     syntax.addDependency("THM:output_vector_velocity", "THM:add_relationship_managers");
     syntax.addDependency("THM:add_variables", "THM:integrity_check");
   }

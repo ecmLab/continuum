@@ -266,7 +266,7 @@ FeatureFloodCount::initialSetup()
   _entities_visited.resize(_vars.size());
 
   // Get a pointer to the PeriodicBoundaries buried in libMesh
-  _pbs = _fe_problem.getNonlinearSystemBase().dofMap().get_periodic_boundaries();
+  _pbs = _fe_problem.getNonlinearSystemBase(_sys.number()).dofMap().get_periodic_boundaries();
 
   meshChanged();
 
@@ -797,7 +797,7 @@ FeatureFloodCount::scatterAndUpdateRanks()
 }
 
 Real
-FeatureFloodCount::getValue()
+FeatureFloodCount::getValue() const
 {
   return static_cast<Real>(_feature_count);
 }
@@ -2213,14 +2213,9 @@ operator<<(std::ostream & out, const FeatureFloodCount::FeatureData & feature)
   }
 
   out << "\nBBoxes:";
-  Real volume = 0;
   for (const auto & bbox : feature._bboxes)
   {
     out << "\nMax: " << bbox.max() << " Min: " << bbox.min();
-    volume += (bbox.max()(0) - bbox.min()(0)) * (bbox.max()(1) - bbox.min()(1)) *
-              (MooseUtils::absoluteFuzzyEqual(bbox.max()(2), bbox.min()(2))
-                   ? 1
-                   : bbox.max()(2) - bbox.min()(2));
   }
 
   out << "\nStatus: ";

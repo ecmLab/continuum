@@ -205,7 +205,7 @@ the $\phi_i's$ are shape functions associated with the dofs. For a
 Lagrange basis, shape functions and dofs are tied to mesh nodes. To
 illustrate initiation of the AD process, we will consider construction of
 a local finite element solution on a `QUAD4` element, that is to say a
-quadrilaterial with a number of nodes equal to the number of vertices. This
+quadrilateral with a number of nodes equal to the number of vertices. This
 element type when combined with a Lagrange basis has four dofs which
 contribute to the local solution, one for each element node. In MOOSE we
 assign these local degree of freedom solution values (the local $u_i's$) to a
@@ -280,7 +280,7 @@ we see exactly what we would expect: values 0--3 corresponding to the $u$
 indices are equivalent to that shown in the previous lldb output whereas the
 values in 4--7, corresponding to the $v$ indices, are equal to the negative of
 that shown in the previous lldb output. In general, the quality of automatic
-differention results are verified with unit testing in MetaPhysicL and using a
+differentiation results are verified with unit testing in MetaPhysicL and using a
 `PetscJacobianTester` in MOOSE which compares the Jacobian produced
 by automatic differentiation against that generated using finite differencing of
 the residuals. The latter test relies on using well-scaled problems; for
@@ -302,6 +302,23 @@ properties can be retrieved in compute objects like `ADKernels` by using the
 `getADMaterialProperty` API. For detailed examples of [!ac](AD) use, the reader is
 encouraged to investigate the tensor mechanics, navier-stokes, and level-set
 modules, all of which heavily leverage MOOSE's [!ac](AD) capabilities.
+
+### Maximum AD container size id=max_container_size
+
+For performance reasons, AD values in MOOSE have a maximum container size, i.e.,
+they have a maximum number of degrees of freedom that each AD quantity may
+depend upon. Currently, MOOSE's default maximum AD container size is 53. If the
+maximum AD container size is exceeded, then an error will result.
+If a quantity needs to depend on more degrees of freedom than the maximum AD
+container size, then MOOSE needs to be reconfigured: go to the
+root of the MOOSE repository and run the following, where `n` should be
+substituted with the desired size.
+
+```
+./configure --with-derivative-size=n
+```
+
+Then, you must recompile your application.
 
 ### Combining AD and non-AD classes
 

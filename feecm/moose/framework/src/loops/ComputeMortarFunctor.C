@@ -51,11 +51,14 @@ ComputeMortarFunctor::ComputeMortarFunctor(
 }
 
 void
-ComputeMortarFunctor::operator()(const Moose::ComputeType compute_type)
+ComputeMortarFunctor::operator()(const Moose::ComputeType compute_type,
+                                 const std::set<TagID> & vector_tag_ids,
+                                 const std::set<TagID> & /*matrix_tag_ids*/)
 {
   libmesh_parallel_only(_fe_problem.comm());
 
   unsigned int num_cached = 0;
+  const auto & vector_tags = _fe_problem.getVectorTags(vector_tag_ids);
 
   const auto & secondary_elems_to_mortar_segments = _amg.secondariesToMortarSegments();
   typedef decltype(secondary_elems_to_mortar_segments.begin()) it_type;
@@ -78,7 +81,7 @@ ComputeMortarFunctor::operator()(const Moose::ComputeType compute_type)
     }
   }
 
-  auto act_functor = [this, &num_cached, compute_type]()
+  auto act_functor = [this, &num_cached, compute_type, &vector_tags]()
   {
     ++num_cached;
 
@@ -87,14 +90,17 @@ ComputeMortarFunctor::operator()(const Moose::ComputeType compute_type)
       case Moose::ComputeType::Residual:
       {
         for (auto * const mc : _mortar_constraints)
+        {
+          mc->setNormals();
           mc->computeResidual();
+        }
 
-        _assembly.cacheResidual();
-        _assembly.cacheResidualNeighbor();
-        _assembly.cacheResidualLower();
+        _assembly.cacheResidual(Assembly::GlobalDataKey{}, vector_tags);
+        _assembly.cacheResidualNeighbor(Assembly::GlobalDataKey{}, vector_tags);
+        _assembly.cacheResidualLower(Assembly::GlobalDataKey{}, vector_tags);
 
         if (num_cached % 20 == 0)
-          _assembly.addCachedResiduals();
+          _assembly.addCachedResiduals(Assembly::GlobalDataKey{}, vector_tags);
 
         break;
       }
@@ -102,29 +108,35 @@ ComputeMortarFunctor::operator()(const Moose::ComputeType compute_type)
       case Moose::ComputeType::Jacobian:
       {
         for (auto * const mc : _mortar_constraints)
+        {
+          mc->setNormals();
           mc->computeJacobian();
+        }
 
-        _assembly.cacheJacobianMortar();
+        _assembly.cacheJacobianMortar(Assembly::GlobalDataKey{});
 
         if (num_cached % 20 == 0)
-          _assembly.addCachedJacobian();
+          _assembly.addCachedJacobian(Assembly::GlobalDataKey{});
         break;
       }
 
       case Moose::ComputeType::ResidualAndJacobian:
       {
         for (auto * const mc : _mortar_constraints)
+        {
+          mc->setNormals();
           mc->computeResidualAndJacobian();
+        }
 
-        _assembly.cacheResidual();
-        _assembly.cacheResidualNeighbor();
-        _assembly.cacheResidualLower();
-        _assembly.cacheJacobianMortar();
+        _assembly.cacheResidual(Assembly::GlobalDataKey{}, vector_tags);
+        _assembly.cacheResidualNeighbor(Assembly::GlobalDataKey{}, vector_tags);
+        _assembly.cacheResidualLower(Assembly::GlobalDataKey{}, vector_tags);
+        _assembly.cacheJacobianMortar(Assembly::GlobalDataKey{});
 
         if (num_cached % 20 == 0)
         {
-          _assembly.addCachedResiduals();
-          _assembly.addCachedJacobian();
+          _assembly.addCachedResiduals(Assembly::GlobalDataKey{}, vector_tags);
+          _assembly.addCachedJacobian(Assembly::GlobalDataKey{});
         }
         break;
       }
@@ -146,7 +158,8 @@ ComputeMortarFunctor::operator()(const Moose::ComputeType compute_type)
                                             _secondary_ip_sub_to_mats,
                                             _primary_ip_sub_to_mats,
                                             _secondary_boundary_mats,
-                                            act_functor);
+                                            act_functor,
+                                            /*reinit_mortar_user_objects=*/true);
     }
     catch (libMesh::LogicError & e)
     {
@@ -176,7 +189,7 @@ ComputeMortarFunctor::operator()(const Moose::ComputeType compute_type)
 
   // Make sure any remaining cached residuals/Jacobians get added
   if (_assembly.computingResidual())
-    _assembly.addCachedResiduals();
+    _assembly.addCachedResiduals(Assembly::GlobalDataKey{}, vector_tags);
   if (_assembly.computingJacobian())
-    _assembly.addCachedJacobian();
+    _assembly.addCachedJacobian(Assembly::GlobalDataKey{});
 }

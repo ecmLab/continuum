@@ -2,9 +2,9 @@
 
 ## Overview
 
-`Function`s are used to define functions depending only on spatial position and
-time: $f(x,y,z,t)$. These objects can serve a wide variety of purposes, including
-(but not limited to) the following:
+`Function`s are used to define functions depending only on time and spatial
+position: $f(t,x,y,z)$. These objects can serve a wide variety of purposes,
+including (but not limited to) the following:
 
 - defining initial conditions,
 - defining residual contributions (sources, boundary conditions, etc.), and
@@ -25,7 +25,8 @@ Moose `Function`s should override the following member functions
 For vector valued functions
 
 - `RealVectorValue vectorValue(Real, Point)` - returning a vector value at a point in space and time
-- `RealVectorValue vectorCurl(Real, Point)` - returning the curl of the function at a point in space and time
+- `RealVectorValue curl(Real, Point)` - returning the curl of the function at a point in space and time
+- `Real div(Real, Point)` - returning the divergence of the function at a point in space and time
 
 can be overridden. The optional `Real integral()` and `Real average()` methods
 can also be overridden. Note that two overloads exist for the `value()` member
@@ -36,6 +37,20 @@ function do not implement  an AD overload of the `value()` function, the
 Check out `PiecewiseBilinear` to see how to update a function to support AD by
 using a templated `valueInternal()` function with virtual `value()` forwarders.
 
+
+### Functions as Functors
+
+Functions are [Functors](syntax/Functors/index.md). Functors are an abstraction, a base class, for
+objects that can compute values at a location in space and time.
+
+As `Functors`, they may be specified to objects such as the
+[FunctorAux.md] in their [!param](/AuxKernels/FunctorAux/functor) parameter. This vastly expands the number
+of objects that can use `Functions` to compute spatial quantities.
+
+!alert note
+When making a new object using `Functions` to contribute back to MOOSE,
+we ask that you consider using [Functors](syntax/Functors/index.md) instead
+to naturally enable its use with variables and functor material properties.
 
 !syntax list /Functions objects=True actions=False subsystems=False
 

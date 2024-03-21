@@ -31,9 +31,12 @@ ParsedAux::validParams()
       false,
       "Make coordinate (x,y,z) and time (t) variables available in the function expression.");
   params.addParam<std::vector<std::string>>(
-      "constant_names", "Vector of constants used in the parsed function (use this for kB etc.)");
+      "constant_names",
+      {},
+      "Vector of constants used in the parsed function (use this for kB etc.)");
   params.addParam<std::vector<std::string>>(
       "constant_expressions",
+      {},
       "Vector of values for the constants in constant_names (can be an FParser expression)");
 
   return params;
@@ -82,7 +85,17 @@ ParsedAux::ParsedAux(const InputParameters & parameters)
 
   // just-in-time compile
   if (_enable_jit)
+  {
+    // let rank 0 do the JIT compilation first
+    if (_communicator.rank() != 0)
+      _communicator.barrier();
+
     _func_F->JITCompile();
+
+    // wait for ranks > 0 to catch up
+    if (_communicator.rank() == 0)
+      _communicator.barrier();
+  }
 
   // reserve storage for parameter passing buffer
   _func_params.resize(_nargs + (_use_xyzt ? 4 : 0));

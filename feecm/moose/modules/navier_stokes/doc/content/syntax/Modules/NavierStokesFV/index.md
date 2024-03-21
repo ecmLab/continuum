@@ -42,7 +42,12 @@ commonly used in the action syntax is presented below:
 
   !listing include/base/NS.h line=std::string T_fluid
 
-For the default names of other variables used in this action, visit [this site](include/base/NS.h).  
+For the default names of other variables used in this action, visit [this site](include/base/NS.h).
+
+
+## Bernoulli pressure jump treatment
+
+Please see [the Bernoulli pressure variable documentation](BernoulliPressureVariable.md) for more information.
 
 ## Examples
 
@@ -63,7 +68,7 @@ material explicitly.
 Careful! The utilization of central difference (`average`) advected interpolation
 may lead to oscillatory behavior in certain scenarios. Even though it is not the case
 for this example, if this phenomenon arises,
-we recommend using first order `upwind` or second order TVD chemes.
+we recommend using first order `upwind` or second order TVD schemes.
 
 !alert-end!
 
@@ -97,7 +102,7 @@ is presented:
 Careful! The utilization of central difference (`average`) advected interpolation
 may lead to oscillatory behavior in certain scenarios. Even though it is not the case
 for this example, if this phenomenon arises,
-we recommend using first order `upwind` or second order TVD chemes.
+we recommend using first order `upwind` or second order TVD schemes.
 
 !alert-end!
 
@@ -129,11 +134,11 @@ the [Weakly-compressible Navier Stokes](modules/navier_stokes/wcnsfv.md) page.
 Careful! The utilization of central difference (`average`) advected interpolation
 may lead to oscillatory behavior in certain scenarios. Even though it is not the case
 for this example, if this phenomenon arises,
-we recommend using first order `upwind` or second order TVD chemes.
+we recommend using first order `upwind` or second order TVD schemes.
 
 !alert-end!
 
-The same simulation can be set up using the action syntax as folows:
+The same simulation can be set up using the action syntax as follows:
 
 !listing modules/navier_stokes/test/tests/finite_volume/wcns/channel-flow/2d-transient-action.i
 
@@ -142,7 +147,6 @@ We note that the weakly-compressible handling can be enabled by setting
 As shown in the example, an arbitrary
 energy source function can also be supplied to the incorporated
 energy equation using the [!param](/Modules/NavierStokesFV/external_heat_source) parameter.
-
 
 
 !syntax list /Modules/NavierStokesFV objects=True actions=False subsystems=False

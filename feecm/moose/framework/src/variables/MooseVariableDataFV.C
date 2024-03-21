@@ -36,6 +36,7 @@ MooseVariableDataFV<OutputType>::MooseVariableDataFV(const MooseVariableFV<Outpu
 
   : MooseVariableDataBase<OutputType>(var, sys, tid),
     MeshChangedInterface(var.parameters()),
+    _var(var),
     _fe_type(_var.feType()),
     _var_num(_var.number()),
     _assembly(_subproblem.assembly(_tid, var.kind() == Moose::VAR_NONLINEAR ? sys.number() : 0)),
@@ -65,6 +66,12 @@ MooseVariableDataFV<OutputType>::MooseVariableDataFV(const MooseVariableFV<Outpu
     _displaced(dynamic_cast<const DisplacedSystem *>(&_sys) ? true : false),
     _qrule(nullptr)
 {
+  _fv_elemental_kernel_query_cache =
+      _subproblem.getMooseApp().theWarehouse().query().template condition<AttribSystem>(
+          "FVElementalKernel");
+  _fv_flux_kernel_query_cache =
+      _subproblem.getMooseApp().theWarehouse().query().template condition<AttribSystem>(
+          "FVFluxKernel");
 }
 
 template <typename OutputType>
@@ -94,6 +101,7 @@ MooseVariableDataFV<OutputType>::uDot() const
 {
   if (_sys.solutionUDot())
   {
+    _var.requireQpComputations();
     _need_u_dot = true;
     return _u_dot;
   }
@@ -108,6 +116,7 @@ MooseVariableDataFV<OutputType>::uDotDot() const
 {
   if (_sys.solutionUDotDot())
   {
+    _var.requireQpComputations();
     _need_u_dotdot = true;
     return _u_dotdot;
   }
@@ -123,6 +132,7 @@ MooseVariableDataFV<OutputType>::uDotOld() const
 {
   if (_sys.solutionUDotOld())
   {
+    _var.requireQpComputations();
     _need_u_dot_old = true;
     return _u_dot_old;
   }
@@ -138,6 +148,7 @@ MooseVariableDataFV<OutputType>::uDotDotOld() const
 {
   if (_sys.solutionUDotDotOld())
   {
+    _var.requireQpComputations();
     _need_u_dotdot_old = true;
     return _u_dotdot_old;
   }
@@ -148,11 +159,20 @@ MooseVariableDataFV<OutputType>::uDotDotOld() const
 }
 
 template <typename OutputType>
+const typename MooseVariableDataFV<OutputType>::FieldVariableValue &
+MooseVariableDataFV<OutputType>::sln(Moose::SolutionState state) const
+{
+  _var.requireQpComputations();
+  return MooseVariableDataBase<OutputType>::sln(state);
+}
+
+template <typename OutputType>
 const typename MooseVariableDataFV<OutputType>::FieldVariableGradient &
 MooseVariableDataFV<OutputType>::gradSlnDot() const
 {
   if (_sys.solutionUDot())
   {
+    _var.requireQpComputations();
     _need_grad_dot = true;
     return _grad_u_dot;
   }
@@ -167,6 +187,7 @@ MooseVariableDataFV<OutputType>::gradSlnDotDot() const
 {
   if (_sys.solutionUDotDot())
   {
+    _var.requireQpComputations();
     _need_grad_dotdot = true;
     return _grad_u_dotdot;
   }
@@ -180,6 +201,7 @@ template <typename OutputType>
 const typename MooseVariableDataFV<OutputType>::FieldVariableSecond &
 MooseVariableDataFV<OutputType>::secondSln(Moose::SolutionState state) const
 {
+  _var.requireQpComputations();
   switch (state)
   {
     case Moose::Current:
@@ -217,6 +239,7 @@ template <typename OutputType>
 const typename MooseVariableDataFV<OutputType>::FieldVariableCurl &
 MooseVariableDataFV<OutputType>::curlSln(Moose::SolutionState state) const
 {
+  _var.requireQpComputations();
   switch (state)
   {
     case Moose::Current:
@@ -504,20 +527,14 @@ MooseVariableDataFV<OutputType>::computeAD(const unsigned int num_dofs, const un
   // AD stuff.  So we just skip all this when that is the case.  Maybe there
   // is a better way to do this - like just checking if getMaxVarNDofsPerElem
   // returns zero?
-  std::vector<FVKernel *> ks1;
-  std::vector<FVKernel *> ks2;
-  _subproblem.getMooseApp()
-      .theWarehouse()
-      .query()
-      .template condition<AttribSystem>("FVElementalKernel")
-      .queryInto(ks1);
-  _subproblem.getMooseApp()
-      .theWarehouse()
-      .query()
-      .template condition<AttribSystem>("FVFluxKernel")
-      .queryInto(ks2);
-  if (ks1.size() == 0 && ks2.size() == 0)
-    return;
+  std::vector<FVKernel *> ks;
+  _fv_elemental_kernel_query_cache.queryInto(ks);
+  if (ks.size() == 0)
+  {
+    _fv_flux_kernel_query_cache.queryInto(ks);
+    if (ks.size() == 0)
+      return;
+  }
 
   _ad_dof_values.resize(num_dofs);
   if (_need_ad_u)
@@ -575,8 +592,10 @@ MooseVariableDataFV<OutputType>::computeAD(const unsigned int num_dofs, const un
     assignForAllQps(_ad_dof_values[0], _ad_u, nqp);
 
   if (_need_ad_grad_u)
-    assignForAllQps(
-        static_cast<const MooseVariableFV<OutputType> &>(_var).adGradSln(_elem), _ad_grad_u, nqp);
+    assignForAllQps(static_cast<const MooseVariableFV<OutputType> &>(_var).adGradSln(
+                        _elem, Moose::currentState()),
+                    _ad_grad_u,
+                    nqp);
 
   if (_need_ad_u_dot)
   {

@@ -15,6 +15,7 @@ InputParameters
 EnergyFluxIntegral::validParams()
 {
   InputParameters params = SideIntegralPostprocessor::validParams();
+  params.addClassDescription("Computes the integral of the energy flux over a boundary");
   params.addRequiredCoupledVar("arhouA", "alpha*rho*u*A");
   params.addRequiredCoupledVar("H", "Specific total enthalpy");
   return params;
@@ -30,7 +31,7 @@ EnergyFluxIntegral::EnergyFluxIntegral(const InputParameters & parameters)
 void
 EnergyFluxIntegral::threadJoin(const UserObject & y)
 {
-  const EnergyFluxIntegral & pps = static_cast<const EnergyFluxIntegral &>(y);
+  const auto & pps = static_cast<const EnergyFluxIntegral &>(y);
   _integral_value += pps._integral_value;
 }
 

@@ -34,7 +34,8 @@ enum class Interfaces
   BlockRestrictable = 1 << 13,
   BoundaryRestrictable = 1 << 14,
   Reporter = 1 << 15,
-  DomainUserObject = 1 << 16
+  DomainUserObject = 1 << 16,
+  MortarUserObject = 1 << 17
 };
 
 template <>
@@ -472,6 +473,27 @@ public:
 
 private:
   uint64_t _val = 0;
+};
+
+/**
+ * Tracks whether the object is on the displaced mesh
+ */
+class AttribDisplaced : public Attribute
+{
+public:
+  typedef signed char Key;
+  void setFrom(Key k) { _val = k; }
+
+  AttribDisplaced(TheWarehouse & w) : Attribute(w, "displaced") {}
+  AttribDisplaced(TheWarehouse & w, Key t) : Attribute(w, "displaced"), _val(t) {}
+  virtual void initFrom(const MooseObject * obj) override;
+  virtual bool isMatch(const Attribute & other) const override;
+  virtual bool isEqual(const Attribute & other) const override;
+  hashfunc(_val);
+  clonefunc(AttribDisplaced);
+
+private:
+  Key _val = -1;
 };
 
 #undef clonefunc

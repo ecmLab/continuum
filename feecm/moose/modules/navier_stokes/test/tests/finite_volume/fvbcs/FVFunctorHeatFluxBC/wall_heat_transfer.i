@@ -121,23 +121,23 @@ flux=10
 
 [AuxKernels]
   [k]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     variable = k
     functor = 'k_mat'
   []
   [k_s]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     variable = k_s
     functor = 'k_s_mat'
   []
   [kappa_s]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     variable = kappa_s
     functor = 'kappa_s_mat'
   []
 []
 
-[Materials]
+[FunctorMaterials]
   [thermal_conductivities_k]
     type = ADGenericFunctorMaterial
     prop_names = 'k_mat'

@@ -23,6 +23,7 @@ DerivativeParsedMaterialHelperTempl<is_ad>::validParams()
   params.addParam<unsigned int>("derivative_order", 3, "Maximum order of derivatives taken");
   params.addParam<std::vector<SymbolName>>(
       "additional_derivative_symbols",
+      {},
       "A list of additional (non-variable) symbols (such as material property or postprocessor "
       "names) to take derivatives w.r.t.");
   return params;
@@ -82,7 +83,7 @@ DerivativeParsedMaterialHelperTempl<is_ad>::functionsPostParse()
   }
 
   // optimize base function
-  ParsedMaterialHelper<is_ad>::functionsOptimize();
+  ParsedMaterialHelper<is_ad>::functionsOptimize(_func_F);
 
   // generate derivatives
   assembleDerivatives();

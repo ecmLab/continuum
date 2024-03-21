@@ -9,6 +9,7 @@
 
 #include "DiscreteNucleationInserter.h"
 #include "libmesh/parallel_algebra.h"
+#include "SystemBase.h"
 
 #include "libmesh/quadrature.h"
 
@@ -51,7 +52,7 @@ DiscreteNucleationInserter::initialize()
   _changes_made = {0, 0};
 
   // expire entries from the local nucleus list (if the current time step converged)
-  if (_fe_problem.converged())
+  if (_fe_problem.converged(_sys.number()))
   {
     unsigned int i = 0;
     while (i < _local_nucleus_list.size())
@@ -114,7 +115,7 @@ void
 DiscreteNucleationInserter::threadJoin(const UserObject & y)
 {
   // combine _local_nucleus_list entries from all threads on the current process
-  const DiscreteNucleationInserter & uo = static_cast<const DiscreteNucleationInserter &>(y);
+  const auto & uo = static_cast<const DiscreteNucleationInserter &>(y);
   _global_nucleus_list.insert(
       _global_nucleus_list.end(), uo._local_nucleus_list.begin(), uo._local_nucleus_list.end());
 

@@ -22,8 +22,8 @@ public:
 
   static InputParameters validParams();
 
-  virtual void initialize() {}
-  virtual void execute() {}
+  virtual void initialize() override {}
+  virtual void execute() override {}
 
-  virtual PostprocessorValue getValue();
+  virtual PostprocessorValue getValue() const override;
 };

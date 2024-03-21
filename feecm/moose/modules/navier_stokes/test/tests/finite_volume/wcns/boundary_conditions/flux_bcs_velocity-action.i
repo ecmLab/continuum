@@ -68,6 +68,10 @@ inlet_velocity = 0.001
 
     external_heat_source = 'power_density'
     passive_scalar_source = 2.1
+
+    mass_advection_interpolation = 'average'
+    momentum_advection_interpolation = 'average'
+    energy_advection_interpolation = 'average'
   []
 []
 
@@ -93,7 +97,7 @@ inlet_velocity = 0.001
   []
 []
 
-[Materials]
+[FunctorMaterials]
   [const_functor]
     type = ADGenericFunctorMaterial
     prop_names = 'cp k mu'

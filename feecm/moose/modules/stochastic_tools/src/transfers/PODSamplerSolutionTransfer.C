@@ -72,7 +72,7 @@ PODSamplerSolutionTransfer::execute()
       {
         // Getting reference to the  solution vector of the sub-app.
         FEProblemBase & app_problem = getFromMultiApp()->appProblemBase(i);
-        NonlinearSystemBase & nl = app_problem.getNonlinearSystemBase();
+        NonlinearSystemBase & nl = app_problem.getNonlinearSystemBase(/*nl_sys_num=*/0);
         NumericVector<Number> & solution = nl.solution();
 
         // Looping over the variables to extract the corresponding solution values
@@ -85,7 +85,7 @@ PODSamplerSolutionTransfer::execute()
 
           // Initializing a temporary vector for the partial solution.
           std::shared_ptr<DenseVector<Real>> tmp = std::make_shared<DenseVector<Real>>();
-          solution.get(var_dofs, tmp->get_values());
+          solution.localize(tmp->get_values(), var_dofs);
 
           // Copying the temporary vector into the trainer.
           _trainer.addSnapshot(v_index, i, tmp);
@@ -109,7 +109,7 @@ PODSamplerSolutionTransfer::execute()
           {
             // Getting the reference to the solution vector in the subapp.
             FEProblemBase & app_problem = getToMultiApp()->appProblemBase(counter);
-            NonlinearSystemBase & nl = app_problem.getNonlinearSystemBase();
+            NonlinearSystemBase & nl = app_problem.getNonlinearSystemBase(/*nl_sys_num=*/0);
             NumericVector<Number> & solution = nl.solution();
 
             // Zeroing the solution to make sure that only the required part
@@ -156,7 +156,7 @@ PODSamplerSolutionTransfer::executeFromMultiapp()
       {
         // Getting reference to the  solution vector of the sub-app.
         FEProblemBase & app_problem = getFromMultiApp()->appProblemBase(i);
-        NonlinearSystemBase & nl = app_problem.getNonlinearSystemBase();
+        NonlinearSystemBase & nl = app_problem.getNonlinearSystemBase(/*nl_sys_num=*/0);
         NumericVector<Number> & solution = nl.solution();
 
         // Looping over the variables to extract the corresponding solution values
@@ -169,7 +169,7 @@ PODSamplerSolutionTransfer::executeFromMultiapp()
 
           // Initializing a temporary vector for the partial solution.
           std::shared_ptr<DenseVector<Real>> tmp = std::make_shared<DenseVector<Real>>();
-          solution.get(var_dofs, tmp->get_values());
+          solution.localize(tmp->get_values(), var_dofs);
 
           // Copying the temporary vector into the trainer.
           _trainer.addSnapshot(var_i, _global_index, tmp);
@@ -199,7 +199,7 @@ PODSamplerSolutionTransfer::executeToMultiapp()
 
     // Getting the reference to the solution vector in the subapp.
     FEProblemBase & app_problem = getToMultiApp()->appProblemBase(processor_id());
-    NonlinearSystemBase & nl = app_problem.getNonlinearSystemBase();
+    NonlinearSystemBase & nl = app_problem.getNonlinearSystemBase(/*nl_sys_num=*/0);
     NumericVector<Number> & solution = nl.solution();
 
     // Zeroing the solution to make sure that only the required part

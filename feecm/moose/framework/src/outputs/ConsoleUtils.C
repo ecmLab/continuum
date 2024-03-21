@@ -17,6 +17,7 @@
 #include "FEProblem.h"
 #include "MooseApp.h"
 #include "MooseMesh.h"
+#include "MooseObject.h"
 #include "NonlinearSystem.h"
 #include "OutputWarehouse.h"
 #include "SystemInfo.h"
@@ -62,7 +63,7 @@ outputMeshInformation(FEProblemBase & problem, bool verbose)
   if (verbose)
   {
     bool forced = moose_mesh.isParallelTypeForced();
-    bool pre_split = problem.getMooseApp().isUseSplit();
+    bool pre_split = moose_mesh.isSplit();
 
     // clang-format off
     oss << "\nMesh: " << '\n'
@@ -275,12 +276,12 @@ outputSystemInformationHelper(std::stringstream & oss, System & system)
 }
 
 std::string
-outputNonlinearSystemInformation(FEProblemBase & problem)
+outputNonlinearSystemInformation(FEProblemBase & problem, const unsigned int nl_sys_num)
 {
   std::stringstream oss;
   oss << std::left;
 
-  return outputSystemInformationHelper(oss, problem.getNonlinearSystemBase().system());
+  return outputSystemInformationHelper(oss, problem.getNonlinearSystemBase(nl_sys_num).system());
 }
 
 std::string
@@ -328,7 +329,7 @@ outputExecutionInformation(const MooseApp & app, FEProblemBase & problem)
   if (time_stepper != "")
     oss << std::setw(console_field_width) << "  TimeStepper: " << time_stepper << '\n';
   std::string time_integrator = exec->getTimeIntegratorName();
-  if (time_stepper != "")
+  if (time_integrator != "")
     oss << std::setw(console_field_width) << "  TimeIntegrator: " << time_integrator << '\n';
 
   oss << std::setw(console_field_width) << "  Solver Mode: " << problem.solverTypeString() << '\n';
@@ -337,16 +338,21 @@ outputExecutionInformation(const MooseApp & app, FEProblemBase & problem)
   if (!pc_desc.empty())
     oss << std::setw(console_field_width) << "  PETSc Preconditioner: " << pc_desc << '\n';
 
-  MoosePreconditioner const * mpc = problem.getNonlinearSystemBase().getPreconditioner();
-  if (mpc)
+  for (const auto i : make_range(problem.numNonlinearSystems()))
   {
-    oss << std::setw(console_field_width)
-        << "  MOOSE Preconditioner: " << mpc->getParam<std::string>("_type");
-    if (mpc->name() == "_moose_auto")
-      oss << " (auto)";
-    oss << '\n';
+    MoosePreconditioner const * mpc = problem.getNonlinearSystemBase(i).getPreconditioner();
+    if (mpc)
+    {
+      oss << std::setw(console_field_width)
+          << "  MOOSE Preconditioner" +
+                 (problem.numNonlinearSystems() > 1 ? (" " + std::to_string(i)) : "") + ": "
+          << mpc->getParam<std::string>("_type");
+      if (mpc->name() == "_moose_auto")
+        oss << " (auto)";
+      oss << '\n';
+    }
+    oss << std::endl;
   }
-  oss << std::endl;
 
   return oss.str();
 }
@@ -410,6 +416,42 @@ insertNewline(std::stringstream & oss, std::streampos & begin, std::streampos & 
     begin = oss.tellp();
     oss << std::setw(console_field_width + 2) << ""; // "{ "
   }
+}
+
+std::string
+formatString(std::string message, const std::string & prefix)
+{
+  MooseUtils::indentMessage(prefix, message, COLOR_DEFAULT, true, " ");
+  std::stringstream stream;
+  std::streampos start = stream.tellp();
+  stream << message;
+  std::streampos end = stream.tellp();
+  insertNewline(stream, start, end);
+  auto formatted_string = stream.str();
+  // no need to end with a line break
+  if (formatted_string.back() == '\n')
+    formatted_string.pop_back();
+  return formatted_string;
+}
+
+std::string
+mooseObjectVectorToString(const std::vector<MooseObject *> & objs, const std::string & sep /*=""*/)
+{
+  std::string object_names = "";
+  if (objs.size())
+  {
+    // Gather all the object names
+    std::vector<std::string> names;
+    names.reserve(objs.size());
+    for (const auto & obj : objs)
+    {
+      mooseAssert(obj, "Trying to print a null object");
+      names.push_back(obj->name());
+    }
+
+    object_names = MooseUtils::join(names, sep);
+  }
+  return object_names;
 }
 
 } // ConsoleUtils namespace

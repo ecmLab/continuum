@@ -87,14 +87,21 @@ OversampleOutput::outputStep(const ExecFlagType & type)
   if (type != EXEC_FINAL && !onInterval())
     return;
 
-  // Call the output method (this has the file checking built in b/c OversampleOutput is a
-  // FileOutput)
-  if (shouldOutput(type))
+  // store current simulation time
+  _last_output_time = _time;
+
+  // set current type
+  _current_execute_flag = type;
+
+  // Call the output method
+  if (shouldOutput())
   {
-    TIME_SECTION("outputStep", 1);
+    TIME_SECTION("outputStep", 2, "Outputting Step");
     updateOversample();
-    output(type);
+    output();
   }
+
+  _current_execute_flag = EXEC_NONE;
 }
 
 OversampleOutput::~OversampleOutput()
@@ -272,7 +279,7 @@ OversampleOutput::cloneMesh()
     _cloned_mesh_ptr = std::make_unique<FileMesh>(mesh_params);
     _cloned_mesh_ptr->allowRecovery(false); // We actually want to reread the initial mesh
     _cloned_mesh_ptr->init();
-    _cloned_mesh_ptr->prepare();
+    _cloned_mesh_ptr->prepare(/*mesh_to_clone=*/nullptr);
     _cloned_mesh_ptr->meshChanged();
   }
 

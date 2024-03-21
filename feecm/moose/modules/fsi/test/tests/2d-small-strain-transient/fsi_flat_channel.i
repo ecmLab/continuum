@@ -5,20 +5,24 @@
   convective_term = true
   transient_term = true
   pspg = true
+  supg = true
   displacements = 'disp_x disp_y'
+  preset = false
+  order = FIRST
+  use_displaced_mesh = true
 []
 
 [Mesh]
   [gmg]
-  type = GeneratedMeshGenerator
-  dim = 2
-  xmin = 0
-  xmax = 3.0
-  ymin = 0
-  ymax = 1.0
-  nx = 10
-  ny = 15
-  elem_type = QUAD4
+    type = GeneratedMeshGenerator
+    dim = 2
+    xmin = 0
+    xmax = 3.0
+    ymin = 0
+    ymax = 1.0
+    nx = 10
+    ny = 15
+    elem_type = QUAD4
   []
 
   [subdomain1]
@@ -70,13 +74,11 @@
     type = INSMomentumTimeDerivative
     variable = vel_x
     block = 0
-    use_displaced_mesh = true
   [../]
   [./vel_y_time]
     type = INSMomentumTimeDerivative
     variable = vel_y
     block = 0
-    use_displaced_mesh = true
   [../]
   [./mass]
     type = INSMass
@@ -85,7 +87,8 @@
     v = vel_y
     pressure = p
     block = 0
-    use_displaced_mesh = true
+    disp_x = disp_x
+    disp_y = disp_y
   [../]
   [./x_momentum_space]
     type = INSMomentumLaplaceForm
@@ -95,7 +98,8 @@
     pressure = p
     component = 0
     block = 0
-    use_displaced_mesh = true
+    disp_x = disp_x
+    disp_y = disp_y
   [../]
   [./y_momentum_space]
     type = INSMomentumLaplaceForm
@@ -105,69 +109,92 @@
     pressure = p
     component = 1
     block = 0
-    use_displaced_mesh = true
+    disp_x = disp_x
+    disp_y = disp_y
   [../]
   [./vel_x_mesh]
     type = ConvectedMesh
     disp_x = disp_x
     disp_y = disp_y
     variable = vel_x
+    u = vel_x
+    v = vel_y
+    pressure = p
     block = 0
-    use_displaced_mesh = true
   [../]
   [./vel_y_mesh]
     type = ConvectedMesh
     disp_x = disp_x
     disp_y = disp_y
     variable = vel_y
+    u = vel_x
+    v = vel_y
+    pressure = p
     block = 0
-    use_displaced_mesh = true
+  [../]
+  [./p_mesh]
+    type = ConvectedMeshPSPG
+    disp_x = disp_x
+    disp_y = disp_y
+    variable = p
+    u = vel_x
+    v = vel_y
+    pressure = p
+    block = 0
   [../]
   [./disp_x_fluid]
     type = Diffusion
     variable = disp_x
     block = 0
+    use_displaced_mesh = false
   [../]
   [./disp_y_fluid]
     type = Diffusion
     variable = disp_y
     block = 0
+    use_displaced_mesh = false
   [../]
   [./accel_tensor_x]
     type = CoupledTimeDerivative
     variable = disp_x
     v = vel_x_solid
     block = 1
+    use_displaced_mesh = false
   [../]
   [./accel_tensor_y]
     type = CoupledTimeDerivative
     variable = disp_y
     v = vel_y_solid
     block = 1
+    use_displaced_mesh = false
   [../]
   [./vxs_time_derivative_term]
     type = CoupledTimeDerivative
     variable = vel_x_solid
     v = disp_x
     block = 1
+    use_displaced_mesh = false
   [../]
   [./vys_time_derivative_term]
     type = CoupledTimeDerivative
     variable = vel_y_solid
     v = disp_y
     block = 1
+    use_displaced_mesh = false
   [../]
   [./source_vxs]
     type = MatReaction
     variable = vel_x_solid
     block = 1
     mob_name = 1
+    use_displaced_mesh = false
   [../]
   [./source_vys]
     type = MatReaction
     variable = vel_y_solid
     block = 1
     mob_name = 1
+    use_displaced_mesh = false
   [../]
 []
 
@@ -205,6 +232,7 @@
     youngs_modulus = 1e2
     poissons_ratio = 0.3
     block = '1'
+    use_displaced_mesh = false
   [../]
   [./small_stress]
     type = ComputeLinearElasticStress
@@ -215,6 +243,7 @@
     block = 0
     prop_names = 'rho mu'
     prop_values = '1  1'
+    use_displaced_mesh = false
   [../]
 []
 
@@ -277,9 +306,11 @@
   dt = 0.1
   dtmin = 0.1
   solve_type = 'PJFNK'
-  petsc_options_iname = '-pc_type'
-  petsc_options_value = 'lu'
+  petsc_options_iname = '-pc_type -pc_factor_shift_type'
+  petsc_options_value = 'lu       NONZERO'
   line_search = none
+  nl_rel_tol = 1e-50
+  nl_abs_tol = 1e-10
 []
 
 [Outputs]

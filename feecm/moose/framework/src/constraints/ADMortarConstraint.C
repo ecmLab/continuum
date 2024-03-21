@@ -103,32 +103,7 @@ ADMortarConstraint::computeJacobian(Moose::MortarType mortar_type)
     for (_i = 0; _i < test_space_size; _i++)
       residuals[_i] += _JxW_msm[_qp] * _coord[_qp] * computeQpResidual(mortar_type);
 
-  _assembly.processUnconstrainedResidualsAndJacobian(
-      residuals, dof_indices, _vector_tags, _matrix_tags, scaling_factor);
-}
-
-void
-ADMortarConstraint::trimDerivative(const dof_id_type remove_derivative_index, ADReal & dual_number)
-{
-  auto md_it = dual_number.derivatives().nude_data().begin();
-  auto mi_it = dual_number.derivatives().nude_indices().begin();
-
-  auto d_it = dual_number.derivatives().nude_data().begin();
-
-  for (auto i_it = dual_number.derivatives().nude_indices().begin();
-       i_it != dual_number.derivatives().nude_indices().end();
-       ++i_it, ++d_it)
-    if (*i_it != remove_derivative_index)
-    {
-      *mi_it = *i_it;
-      *md_it = *d_it;
-      ++mi_it;
-      ++md_it;
-    }
-
-  std::size_t n_indices = md_it - dual_number.derivatives().nude_data().begin();
-  dual_number.derivatives().nude_indices().resize(n_indices);
-  dual_number.derivatives().nude_data().resize(n_indices);
+  addResidualsAndJacobianWithoutConstraints(_assembly, residuals, dof_indices, scaling_factor);
 }
 
 void

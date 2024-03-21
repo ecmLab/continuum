@@ -43,12 +43,20 @@ public:
     }
   };
 
-  /**
-   * Constructor
-   *
-   * @param parameters The parameters object holding data for the class to use.
-   */
   static InputParameters validParams();
+
+  /**
+   * Sets that a mesh generator has a generateData() implementation.
+   *
+   * This must be called in the validParams() implementation for all
+   * mesh generators that implement generateData().
+   */
+  static void setHasGenerateData(InputParameters & params);
+  /**
+   * @return Whether or not the mesh generator noted by the given parameters
+   * has a generateData() implementation
+   */
+  static bool hasGenerateData(const InputParameters & params);
 
   MeshGenerator(const InputParameters & parameters);
 
@@ -61,7 +69,7 @@ public:
    * Internal generation method - this is what is actually called
    * within MooseApp to execute the MeshGenerator.
    */
-  [[nodiscard]] std::unique_ptr<MeshBase> generateInternal();
+  [[nodiscard]] std::unique_ptr<MeshBase> generateInternal(const bool data_only);
 
   /**
    * @returns The names of the MeshGenerators that were requested in the getMesh methods
@@ -81,7 +89,7 @@ public:
 
   /**
    * Class that is used as a parameter to add[Parent/Child]() that allows only
-   * MooseApp methods to call said methods
+   * MeshGeneratorSystem methods to call said methods
    */
   class AddParentChildKey
   {
@@ -130,12 +138,18 @@ public:
   /**
    * @returns Whether or not the MeshGenerator with the name \p name is a parent of this
    * MeshGenerator.
+   *
+   * If \p direct = true, check only immediate parents of this generator. Otherwise, check
+   * all parents.
    */
   bool isParentMeshGenerator(const MeshGeneratorName & name, const bool direct = true) const;
 
   /**
    * @returns Whether or not the MeshGenerator with the name \p name is a child of this
    * MeshGenerator.
+   *
+   * If \p direct = true, check only immediate children of this generator. Otherwise, check
+   * all children.
    */
   bool isChildMeshGenerator(const MeshGeneratorName & name, const bool direct = true) const;
 
@@ -150,14 +164,29 @@ public:
   /**
    * Return whether or not to save the current mesh
    */
-  bool hasSaveMesh();
+  bool hasSaveMesh() const;
+
+  /**
+   * @return Whether or not to output this mesh generator separately (output parameter is set)
+   */
+  bool hasOutput() const;
 
   /**
    * Return the name of the saved mesh
    */
   const std::string & getSavedMeshName() const;
 
+  /**
+   * @return Whether or not this generator has a generateData() implementation
+   */
+  bool hasGenerateData() const { return hasGenerateData(_pars); }
+
 protected:
+  /**
+   * Generate the mesh data
+   */
+  virtual void generateData();
+
   /**
    * Methods for writing out attributes to the mesh meta-data store, which can be retrieved from
    * most other MOOSE systems and is recoverable.
@@ -186,6 +215,30 @@ protected:
     return setMeshProperty<T, const T &>(data_name, data_value);
   }
   ///@}
+
+  /**
+   * Method for copying attribute from input mesh meta-data store to current mesh meta-data store.
+   * This may often be avoided as getMeshProperty calls can traverse the tree of mesh generators to
+   * find a metadata instance
+   */
+  template <typename T>
+  T & copyMeshProperty(const std::string & target_data_name,
+                       const std::string & source_data_name,
+                       const std::string & source_mesh)
+  {
+    return declareMeshProperty(target_data_name, getMeshProperty<T>(source_data_name, source_mesh));
+  }
+
+  /**
+   * Method for copying attribute from input mesh meta-data store to current mesh meta-data store,
+   * keeping source and target data names the same. This may often be avoided as getMeshProperty
+   * calls can traverse the tree of mesh generators to find a metadata instance
+   */
+  template <typename T>
+  T & copyMeshProperty(const std::string & source_data_name, const std::string & source_mesh)
+  {
+    return copyMeshProperty<T>(source_data_name, source_data_name, source_mesh);
+  }
 
   /**
    * Takes the name of a MeshGeneratorName parameter and then gets a pointer to the
@@ -406,8 +459,8 @@ MeshGenerator::declareMeshProperty(const std::string & data_name, Args &&... arg
   const auto full_name = meshPropertyName(data_name);
   auto new_T_value =
       std::make_unique<RestartableData<T>>(full_name, nullptr, std::forward<Args>(args)...);
-  auto value = &_app.registerRestartableData(
-      full_name, std::move(new_T_value), 0, false, MooseApp::MESH_META_DATA);
+  auto value =
+      &_app.registerRestartableData(std::move(new_T_value), 0, false, MooseApp::MESH_META_DATA);
   mooseAssert(value->declared(), "Should be declared");
 
   RestartableData<T> * T_value = dynamic_cast<RestartableData<T> *>(value);

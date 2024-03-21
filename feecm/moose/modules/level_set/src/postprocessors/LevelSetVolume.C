@@ -67,7 +67,7 @@ LevelSetVolume::finalize()
 }
 
 Real
-LevelSetVolume::getValue()
+LevelSetVolume::getValue() const
 {
   return _volume;
 }
@@ -75,6 +75,6 @@ LevelSetVolume::getValue()
 void
 LevelSetVolume::threadJoin(const UserObject & y)
 {
-  const LevelSetVolume & pps = static_cast<const LevelSetVolume &>(y);
+  const auto & pps = static_cast<const LevelSetVolume &>(y);
   _volume += pps._volume;
 }

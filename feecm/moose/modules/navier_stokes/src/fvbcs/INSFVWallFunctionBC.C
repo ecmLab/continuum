@@ -36,6 +36,16 @@ INSFVWallFunctionBC::INSFVWallFunctionBC(const InputParameters & params)
     _rho(getFunctor<ADReal>(NS::density)),
     _mu(getFunctor<ADReal>("mu"))
 {
+  if (_rc_uo.segregated())
+    mooseError("Wall sheer stress enforcement based wall functions are not supported with "
+               "segregated solution approaches!");
+}
+
+ADReal
+INSFVWallFunctionBC::computeSegregatedContribution()
+{
+  mooseError("Sheer-stress-based wall function enforcement not supported for segregated solvers.");
+  return 0.0;
 }
 
 ADReal
@@ -44,12 +54,13 @@ INSFVWallFunctionBC::computeStrongResidual()
   // Get the velocity vector
   const FaceInfo & fi = *_face_info;
   const Elem & elem = fi.elem();
-  Moose::ElemArg elem_arg{&elem, false};
-  ADRealVectorValue velocity(_u(elem_arg));
+  const Moose::ElemArg elem_arg{&elem, false};
+  const auto state = determineState();
+  ADRealVectorValue velocity(_u(elem_arg, state));
   if (_v)
-    velocity(1) = (*_v)(elem_arg);
+    velocity(1) = (*_v)(elem_arg, state);
   if (_w)
-    velocity(2) = (*_w)(elem_arg);
+    velocity(2) = (*_w)(elem_arg, state);
 
   // Compute the velocity magnitude (parallel_speed) and
   // direction of the tangential velocity component (parallel_dir)
@@ -66,8 +77,8 @@ INSFVWallFunctionBC::computeStrongResidual()
     return parallel_speed;
 
   // Compute the friction velocity and the wall shear stress
-  const auto rho = _rho(makeElemArg(&elem));
-  ADReal u_star = NS::findUStar(_mu(makeElemArg(&elem)), rho, parallel_speed, dist.value());
+  const auto rho = _rho(makeElemArg(&elem), state);
+  ADReal u_star = NS::findUStar(_mu(makeElemArg(&elem), state), rho, parallel_speed, dist.value());
   ADReal tau = u_star * u_star * rho;
   _a *= tau;
 
@@ -84,7 +95,7 @@ void
 INSFVWallFunctionBC::gatherRCData(const FaceInfo & fi)
 {
   _face_info = &fi;
-  _face_type = fi.faceType(_var.name());
+  _face_type = fi.faceType(std::make_pair(_var.number(), _var.sys().number()));
   _normal = fi.normal();
 
   // Fill-in the coefficient _a (but without multiplication by A)
@@ -94,5 +105,5 @@ INSFVWallFunctionBC::gatherRCData(const FaceInfo & fi)
                 _index,
                 _a * (fi.faceArea() * fi.faceCoord()));
 
-  processResidualAndJacobian(strong_resid * (fi.faceArea() * fi.faceCoord()));
+  addResidualAndJacobian(strong_resid * (fi.faceArea() * fi.faceCoord()));
 }

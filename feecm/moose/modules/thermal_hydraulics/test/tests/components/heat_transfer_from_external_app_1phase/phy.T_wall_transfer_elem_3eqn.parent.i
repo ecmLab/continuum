@@ -1,6 +1,6 @@
 # This tests a temperature transfer using the MultiApp system.  Simple heat
 # conduction problem is solved, then the layered average is computed and
-# transferred into the slave side of the solve
+# transferred into the child side of the solve
 
 [Mesh]
   type = GeneratedMesh
@@ -73,17 +73,20 @@
   [thm]
     type = TransientMultiApp
     app_type = ThermalHydraulicsApp
-    input_files = phy.T_wall_transfer_elem_3eqn.slave.i
+    input_files = phy.T_wall_transfer_elem_3eqn.child.i
     execute_on = TIMESTEP_END
   []
 []
 
 [Transfers]
-  [T_to_slave]
-    type = MultiAppUserObjectTransfer
+  [T_to_child]
+    type = MultiAppGeneralFieldUserObjectTransfer
     to_multi_app = thm
-    user_object = T_avg_uo
+    source_user_object = T_avg_uo
     variable = T_wall
+    greedy_search = true
+    use_bounding_boxes = false
+    error_on_miss = true
   []
 []
 

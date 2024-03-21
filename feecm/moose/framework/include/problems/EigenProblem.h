@@ -31,11 +31,11 @@ public:
   }
 
 #ifdef LIBMESH_HAVE_SLEPC
-  virtual void solve(unsigned int nl_sys_num = 0) override;
+  virtual void solve(const unsigned int nl_sys_num) override;
 
   virtual void init() override;
 
-  virtual bool nlConverged(unsigned int nl_sys_num) override;
+  virtual bool nlConverged(const unsigned int nl_sys_num) override;
 
   unsigned int getNEigenPairsRequired() const { return _n_eigen_pairs_required; }
   void setNEigenPairsRequired(unsigned int n_eigen_pairs)
@@ -47,7 +47,7 @@ public:
   // silences warning in debug mode about the other computeJacobian signature being hidden
   using FEProblemBase::computeJacobian;
 
-  NonlinearEigenSystem & getNonlinearEigenSystem(unsigned int nl_sys_num = 0);
+  NonlinearEigenSystem & getNonlinearEigenSystem(const unsigned int nl_sys_num);
   NonlinearEigenSystem & getCurrentNonlinearEigenSystem();
 
   virtual void checkProblemIntegrity() override;
@@ -142,7 +142,7 @@ public:
                          TagID tagB);
 
   virtual void computeJacobianBlocks(std::vector<JacobianBlock *> & blocks,
-                                     unsigned int nl_sys_num = 0) override;
+                                     const unsigned int nl_sys_num) override;
 
   /**
    * Form a vector for all kernels and BCs with a given tag
@@ -177,11 +177,6 @@ public:
    * Which eigenvalue is active
    */
   unsigned int activeEigenvalueIndex() const { return _active_eigen_index; }
-
-  /**
-   * Return console handle, and we use that in EPSMonitor to print out eigenvalue
-   */
-  const ConsoleStream & console() const { return _console; }
 
   /**
    * Hook up monitors for SNES and KSP
@@ -229,21 +224,20 @@ public:
    */
   void wereMatricesFormed(bool mf) { _matrices_formed = mf; }
 
-private:
   /**
-   * Do some free/extra power iterations
+   * Form the Bx norm
    */
-  void doFreeNonlinearPowerIterations(unsigned int free_power_iterations);
+  Real formNorm();
 
   /**
-   * Adjust eigen vector by either scaling the existing values or setting new values
-   * The operations are applied for only eigen variables
+   * Whether a Bx norm postprocessor has been provided
    */
-  void adjustEigenVector(const Real value, bool scaling);
+  bool bxNormProvided() const { return _bx_norm_name.has_value(); }
 
-#endif
-
-  using FEProblemBase::_nl;
+  /**
+   * Set the Bx norm postprocessor programatically
+   */
+  void setBxNorm(const PostprocessorName & bx_norm) { _bx_norm_name = bx_norm; }
 
 protected:
   unsigned int _n_eigen_pairs_required;
@@ -280,6 +274,26 @@ protected:
   bool & _first_solve;
   /// A value used for initial normalization
   Real _initial_eigenvalue;
+
+private:
+  /**
+   * Do some free/extra power iterations
+   */
+  void doFreeNonlinearPowerIterations(unsigned int free_power_iterations);
+
+  /**
+   * Adjust eigen vector by either scaling the existing values or setting new values
+   * The operations are applied for only eigen variables
+   */
+  void adjustEigenVector(const Real value, bool scaling);
+
+  /// The name of the Postprocessor providing the Bx norm. This may be empty in which case the
+  /// default L2 norm of Bx will be used as the Bx norm
+  std::optional<PostprocessorName> _bx_norm_name;
+
+#endif
+
+  using FEProblemBase::_nl;
 };
 
 #ifdef LIBMESH_HAVE_SLEPC

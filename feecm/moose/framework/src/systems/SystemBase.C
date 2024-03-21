@@ -48,67 +48,6 @@ extraSparsity(SparsityPattern::Graph & sparsity,
   sys->augmentSparsity(sparsity, n_nz, n_oz);
 }
 
-template <>
-void
-dataStore(std::ostream & stream, SystemBase & system_base, void * context)
-{
-  System & libmesh_system = system_base.system();
-
-  NumericVector<Real> & solution = *(libmesh_system.solution.get());
-
-  dataStore(stream, solution, context);
-
-  // Need an l-value reference to pass to dataStore
-  unsigned int num_vectors = libmesh_system.n_vectors();
-  dataStore(stream, num_vectors, context);
-
-  for (System::vectors_iterator it = libmesh_system.vectors_begin();
-       it != libmesh_system.vectors_end();
-       it++)
-  {
-    // Store the vector name. A map iterator will have a const Key, so we need to make a copy
-    // because dataStore expects a non-const reference
-    auto vector_name = it->first;
-    dataStore(stream, vector_name, context);
-
-    // Store the vector
-    dataStore(stream, *(it->second), context);
-  }
-}
-
-template <>
-void
-dataLoad(std::istream & stream, SystemBase & system_base, void * context)
-{
-  System & libmesh_system = system_base.system();
-
-  NumericVector<Real> & solution = *(libmesh_system.solution.get());
-
-  dataLoad(stream, solution, context);
-
-  unsigned int num_vectors;
-  dataLoad(stream, num_vectors, context);
-
-  // Can't do a range based for loop because we don't actually use the index, resulting in an unused
-  // variable warning. So we make a dumb index variable and use it in the loop termination check
-  for (unsigned int vec_num = 0; vec_num < num_vectors; ++vec_num)
-  {
-    std::string vector_name;
-    dataLoad(stream, vector_name, context);
-
-    if (!libmesh_system.have_vector(vector_name))
-      mooseError("Trying to load vector name ",
-                 vector_name,
-                 " but that vector doesn't exist in the system.");
-
-    auto & vector = libmesh_system.get_vector(vector_name);
-
-    dataLoad(stream, vector, context);
-  }
-
-  system_base.update();
-}
-
 SystemBase::SystemBase(SubProblem & subproblem,
                        const std::string & name,
                        Moose::VarKindType var_kind)
@@ -230,6 +169,20 @@ void
 SystemBase::addVariableToZeroOnJacobian(std::string var_name)
 {
   _vars_to_be_zeroed_on_jacobian.push_back(var_name);
+}
+
+void
+SystemBase::setVariableGlobalDoFs(const std::string & var_name)
+{
+  AllLocalDofIndicesThread aldit(_subproblem, {var_name});
+  ConstElemRange & elem_range = *_mesh.getActiveLocalElementRange();
+  Threads::parallel_reduce(elem_range, aldit);
+
+  // Gather the dof indices across procs to get all the dof indices for var_name
+  aldit.dofIndicesSetUnion();
+
+  const auto & all_dof_indices = aldit.getDofIndices();
+  _var_all_dof_indices.assign(all_dof_indices.begin(), all_dof_indices.end());
 }
 
 void
@@ -545,7 +498,8 @@ SystemBase::augmentSendList(std::vector<dof_id_type> & send_list)
 void
 SystemBase::saveOldSolutions()
 {
-  const auto states = _solution_states.size();
+  const auto states =
+      _solution_states[static_cast<unsigned short>(Moose::SolutionIterationType::Time)].size();
   if (states > 1)
   {
     _saved_solution_states.resize(states);
@@ -576,7 +530,8 @@ SystemBase::saveOldSolutions()
 void
 SystemBase::restoreOldSolutions()
 {
-  const auto states = _solution_states.size();
+  const auto states =
+      _solution_states[static_cast<unsigned short>(Moose::SolutionIterationType::Time)].size();
   if (states > 1)
     for (unsigned int i = 1; i <= states - 1; ++i)
       if (_saved_solution_states[i])
@@ -776,7 +731,7 @@ SystemBase::addVariable(const std::string & var_type,
   if (var_type == "ArrayMooseVariable")
   {
     if (fe_type.family == NEDELEC_ONE || fe_type.family == LAGRANGE_VEC ||
-        fe_type.family == MONOMIAL_VEC)
+        fe_type.family == MONOMIAL_VEC || fe_type.family == RAVIART_THOMAS)
       mooseError("Vector family type cannot be used in an array variable");
 
     // Build up the variable names
@@ -884,10 +839,29 @@ SystemBase::isScalarVariable(unsigned int var_num) const
 unsigned int
 SystemBase::nVariables() const
 {
+  unsigned int n = nFieldVariables();
+  n += _vars[0].scalars().size();
+
+  return n;
+}
+
+unsigned int
+SystemBase::nFieldVariables() const
+{
   unsigned int n = 0;
   for (auto & var : _vars[0].fieldVariables())
     n += var->count();
-  n += _vars[0].scalars().size();
+
+  return n;
+}
+
+unsigned int
+SystemBase::nFVVariables() const
+{
+  unsigned int n = 0;
+  for (auto & var : _vars[0].fieldVariables())
+    if (var->isFV())
+      n += var->count();
 
   return n;
 }
@@ -1238,24 +1212,12 @@ SystemBase::update(const bool update_libmesh_system)
 {
   if (update_libmesh_system)
     system().update();
-  std::vector<VariableName> std_field_variables;
-  getStandardFieldVariableNames(std_field_variables);
-  cacheVarIndicesByFace(std_field_variables);
 }
 
 void
 SystemBase::solve()
 {
   system().solve();
-}
-
-void
-SystemBase::getStandardFieldVariableNames(std::vector<VariableName> & std_field_variables) const
-{
-  std_field_variables.clear();
-  for (auto & p : _vars[0].fieldVariables())
-    if (p->fieldType() == 0)
-      std_field_variables.push_back(p->name());
 }
 
 /**
@@ -1266,10 +1228,16 @@ SystemBase::copySolutionsBackwards()
 {
   system().update();
 
-  const auto states = _solution_states.size();
-  if (states > 1)
-    for (unsigned int i = 1; i <= states - 1; ++i)
-      solutionState(i) = solutionState(0);
+  // Copying the solutions backward so the current solution will become the old, and the old will
+  // become older. The same applies to the nonlinear iterates.
+  for (const auto iteration_index : index_range(_solution_states))
+  {
+    const auto states = _solution_states[iteration_index].size();
+    if (states > 1)
+      for (unsigned int i = states - 1; i > 0; --i)
+        solutionState(i, Moose::SolutionIterationType(iteration_index)) =
+            solutionState(i - 1, Moose::SolutionIterationType(iteration_index));
+  }
 
   if (solutionUDotOld())
     *solutionUDotOld() = *solutionUDot();
@@ -1285,7 +1253,8 @@ SystemBase::copySolutionsBackwards()
 void
 SystemBase::copyOldSolutions()
 {
-  const auto states = _solution_states.size();
+  const auto states =
+      _solution_states[static_cast<unsigned short>(Moose::SolutionIterationType::Time)].size();
   if (states > 1)
     for (unsigned int i = states - 1; i > 0; --i)
       solutionState(i) = solutionState(i - 1);
@@ -1360,78 +1329,94 @@ SystemBase::initSolutionState()
   for (const auto & var : getScalarVariables(/* tid = */ 0))
     state = std::max(state, var->oldestSolutionStateRequested());
 
-  needSolutionState(state);
+  needSolutionState(state, Moose::SolutionIterationType::Time);
 
   _solution_states_initialized = true;
 }
 
 TagName
-SystemBase::oldSolutionStateVectorName(const unsigned int state) const
+SystemBase::oldSolutionStateVectorName(const unsigned int state,
+                                       const Moose::SolutionIterationType iteration_type) const
 {
   mooseAssert(state != 0, "Not an old state");
-  if (state == 1)
-    return Moose::OLD_SOLUTION_TAG;
-  else if (state == 2)
-    return Moose::OLDER_SOLUTION_TAG;
-  else
-    return "solution_state_" + std::to_string(state);
+
+  if (iteration_type == Moose::SolutionIterationType::Time)
+  {
+    if (state == 1)
+      return Moose::OLD_SOLUTION_TAG;
+    else if (state == 2)
+      return Moose::OLDER_SOLUTION_TAG;
+  }
+  else if (iteration_type == Moose::SolutionIterationType::Nonlinear && state == 1)
+    return Moose::PREVIOUS_NL_SOLUTION_TAG;
+
+  return "solution_state_" + std::to_string(state) + "_" + Moose::stringify(iteration_type);
 }
 
 const NumericVector<Number> &
-SystemBase::solutionState(const unsigned int state) const
+SystemBase::solutionState(const unsigned int state,
+                          const Moose::SolutionIterationType iteration_type) const
 {
-  if (!hasSolutionState(state))
-    mooseError("Solution state ",
+  if (!hasSolutionState(state, iteration_type))
+    mooseError("For iteration type '",
+               Moose::stringify(iteration_type),
+               "': solution state ",
                state,
                " was requested in ",
                name(),
                " but only up to state ",
-               _solution_states.size() - 1,
+               _solution_states[static_cast<unsigned short>(iteration_type)].size() - 1,
                " is available.");
 
+  const auto & solution_states = _solution_states[static_cast<unsigned short>(iteration_type)];
+
   if (state == 0)
-    mooseAssert(_solution_states[0] == &solutionInternal(), "Inconsistent current solution");
+    mooseAssert(solution_states[0] == &solutionInternal(), "Inconsistent current solution");
   else
-    mooseAssert(_solution_states[state] == &getVector(oldSolutionStateVectorName(state)),
+    mooseAssert(solution_states[state] ==
+                    &getVector(oldSolutionStateVectorName(state, iteration_type)),
                 "Inconsistent solution state");
 
-  return *_solution_states[state];
+  return *solution_states[state];
 }
 
 NumericVector<Number> &
-SystemBase::solutionState(const unsigned int state)
+SystemBase::solutionState(const unsigned int state,
+                          const Moose::SolutionIterationType iteration_type)
 {
-  if (!hasSolutionState(state))
-    needSolutionState(state);
-  return *_solution_states[state];
+  if (!hasSolutionState(state, iteration_type))
+    needSolutionState(state, iteration_type);
+  return *_solution_states[static_cast<unsigned short>(iteration_type)][state];
 }
 
 void
-SystemBase::needSolutionState(const unsigned int state)
+SystemBase::needSolutionState(const unsigned int state,
+                              const Moose::SolutionIterationType iteration_type)
 {
   libmesh_parallel_only(this->comm());
 
-  if (hasSolutionState(state))
+  if (hasSolutionState(state, iteration_type))
     return;
 
-  _solution_states.resize(state + 1);
+  auto & solution_states = _solution_states[static_cast<unsigned short>(iteration_type)];
+  solution_states.resize(state + 1);
 
   // The 0-th (current) solution state is owned by libMesh
-  if (!_solution_states[0])
-    _solution_states[0] = &solutionInternal();
+  if (!solution_states[0])
+    solution_states[0] = &solutionInternal();
   else
-    mooseAssert(_solution_states[0] == &solutionInternal(), "Inconsistent current solution");
+    mooseAssert(solution_states[0] == &solutionInternal(), "Inconsistent current solution");
 
   // We will manually add all states past current
   for (unsigned int i = 1; i <= state; ++i)
-    if (!_solution_states[i])
+    if (!solution_states[i])
     {
-      auto tag =
-          _subproblem.addVectorTag(oldSolutionStateVectorName(i), Moose::VECTOR_TAG_SOLUTION);
-      _solution_states[i] = &addVector(tag, true, GHOSTED);
+      auto tag = _subproblem.addVectorTag(oldSolutionStateVectorName(i, iteration_type),
+                                          Moose::VECTOR_TAG_SOLUTION);
+      solution_states[i] = &addVector(tag, true, GHOSTED);
     }
     else
-      mooseAssert(_solution_states[i] == &getVector(oldSolutionStateVectorName(i)),
+      mooseAssert(solution_states[i] == &getVector(oldSolutionStateVectorName(i, iteration_type)),
                   "Inconsistent solution state");
 }
 
@@ -1476,34 +1461,10 @@ SystemBase::applyScalingFactors(const std::vector<Real> & inverse_scaling_factor
 }
 
 void
-SystemBase::cacheVarIndicesByFace(const std::vector<VariableName> & vars)
-{
-  if (!_subproblem.haveFV())
-    return;
-
-  // prepare a vector of MooseVariables from names
-  std::vector<const MooseVariableFieldBase *> moose_vars;
-  for (auto & v : vars)
-  {
-    // first make sure this is not a scalar variable
-    if (hasScalarVariable(v))
-      mooseError("Variable ", v, " is a scalar variable");
-
-    // now make sure this is a standard variable [not array/vector]
-    if (getVariable(0, v).fieldType() != 0)
-      mooseError("Variable ", v, " not a standard field variable [either VECTOR or ARRAY].");
-    moose_vars.push_back(static_cast<MooseVariableFieldBase *>(&getVariable(0, v)));
-  }
-
-  _mesh.cacheVarIndicesByFace(moose_vars);
-  _mesh.computeFaceInfoFaceCoords();
-}
-
-void
 SystemBase::addScalingVector()
 {
   addVector("scaling_factors", /*project=*/false, libMesh::ParallelType::GHOSTED);
-  _subproblem.hasScalingVector();
+  _subproblem.hasScalingVector(number());
 }
 
 bool

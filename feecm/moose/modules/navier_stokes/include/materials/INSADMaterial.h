@@ -10,6 +10,7 @@
 #pragma once
 
 #include "Material.h"
+#include "NSEnums.h"
 
 class INSADObjectTracker;
 
@@ -20,15 +21,11 @@ public:
 
   INSADMaterial(const InputParameters & parameters);
 
-  void subdomainSetup() override;
+  virtual void subdomainSetup() override;
+  virtual void resolveOptionalProperties() override;
 
 protected:
   virtual void computeQpProperties() override;
-
-  /**
-   * compute the strong form corresponding to RZ pieces of the viscous term
-   */
-  void viscousTermRZ();
 
   /// velocity
   const ADVectorVariableValue & _velocity;
@@ -54,10 +51,6 @@ protected:
   /// Strong residual corresponding to the momentum advective term
   ADMaterialProperty<RealVectorValue> & _advective_strong_residual;
 
-  /// Strong residual corresponding to the momentum viscous term. This is only used by stabilization
-  /// kernels
-  ADMaterialProperty<RealVectorValue> & _viscous_strong_residual;
-
   /// Strong residual corresponding to the momentum transient term
   ADMaterialProperty<RealVectorValue> & _td_strong_residual;
 
@@ -69,6 +62,15 @@ protected:
 
   /// Strong residual corresponding to coupled force term
   ADMaterialProperty<RealVectorValue> & _coupled_force_strong_residual;
+
+  /// The mesh velocity
+  ADMaterialProperty<RealVectorValue> & _mesh_velocity;
+
+  /// The relative velocity, e.g. velocity - mesh_velocity
+  ADMaterialProperty<RealVectorValue> & _relative_velocity;
+
+  /// Strong residual corresponding to advected mesh term
+  ADMaterialProperty<RealVectorValue> & _advected_mesh_strong_residual;
 
   // /// Future addition pending addition of INSADMMSKernel.
   // /// Strong residual corresponding to the mms function term
@@ -105,16 +107,18 @@ protected:
   bool _has_coupled_force;
 
   /// The Boussinesq coefficient
+  std::unordered_map<SubdomainID, const ADMaterialProperty<Real> *> _boussinesq_alphas;
   const ADMaterialProperty<Real> * _boussinesq_alpha;
 
   /// The temperature
   const ADVariableValue * _temperature;
 
   /// The reference temperature
+  std::unordered_map<SubdomainID, const MaterialProperty<Real> *> _ref_temps;
   const MaterialProperty<Real> * _ref_temp;
 
   /// The viscous form of the equations. This is either "laplace" or "traction"
-  std::string _viscous_form;
+  NS::ViscousForm _viscous_form;
 
   /// The gravity vector
   RealVectorValue _gravity_vector;
@@ -124,4 +128,23 @@ protected:
 
   /// optional vector function(s)
   std::vector<const Function *> _coupled_force_vector_function;
+
+  /// Whether we have mesh convection
+  bool _has_advected_mesh;
+
+  /// The time derivative with respect to x-displacement
+  const ADVariableValue * _disp_x_dot;
+
+  /// The time derivative with respect to y-displacement
+  const ADVariableValue * _disp_y_dot;
+
+  /// The time derivative with respect to z-displacement
+  const ADVariableValue * _disp_z_dot;
+
+  unsigned int _disp_x_num = libMesh::invalid_uint;
+  unsigned int _disp_y_num = libMesh::invalid_uint;
+  unsigned int _disp_z_num = libMesh::invalid_uint;
+  unsigned int _disp_x_sys_num = libMesh::invalid_uint;
+  unsigned int _disp_y_sys_num = libMesh::invalid_uint;
+  unsigned int _disp_z_sys_num = libMesh::invalid_uint;
 };

@@ -34,11 +34,12 @@ HeatStructurePlate::HeatStructurePlate(const InputParameters & params)
   : HeatStructureBase(params), _depth(getParam<Real>("depth"))
 {
   _names = getParam<std::vector<std::string>>("names");
-  _number_of_hs = _names.size();
+  _n_regions = _names.size();
   for (unsigned int i = 0; i < _names.size(); i++)
     _name_index[_names[i]] = i;
 
-  _material_names = getParam<std::vector<std::string>>("materials");
+  _material_names = isParamValid("materials") ? getParam<std::vector<std::string>>("materials")
+                                              : std::vector<std::string>{};
 
   _width = getParam<std::vector<Real>>("widths");
   _total_width = std::accumulate(_width.begin(), _width.end(), 0.0);
@@ -49,9 +50,9 @@ HeatStructurePlate::HeatStructurePlate(const InputParameters & params)
 
   _num_rods = getParam<Real>("num_rods");
 
-  if (_width.size() == _number_of_hs)
+  if (_width.size() == _n_regions)
   {
-    for (unsigned int i = 0; i < _number_of_hs; i++)
+    for (unsigned int i = 0; i < _n_regions; i++)
       _volume.push_back(_num_rods * _width[i] * _depth * _length);
   }
 }
@@ -68,18 +69,30 @@ HeatStructurePlate::check() const
 }
 
 Real
-HeatStructurePlate::getUnitPerimeter(const HeatStructureSideType & side) const
+HeatStructurePlate::getUnitPerimeter(const ExternalBoundaryType & side) const
 {
   switch (side)
   {
-    case HeatStructureSideType::OUTER:
-    case HeatStructureSideType::INNER:
+    case ExternalBoundaryType::OUTER:
+    case ExternalBoundaryType::INNER:
       return _depth;
 
-    case HeatStructureSideType::START:
-    case HeatStructureSideType::END:
+    case ExternalBoundaryType::START:
+    case ExternalBoundaryType::END:
       return std::numeric_limits<Real>::quiet_NaN();
   }
 
   mooseError(name(), ": Unknown value of 'side' parameter.");
+}
+
+Real
+HeatStructurePlate::computeRadialBoundaryArea(const Real & length, const Real & /*y*/) const
+{
+  return length * _depth;
+}
+
+Real
+HeatStructurePlate::computeAxialBoundaryArea(const Real & y_min, const Real & y_max) const
+{
+  return (y_max - y_min) * _depth;
 }

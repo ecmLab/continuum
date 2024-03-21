@@ -50,6 +50,19 @@ enum class InterpMethod
   QUICK
 };
 
+/**
+ * Returns an enum with all the currently supported interpolation methods and the current default
+ * for FV: first-order upwind
+ * @return MooseEnum with all the face interpolation methods supported
+ */
+MooseEnum interpolationMethods();
+
+/**
+ * @return An input parameters object that contains the \p advected_interp_method parameter, e.g.
+ * the interpolation method to use for an advected quantity
+ */
+InputParameters advectedInterpolationParameter();
+
 /*
  * Converts from the interpolation method to the interpolation enum.
  * This routine is here in lieu of using a MooseEnum for InterpMethod
@@ -57,6 +70,18 @@ enum class InterpMethod
  * @return the interpolation method
  */
 InterpMethod selectInterpolationMethod(const std::string & interp_method);
+
+/**
+ * Sets one interpolation method
+ * @param obj The \p MooseObject with input parameters to query
+ * @param interp_method The interpolation method we will set
+ * @param param_name The name of the parameter setting this interpolation method
+ * @return Whether the interpolation method has indicated that we will need more than the
+ * default level of ghosting
+ */
+bool setInterpolationMethod(const MooseObject & obj,
+                            Moose::FV::InterpMethod & interp_method,
+                            const std::string & param_name);
 
 /**
  * Produce the interpolation coefficients in the equation:
@@ -134,7 +159,7 @@ linearInterpolation(const T & value1,
  * @param value2 Reference to value2 in the (1/(gc/value1+(1-gc)/value2)) expression
  * @param fi Reference to the FaceInfo of the face on which the interpolation is requested
  * @param one_is_elem Boolean indicating if the interpolation weight on FaceInfo belongs to the
- * elementcorresponding to value1
+ * element corresponding to value1
  * @return The interpolated value
  */
 template <typename T1, typename T2>
@@ -163,7 +188,9 @@ harmonicInterpolation(const T1 & value1,
     // so we assert that the input values shall be positive.
 #ifndef NDEBUG
     if (value1 * value2 <= 0)
-      mooseWarning("Input values must be of the same sign for harmonic interpolation");
+      mooseWarning("Input values (" + Moose::stringify(MetaPhysicL::raw_value(value1)) + " & " +
+                   Moose::stringify(MetaPhysicL::raw_value(value2)) +
+                   ") must be of the same sign for harmonic interpolation");
 #endif
     return 1.0 / (coeffs.first / value1 + coeffs.second / value2);
   }
@@ -175,8 +202,10 @@ harmonicInterpolation(const T1 & value1,
     {
 #ifndef NDEBUG
       if (value1(i) * value2(i) <= 0)
-        mooseWarning("Component " + std::to_string(i) +
-                     "of input values must be of the same sign for harmonic interpolation");
+        mooseWarning("Component " + std::to_string(i) + " of input values (" +
+                     Moose::stringify(MetaPhysicL::raw_value(value1(i))) + " & " +
+                     Moose::stringify(MetaPhysicL::raw_value(value2(i))) +
+                     ") must be of the same sign for harmonic interpolation");
 #endif
       result(i) = 1.0 / (coeffs.first / value1(i) + coeffs.second / value2(i));
     }
@@ -193,7 +222,10 @@ harmonicInterpolation(const T1 & value1,
 #ifndef NDEBUG
         if (value1(i, j) * value2(i, j) <= 0)
           mooseWarning("Component (" + std::to_string(i) + "," + std::to_string(j) +
-                       ") of input values must be of the same sign for harmonic interpolation");
+                       ") of input values (" +
+                       Moose::stringify(MetaPhysicL::raw_value(value1(i, j))) + " & " +
+                       Moose::stringify(MetaPhysicL::raw_value(value2(i, j))) +
+                       ") must be of the same sign for harmonic interpolation");
 #endif
         result(i, j) = 1.0 / (coeffs.first / value1(i, j) + coeffs.second / value2(i, j));
       }
@@ -264,7 +296,7 @@ interpolate(InterpMethod m,
  */
 template <typename T>
 T
-linearInterpolation(const FunctorBase<T> & functor, const FaceArg & face)
+linearInterpolation(const FunctorBase<T> & functor, const FaceArg & face, const StateArg & time)
 {
   mooseAssert(face.limiter_type == LimiterType::CentralDifference,
               "this interpolation method is meant for linear interpolations");
@@ -283,13 +315,14 @@ linearInterpolation(const FunctorBase<T> & functor, const FaceArg & face)
     // 2nd order accuracy on skewed meshes with the minimum additional effort.
     FaceArg new_face(face);
     new_face.correct_skewness = false;
-    const auto surface_gradient = functor.gradient(new_face);
+    const auto surface_gradient = functor.gradient(new_face, time);
 
     return skewCorrectedLinearInterpolation(
-        functor(elem_arg), functor(neighbor_arg), surface_gradient, *face.fi, true);
+        functor(elem_arg, time), functor(neighbor_arg, time), surface_gradient, *face.fi, true);
   }
   else
-    return linearInterpolation(functor(elem_arg), functor(neighbor_arg), *face.fi, true);
+    return linearInterpolation(
+        functor(elem_arg, time), functor(neighbor_arg, time), *face.fi, true);
 }
 
 /**
@@ -365,11 +398,9 @@ interpolate(InterpMethod m,
 /// Calculates and returns "grad_u dot normal" on the face to be used for
 /// diffusive terms.  If using any cross-diffusion corrections, etc. all
 /// those calculations should be handled appropriately by this function.
-template <typename T, typename T2>
-ADReal gradUDotNormal(const T & elem_value,
-                      const T2 & neighbor_value,
-                      const FaceInfo & face_info,
+ADReal gradUDotNormal(const FaceInfo & face_info,
                       const MooseVariableFV<Real> & fv_var,
+                      const Moose::StateArg & time,
                       bool correct_skewness = false);
 
 /**
@@ -500,7 +531,7 @@ interpolate(const Limiter & limiter,
  */
 template <typename T, typename Enable = typename std::enable_if<ScalarTraits<T>::value>::type>
 std::pair<std::pair<T, T>, std::pair<T, T>>
-interpCoeffsAndAdvected(const FunctorBase<T> & functor, const FaceArg & face)
+interpCoeffsAndAdvected(const FunctorBase<T> & functor, const FaceArg & face, const StateArg & time)
 {
   typedef typename FunctorBase<T>::GradientType GradientType;
   static const GradientType zero(0);
@@ -510,8 +541,8 @@ interpCoeffsAndAdvected(const FunctorBase<T> & functor, const FaceArg & face)
 
   const auto upwind_arg = face.elem_is_upwind ? face.makeElem() : face.makeNeighbor();
   const auto downwind_arg = face.elem_is_upwind ? face.makeNeighbor() : face.makeElem();
-  auto phi_upwind = functor(upwind_arg);
-  auto phi_downwind = functor(downwind_arg);
+  auto phi_upwind = functor(upwind_arg, time);
+  auto phi_downwind = functor(downwind_arg, time);
 
   std::pair<T, T> interp_coeffs;
   if (face.limiter_type == LimiterType::Upwind ||
@@ -520,7 +551,7 @@ interpCoeffsAndAdvected(const FunctorBase<T> & functor, const FaceArg & face)
         interpCoeffs(*limiter, phi_upwind, phi_downwind, &zero, *face.fi, face.elem_is_upwind);
   else
   {
-    const auto grad_phi_upwind = functor.gradient(upwind_arg);
+    const auto grad_phi_upwind = functor.gradient(upwind_arg, time);
     interp_coeffs = interpCoeffs(
         *limiter, phi_upwind, phi_downwind, &grad_phi_upwind, *face.fi, face.elem_is_upwind);
   }
@@ -536,20 +567,22 @@ interpCoeffsAndAdvected(const FunctorBase<T> & functor, const FaceArg & face)
 
 template <typename T, typename Enable = typename std::enable_if<ScalarTraits<T>::value>::type>
 T
-interpolate(const FunctorBase<T> & functor, const FaceArg & face)
+interpolate(const FunctorBase<T> & functor, const FaceArg & face, const StateArg & time)
 {
   // Special handling for central differencing as it is the only interpolation method which
   // currently supports skew correction
   if (face.limiter_type == LimiterType::CentralDifference)
-    return linearInterpolation(functor, face);
+    return linearInterpolation(functor, face, time);
 
-  const auto [interp_coeffs, advected] = interpCoeffsAndAdvected(functor, face);
+  const auto [interp_coeffs, advected] = interpCoeffsAndAdvected(functor, face, time);
   return interp_coeffs.first * advected.first + interp_coeffs.second * advected.second;
 }
 
 template <typename T>
 VectorValue<T>
-interpolate(const FunctorBase<VectorValue<T>> & functor, const FaceArg & face)
+interpolate(const FunctorBase<VectorValue<T>> & functor,
+            const FaceArg & face,
+            const StateArg & time)
 {
   static const VectorValue<T> grad_zero(0);
 
@@ -558,8 +591,8 @@ interpolate(const FunctorBase<VectorValue<T>> & functor, const FaceArg & face)
 
   const auto upwind_arg = face.elem_is_upwind ? face.makeElem() : face.makeNeighbor();
   const auto downwind_arg = face.elem_is_upwind ? face.makeNeighbor() : face.makeElem();
-  auto phi_upwind = functor(upwind_arg);
-  auto phi_downwind = functor(downwind_arg);
+  auto phi_upwind = functor(upwind_arg, time);
+  auto phi_downwind = functor(downwind_arg, time);
 
   VectorValue<T> ret;
   T coeff_upwind, coeff_downwind;
@@ -581,7 +614,7 @@ interpolate(const FunctorBase<VectorValue<T>> & functor, const FaceArg & face)
   }
   else
   {
-    const auto grad_phi_upwind = functor.gradient(upwind_arg);
+    const auto grad_phi_upwind = functor.gradient(upwind_arg, time);
     for (unsigned int i = 0; i < LIBMESH_DIM; ++i)
     {
       const auto &component_upwind = phi_upwind(i), component_downwind = phi_downwind(i);
@@ -597,7 +630,7 @@ interpolate(const FunctorBase<VectorValue<T>> & functor, const FaceArg & face)
 
 template <typename T>
 T
-containerInterpolate(const FunctorBase<T> & functor, const FaceArg & face)
+containerInterpolate(const FunctorBase<T> & functor, const FaceArg & face, const StateArg & time)
 {
   typedef typename FunctorBase<T>::GradientType ContainerGradientType;
   typedef typename ContainerGradientType::value_type GradientType;
@@ -608,8 +641,8 @@ containerInterpolate(const FunctorBase<T> & functor, const FaceArg & face)
 
   const auto upwind_arg = face.elem_is_upwind ? face.makeElem() : face.makeNeighbor();
   const auto downwind_arg = face.elem_is_upwind ? face.makeNeighbor() : face.makeElem();
-  const auto phi_upwind = functor(upwind_arg);
-  const auto phi_downwind = functor(downwind_arg);
+  const auto phi_upwind = functor(upwind_arg, time);
+  const auto phi_downwind = functor(downwind_arg, time);
 
   // initialize in order to get proper size
   T ret = phi_upwind;
@@ -632,7 +665,7 @@ containerInterpolate(const FunctorBase<T> & functor, const FaceArg & face)
   }
   else
   {
-    const auto grad_phi_upwind = functor.gradient(upwind_arg);
+    const auto grad_phi_upwind = functor.gradient(upwind_arg, time);
     for (const auto i : index_range(ret))
     {
       const auto &component_upwind = phi_upwind[i], component_downwind = phi_downwind[i];
@@ -648,16 +681,20 @@ containerInterpolate(const FunctorBase<T> & functor, const FaceArg & face)
 
 template <typename T>
 std::vector<T>
-interpolate(const FunctorBase<std::vector<T>> & functor, const FaceArg & face)
+interpolate(const FunctorBase<std::vector<T>> & functor,
+            const FaceArg & face,
+            const StateArg & time)
 {
-  return containerInterpolate(functor, face);
+  return containerInterpolate(functor, face, time);
 }
 
 template <typename T, std::size_t N>
 std::array<T, N>
-interpolate(const FunctorBase<std::array<T, N>> & functor, const FaceArg & face)
+interpolate(const FunctorBase<std::array<T, N>> & functor,
+            const FaceArg & face,
+            const StateArg & time)
 {
-  return containerInterpolate(functor, face);
+  return containerInterpolate(functor, face, time);
 }
 
 /**

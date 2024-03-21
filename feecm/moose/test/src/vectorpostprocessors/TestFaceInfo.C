@@ -11,6 +11,7 @@
 
 // MOOSE includes
 #include "MooseMesh.h"
+#include "SystemBase.h"
 
 registerMooseObject("MooseTestApp", TestFaceInfo);
 
@@ -19,7 +20,8 @@ TestFaceInfo::validParams()
 {
   InputParameters params = GeneralVectorPostprocessor::validParams();
   params.addParam<std::vector<VariableName>>("vars", "Variable names");
-  params.addClassDescription("Computes element face quatities like area, neighbors, normals, etc.");
+  params.addClassDescription(
+      "Computes element face quantities like area, neighbors, normals, etc.");
   return params;
 }
 
@@ -96,7 +98,9 @@ TestFaceInfo::execute()
 
     for (unsigned int l = 0; l < _vars.size(); ++l)
     {
-      FaceInfo::VarFaceNeighbors vfn = p->faceType(_vars[l]);
+      const auto & var = _subproblem.getVariable(0, _vars[l]);
+      FaceInfo::VarFaceNeighbors vfn =
+          p->faceType(std::make_pair(var.number(), var.sys().number()));
       Real x = 0;
       switch (vfn)
       {
