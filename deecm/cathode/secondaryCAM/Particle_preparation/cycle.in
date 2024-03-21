@@ -1,0 +1,141 @@
+variable        r0		equal	0.2
+variable        r1		equal	0.2
+
+#------------------General Settings for Granular Systems--------------------------------------------
+atom_style	granular
+atom_modify	map           array
+boundary	f f f
+newton		off
+communicate	single        vel       yes
+units		micro
+neighbor        0.02        bin
+neigh_modify    delay         0
+echo            both
+variable        dt            equal     2e-4
+variable        nStepsRun     equal     1.0/${dt}
+variable        writeOutEvery equal     0.2/${dt}
+variable        thermofreq    equal     0.01/${dt}
+timestep        ${dt}
+
+#--------------------------Box Information---------------------------------------------------------
+variable       x1y1          equal    -10
+variable       x2y2          equal     10
+variable       z1            equal    -10
+variable       z2            equal     10
+
+#--------------------------Model Geometry---------------------------------------------------------
+variable        grwth         equal     0.01                   # Overall growth of each direction
+variable        grwFq         equal     1000                    # The growth frequncy, every # of steps
+variable        grwNs         equal     20                      # The total number of growth step
+variable        grwRt         equal     ${grwth}/${grwNs}       # Growth rate at each growth step
+
+#--------------------------Material Information---------------------------------------------------------
+variable        cf_pp         equal     0.1
+variable        cf_pw         equal     0.1
+variable        cf_ww         equal     0.1
+variable        cof_pp        equal     0.1
+variable        cof_pw        equal     0.1
+variable        cof_ww        equal     0.1
+variable        corf_pp       equal     0.1
+variable        corf_pw       equal     0.1
+variable        corf_ww       equal     0.1
+variable        Yp            equal     1.775e6
+variable        Yw            equal     5.1e+6
+
+#---------------------Generate Box----------------------------------------
+region          reg block ${x1y1} ${x2y2} ${x1y1} ${x2y2} ${z1} ${z2}  units box
+#create_box      2 reg
+read_data wall.pour
+#---------------------Assign Material Properties to particle and wall----------------------------------------
+fix 	m1 all property/global youngsModulus peratomtype ${Yp} ${Yw} ${Yw}
+fix 	m2 all property/global poissonsRatio peratomtype 0.3 0.3 0.3 
+fix     m3 all property/global coefficientRestitution peratomtypepair 3 ${cf_pp} ${cf_pw} ${cf_pw} ${cf_ww} ${cf_pw} ${cf_pw} ${cf_ww} ${cf_pw} ${cf_pw} 
+fix     m4 all property/global coefficientFriction peratomtypepair 3 ${cof_pp} ${cof_pw} ${cof_pw} ${cof_ww} ${cof_pw} ${cof_pw} ${cof_ww} ${cof_pw} ${cof_pw}
+fix     m5 all property/global coefficientRollingFriction peratomtypepair 3 ${corf_pp} ${corf_pw} ${corf_pw} ${corf_ww} ${corf_pw} ${corf_pw} ${corf_ww} ${corf_pw} ${corf_pw}
+fix     m6 all property/global cohesionEnergyDensity peratomtypepair 3 100000 0 0 0 0 0 0 0 0
+
+#Define pair style
+pair_style gran model hertz tangential history cohesion sjkr #Hertzian with cohesion
+pair_coeff	* *
+
+group walls type 3
+group ncm type 1
+
+fix Bsphere ncm mesh/surface file sphere.stl type 2 scale 0.25
+fix wall ncm wall/gran model hertz tangential history rolling_friction epsd2 mesh n_meshes 1 meshes Bsphere
+
+#fix xwalls1 all wall/gran model hertz tangential history primitive type 2 xplane ${x1y1}
+#fix xwalls2 all wall/gran model hertz tangential history primitive type 2 xplane ${x2y2}
+#fix ywalls1 all wall/gran model hertz tangential history primitive type 2 yplane ${x1y1}
+#fix ywalls2 all wall/gran model hertz tangential history primitive type 2 yplane ${x2y2}
+#fix zwalls2 all wall/gran model hertz tangential history primitive type 2 zplane ${z1}
+
+
+fix pts1 ncm particletemplate/sphere 49979687 atom_type 1 density constant 4850 radius constant ${r0}
+fix pts2 ncm particletemplate/sphere 15485863 atom_type 1 density constant 4850 radius constant ${r1}
+fix pdd1 ncm particledistribution/discrete 86028157 2 pts1 0.5 pts2 0.5
+region  bc sphere 0 0 0 4.95
+
+fix   ins ncm insert/pack seed 32452843 distributiontemplate pdd1 maxattempt 1000 insert_every 20000 &
+												overlapcheck yes all_in yes &
+												vel constant 0.0 0.0 -0.1 region bc volumefraction_region 0.55 &
+												ntry_mc 500000 check_dist_from_subdomain_border yes
+
+
+#apply nve integration to all particles 
+fix		integr all nve/sphere 
+
+#------------------------Output Settings------------------------------------------------------
+# Output to screen
+compute        ker   all   erotate/sphere            # Compute the rotational kinetic energy of all particles
+#compute       prs   all   pressure thermo_temp                  # Total pressure on ghost particles
+compute        frc  walls   reduce sum fz                   # Total pressure on ghost particles
+compute        posw walls   reduce ave z                    # Total pressure on ghost particles
+variable       mss  equal  mass(ncm) 		           # Total mass of LPS and NCM particles
+variable       prs  equal  (c_frc)/(1000*10*10)    # Pressure in unit of MPa
+variable       posz  equal  (c_posw)    # Pressure in unit of MPa
+thermo_style	custom step atoms ke c_ker vol v_prs c_posw
+thermo		50000
+thermo_modify	lost ignore norm no
+# Output to file
+dump	dmp all custom 100000 post_bi/dump*.liggghts id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
+
+run 450000
+
+unfix ins
+variable    nt equal 1
+variable    cycles equal 10   
+variable    pf equal 0.6
+
+label loopG 
+label loop1
+  fix   lin walls move linear 0.0 0.0 -0.05
+  run   10000
+  if "${prs} > 30" then "jump cycle.in loop2"
+jump cycle.in loop1
+
+label loop2
+  fix   lin walls move linear 0.0 0.0 0.05
+  run   10000
+  if "${posz} > 5" then "jump cycle.in loop3"
+jump cycle.in loop2
+
+label loop3
+fix lin walls move linear 0.0 0.0 0.0
+variable    nt equal ${nt}+1
+if "${nt} > ${cycles}" then "jump cycle.in loopG2"
+fix   ins all insert/pack seed 32452843 distributiontemplate pdd1 maxattempt 1000 insert_every 2000 &
+												overlapcheck yes all_in yes &
+												vel constant 0.0 0.0 -0.1 region bc volumefraction_region ${pf} &
+												ntry_mc 500000 check_dist_from_subdomain_border yes
+
+run 100000
+unfix ins
+variable    pf equal ${pf}+0.04
+
+jump cycle.in loopG
+
+label loopG2
+run 100000
+
+write_restart   cohesion.restart
