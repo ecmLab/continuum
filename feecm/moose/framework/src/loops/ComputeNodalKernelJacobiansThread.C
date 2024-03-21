@@ -22,10 +22,12 @@
 
 ComputeNodalKernelJacobiansThread::ComputeNodalKernelJacobiansThread(
     FEProblemBase & fe_problem,
+    NonlinearSystemBase & nl,
     MooseObjectTagWarehouse<NodalKernelBase> & nodal_kernels,
     const std::set<TagID> & tags)
   : ThreadedNodeLoop<ConstNodeRange, ConstNodeRange::const_iterator>(fe_problem),
     _fe_problem(fe_problem),
+    _nl(nl),
     _aux_sys(fe_problem.getAuxiliarySystem()),
     _tags(tags),
     _nodal_kernels(nodal_kernels),
@@ -38,6 +40,7 @@ ComputeNodalKernelJacobiansThread::ComputeNodalKernelJacobiansThread(
     ComputeNodalKernelJacobiansThread & x, Threads::split split)
   : ThreadedNodeLoop<ConstNodeRange, ConstNodeRange::const_iterator>(x, split),
     _fe_problem(x._fe_problem),
+    _nl(x._nl),
     _aux_sys(x._aux_sys),
     _tags(x._tags),
     _nodal_kernels(x._nodal_kernels),
@@ -63,7 +66,7 @@ ComputeNodalKernelJacobiansThread::onNode(ConstNodeRange::const_iterator & node_
 {
   const Node * node = *node_it;
 
-  auto & ce = _fe_problem.couplingEntries(_tid);
+  auto & ce = _fe_problem.couplingEntries(_tid, _nl.number());
   for (const auto & it : ce)
   {
     MooseVariableFEBase & ivariable = *(it.first);
@@ -127,8 +130,7 @@ ComputeNodalKernelJacobiansThread::onNode(ConstNodeRange::const_iterator & node_
         _num_cached = 0;
         // vectors are thread-safe, but matrices are not yet
         Threads::spin_mutex::scoped_lock lock(Threads::spin_mtx);
-        _fe_problem.assembly(_tid, _fe_problem.currentNonlinearSystem().number())
-            .addCachedJacobian();
+        _fe_problem.addCachedJacobian(_tid);
       }
     }
   }
@@ -137,4 +139,17 @@ ComputeNodalKernelJacobiansThread::onNode(ConstNodeRange::const_iterator & node_
 void
 ComputeNodalKernelJacobiansThread::join(const ComputeNodalKernelJacobiansThread & /*y*/)
 {
+}
+
+void
+ComputeNodalKernelJacobiansThread::printGeneralExecutionInformation() const
+{
+  if (!_fe_problem.shouldPrintExecution(_tid) || !_nkernel_warehouse->hasActiveObjects())
+    return;
+
+  const auto & console = _fe_problem.console();
+  const auto & execute_on = _fe_problem.getCurrentExecuteOnFlag();
+  console << "[DBG] Executing nodal kernels contribution to Jacobian on nodes on " << execute_on
+          << std::endl;
+  console << _nkernel_warehouse->activeObjectsToFormattedString() << std::endl;
 }

@@ -34,22 +34,26 @@ TopResidualDebugOutput::validParams()
 
   // By default operate on both nonlinear and linear residuals
   params.set<ExecFlagEnum>("execute_on", true) = {EXEC_LINEAR, EXEC_NONLINEAR, EXEC_TIMESTEP_END};
+  params.addParam<NonlinearSystemName>(
+      "nl_sys", "nl0", "The nonlinear system that we should output information for.");
   return params;
 }
 
 TopResidualDebugOutput::TopResidualDebugOutput(const InputParameters & parameters)
   : PetscOutput(parameters),
     _num_residuals(getParam<unsigned int>("num_residuals")),
-    _sys(_problem_ptr->getNonlinearSystemBase().system())
+    _nl(_problem_ptr->getNonlinearSystemBase(
+        _problem_ptr->nlSysNum(getParam<NonlinearSystemName>("nl_sys")))),
+    _sys(_nl.system())
 {
 }
 
 void
-TopResidualDebugOutput::output(const ExecFlagType & /*type*/)
+TopResidualDebugOutput::output()
 {
   // Display the top residuals
   if (_num_residuals > 0)
-    printTopResiduals(_problem_ptr->getNonlinearSystemBase().RHS(), _num_residuals);
+    printTopResiduals(_nl.RHS(), _num_residuals);
 }
 
 void

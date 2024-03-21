@@ -73,10 +73,24 @@ gamma = 1.4
     pressure_function = '${fparse p0}'
     momentum_advection_interpolation = 'upwind'
     mass_advection_interpolation = 'upwind'
-    friction_types = 'Darcy'
-    friction_coeffs = 'Darcy_coef'
     porous_medium_treatment = true
     porosity = porosity
+    energy_advection_interpolation = 'average'
+  []
+[]
+
+[FVKernels]
+  [u_friction]
+    type = INSFVMomentumFriction
+    variable = superficial_vel_x
+    linear_coef_name = linear_friction_coeff
+    momentum_component = 'x'
+  []
+  [v_friction]
+    type = INSFVMomentumFriction
+    variable = superficial_vel_y
+    linear_coef_name = linear_friction_coeff
+    momentum_component = 'y'
   []
 []
 
@@ -105,7 +119,7 @@ gamma = 1.4
   []
 []
 
-[Materials]
+[FunctorMaterials]
   [fluid_props_to_mat_props]
     type = GeneralFunctorFluidProps
     fp = air
@@ -120,14 +134,15 @@ gamma = 1.4
 
   [scalar_props]
     type = ADGenericFunctorMaterial
-    prop_names = 'porosity'
-    prop_values = '1      '
+    prop_names = 'porosity loss_coeff'
+    prop_values = '1       1.3'
   []
 
-  [vector_props]
-    type = ADGenericVectorFunctorMaterial
-    prop_names = 'Darcy_coef'
-    prop_values = '1.3 1.3 1.3'
+  [linear_friction_coeff]
+    type = ADParsedFunctorMaterial
+    property_name = 'linear_friction_coeff'
+    expression = 'loss_coeff * rho'
+    functor_names = 'loss_coeff rho'
   []
 []
 
@@ -147,13 +162,13 @@ gamma = 1.4
 
 [AuxKernels]
   [rho_var_aux]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     variable = rho_var
     functor = rho
   []
 
   [cp_var_aux]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     variable = cp_var
     functor = cp
   []

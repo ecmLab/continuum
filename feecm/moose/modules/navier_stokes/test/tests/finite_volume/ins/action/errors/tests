@@ -1,5 +1,5 @@
 [Tests]
-  issues = '#19472 #21135'
+  issues = '#19472 #21135 #24498'
   design = 'NSFVAction.md'
   [momentum-inlet-error]
     type = 'RunException'
@@ -134,6 +134,13 @@
     cli_args = "Modules/NavierStokesFV/porosity_smoothing_layers=4"
     expect_err = "This parameter should not be defined if the porous medium treatment is disabled!"
   []
+  [no-bernoulli-two-term-error]
+    type = 'RunException'
+    input = 2d-rc-error-action.i
+    requirement = 'The system shall throw an error if two-term extrapolation is elected for prosity jump faces without enabling the Bernoulli treatment.'
+    cli_args = "Modules/NavierStokesFV/pressure_allow_expansion_on_bernoulli_faces=true"
+    expect_err = "This parameter should not be given by the user with the corresponding porosity_interface_pressure_treatment setting!"
+  []
   [passive-scalar-diffusivity-error]
     type = 'RunException'
     input = 2d-rc-error-action.i
@@ -200,6 +207,15 @@
                "Variables/inactive='pressure T_fluid scalar'"
     expect_err = "The number of velocity variable names supplied to the NSFVAction is not 2 \(mesh "
                  "dimension\) or 3!"
+  []
+  [velocity-name-error]
+    type = 'RunException'
+    input = 2d-rc-error-action-no-scalar.i
+    requirement = 'The system shall throw an error if the user supplies unallowed names for the external velocity components in a porous medium setting'
+    cli_args = "Modules/NavierStokesFV/velocity_variable='vel_x vel_y' "
+               "Modules/NavierStokesFV/porous_medium_treatment=true "
+               "Variables/vel_x/type=MooseVariableFVReal Variables/vel_y/type=MooseVariableFVReal"
+    expect_err = "For porous medium simulations, functor name vel\_x is already reserved for the automatically-computed interstitial velocity. Please choose another name for your external velocity variable!"
   []
   [pressure-variable-error]
     type = 'RunException'

@@ -23,10 +23,10 @@ BreakMeshByBlockGenerator::validParams()
 {
   InputParameters params = BreakMeshByBlockGeneratorBase::validParams();
   params.addRequiredParam<MeshGeneratorName>("input", "The mesh we want to modify");
-  params.addClassDescription("Break boundaries based on the subdomains to which their sides are "
-                             "attached. Naming convention for the new boundaries will be the old "
-                             "boundary name plus \"_to_\" plus the subdomain name. At the moment"
-                             "this only works on REPLICATED mesh");
+  params.addClassDescription(
+      "Break the mesh at interfaces between blocks. New nodes will be generated so elements on "
+      "each side of the break are no longer connected. At the moment, this only works on a "
+      "REPLICATED mesh");
   params.addParam<std::vector<SubdomainName>>(
       "surrounding_blocks",
       "The list of subdomain names surrounding which interfaces will be generated.");
@@ -80,6 +80,9 @@ BreakMeshByBlockGenerator::generate()
   std::unique_ptr<MeshBase> mesh = std::move(_input);
   if (!mesh->is_replicated())
     mooseError("BreakMeshByBlockGenerator is not implemented for distributed meshes");
+
+  // Try to trick the rest of the world into thinking we're prepared
+  mesh->prepare_for_use();
 
   BoundaryInfo & boundary_info = mesh->get_boundary_info();
 

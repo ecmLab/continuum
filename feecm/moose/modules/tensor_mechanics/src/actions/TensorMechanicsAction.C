@@ -54,6 +54,7 @@ TensorMechanicsAction::validParams()
   // parameters specified here only appear in the input file sub-blocks of the
   // Master action, not in the common parameters area
   params.addParam<std::vector<SubdomainName>>("block",
+                                              {},
                                               "The list of ids of the blocks (subdomain) "
                                               "that the stress divergence kernels will be "
                                               "applied to");
@@ -82,6 +83,9 @@ TensorMechanicsAction::validParams()
   params.addParam<std::vector<TagName>>(
       "extra_vector_tags",
       "The tag names for extra vectors that residual data should be saved into");
+  params.addParam<std::vector<TagName>>("absolute_value_vector_tags",
+                                        "The tag names for extra vectors that the absolute value "
+                                        "of the residual should be accumulated into");
   params.addParam<Real>("scaling", "The scaling to apply to the displacement variables");
   params.addParam<Point>(
       "cylindrical_axis_point1",
@@ -104,6 +108,7 @@ TensorMechanicsAction::validParams()
                                   "Type of each constraint: "
                                   "stress or strain.");
   params.addParam<std::vector<FunctionName>>("targets",
+                                             {},
                                              "Functions giving the target "
                                              "values of each constraint.");
 
@@ -357,9 +362,6 @@ TensorMechanicsAction::act()
       auto action = MooseSharedNamespace::static_pointer_cast<MooseObjectAction>(
           _action_factory.create(type, name() + "_gps", action_params));
       _awh.addActionBlock(action);
-      if (isParamValid("extra_vector_tags"))
-        action_params.set<std::vector<TagName>>("extra_vector_tags") =
-            getParam<std::vector<TagName>>("extra_vector_tags");
     }
   }
 

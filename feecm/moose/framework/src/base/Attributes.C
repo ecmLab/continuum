@@ -28,6 +28,7 @@
 #include "Reporter.h"
 #include "SystemBase.h"
 #include "DomainUserObject.h"
+#include "MortarUserObject.h"
 #include "ExecFlagRegistry.h"
 
 #include <algorithm>
@@ -66,6 +67,8 @@ operator<<(std::ostream & os, Interfaces & iface)
     os << "|Reporter";
   if (static_cast<bool>(iface & Interfaces::DomainUserObject))
     os << "|DomainUserObject";
+  if (static_cast<bool>(iface & Interfaces::MortarUserObject))
+    os << "|MortarUserObject";
   os << ")";
   return os;
 }
@@ -106,7 +109,7 @@ AttribMatrixTags::initFrom(const MooseObject * obj)
   auto t = dynamic_cast<const TaggingInterface *>(obj);
   if (t)
   {
-    for (auto & tag : t->getMatrixTags())
+    for (auto & tag : t->getMatrixTags({}))
       _vals.push_back(static_cast<int>(tag));
   }
 }
@@ -118,7 +121,7 @@ AttribVectorTags::initFrom(const MooseObject * obj)
   auto t = dynamic_cast<const TaggingInterface *>(obj);
   if (t)
   {
-    for (auto & tag : t->getVectorTags())
+    for (auto & tag : t->getVectorTags({}))
       _vals.push_back(static_cast<int>(tag));
   }
 }
@@ -411,10 +414,7 @@ AttribName::isEqual(const Attribute & other) const
 void
 AttribSystem::initFrom(const MooseObject * obj)
 {
-  if (!obj->isParamValid("_moose_warehouse_system_name"))
-    mooseError("The base objects supplied to the TheWarehouse must call "
-               "'registerSystemAttributeName' method in the validParams function.");
-  _val = obj->getParam<std::string>("_moose_warehouse_system_name");
+  _val = obj->parameters().getSystemAttributeName();
 }
 
 bool
@@ -491,6 +491,7 @@ AttribInterfaces::initFrom(const MooseObject * obj)
   _val |= (unsigned int)Interfaces::BoundaryRestrictable      * (dynamic_cast<const BoundaryRestrictable *>(obj) != nullptr);
   _val |= (unsigned int)Interfaces::Reporter                  * (dynamic_cast<const Reporter *>(obj) != nullptr);
   _val |= (unsigned int)Interfaces::DomainUserObject          * (dynamic_cast<const DomainUserObject *>(obj) != nullptr);
+  _val |= (unsigned int)Interfaces::MortarUserObject          * (dynamic_cast<const MortarUserObject *>(obj) != nullptr);
   // clang-format on
 }
 
@@ -506,4 +507,24 @@ AttribInterfaces::isEqual(const Attribute & other) const
 {
   auto a = dynamic_cast<const AttribInterfaces *>(&other);
   return a && (a->_val == _val);
+}
+
+void
+AttribDisplaced::initFrom(const MooseObject * obj)
+{
+  _val = obj->parameters().have_parameter<bool>("use_displaced_mesh") &&
+         obj->getParam<bool>("use_displaced_mesh");
+}
+
+bool
+AttribDisplaced::isMatch(const Attribute & other) const
+{
+  auto a = dynamic_cast<const AttribDisplaced *>(&other);
+  return a && (a->_val == _val);
+}
+
+bool
+AttribDisplaced::isEqual(const Attribute & other) const
+{
+  return isMatch(other);
 }

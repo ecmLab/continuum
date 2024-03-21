@@ -32,7 +32,8 @@ XYDelaunayGenerator::validParams()
   MooseEnum algorithm("BINARY EXHAUSTIVE", "BINARY");
 
   params.addRequiredParam<MeshGeneratorName>(
-      "boundary", "The input MeshGenerator that defines the output mesh outer boundary.");
+      "boundary",
+      "The input MeshGenerator defining the output outer boundary and required Steiner points.");
   params.addParam<std::vector<BoundaryName>>(
       "input_boundary_names", "2D-input-mesh boundaries defining the output mesh outer boundary");
   params.addParam<std::vector<SubdomainName>>(
@@ -107,7 +108,7 @@ XYDelaunayGenerator::XYDelaunayGenerator(const InputParameters & parameters)
     paramError("stitch_holes", "Need one stitch_holes entry per hole, if specified.");
 
   for (auto hole_i : index_range(_stitch_holes))
-    if (hole_i < _refine_holes.size() && _refine_holes[hole_i])
+    if (_stitch_holes[hole_i] && (hole_i >= _refine_holes.size() || _refine_holes[hole_i]))
       paramError("refine_holes", "Disable auto refine of any hole boundary to be stitched.");
 }
 
@@ -362,7 +363,9 @@ XYDelaunayGenerator::generate()
         next_hole_boundary_point[mh.point(pi - 1)] = mh.point(pi);
       next_hole_boundary_point[mh.point(np - 1)] = mh.point(0);
 
+#ifndef NDEBUG
       int found_hole_sides = 0;
+#endif
       for (auto elem : hole_mesh.element_ptr_range())
       {
         if (elem->dim() != 2)
@@ -376,14 +379,18 @@ XYDelaunayGenerator::generate()
             if (it_s->second == elem->point((s + 1) % ns))
             {
               hole_boundary_info.add_side(elem, s, new_hole_bcid);
+#ifndef NDEBUG
               ++found_hole_sides;
+#endif
             }
         }
       }
       mooseAssert(found_hole_sides == np, "Failed to find full outer boundary of meshed hole");
 
       auto & mesh_boundary_info = mesh->get_boundary_info();
+#ifndef NDEBUG
       int found_inner_sides = 0;
+#endif
       for (auto elem : mesh->element_ptr_range())
       {
         auto ns = elem->n_sides();
@@ -394,7 +401,9 @@ XYDelaunayGenerator::generate()
             if (it_s->second == elem->point(s))
             {
               mesh_boundary_info.add_side(elem, s, inner_bcid);
+#ifndef NDEBUG
               ++found_inner_sides;
+#endif
             }
         }
       }
@@ -409,5 +418,6 @@ XYDelaunayGenerator::generate()
                           use_binary_search);
     }
   }
+  mesh->prepare_for_use();
   return mesh;
 }

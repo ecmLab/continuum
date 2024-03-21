@@ -39,16 +39,15 @@ AverageElementSize::execute()
 }
 
 Real
-AverageElementSize::getValue()
+AverageElementSize::getValue() const
 {
-
   return _total_size / _elems;
 }
 
 void
 AverageElementSize::threadJoin(const UserObject & y)
 {
-  const AverageElementSize & pps = static_cast<const AverageElementSize &>(y);
+  const auto & pps = static_cast<const AverageElementSize &>(y);
   _total_size += pps._total_size;
   _elems += pps._elems;
 }

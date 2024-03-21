@@ -125,7 +125,7 @@ FVFluxKernel::computeResidual(const FaceInfo & fi)
 
   _face_info = &fi;
   _normal = fi.normal();
-  _face_type = fi.faceType(_var.name());
+  _face_type = fi.faceType(std::make_pair(_var.number(), _var.sys().number()));
   auto r = MetaPhysicL::raw_value(fi.faceArea() * fi.faceCoord() * computeQpResidual());
 
   // residual contributions for a flux kernel go to both neighboring faces.
@@ -163,57 +163,6 @@ FVFluxKernel::computeResidual(const FaceInfo & fi)
 }
 
 void
-FVFluxKernel::computeJacobianType(Moose::DGJacobianType type, const ADReal & residual)
-{
-  auto & ce = _assembly.couplingEntries();
-  for (const auto & it : ce)
-  {
-    MooseVariableFieldBase & ivariable = *(it.first);
-    MooseVariableFieldBase & jvariable = *(it.second);
-
-    // We currently only support coupling to other FV variables
-    // Remove this when we enable support for it.
-    if (!jvariable.isFV())
-      continue;
-
-    if ((type == Moose::ElementElement || type == Moose::NeighborElement) &&
-        !jvariable.activeOnSubdomain(_face_info->elemSubdomainID()))
-      continue;
-    else if ((type == Moose::ElementNeighbor || type == Moose::NeighborNeighbor) &&
-             !jvariable.activeOnSubdomain(_face_info->neighborSubdomainID()))
-      continue;
-
-    unsigned int ivar = ivariable.number();
-    unsigned int jvar = jvariable.number();
-
-    if (ivar != _var.number())
-      continue;
-
-    auto dofs_per_elem = _sys.getMaxVarNDofsPerElem();
-
-    auto ad_offset = Moose::adOffset(jvar, dofs_per_elem, type, _sys.system().n_vars());
-
-    prepareMatrixTagNeighbor(_assembly, ivar, jvar, type);
-
-    mooseAssert(
-        _local_ke.m() == 1,
-        "We are currently only supporting constant monomials for finite volume calculations");
-    mooseAssert(
-        _local_ke.n() == 1,
-        "We are currently only supporting constant monomials for finite volume calculations");
-    mooseAssert((type == Moose::ElementElement || type == Moose::NeighborElement)
-                    ? jvariable.dofIndices().size() == 1
-                    : jvariable.dofIndicesNeighbor().size() == 1,
-                "The AD derivative indexing below only makes sense for constant monomials, e.g. "
-                "for a number of dof indices equal to  1");
-
-    _local_ke(0, 0) = residual.derivatives()[ad_offset];
-
-    accumulateTaggedLocalMatrix();
-  }
-}
-
-void
 FVFluxKernel::computeJacobian(const FaceInfo & fi)
 {
   if (skipForBoundary(fi))
@@ -221,7 +170,7 @@ FVFluxKernel::computeJacobian(const FaceInfo & fi)
 
   _face_info = &fi;
   _normal = fi.normal();
-  _face_type = fi.faceType(_var.name());
+  _face_type = fi.faceType(std::make_pair(_var.number(), _var.sys().number()));
   const ADReal r = fi.faceArea() * fi.faceCoord() * computeQpResidual();
 
   // The fancy face type if condition checks here are because we might
@@ -238,7 +187,8 @@ FVFluxKernel::computeJacobian(const FaceInfo & fi)
   {
     mooseAssert(_var.dofIndices().size() == 1, "We're currently built to use CONSTANT MONOMIALS");
 
-    _assembly.processResidualAndJacobian(r, _var.dofIndices()[0], _vector_tags, _matrix_tags);
+    addResidualsAndJacobian(
+        _assembly, std::array<ADReal, 1>{{r}}, _var.dofIndices(), _var.scalingFactor());
   }
 
   if (_face_type == FaceInfo::VarFaceNeighbors::NEIGHBOR ||
@@ -257,8 +207,10 @@ FVFluxKernel::computeJacobian(const FaceInfo & fi)
     mooseAssert(_var.dofIndicesNeighbor().size() == 1,
                 "We're currently built to use CONSTANT MONOMIALS");
 
-    _assembly.processResidualAndJacobian(
-        neighbor_r, _var.dofIndicesNeighbor()[0], _vector_tags, _matrix_tags);
+    addResidualsAndJacobian(_assembly,
+                            std::array<ADReal, 1>{{neighbor_r}},
+                            _var.dofIndicesNeighbor(),
+                            _var.scalingFactor());
   }
 }
 
@@ -269,7 +221,7 @@ FVFluxKernel::computeResidualAndJacobian(const FaceInfo & fi)
 }
 
 ADReal
-FVFluxKernel::gradUDotNormal() const
+FVFluxKernel::gradUDotNormal(const Moose::StateArg & time) const
 {
   mooseAssert(_face_info, "the face info should be non-null");
 
@@ -277,21 +229,7 @@ FVFluxKernel::gradUDotNormal() const
   const bool correct_skewness =
       (_var.faceInterpolationMethod() == Moose::FV::InterpMethod::SkewCorrectedAverage);
 
-  const Elem * const elem = &_face_info->elem();
-  const Elem * const neighbor = _face_info->neighborPtr();
-
-  bool var_defined_on_elem = _var.hasBlocks(_face_info->elem().subdomain_id());
-  bool is_internal_face = _var.isInternalFace(*_face_info);
-
-  const ADReal side_one_value = (!is_internal_face && !var_defined_on_elem)
-                                    ? _var.getBoundaryFaceValue(*_face_info)
-                                    : _var.getElemValue(elem);
-  const ADReal side_two_value = (var_defined_on_elem && !is_internal_face)
-                                    ? _var.getBoundaryFaceValue(*_face_info)
-                                    : _var.getElemValue(neighbor);
-
-  return Moose::FV::gradUDotNormal(
-      side_one_value, side_two_value, *_face_info, _var, correct_skewness);
+  return Moose::FV::gradUDotNormal(*_face_info, _var, time, correct_skewness);
 }
 
 Moose::ElemArg

@@ -23,15 +23,23 @@ Split::validParams()
   InputParameters params = MooseObject::validParams();
   params.addClassDescription("Field split based preconditioner for nonlinear solver.");
   params.addParam<std::vector<NonlinearVariableName>>(
-      "vars", "Variables Split operates on (omitting this implies \"all variables\"");
+      "vars", {}, "Variables Split operates on (omitting this implies \"all variables\"");
   params.addParam<std::vector<SubdomainName>>(
-      "blocks", "Mesh blocks Split operates on (omitting this implies \"all blocks\"");
+      "blocks", {}, "Mesh blocks Split operates on (omitting this implies \"all blocks\"");
   params.addParam<std::vector<BoundaryName>>(
-      "sides", "Sidesets Split operates on (omitting this implies \"no sidesets\"");
+      "sides", {}, "Sidesets Split operates on (omitting this implies \"no sidesets\"");
   params.addParam<std::vector<BoundaryName>>(
-      "unsides", "Sidesets Split excludes (omitting this implies \"do not exclude any sidesets\"");
+      "unsides",
+      {},
+      "Sidesets Split excludes (omitting this implies \"do not exclude any sidesets\"");
   params.addParam<std::vector<std::string>>(
-      "splitting", "The names of the splits (subsystems) in the decomposition of this split");
+      "splitting", {}, "The names of the splits (subsystems) in the decomposition of this split");
+  params.addParam<std::vector<BoundaryName>>(
+      "unside_by_var_boundary_name",
+      "A map from boundary name to unside by variable, e.g. only unside for a given variable.");
+  params.addParam<std::vector<NonlinearVariableName>>(
+      "unside_by_var_var_name",
+      "A map from boundary name to unside by variable, e.g. only unside for a given variable.");
 
   MooseEnum SplittingTypeEnum("additive multiplicative symmetric_multiplicative schur", "additive");
   params.addParam<MooseEnum>("splitting_type", SplittingTypeEnum, "Split decomposition type");
@@ -80,7 +88,7 @@ Split::Split(const InputParameters & parameters)
 }
 
 void
-Split::setup(const std::string & prefix)
+Split::setup(NonlinearSystemBase & nl, const std::string & prefix)
 {
   // The Split::setup() implementation does not actually depend on any
   // specific version of PETSc, so there's no need to wrap the entire
@@ -91,13 +99,27 @@ Split::setup(const std::string & prefix)
   // prefix
   std::string dmprefix = prefix + "dm_moose_";
 
+  if (isParamValid("unside_by_var_boundary_name"))
+  {
+    const auto & unside_by_var_boundary_name =
+        getParam<std::vector<BoundaryName>>("unside_by_var_boundary_name");
+    const auto & unside_by_var_var_name =
+        getParam<std::vector<NonlinearVariableName>>("unside_by_var_var_name");
+
+    std::vector<std::string> vector_of_pairs;
+    for (const auto i : index_range(unside_by_var_boundary_name))
+      vector_of_pairs.push_back(unside_by_var_boundary_name[i] + ":" + unside_by_var_var_name[i]);
+    po.pairs.emplace_back(dmprefix + "unside_by_var", Moose::stringify(vector_of_pairs, ","));
+  }
+
   // var options
   if (!_vars.empty())
   {
     po.pairs.emplace_back(dmprefix + "vars", Moose::stringify(_vars, ","));
 
+    // check that variables are either field or scalars
     for (const auto & var : _vars)
-      if (!_fe_problem.hasVariable(var))
+      if (!_fe_problem.hasVariable(var) && !_fe_problem.hasScalarVariable(var))
         mooseError("Variable '", var, "' specified in split '", name(), "' does not exist");
   }
 
@@ -145,9 +167,9 @@ Split::setup(const std::string & prefix)
     // Finally, recursively configure the splits contained within this split.
     for (const auto & split_name : _splitting)
     {
-      std::shared_ptr<Split> split = _fe_problem.getNonlinearSystemBase().getSplit(split_name);
+      std::shared_ptr<Split> split = nl.getSplit(split_name);
       std::string sprefix = prefix + "fieldsplit_" + split_name + "_";
-      split->setup(sprefix);
+      split->setup(nl, sprefix);
     }
   }
 

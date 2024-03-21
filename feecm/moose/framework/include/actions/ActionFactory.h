@@ -21,8 +21,6 @@
  * Macros
  */
 #define stringifyName(name) #name
-#define registerAction(tplt, action)                                                               \
-  action_factory.reg<tplt>(stringifyName(tplt), action, __FILE__, __LINE__)
 
 #define registerSyntax(action, action_syntax)                                                      \
   syntax.registerActionSyntax(action, action_syntax, "", __FILE__, __LINE__)
@@ -32,21 +30,13 @@
 #define registerMooseObjectTask(name, moose_system, is_required)                                   \
   syntax.registerTaskName(name, stringifyName(moose_system), is_required)
 #define appendMooseObjectTask(name, moose_system)                                                  \
-  syntax.appendTaskName(name, stringifyName(moose_system))
+  syntax.appendTaskName(name, stringifyName(moose_system), false)
+#define appendDeprecatedMooseObjectTask(name, moose_system)                                        \
+  syntax.appendTaskName(name, stringifyName(moose_system), true)
 #define addTaskDependency(action, depends_on) syntax.addDependency(action, depends_on)
 
 // Forward Declaration
 class MooseApp;
-
-/**
- * Typedef for function to build objects
- */
-typedef std::shared_ptr<Action> (*buildActionPtr)(const InputParameters & parameters);
-
-/**
- * Typedef for validParams
- */
-typedef InputParameters (*paramsActionPtr)();
 
 /**
  * Specialized factory for generic Action System objects
@@ -60,21 +50,7 @@ public:
 
   MooseApp & app() { return _app; }
 
-  template <typename T>
-  void reg(const std::string & name,
-           const std::string & task,
-           const std::string & file = "",
-           int line = -1)
-  {
-    reg(name, task, &buildAction<T>, &moose::internal::callValidParams<T>, file, line);
-  }
-
-  void reg(const std::string & name,
-           const std::string & task,
-           buildActionPtr obj_builder,
-           paramsActionPtr ref_params,
-           const std::string & file = "",
-           int line = -1);
+  void reg(std::shared_ptr<RegistryEntryBase> obj);
 
   /**
    * Gets file and line information where an action was registered.
@@ -91,11 +67,9 @@ public:
 
   InputParameters getValidParams(const std::string & name);
 
-  class BuildInfo
+  struct BuildInfo
   {
-  public:
-    buildActionPtr _build_pointer;
-    paramsActionPtr _params_pointer;
+    std::shared_ptr<RegistryEntryBase> _obj_pointer;
     std::string _task;
   };
 

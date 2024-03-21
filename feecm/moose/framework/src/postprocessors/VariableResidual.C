@@ -48,12 +48,12 @@ VariableResidual::initialize()
 void
 VariableResidual::execute()
 {
-  NonlinearSystemBase & nl = _fe_problem.getNonlinearSystemBase();
+  NonlinearSystemBase & nl = _fe_problem.getNonlinearSystemBase(_sys.number());
   _var_residual = nl.system().calculate_norm(nl.RHS(), _var.number(), DISCRETE_L2);
 }
 
 PostprocessorValue
-VariableResidual::getValue()
+VariableResidual::getValue() const
 {
   return _var_residual;
 }

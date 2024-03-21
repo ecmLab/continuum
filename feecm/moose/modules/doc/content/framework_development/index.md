@@ -1,6 +1,6 @@
 # Framework Development
 
-The articles attached to this page are useful if you intend on contributing to the MOOSE reposistory. Information about the repository
+The articles attached to this page are useful if you intend on contributing to the MOOSE repository. Information about the repository
 structure, code standards, testing, and software quality are all available here. If you are new to Git, we've created some information
 about how to get up and running here as well.
 
@@ -9,6 +9,8 @@ For development of MOOSE-based applications see [Application Development](applic
 ## Overview on contributing
 
 [Contributing](framework/contributing.md)
+
+[Reviewing](framework/reviewing.md)
 
 [How a patch becomes code](framework/patch_to_code.md)
 

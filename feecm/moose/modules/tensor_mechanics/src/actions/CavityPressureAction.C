@@ -23,13 +23,19 @@ CavityPressureAction::validParams()
   params.addRequiredParam<std::vector<VariableName>>("displacements",
                                                      "The nonlinear displacement variables");
   params.addParam<std::vector<AuxVariableName>>(
-      "save_in", "Auxiliary variables to save the displacement residuals");
+      "save_in", {}, "Auxiliary variables to save the displacement residuals");
   params.addParam<std::string>("output", "The name to use for the cavity pressure value");
   params.addParam<bool>(
       "use_displaced_mesh", true, "Whether to use displaced mesh in the boundary condition");
   params.addParam<bool>("use_automatic_differentiation",
                         false,
                         "Flag to use automatic differentiation (AD) objects when possible");
+  params.addParam<std::vector<TagName>>("extra_vector_tags",
+                                        "The extra tags for the vectors this Kernel should fill");
+  params.addParam<std::vector<TagName>>(
+      "absolute_value_vector_tags",
+      "The tags for the vectors this residual object should fill with the "
+      "absolute value of the residual contribution");
   params.addClassDescription("Action to setup cavity pressure boundary condition");
   return params;
 }

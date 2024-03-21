@@ -301,10 +301,6 @@ public:
    */
   void constraintJacobians(bool displaced);
 
-  /// set all the global dof indices for a nonlinear variable
-  void setVariableGlobalDoFs(const std::string & var_name);
-  const std::vector<dof_id_type> & getVariableGlobalDoFs() { return _var_all_dof_indices; }
-
   /**
    * Computes multiple (tag associated) Jacobian matricese
    */
@@ -688,6 +684,11 @@ public:
   unsigned int _current_nl_its;
   bool _compute_initial_residual_before_preset_bcs;
 
+  /**
+   * Setup the PETSc DM object (when appropriate)
+   */
+  void setupDM();
+
 protected:
   /**
    * Compute the residual for a given tag
@@ -734,7 +735,9 @@ protected:
   /**
    * Do mortar constraint residual/jacobian computations
    */
-  void mortarConstraints(Moose::ComputeType compute_type);
+  void mortarConstraints(Moose::ComputeType compute_type,
+                         const std::set<TagID> & vector_tags,
+                         const std::set<TagID> & matrix_tags);
 
   /**
    * Compute a "Jacobian" for automatic scaling purposes
@@ -917,8 +920,6 @@ protected:
   bool _has_nodalbc_diag_save_in;
 
   void getNodeDofs(dof_id_type node_id, std::vector<dof_id_type> & dofs);
-
-  std::vector<dof_id_type> _var_all_dof_indices;
 
   /// Flag used to indicate whether we have already computed the scaling Jacobian
   bool _computed_scaling;

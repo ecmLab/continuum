@@ -27,7 +27,7 @@ The thicknesses of the layers can be set in three different, and separate, ways:
 - a vector of bounding domains may be specified using the [!param](/UserObjects/LayeredAverage/layer_bounding_block).
   The minimum and maximum coordinates along specified direction, which sets the thickness for each layer,
   are then obtained by looking at the maximum coordinate in the specified bounding block (to set the layers' minimum)
-  and the minimum coordinate in the bounding blocks (set the layers's maximum).
+  and the minimum coordinate in the bounding blocks (to set the layers' maximum).
 
 
 The layers may be restricted to elements in certain subdomains using the
@@ -59,7 +59,7 @@ the [!param](/UserObjects/LayeredAverage/cumulative) to `true`.
 ## Example input syntax
 
 In this example, the average of variable `u` is taken over the whole domain in direction `y` over
-two layers. The result of this averaging in stored is the variable `layered_average` using a
+two layers. The result of this averaging is stored in the variable `layered_average` using a
 [SpatialUserObjectAux.md], and output to a CSV file using a [SpatialUserObjectVectorPostprocessor.md].
 
 !listing test/tests/userobjects/layered_average/layered_average.i block=UserObjects AuxKernels VectorPostprocessors

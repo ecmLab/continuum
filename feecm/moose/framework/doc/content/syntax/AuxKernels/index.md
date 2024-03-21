@@ -1,7 +1,7 @@
 # AuxKernels System
 
 The AuxKernel system mimics the [syntax/Kernels/index.md] but compute values that can be defined
-explicitly with a known function. There are two main use cases for AuxKerenel system: computing
+explicitly with a known function. There are two main use cases for the AuxKernel system: computing
 a quantity that varies with space and time for postprocessing purposes or for decoupling systems
 of equations. Examples for both of these use cases shall be discussed further in the following
 sections.
@@ -9,7 +9,7 @@ sections.
 Creating a custom AuxKernel object is done by creating a new C++ object that inherits from
 `AuxKernel`, `VectorAuxKernel` or `ArrayAuxKernel` and overriding the `computeValue` method,
 which returns a scalar (`Real`), vector (`RealVectorValue`) or a Eigen vector (`RealEigenVector`)
-for the two types respectively. A forth type (`AuxScalarKernel`) also exists, but the syntax for
+for the three types respectively. A forth type (`AuxScalarKernel`) also exists, but the syntax for
 these objects is different and detailed in the [syntax/AuxScalarKernels/index.md].
 
 AuxKernel objects, like Kernel objects, must operate on a variable. Thus, there is a required
@@ -67,7 +67,7 @@ is done to allow the syntax to be consistent regardless of the AuxKernel flavor:
 
 In order to compute properties in the mortar sense, it is necessary to loop over the mortar segment
 mesh to spatially integrate variables. `MortarNodalAuxKernel`s offer this functionality where these "weighted" variables,
-which intervene in the computation of contact constraints and their residuals, can be coupled to generate the desired ouput value. 
+which intervene in the computation of contact constraints and their residuals, can be coupled to generate the desired output value. 
 Therefore, if postprocessing of mortar quantities is required, nodal mortar auxiliary kernels can be employed. 
 Objects inheriting from `MortarNodalAuxKernel` allow for said operations on the mortar lower-dimensional domains featuring similar
 functionality to other nodal auxiliary kernels, including the possibility of computing quantities in an

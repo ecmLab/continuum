@@ -82,10 +82,14 @@ T_inlet = 200
 
     ambient_convection_alpha = 'h_cv'
     ambient_temperature = 'T_solid'
+
+    mass_advection_interpolation = 'average'
+    momentum_advection_interpolation = 'average'
+    energy_advection_interpolation = 'average'
   []
 []
 
-[Materials]
+[FunctorMaterials]
   [kappa]
     type = ADGenericVectorFunctorMaterial
     prop_names = 'kappa'

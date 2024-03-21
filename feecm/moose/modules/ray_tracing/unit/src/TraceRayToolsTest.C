@@ -35,6 +35,7 @@ traceRayToolsTestMesh(const int type)
     case QUAD9:
     case TRI3:
     case TRI6:
+    case TRI7:
       MeshTools::Generation::build_square(*mesh, n, n, min, max, min, max, (ElemType)type);
       break;
     case HEX8:
@@ -42,6 +43,7 @@ traceRayToolsTestMesh(const int type)
     case HEX27:
     case TET4:
     case TET10:
+    case TET14:
     case PYRAMID5:
     case PYRAMID13:
     case PYRAMID14:

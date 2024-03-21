@@ -13,6 +13,7 @@
 #include "MooseTypes.h"
 #include "MeshChangedInterface.h"
 #include "MooseVariableDataBase.h"
+#include "TheWarehouse.h"
 
 #include "libmesh/tensor_tools.h"
 #include "libmesh/vector_value.h"
@@ -133,6 +134,11 @@ public:
   void prepareIC();
 
   //////////////////////////////////// Solution getters /////////////////////////////////////
+
+  /**
+   * Local solution value
+   */
+  const FieldVariableValue & sln(Moose::SolutionState state) const;
 
   /**
    * Local time derivative of solution gradient getter
@@ -261,6 +267,9 @@ public:
 
   void meshChanged() override;
 
+protected:
+  virtual const MooseVariableFV<OutputType> & var() const override { return _var; }
+
 private:
   void initializeSolnVars();
 
@@ -275,6 +284,9 @@ private:
    * Helper method that tells us whether it's safe to compute _ad_u_dot
    */
   bool safeToComputeADUDot() const;
+
+  /// A const reference to the owning MooseVariableFV object
+  const MooseVariableFV<OutputType> & _var;
 
   const FEType & _fe_type;
 
@@ -384,7 +396,11 @@ private:
   /// A dummy ADReal variable
   ADReal _ad_real_dummy = 0;
 
-  using MooseVariableDataBase<OutputType>::_var;
+  /// Cached warehouse query for FVElementalKernels
+  TheWarehouse::QueryCache<> _fv_elemental_kernel_query_cache;
+  /// Cached warehouse query for FVFluxKernels
+  TheWarehouse::QueryCache<> _fv_flux_kernel_query_cache;
+
   using MooseVariableDataBase<OutputType>::_sys;
   using MooseVariableDataBase<OutputType>::_subproblem;
   using MooseVariableDataBase<OutputType>::_need_vector_tag_dof_u;

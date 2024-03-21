@@ -67,7 +67,7 @@ ADKernelTempl<T>::ADKernelTempl(const InputParameters & parameters)
   {
     MooseVariable * var = &_subproblem.getStandardVariable(_tid, _save_in_strings[i]);
 
-    if (_fe_problem.getNonlinearSystemBase().hasVariable(_save_in_strings[i]))
+    if (_fe_problem.getNonlinearSystemBase(_sys.number()).hasVariable(_save_in_strings[i]))
       paramError("save_in", "cannot use solution variable as save-in variable");
 
     if (var->feType() != _var.feType())
@@ -87,7 +87,7 @@ ADKernelTempl<T>::ADKernelTempl(const InputParameters & parameters)
   {
     MooseVariable * var = &_subproblem.getStandardVariable(_tid, _diag_save_in_strings[i]);
 
-    if (_fe_problem.getNonlinearSystemBase().hasVariable(_diag_save_in_strings[i]))
+    if (_fe_problem.getNonlinearSystemBase(_sys.number()).hasVariable(_diag_save_in_strings[i]))
       paramError("diag_save_in", "cannot use solution variable as diag save-in variable");
 
     if (var->feType() != _var.feType())
@@ -102,12 +102,6 @@ ADKernelTempl<T>::ADKernelTempl(const InputParameters & parameters)
   }
 
   _has_diag_save_in = _diag_save_in.size() > 0;
-
-  if (_use_displaced_mesh && _displacements.empty())
-    mooseError("ADKernel ",
-               name(),
-               "has been asked to act on the displaced mesh, but no displacements have been "
-               "coupled in. Your Jacobian will be wrong without that coupling");
 }
 
 template <typename T>
@@ -127,7 +121,7 @@ ADKernelTempl<T>::computeResidual()
       for (_i = 0; _i < _test.size(); _i++)
         residuals[_i] += raw_value(_JxW[_qp] * _coord[_qp] * computeQpResidual());
 
-  _assembly.processResiduals(residuals, _var.dofIndices(), _vector_tags, _var.scalingFactor());
+  addResiduals(_assembly, residuals, _var.dofIndices(), _var.scalingFactor());
 
   if (_has_save_in)
     for (unsigned int i = 0; i < _save_in.size(); i++)
@@ -160,28 +154,9 @@ ADKernelTempl<T>::computeResidualsForJacobian()
 
 template <typename T>
 void
-ADKernelTempl<T>::addJacobian(const MooseVariableFieldBase & jvariable)
-{
-  unsigned int jvar = jvariable.number();
-
-  auto ad_offset = Moose::adOffset(jvar, _sys.getMaxVarNDofsPerElem(), Moose::ElementType::Element);
-
-  prepareMatrixTag(_assembly, _var.number(), jvar);
-
-  for (_i = 0; _i < _test.size(); _i++)
-    for (_j = 0; _j < jvariable.phiSize(); _j++)
-      _local_ke(_i, _j) += _residuals[_i].derivatives()[ad_offset + _j];
-
-  accumulateTaggedLocalMatrix();
-}
-
-template <typename T>
-void
 ADKernelTempl<T>::computeJacobian()
 {
-  const std::vector<std::pair<MooseVariableFieldBase *, MooseVariableFieldBase *>>
-      var_var_coupling = {std::make_pair(&_var, &_var)};
-  computeADJacobian(var_var_coupling);
+  computeADJacobian();
 
   if (_has_diag_save_in && !_sys.computingScalingJacobian())
     mooseError("_local_ke not computed for global AD indexing. Save-in is deprecated anyway. Use "
@@ -190,32 +165,10 @@ ADKernelTempl<T>::computeJacobian()
 
 template <typename T>
 void
-ADKernelTempl<T>::computeADJacobian(
-    const std::vector<std::pair<MooseVariableFieldBase *, MooseVariableFieldBase *>> &
-        coupling_entries)
+ADKernelTempl<T>::computeADJacobian()
 {
   computeResidualsForJacobian();
-
-  auto local_functor =
-      [&](const std::vector<ADReal> &, const std::vector<dof_id_type> &, const std::set<TagID> &)
-  {
-    for (const auto & it : coupling_entries)
-    {
-      const MooseVariableFEBase & ivariable = *(it.first);
-      const MooseVariableFEBase & jvariable = *(it.second);
-
-      unsigned int ivar = ivariable.number();
-
-      if (ivar != _var.number() || !jvariable.hasBlocks(_current_elem->subdomain_id()))
-        continue;
-
-      // Make sure to get the correct undisplaced/displaced variable
-      addJacobian(getVariable(jvariable.number()));
-    }
-  };
-
-  _assembly.processJacobian(
-      _residuals, dofIndices(), _matrix_tags, _var.scalingFactor(), local_functor);
+  addJacobian(_assembly, _residuals, dofIndices(), _var.scalingFactor());
 }
 
 template <typename T>
@@ -231,7 +184,7 @@ ADKernelTempl<T>::computeOffDiagJacobian(const unsigned int)
 {
   if (_my_elem != _current_elem)
   {
-    computeADJacobian(_assembly.couplingEntries());
+    computeADJacobian();
     _my_elem = _current_elem;
   }
 }
@@ -247,8 +200,7 @@ void
 ADKernelTempl<T>::computeResidualAndJacobian()
 {
   computeResidualsForJacobian();
-  _assembly.processResidualsAndJacobian(
-      _residuals, _var.dofIndices(), _vector_tags, _matrix_tags, _var.scalingFactor());
+  addResidualsAndJacobian(_assembly, _residuals, _var.dofIndices(), _var.scalingFactor());
 }
 
 template class ADKernelTempl<Real>;

@@ -1,3 +1,12 @@
+//* This file is part of the MOOSE framework
+//* https://www.mooseframework.org
+//*
+//* All rights reserved, see COPYRIGHT for full restrictions
+//* https://github.com/idaholab/moose/blob/master/COPYRIGHT
+//*
+//* Licensed under LGPL 2.1, please see LICENSE for details
+//* https://www.gnu.org/licenses/lgpl-2.1.html
+
 #include "VerificationTutorialApp.h"
 #include "Moose.h"
 #include "AppFactory.h"
@@ -25,7 +34,7 @@ VerificationTutorialApp::~VerificationTutorialApp() {}
 void
 VerificationTutorialApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
 {
-  ModulesApp::registerAll(f, af, syntax);
+  ModulesApp::registerAllObjects<VerificationTutorialApp>(f, af, syntax);
   Registry::registerObjectsTo(f, {"VerificationTutorialApp"});
   Registry::registerActionsTo(af, {"VerificationTutorialApp"});
 

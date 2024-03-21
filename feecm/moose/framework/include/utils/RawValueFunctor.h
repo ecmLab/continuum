@@ -28,9 +28,10 @@ public:
   }
 
   virtual bool isExtrapolatedBoundaryFace(const FaceInfo & fi,
-                                          const Elem * const elem) const override
+                                          const Elem * const elem,
+                                          const Moose::StateArg & state) const override
   {
-    return _ad_functor.isExtrapolatedBoundaryFace(fi, elem);
+    return _ad_functor.isExtrapolatedBoundaryFace(fi, elem, state);
   }
   virtual bool isConstant() const override { return _ad_functor.isConstant(); }
   virtual bool hasBlocks(const SubdomainID id) const override { return _ad_functor.hasBlocks(id); }
@@ -44,68 +45,106 @@ protected:
   /**
    * Forward calls to wrapped object
    */
-  ValueType evaluate(const ElemArg & elem, unsigned int state = 0) const override
+  ValueType evaluate(const ElemArg & elem, const StateArg & state) const override
   {
     return MetaPhysicL::raw_value(_ad_functor(elem, state));
   }
-  ValueType evaluate(const FaceArg & face, unsigned int state = 0) const override
+  ValueType evaluate(const FaceArg & face, const StateArg & state) const override
   {
     return MetaPhysicL::raw_value(_ad_functor(face, state));
   }
-  ValueType evaluate(const ElemQpArg & qp, unsigned int state = 0) const override
+  ValueType evaluate(const ElemQpArg & qp, const StateArg & state) const override
   {
     return MetaPhysicL::raw_value(_ad_functor(qp, state));
   }
-  ValueType evaluate(const ElemSideQpArg & qp, unsigned int state = 0) const override
+  ValueType evaluate(const ElemSideQpArg & qp, const StateArg & state) const override
   {
     return MetaPhysicL::raw_value(_ad_functor(qp, state));
   }
-  ValueType evaluate(const ElemPointArg & elem_point, unsigned int state = 0) const override
+  ValueType evaluate(const ElemPointArg & elem_point, const StateArg & state) const override
   {
     return MetaPhysicL::raw_value(_ad_functor(elem_point, state));
   }
+  ValueType evaluate(const NodeArg & node, const StateArg & state) const override
+  {
+    return MetaPhysicL::raw_value(_ad_functor(node, state));
+  }
 
-  GradientType evaluateGradient(const ElemArg & elem, unsigned int state = 0) const override
+  GradientType evaluateGradient(const ElemArg & elem, const StateArg & state) const override
   {
     return MetaPhysicL::raw_value(_ad_functor.gradient(elem, state));
   }
-  GradientType evaluateGradient(const FaceArg & face, unsigned int state = 0) const override
+  GradientType evaluateGradient(const FaceArg & face, const StateArg & state) const override
   {
     return MetaPhysicL::raw_value(_ad_functor.gradient(face, state));
   }
-  GradientType evaluateGradient(const ElemQpArg & qp, unsigned int state = 0) const override
+  GradientType evaluateGradient(const ElemQpArg & qp, const StateArg & state) const override
   {
     return MetaPhysicL::raw_value(_ad_functor.gradient(qp, state));
   }
-  GradientType evaluateGradient(const ElemSideQpArg & qp, unsigned int state = 0) const override
+  GradientType evaluateGradient(const ElemSideQpArg & qp, const StateArg & state) const override
   {
     return MetaPhysicL::raw_value(_ad_functor.gradient(qp, state));
   }
   GradientType evaluateGradient(const ElemPointArg & elem_point,
-                                unsigned int state = 0) const override
+                                const StateArg & state) const override
   {
     return MetaPhysicL::raw_value(_ad_functor.gradient(elem_point, state));
   }
+  GradientType evaluateGradient(const NodeArg & node, const StateArg & state) const override
+  {
+    return MetaPhysicL::raw_value(_ad_functor.gradient(node, state));
+  }
 
-  DotType evaluateDot(const ElemArg & elem, unsigned int state = 0) const override
+  DotType evaluateDot(const ElemArg & elem, const StateArg & state) const override
   {
     return MetaPhysicL::raw_value(_ad_functor.dot(elem, state));
   }
-  DotType evaluateDot(const FaceArg & face, unsigned int state = 0) const override
+  DotType evaluateDot(const FaceArg & face, const StateArg & state) const override
   {
     return MetaPhysicL::raw_value(_ad_functor.dot(face, state));
   }
-  DotType evaluateDot(const ElemQpArg & qp, unsigned int state = 0) const override
+  DotType evaluateDot(const ElemQpArg & qp, const StateArg & state) const override
   {
     return MetaPhysicL::raw_value(_ad_functor.dot(qp, state));
   }
-  DotType evaluateDot(const ElemSideQpArg & qp, unsigned int state = 0) const override
+  DotType evaluateDot(const ElemSideQpArg & qp, const StateArg & state) const override
   {
     return MetaPhysicL::raw_value(_ad_functor.dot(qp, state));
   }
-  DotType evaluateDot(const ElemPointArg & elem_point, unsigned int state = 0) const override
+  DotType evaluateDot(const ElemPointArg & elem_point, const StateArg & state) const override
   {
     return MetaPhysicL::raw_value(_ad_functor.dot(elem_point, state));
+  }
+  DotType evaluateDot(const NodeArg & node, const StateArg & state) const override
+  {
+    return MetaPhysicL::raw_value(_ad_functor.dot(node, state));
+  }
+
+  GradientType evaluateGradDot(const ElemArg & elem, const StateArg & state) const override
+  {
+    return MetaPhysicL::raw_value(_ad_functor.gradDot(elem, state));
+  }
+  GradientType evaluateGradDot(const FaceArg & face, const StateArg & state) const override
+  {
+    return MetaPhysicL::raw_value(_ad_functor.gradDot(face, state));
+  }
+  GradientType evaluateGradDot(const ElemQpArg & qp, const StateArg & state) const override
+  {
+    return MetaPhysicL::raw_value(_ad_functor.gradDot(qp, state));
+  }
+  GradientType evaluateGradDot(const ElemSideQpArg & qp, const StateArg & state) const override
+  {
+    return MetaPhysicL::raw_value(_ad_functor.gradDot(qp, state));
+  }
+  GradientType evaluateGradDot(const ElemPointArg & elem_point,
+                               const StateArg & state) const override
+  {
+    return MetaPhysicL::raw_value(_ad_functor.gradDot(elem_point, state));
+  }
+  GradientType evaluateGradDot(const NodeArg & node, const StateArg & state) const override
+  {
+    return MetaPhysicL::raw_value(_ad_functor.gradDot(node, state));
   }
   ///@}
 

@@ -99,7 +99,7 @@ WORKDIR ${MOOSE_DIR}
 #-----------------------------------------------------------------------------#
 # Install PETSc to system path
 #-----------------------------------------------------------------------------#
-ARG PETSC_REV=f855b95493736b087b8ccc16dc6c5b29bc4b5aa8
+ARG PETSC_REV=9a61b8cbbacd10b14c2a18c9bc314b0ecb8ec018
 ARG PETSC_OPTIONS
 ENV PETSC_DIR=/usr/local
 COPY scripts/update_and_rebuild_petsc.sh ${MOOSE_DIR}/scripts/update_and_rebuild_petsc.sh
@@ -114,7 +114,7 @@ if [ ! -d $PETSC_DIR/lib/petsc ]; then exit 1; fi
 #-----------------------------------------------------------------------------#
 # Install Libmesh to system path
 #-----------------------------------------------------------------------------#
-ARG LIBMESH_REV=80494219d2293e467392189814d30330c4f87a25
+ARG LIBMESH_REV=7c03afd53c9c7fd7fcb6e3e20bae37cf1b124986
 ARG LIBMESH_OPTIONS
 ARG LIBMESH_METHODS="opt dbg"
 ENV LIBMESH_DIR=/usr/local \
@@ -132,6 +132,25 @@ METHODS="${LIBMESH_METHODS}" ./scripts/update_and_rebuild_libmesh.sh ${LIBMESH_O
 rm -rf libmesh/* libmesh/.* || true ; \
 # Ensure Libmesh was installed via include directory
 if [ ! -d $LIBMESH_DIR/include/libmesh ]; then exit 1; fi
+
+#-----------------------------------------------------------------------------#
+# Install wasp to system path
+#-----------------------------------------------------------------------------#
+ARG WASP_REV=28fe0d67f10693eeb8c5c4d151af03d573962155
+ENV WASP_DIR=/usr/local/wasp
+
+COPY scripts/update_and_rebuild_wasp.sh ${MOOSE_DIR}/scripts/update_and_rebuild_wasp.sh
+COPY scripts/configure_wasp.sh ${MOOSE_DIR}/scripts/configure_wasp.sh
+
+RUN mkdir -p framework/contrib ; \
+cd framework/contrib ; \
+git clone https://code.ornl.gov/neams-workbench/wasp.git ; \
+cd wasp ; \
+git checkout ${WASP_REV} ; \
+git submodule update --init --recursive ; \
+cd ../../.. ; \
+./scripts/update_and_rebuild_wasp.sh -D CMAKE_INSTALL_PREFIX:STRING=${WASP_DIR} ; \
+rm -rf framework || true
 
 #-----------------------------------------------------------------------------#
 # Copy and build MOOSE framework, test, and optionally modules

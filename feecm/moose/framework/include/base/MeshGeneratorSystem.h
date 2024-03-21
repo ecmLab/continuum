@@ -29,6 +29,11 @@ class MeshGeneratorSystem : public PerfGraphInterface, public libMesh::ParallelO
 public:
   MeshGeneratorSystem(MooseApp & app);
 
+  /// The name of the string parameter that sets the data driven generator
+  static const std::string data_driven_generator_param;
+  /// The name of the boolean parameter on the MooseApp that will enable data driven generation
+  static const std::string allow_data_driven_param;
+
   /**
    * Execute and clear the Mesh Generators data structure
    */
@@ -145,6 +150,16 @@ public:
    */
   static std::string mainMeshGeneratorName() { return "main"; };
 
+  /**
+   * @return Whether any of our mesh generators were of type \p BreakMeshByBlockGenerator
+   */
+  bool hasBreakMeshByBlockGenerator() const { return _has_bmbb; }
+
+  /**
+   * @return Whether or not data driven generation is enabled in the app
+   */
+  bool hasDataDrivenAllowed() const;
+
 private:
   /**
    * Gets the MeshGeneratorNames that are referenced in an object's parameters.
@@ -203,4 +218,7 @@ private:
 
   /// Holds the map of save in mesh -> name
   std::map<std::string, std::unique_ptr<MeshBase>> _save_in_meshes;
+
+  /// Whether any of the mesh generators are a \p BreakMeshByBlockGenerator
+  bool _has_bmbb;
 };

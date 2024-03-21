@@ -253,8 +253,8 @@ RayTracingStudy::initialSetup()
                  "\nIn this case, the study must use the execute_on = PRE_KERNELS");
 
   // Build 1D quadrature rule for along a segment
-  _segment_qrule =
-      QBase::build(QGAUSS, 1, _fe_problem.getNonlinearSystemBase().getMinQuadratureOrder());
+  _segment_qrule = QBase::build(
+      QGAUSS, 1, _fe_problem.getNonlinearSystemBase(_sys.number()).getMinQuadratureOrder());
 }
 
 void
@@ -686,7 +686,7 @@ RayTracingStudy::reinitSegment(
     std::vector<Real> weights;
     buildSegmentQuadrature(start, end, length, points, weights);
     _fe_problem.reinitElemPhys(elem, points, tid);
-    _fe_problem.assembly(tid).modifyArbitraryWeights(weights);
+    _fe_problem.assembly(tid, _sys.number()).modifyArbitraryWeights(weights);
 
     _fe_problem.reinitMaterials(elem->subdomain_id(), tid);
   }
@@ -1439,9 +1439,10 @@ RayTracingStudy::verifyUniqueRayIDs(const std::vector<std::shared_ptr<Ray>>::con
   {
     // Package our local IDs and send to rank 0
     std::map<processor_id_type, std::vector<RayID>> send_ids;
-    send_ids.emplace(std::piecewise_construct,
-                     std::forward_as_tuple(0),
-                     std::forward_as_tuple(local_rays.begin(), local_rays.end()));
+    if (local_rays.size())
+      send_ids.emplace(std::piecewise_construct,
+                       std::forward_as_tuple(0),
+                       std::forward_as_tuple(local_rays.begin(), local_rays.end()));
     local_rays.clear();
 
     // Mapping on rank 0 from ID -> processor ID

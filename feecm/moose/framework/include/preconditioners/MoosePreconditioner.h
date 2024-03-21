@@ -17,9 +17,11 @@
 // Libmesh include
 #include "libmesh/preconditioner.h"
 #include "libmesh/linear_solver.h"
+#include "libmesh/coupling_matrix.h"
 
 // Forward declarations
 class FEProblemBase;
+class NonlinearSystemBase;
 namespace libMesh
 {
 class MeshBase;
@@ -51,6 +53,17 @@ public:
                             NumericVector<Number> & to_vector);
 
 protected:
+  /// Setup the coupling matrix on the finite element problem
+  void setCouplingMatrix(std::unique_ptr<CouplingMatrix> cm);
+
   /// Subproblem this preconditioner is part of
   FEProblemBase & _fe_problem;
+
+  /// The nonlinear system number whose linearization this preconditioner should be applied to
+  const unsigned int _nl_sys_num;
+
+  /// The nonlinear system whose linearization this preconditioner should be applied to
+  NonlinearSystemBase & _nl;
+
+  friend class SetupPreconditionerAction;
 };

@@ -22,10 +22,10 @@ public:
 
   DiscreteNucleationData(const InputParameters & parameters);
 
-  void execute() override{};
-  void initialize() override{};
+  virtual void execute() override{};
+  virtual void initialize() override{};
 
-  Real getValue() override;
+  virtual Real getValue() const override;
 
 protected:
   /// UserObject that manages nucleus insertin and deletion

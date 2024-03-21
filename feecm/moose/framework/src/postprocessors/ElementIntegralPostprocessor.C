@@ -36,7 +36,7 @@ ElementIntegralPostprocessor::execute()
 }
 
 Real
-ElementIntegralPostprocessor::getValue()
+ElementIntegralPostprocessor::getValue() const
 {
   return _integral_value;
 }
@@ -44,7 +44,7 @@ ElementIntegralPostprocessor::getValue()
 void
 ElementIntegralPostprocessor::threadJoin(const UserObject & y)
 {
-  const ElementIntegralPostprocessor & pps = static_cast<const ElementIntegralPostprocessor &>(y);
+  const auto & pps = static_cast<const ElementIntegralPostprocessor &>(y);
   _integral_value += pps._integral_value;
 }
 

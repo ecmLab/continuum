@@ -50,12 +50,12 @@ LevelSetCFLCondition::finalize()
 void
 LevelSetCFLCondition::threadJoin(const UserObject & user_object)
 {
-  const LevelSetCFLCondition & cfl = static_cast<const LevelSetCFLCondition &>(user_object);
+  const auto & cfl = static_cast<const LevelSetCFLCondition &>(user_object);
   _cfl_timestep = std::min(_cfl_timestep, cfl._cfl_timestep);
 }
 
 PostprocessorValue
-LevelSetCFLCondition::getValue()
+LevelSetCFLCondition::getValue() const
 {
   return _cfl_timestep;
 }

@@ -49,6 +49,15 @@
 using namespace libMesh;
 using MetaPhysicL::DualNumber;
 
+// Make newer nanoflann API spelling compatible with older nanoflann
+// versions
+#if NANOFLANN_VERSION < 0x150
+namespace nanoflann
+{
+typedef SearchParams SearchParameters;
+}
+#endif
+
 class MortarNodalGeometryOutput : public Output
 {
 public:
@@ -66,7 +75,7 @@ public:
   {
   }
 
-  void output(const ExecFlagType &) override
+  void output() override
   {
     // Must call compute_nodal_geometry first!
     if (_amg._secondary_node_to_nodal_normal.empty() ||
@@ -952,6 +961,7 @@ AutomaticMortarGeneration::buildMortarSegmentMesh3d()
         case QUAD4:
           return {{0, 1, 2, 3}};
         case TRI6:
+        case TRI7:
           switch (sub_elem)
           {
             case 0:
@@ -1032,8 +1042,9 @@ AutomaticMortarGeneration::buildMortarSegmentMesh3d()
        * Step 1.1: Linearize secondary face elements
        *
        * For first order face elements (Tri3 and Quad4) elements are simply linearized around center
-       * For second order face elements (Tri6 and Quad9), elements are sub-divided into four first
-       * order elements then each of the sub-elements is linearized around their respective centers
+       * For second order (Tri6 and Quad9) and third order (Tri7) face elements, elements are
+       * sub-divided into four first order elements then each of the sub-elements is linearized
+       * around their respective centers
        * For Quad8 elements, they are sub-divided into one quad and four triangle elements and each
        * sub-element is linearized around their respective centers
        */
@@ -1080,6 +1091,7 @@ AutomaticMortarGeneration::buildMortarSegmentMesh3d()
           query_pt = {{center_point(0), center_point(1), center_point(2)}};
           break;
         case TRI6:
+        case TRI7:
           center_point = mortar_segment_helper[1]->center();
           query_pt = {{center_point(0), center_point(1), center_point(2)}};
           break;
@@ -1106,7 +1118,7 @@ AutomaticMortarGeneration::buildMortarSegmentMesh3d()
       std::vector<Real> out_dist_sqr(num_results);
       nanoflann::KNNResultSet<Real> result_set(num_results);
       result_set.init(&ret_index[0], &out_dist_sqr[0]);
-      kd_tree.findNeighbors(result_set, &query_pt[0], nanoflann::SearchParams(10));
+      kd_tree.findNeighbors(result_set, &query_pt[0], nanoflann::SearchParameters());
 
       // Initialize list of processed primary elements, we don't want to revisit processed elements
       std::set<const Elem *, CompareDofObjectsByID> processed_primary_elems;
@@ -1915,7 +1927,7 @@ AutomaticMortarGeneration::projectSecondaryNodesSinglePair(
       std::vector<Real> out_dist_sqr(num_results);
       nanoflann::KNNResultSet<Real> result_set(num_results);
       result_set.init(&ret_index[0], &out_dist_sqr[0]);
-      kd_tree.findNeighbors(result_set, &query_pt[0], nanoflann::SearchParams(10));
+      kd_tree.findNeighbors(result_set, &query_pt[0], nanoflann::SearchParameters());
 
       // If this flag gets set in the loop below, we can break out of the outer r-loop as well.
       bool projection_succeeded = false;
@@ -2214,7 +2226,7 @@ AutomaticMortarGeneration::projectPrimaryNodesSinglePair(
       std::vector<Real> out_dist_sqr(num_results);
       nanoflann::KNNResultSet<Real> result_set(num_results);
       result_set.init(&ret_index[0], &out_dist_sqr[0]);
-      kd_tree.findNeighbors(result_set, &query_pt[0], nanoflann::SearchParams(10));
+      kd_tree.findNeighbors(result_set, &query_pt[0], nanoflann::SearchParameters());
 
       // If this flag gets set in the loop below, we can break out of the outer r-loop as well.
       bool projection_succeeded = false;

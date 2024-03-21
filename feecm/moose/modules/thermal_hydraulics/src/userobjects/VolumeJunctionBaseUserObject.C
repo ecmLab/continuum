@@ -19,7 +19,7 @@ VolumeJunctionBaseUserObject::validParams()
   params.addRequiredParam<std::vector<UserObjectName>>(
       "numerical_flux_names",
       "The names of the user objects that compute the numerical flux at each flow channel.");
-
+  params.addClassDescription("User object to compute quantities pertaining to a volume junction");
   return params;
 }
 
@@ -129,8 +129,7 @@ VolumeJunctionBaseUserObject::computeScalarJacobianWRTFlowDofs(const DenseMatrix
 void
 VolumeJunctionBaseUserObject::threadJoin(const UserObject & uo)
 {
-  const VolumeJunctionBaseUserObject & volume_junction_uo =
-      dynamic_cast<const VolumeJunctionBaseUserObject &>(uo);
+  const auto & volume_junction_uo = static_cast<const VolumeJunctionBaseUserObject &>(uo);
 
   // Store the data computed/retrieved in the other threads
   for (unsigned int i = 0; i < volume_junction_uo._connection_indices.size(); i++)

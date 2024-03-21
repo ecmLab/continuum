@@ -1,6 +1,7 @@
 # This tests a form loss transfer using the MultiApp system.  A dummy heat
 # conduction problem is solved, then the form loss evaluated and transferred
-# to the slave side of the solve, slave side solves and master continues solving
+# to the child app side of the solve, then the child app solves and then the
+# parent continues solving
 
 [Mesh]
   type = GeneratedMesh
@@ -78,18 +79,18 @@
 []
 
 [MultiApps]
-  [slave]
+  [child]
     type = TransientMultiApp
     app_type = ThermalHydraulicsApp
-    input_files = phy.form_loss_1phase.slave.i
+    input_files = phy.form_loss_1phase.child.i
     execute_on = 'timestep_end'
   []
 []
 
 [Transfers]
   [K_to_s]
-    type = MultiAppNearestNodeTransfer
-    to_multi_app = slave
+    type = MultiAppGeneralFieldNearestLocationTransfer
+    to_multi_app = child
     source_variable = K_prime
     variable = K_prime
   []

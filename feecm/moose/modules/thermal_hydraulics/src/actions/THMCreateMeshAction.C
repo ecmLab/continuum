@@ -23,7 +23,7 @@ THMCreateMeshAction::validParams()
 {
   InputParameters params = Action::validParams();
   params.addClassDescription("Action that creates an empty mesh (in case one was not already "
-                             "created) and also builds THMProblem.");
+                             "created) and also builds THMProblem (same).");
   return params;
 }
 
@@ -52,7 +52,7 @@ THMCreateMeshAction::act()
     {
       const std::string class_name = "THMProblem";
       InputParameters params = _factory.getValidParams(class_name);
-      _app.parser().extractParams("", params); // extract global params
+      _app.builder().extractParams("", params); // extract global params
       // apply common parameters of the object held by CreateProblemAction to honor user inputs in
       // [Problem]
       auto p = _awh.getActionByTask<CreateProblemAction>("create_problem");

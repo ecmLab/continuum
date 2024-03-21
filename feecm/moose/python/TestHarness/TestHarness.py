@@ -47,7 +47,7 @@ def findTestRoot(start=os.getcwd(), method=os.environ.get('METHOD', 'opt')):
     raise RuntimeError('test root directory not found in "{}"'.format(start))
 
 # This function finds a file in the herd trunk containing all the possible applications
-# thay may be built with an "up" target.  If passed the value ROOT it will simply
+# that may be built with an "up" target.  If passed the value ROOT it will simply
 # return the root directory
 def findDepApps(dep_names, use_current_only=False):
     dep_name = dep_names.split('~')[0]
@@ -250,8 +250,8 @@ class TestHarness:
 
         checks = {}
         checks['platform'] = util.getPlatforms()
+        checks['machine'] = util.getMachine()
         checks['submodules'] = util.getInitializedSubmodules(self.run_tests_dir)
-        checks['installed'] = util.checkInstalled(self.run_tests_dir)
         checks['exe_objects'] = None # This gets calculated on demand
         checks['registered_apps'] = None # This gets extracted on demand
 
@@ -340,6 +340,9 @@ class TestHarness:
         self.options._checks = checks
 
         self.initialize(argv, app_name)
+
+        # executable is available after initalize
+        checks['installation_type'] = util.checkInstalled(self.executable, app_name)
 
         os.chdir(self._orig_cwd)
 
@@ -431,7 +434,7 @@ class TestHarness:
             # Wait for all the tests to complete (blocking)
             self.scheduler.waitFinish()
 
-            # TODO: this DOES NOT WORK WITH MAX FAILES (max failes is considered a scheduler error at the moment)
+            # TODO: this DOES NOT WORK WITH MAX FAILS (max fails is considered a scheduler error at the moment)
             if not self.scheduler.schedulerError():
                 self.cleanup()
 
@@ -516,6 +519,7 @@ class TestHarness:
         params['test_dir'] = test_dir
         params['relative_path'] = relative_path
         params['executable'] = testroot_params.get("executable", self.executable)
+        params['app_name'] = self.app_name
         params['hostname'] = self.host_name
         params['moose_dir'] = self.moose_dir
         params['moose_python_dir'] = self.moose_python_dir
@@ -922,6 +926,7 @@ class TestHarness:
         # Save executable-under-test name to self.executable
         exec_suffix = 'Windows' if platform.system() == 'Windows' else ''
         self.executable = app_name + '-' + self.options.method + exec_suffix
+        self.app_name = app_name
 
         # if the executable has a slash - assume it is a file path
         if '/' in app_name:
@@ -981,7 +986,8 @@ class TestHarness:
             and not os.path.exists(self.options.results_file)):
             print('A previous run does not exist')
             sys.exit(1)
-
+        elif os.path.exists(self.options.results_file):
+            os.remove(self.options.results_file)
 
     ## Parse command line options and assign them to self.options
     def parseCLArgs(self, argv):
@@ -1147,10 +1153,6 @@ class TestHarness:
         # Update libmesh_dir to reflect arguments
         if opts.libmesh_dir:
             self.libmesh_dir = opts.libmesh_dir
-
-        # When running heavy tests, we'll make sure we use --no-report
-        if opts.heavy_tests:
-            self.options.report_skipped = False
 
         # User wants to write all output, so unify the options involved
         if opts.sep_files:

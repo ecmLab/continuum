@@ -29,9 +29,7 @@ GeneratedMeshGenerator::validParams()
 {
   InputParameters params = MeshGenerator::validParams();
 
-  MooseEnum elem_types(
-      "EDGE EDGE2 EDGE3 EDGE4 QUAD QUAD4 QUAD8 QUAD9 TRI3 TRI6 HEX HEX8 HEX20 HEX27 TET4 TET10 "
-      "PRISM6 PRISM15 PRISM18 PYRAMID5 PYRAMID13 PYRAMID14"); // no default
+  MooseEnum elem_types(LIST_GEOM_ELEM); // no default
 
   MooseEnum dims("1=1 2 3");
   params.addRequiredParam<MooseEnum>("dim", dims, "The dimension of the mesh to be generated");
@@ -50,7 +48,8 @@ GeneratedMeshGenerator::validParams()
                              "The type of element from libMesh to "
                              "generate (default: linear element for "
                              "requested dimension)");
-  params.addParam<std::vector<SubdomainID>>("subdomain_ids", "Subdomain IDs, default to all zero");
+  params.addParam<std::vector<SubdomainID>>("subdomain_ids",
+                                            "Subdomain IDs for each element, default to all zero");
 
   params.addParam<bool>(
       "gauss_lobatto_grid",
@@ -76,8 +75,6 @@ GeneratedMeshGenerator::validParams()
                                "If provided, prefix the built in boundary names with this string");
   params.addParam<boundary_id_type>(
       "boundary_id_offset", 0, "This offset is added to the generated boundary IDs");
-
-  params.addParamNamesToGroup("dim", "Main");
 
   params.addParam<std::vector<ExtraElementIDName>>("extra_element_integers",
                                                    "Names of extra element integers");
@@ -208,7 +205,7 @@ GeneratedMeshGenerator::generate()
   BoundaryInfo & boundary_info = mesh->get_boundary_info();
 
   // Copy, since we're modifying the container mid-iteration
-  const auto mesh_boundary_ids = boundary_info.get_boundary_ids();
+  const auto mesh_boundary_ids = boundary_info.get_global_boundary_ids();
   for (auto rit = mesh_boundary_ids.rbegin(); rit != mesh_boundary_ids.rend(); ++rit)
   {
     const std::string old_sideset_name = boundary_info.sideset_name(*rit);
@@ -314,5 +311,6 @@ GeneratedMeshGenerator::generate()
     }
   }
 
+  mesh->set_isnt_prepared();
   return dynamic_pointer_cast<MeshBase>(mesh);
 }

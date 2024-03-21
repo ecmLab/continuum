@@ -22,9 +22,9 @@ class RealControlDataValuePostprocessor : public GeneralPostprocessor
 public:
   RealControlDataValuePostprocessor(const InputParameters & parameters);
 
-  virtual void initialize();
-  virtual Real getValue();
-  virtual void execute();
+  virtual void initialize() override;
+  virtual Real getValue() const override;
+  virtual void execute() override;
 
 protected:
   THMProblem * _thm_problem;

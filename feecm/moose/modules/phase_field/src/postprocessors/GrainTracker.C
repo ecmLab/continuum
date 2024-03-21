@@ -69,6 +69,12 @@ GrainTracker::validParams()
   // The GrainTracker requires non-volatile storage for tracking grains across invocations.
   params.set<bool>("restartable_required") = true;
 
+  params.addParam<Real>("bound_value",
+                        0.0,
+                        "Absolute value of the lower bound for the variable value that represents "
+                        "a region not assigned to the grain. Must be positive, but the actual "
+                        "value used is -bound_value.");
+
   params.addClassDescription("Grain Tracker object for running reduced order parameter simulations "
                              "without grain coalescence.");
 
@@ -84,9 +90,10 @@ GrainTracker::GrainTracker(const InputParameters & parameters)
     _n_reserve_ops(getParam<unsigned short>("reserve_op")),
     _reserve_op_index(_n_reserve_ops <= _n_vars ? _n_vars - _n_reserve_ops : 0),
     _reserve_op_threshold(getParam<Real>("reserve_op_threshold")),
+    _bound_value(getParam<Real>("bound_value")),
     _remap(getParam<bool>("remap_grains")),
     _tolerate_failure(getParam<bool>("tolerate_failure")),
-    _nl(_fe_problem.getNonlinearSystemBase()),
+    _nl(_fe_problem.getNonlinearSystemBase(_sys.number())),
     _poly_ic_uo(parameters.isParamValid("polycrystal_ic_uo")
                     ? &getUserObject<PolycrystalUserObjectBase>("polycrystal_ic_uo")
                     : nullptr),
@@ -980,7 +987,6 @@ GrainTracker::remapGrains()
     /**
      * Loop over each grain and see if any grains represented by the same variable are "touching"
      */
-    bool any_grains_remapped = false;
     bool grains_remapped;
 
     std::set<unsigned int> notify_ids;
@@ -1058,7 +1064,6 @@ GrainTracker::remapGrains()
           }
         }
       }
-      any_grains_remapped |= grains_remapped;
     } while (grains_remapped);
 
     if (!notify_ids.empty())
@@ -1162,7 +1167,7 @@ GrainTracker::remapGrains()
     _nl.solutionOld().close();
     _nl.solutionOlder().close();
 
-    _fe_problem.getNonlinearSystemBase().system().update();
+    _nl.system().update();
 
     if (_verbosity_level > 1)
       _console << "Swaps complete" << std::endl;
@@ -1527,11 +1532,11 @@ GrainTracker::swapSolutionValuesHelper(Node * curr_node,
       const auto & dof_index = _vars[curr_var_index]->nodalDofIndex();
 
       // Set the DOF for the current variable to zero
-      _nl.solution().set(dof_index, 0.0);
+      _nl.solution().set(dof_index, -_bound_value);
       if (_is_transient)
       {
-        _nl.solutionOld().set(dof_index, 0.0);
-        _nl.solutionOlder().set(dof_index, 0.0);
+        _nl.solutionOld().set(dof_index, -_bound_value);
+        _nl.solutionOlder().set(dof_index, -_bound_value);
       }
     }
   }
@@ -1674,12 +1679,11 @@ GrainTracker::communicateHaloMap()
       }
 
       // Build up the counts vector for MPI scatter
-      std::size_t global_count = 0;
       for (const auto & vector_ref : root_halo_ids)
       {
         std::copy(vector_ref.begin(), vector_ref.end(), std::back_inserter(halo_ids_all));
         counts[counter] = vector_ref.size();
-        global_count += counts[counter++];
+        counter++;
       }
     }
 

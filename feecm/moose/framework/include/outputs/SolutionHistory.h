@@ -35,11 +35,15 @@ public:
   /**
    * Output the data to *.slh file
    */
-  virtual void output(const ExecFlagType & type) override;
+  virtual void output() override;
 
   /**
    * The filename for the output file
    * @return A string of output file including the extension
    */
   virtual std::string filename() override;
+
+protected:
+  /// The nonlinear system number we should output information for
+  const unsigned int _nl_sys_num;
 };

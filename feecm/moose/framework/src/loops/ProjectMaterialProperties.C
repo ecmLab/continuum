@@ -22,16 +22,12 @@
 ProjectMaterialProperties::ProjectMaterialProperties(
     bool refine,
     FEProblemBase & fe_problem,
-    std::vector<std::shared_ptr<MaterialData>> & material_data,
-    std::vector<std::shared_ptr<MaterialData>> & bnd_material_data,
     MaterialPropertyStorage & material_props,
     MaterialPropertyStorage & bnd_material_props,
     std::vector<std::vector<std::unique_ptr<Assembly>>> & assembly)
   : ThreadedElementLoop<ConstElemPointerRange>(fe_problem),
     _refine(refine),
     _fe_problem(fe_problem),
-    _material_data(material_data),
-    _bnd_material_data(bnd_material_data),
     _material_props(material_props),
     _bnd_material_props(bnd_material_props),
     _assembly(assembly),
@@ -47,8 +43,6 @@ ProjectMaterialProperties::ProjectMaterialProperties(ProjectMaterialProperties &
   : ThreadedElementLoop<ConstElemPointerRange>(x, split),
     _refine(x._refine),
     _fe_problem(x._fe_problem),
-    _material_data(x._material_data),
-    _bnd_material_data(x._bnd_material_data),
     _material_props(x._material_props),
     _bnd_material_props(x._bnd_material_props),
     _assembly(x._assembly),
@@ -82,32 +76,61 @@ ProjectMaterialProperties::onElement(const Elem * elem)
 
   if (_refine)
   {
-    const std::vector<std::vector<QpMap>> & refinement_map =
-        _mesh.getRefinementMap(*elem, -1, -1, -1);
+    if (_mesh.doingPRefinement())
+    {
+      const auto & p_refinement_map = _mesh.getPRefinementMap(*elem);
+      _material_props.updateStatefulPropsForPRefinement(_mesh.processor_id(),
+                                                        p_refinement_map,
+                                                        *_assembly[_tid][0]->qRule(),
+                                                        *_assembly[_tid][0]->qRuleFace(),
+                                                        _tid,
+                                                        *elem,
+                                                        -1);
+    }
+    else
+    {
+      const std::vector<std::vector<QpMap>> & refinement_map =
+          _mesh.getRefinementMap(*elem, -1, -1, -1);
 
-    _material_props.prolongStatefulProps(
-        refinement_map,
-        *_assembly[_tid][0]->qRule(),
-        *_assembly[_tid][0]->qRuleFace(),
-        _material_props, // Passing in the same properties to do volume to volume projection
-        *_material_data[_tid],
-        *elem,
-        -1,
-        -1,
-        -1); // Gets us volume projection
+      _material_props.prolongStatefulProps(
+          _mesh.processor_id(),
+          refinement_map,
+          *_assembly[_tid][0]->qRule(),
+          *_assembly[_tid][0]->qRuleFace(),
+          _material_props, // Passing in the same properties to do volume to volume projection
+          _tid,
+          *elem,
+          -1,
+          -1,
+          -1); // Gets us volume projection
+    }
   }
   else
   {
-    const std::vector<std::pair<unsigned int, QpMap>> & coarsening_map =
-        _mesh.getCoarseningMap(*elem, -1);
+    if (_mesh.doingPRefinement())
+    {
+      const auto & p_coarsening_map = _mesh.getPCoarseningMap(*elem);
+      _material_props.updateStatefulPropsForPRefinement(_mesh.processor_id(),
+                                                        p_coarsening_map,
+                                                        *_assembly[_tid][0]->qRule(),
+                                                        *_assembly[_tid][0]->qRuleFace(),
+                                                        _tid,
+                                                        *elem,
+                                                        -1);
+    }
+    else
+    {
+      const std::vector<std::pair<unsigned int, QpMap>> & coarsening_map =
+          _mesh.getCoarseningMap(*elem, -1);
 
-    _material_props.restrictStatefulProps(coarsening_map,
-                                          _mesh.coarsenedElementChildren(elem),
-                                          *_assembly[_tid][0]->qRule(),
-                                          *_assembly[_tid][0]->qRuleFace(),
-                                          *_material_data[_tid],
-                                          *elem,
-                                          -1);
+      _material_props.restrictStatefulProps(coarsening_map,
+                                            _mesh.coarsenedElementChildren(elem),
+                                            *_assembly[_tid][0]->qRule(),
+                                            *_assembly[_tid][0]->qRuleFace(),
+                                            _tid,
+                                            *elem,
+                                            -1);
+    }
   }
 }
 
@@ -124,32 +147,61 @@ ProjectMaterialProperties::onBoundary(const Elem * elem,
 
     if (_refine)
     {
-      const std::vector<std::vector<QpMap>> & refinement_map =
-          _mesh.getRefinementMap(*elem, side, -1, side);
+      if (_mesh.doingPRefinement())
+      {
+        const auto & p_refinement_map = _mesh.getPRefinementSideMap(*elem);
+        _bnd_material_props.updateStatefulPropsForPRefinement(_mesh.processor_id(),
+                                                              p_refinement_map,
+                                                              *_assembly[_tid][0]->qRule(),
+                                                              *_assembly[_tid][0]->qRuleFace(),
+                                                              _tid,
+                                                              *elem,
+                                                              side);
+      }
+      else
+      {
+        const std::vector<std::vector<QpMap>> & refinement_map =
+            _mesh.getRefinementMap(*elem, side, -1, side);
 
-      _bnd_material_props.prolongStatefulProps(
-          refinement_map,
-          *_assembly[_tid][0]->qRule(),
-          *_assembly[_tid][0]->qRuleFace(),
-          _bnd_material_props, // Passing in the same properties to do side_to_side projection
-          *_bnd_material_data[_tid],
-          *elem,
-          side,
-          -1,
-          side); // Gets us side to side projection
+        _bnd_material_props.prolongStatefulProps(
+            _mesh.processor_id(),
+            refinement_map,
+            *_assembly[_tid][0]->qRule(),
+            *_assembly[_tid][0]->qRuleFace(),
+            _bnd_material_props, // Passing in the same properties to do side_to_side projection
+            _tid,
+            *elem,
+            side,
+            -1,
+            side); // Gets us side to side projection
+      }
     }
     else
     {
-      const std::vector<std::pair<unsigned int, QpMap>> & coarsening_map =
-          _mesh.getCoarseningMap(*elem, side);
+      if (_mesh.doingPRefinement())
+      {
+        const auto & p_coarsening_map = _mesh.getPCoarseningSideMap(*elem);
+        _bnd_material_props.updateStatefulPropsForPRefinement(_mesh.processor_id(),
+                                                              p_coarsening_map,
+                                                              *_assembly[_tid][0]->qRule(),
+                                                              *_assembly[_tid][0]->qRuleFace(),
+                                                              _tid,
+                                                              *elem,
+                                                              side);
+      }
+      else
+      {
+        const std::vector<std::pair<unsigned int, QpMap>> & coarsening_map =
+            _mesh.getCoarseningMap(*elem, side);
 
-      _bnd_material_props.restrictStatefulProps(coarsening_map,
-                                                _mesh.coarsenedElementChildren(elem),
-                                                *_assembly[_tid][0]->qRule(),
-                                                *_assembly[_tid][0]->qRuleFace(),
-                                                *_material_data[_tid],
-                                                *elem,
-                                                side);
+        _bnd_material_props.restrictStatefulProps(coarsening_map,
+                                                  _mesh.coarsenedElementChildren(elem),
+                                                  *_assembly[_tid][0]->qRule(),
+                                                  *_assembly[_tid][0]->qRuleFace(),
+                                                  _tid,
+                                                  *elem,
+                                                  side);
+      }
     }
   }
 }
@@ -160,6 +212,8 @@ ProjectMaterialProperties::onInternalSide(const Elem * elem, unsigned int /*side
   if (_need_internal_side_material &&
       _refine) // If we're refining then we need to also project "internal" child sides.
   {
+    mooseError("I'm pretty sure we're not handling stateful material property prolongation or "
+               "restriction correctly on internal sides");
     for (unsigned int child = 0; child < elem->n_children(); child++)
     {
       const Elem * child_elem = elem->child_ptr(child);
@@ -172,11 +226,12 @@ ProjectMaterialProperties::onInternalSide(const Elem * elem, unsigned int /*side
               _mesh.getRefinementMap(*elem, -1, child, side);
 
           _bnd_material_props.prolongStatefulProps(
+              _mesh.processor_id(),
               refinement_map,
               *_assembly[_tid][0]->qRule(),
               *_assembly[_tid][0]->qRuleFace(),
               _material_props, // Passing in the same properties to do side_to_side projection
-              *_bnd_material_data[_tid],
+              _tid,
               *elem,
               -1,
               child,

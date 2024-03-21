@@ -39,7 +39,11 @@ SamplerTransientMultiApp::validParams()
       "mode",
       modes,
       "The operation mode, 'normal' creates one sub-application for each row in the Sampler and "
-      "'batch' creates on sub-application for each processor and re-executes for each row.");
+      "'batch-reset' and 'batch-restore' creates N sub-applications, where N is the minimum of "
+      "'num_rows' in the Sampler and floor(number of processes / min_procs_per_app). To run "
+      "the rows in the Sampler, 'batch-reset' will destroy and re-create sub-apps as needed, "
+      "whereas the 'batch-restore' will backup and restore sub-apps to the initial state prior "
+      "to execution, without destruction.");
 
   return params;
 }
@@ -145,7 +149,10 @@ SamplerTransientMultiApp::solveStepBatch(Real dt, Real target_time, bool auto_ad
 
     if (_mode == StochasticTools::MultiAppMode::BATCH_RESTORE)
       for (MooseIndex(_my_num_apps) j = 0; j < _my_num_apps; j++)
-        _apps[j]->restore(_batch_backup[_local_batch_app_index][j]);
+      {
+        _apps[j]->restore(std::move(_batch_backup[_local_batch_app_index][j]), false);
+        _apps[j]->finalizeRestore();
+      }
 
     SamplerFullSolveMultiApp::execBatchTransfers(to_transfers,
                                                  i,

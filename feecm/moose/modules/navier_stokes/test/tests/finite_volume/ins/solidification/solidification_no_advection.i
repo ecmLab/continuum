@@ -47,17 +47,17 @@ N = 10
     execute_on = 'TIMESTEP_END'
   []
   [rho_out]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     functor = 'rho_mixture'
     variable = 'density'
   []
   [th_cond_out]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     functor = 'k_mixture'
     variable = 'th_cond'
   []
   [cp_out]
-    type = ADFunctorElementalAux
+    type = FunctorAux
     functor = 'cp_mixture'
     variable = 'cp_var'
   []
@@ -74,7 +74,6 @@ N = 10
   [T_time]
     type = INSFVEnergyTimeDerivative
     variable = T
-    cp = ${cp_liquid}
     rho = ${rho_liquid}
   []
   [energy_diffusion]
@@ -108,13 +107,19 @@ N = 10
   []
 []
 
-[Materials]
+[FunctorMaterials]
   [eff_cp]
-    type = NSFVMixtureMaterial
+    type = NSFVMixtureFunctorMaterial
     phase_2_names = '${cp_solid} ${k_solid} ${rho_solid}'
     phase_1_names = '${cp_liquid} ${k_liquid} ${rho_liquid}'
     prop_names = 'cp_mixture k_mixture rho_mixture'
     phase_1_fraction = fl
+  []
+  [h]
+    type = INSFVEnthalpyFunctorMaterial
+    cp = ${cp_liquid}
+    temperature = T
+    rho = ${rho_liquid}
   []
 []
 

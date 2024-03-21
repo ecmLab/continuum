@@ -11,7 +11,7 @@ MOOSE_SUBMODULE    := $(CURDIR)/moose
 ifneq ($(wildcard $(MOOSE_SUBMODULE)/framework/Makefile),)
   MOOSE_DIR        ?= $(MOOSE_SUBMODULE)
 else
-  MOOSE_DIR        ?= $(shell dirname `pwd`)/moose
+  MOOSE_DIR        ?= $(shell dirname `pwd`)/../..
 endif
 
 # framework
@@ -33,7 +33,7 @@ FLUID_PROPERTIES            := no
 FSI                         := no
 FUNCTIONAL_EXPANSION_TOOLS  := no
 GEOCHEMISTRY                := no
-HEAT_CONDUCTION             := no
+HEAT_TRANSFER               := no
 LEVEL_SET                   := no
 MISC                        := no
 NAVIER_STOKES               := no

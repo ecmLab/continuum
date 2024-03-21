@@ -24,6 +24,7 @@ ContactSplit::validParams()
                                              "Secondary surface list for included contacts");
   params.addParam<std::vector<int>>(
       "contact_displaced",
+      {},
       "List of indicators whether displaced mesh is used to define included contact");
   params.addParam<std::vector<BoundaryName>>("uncontact_primary",
                                              "Primary surface list for excluded contacts");
@@ -31,6 +32,7 @@ ContactSplit::validParams()
                                              "Secondary surface list for excluded contacts");
   params.addParam<std::vector<int>>(
       "uncontact_displaced",
+      {},
       "List of indicators whether displaced mesh is used to define excluded contact");
   params.addRequiredParam<bool>("include_all_contact_nodes",
                                 "Whether to include all nodes on the contact surfaces");
@@ -69,7 +71,7 @@ ContactSplit::ContactSplit(const InputParameters & params)
 }
 
 void
-ContactSplit::setup(const std::string & prefix)
+ContactSplit::setup(NonlinearSystemBase & nl, const std::string & prefix)
 {
   // A reference to the PetscOptions
   Moose::PetscSupport::PetscOptions & po = _fe_problem.getPetscOptions();
@@ -111,5 +113,5 @@ ContactSplit::setup(const std::string & prefix)
   // into the contact subsolver
   po.pairs.emplace_back(dmprefix + "includeAllContactNodes",
                         _include_all_contact_nodes ? "yes" : "no");
-  Split::setup(prefix);
+  Split::setup(nl, prefix);
 }
