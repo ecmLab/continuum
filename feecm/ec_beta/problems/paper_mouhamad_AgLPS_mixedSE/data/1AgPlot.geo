@@ -1,9 +1,9 @@
 lx   = 0.5;       // width of the SE, in unit um
-ly   = 1;       // thickness of the SE, in unit um
-dh   = 0.5;       // length of the pre-existing crack, in unit um
+ly   = 10;       // thickness of the SE, in unit um
+dh   = 5;       // length of the pre-existing crack, in unit um
 dw   = 0.05;        // width of the pre-existing crack located at the bottom middle, in unit um
-hLi  = 0.2;        // length of the current Li metal, in unit um
-hAg  = hLi/2;    // location of the Ag, in unit um
+hLi  = 4;        // length of the current Li metal, in unit um
+hAg  = 1;    // location of the Ag, in unit um
 dAg  = 0.05;      // size of the Ag, in unit um
 
 m0SE  = 0.01;    // mesh characteristic length for corner points of SE

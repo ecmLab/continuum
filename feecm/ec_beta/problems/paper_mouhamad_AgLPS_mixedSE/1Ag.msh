@@ -1,0 +1,15 @@
+$MeshFormat
+4.1 0 8
+$EndMeshFormat
+$Entities
+0 0 0 0
+$EndEntities
+$Nodes
+0 0 18446744073709551615 0
+$EndNodes
+$Elements
+0 0 18446744073709551615 0
+$EndElements
+$Parametrizations
+0 0
+$EndParametrizations

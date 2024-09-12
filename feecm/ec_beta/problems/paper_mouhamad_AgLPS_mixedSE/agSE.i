@@ -5,10 +5,10 @@
 
 [Mesh]
 # uniform_refine = 1
- coord_type = RZ
+# coord_type = RZ
  [importMesh]
    type = FileMeshGenerator
-   file = data/1AgPlot.msh
+   file = data/1Ag.msh
  []
 []
 
@@ -118,6 +118,6 @@
 [Outputs]
   execute_on = 'timestep_end'
   exodus = true
-  file_base = rst/1AgPlot
+  file_base = rst/1Ag
   csv = true
 []

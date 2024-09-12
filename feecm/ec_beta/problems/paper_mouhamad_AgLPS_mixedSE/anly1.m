@@ -12,10 +12,10 @@ i_exc = 1.3;       % The exchange current density, 13 is based on the ASR=2 Ohm,
 sgmSE = 0.1;           % The ionic conductivity of the SE, mS/cm
 % Geometric parameters
 wSE   = 0.5;  % width of the SE, in unit um
-hSE   = 1.0;  % thickness of the SE, in unit um
+hSE   = 10;  % thickness of the SE, in unit um
 dw    = 0.05;      % width of the crack, in unit um
-hLi   = 0.2;      % length of Li, in unit um
-hAg   = hLi/2;  % center location of the Ag, in unit um
+hLi   = 2;      % length of Li, in unit um
+hAg   = 1;  % center location of the Ag, in unit um
 dAg   = 0.05;    % radius of the Ag particle, in unit um
 potLiAg = -2;   % The potential of LiAg, in unit mV
 
@@ -41,8 +41,8 @@ cord     = Ag1(:,3:4); % coordinates of points
 archL    = zeros(length(cord),1);
 for ip = 2 : length(cord)
     archL(ip) = archL(ip-1) + norm(cord(ip,:)-cord(ip-1,:));
-    if cord(ip,1)==dw && abs(cord(ip,2) - hAg)<=dAg/2
-%     if cord(ip,1)>dw && cord(ip,2)>0
+%     if cord(ip,1)==dw && abs(cord(ip,2) - hAg)<=dAg/2
+    if cord(ip,1)>dw && cord(ip,2)>0
        Ag1(ip,2) = Ag1(ip,2) - potLiAg;
     end
 end

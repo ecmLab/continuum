@@ -1,6 +1,6 @@
 lx   = 10;       // width of the BL, in unit um
-ly   = 10;       // thickness of the BL, in unit um
-dia  = 0.5;      // diameter of the pore located at the middle, in unit um
+ly   = 20;       // thickness of the BL, in unit um
+dia  = 0.5;       // diameter of the pore located at the middle, in unit um
 
 m0BL  = 0.1;     // mesh characteristic length for the bl miec
 m1Pr  = 0.01;    // mesh characteristic length for Ag particles or pores
