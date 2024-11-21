@@ -1,1 +1,0 @@
-rz_cone_no_parts_steady_stabilized_second_order_out.e

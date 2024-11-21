@@ -1,3 +1,0 @@
-# Poroperm test descriptions
-
-TODO

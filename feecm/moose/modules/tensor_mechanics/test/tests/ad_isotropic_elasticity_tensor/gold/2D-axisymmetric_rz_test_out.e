@@ -1,1 +1,0 @@
-../../isotropic_elasticity_tensor/gold/2D-axisymmetric_rz_test_out.e

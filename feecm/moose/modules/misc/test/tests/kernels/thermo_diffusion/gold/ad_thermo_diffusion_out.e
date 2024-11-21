@@ -1,1 +1,0 @@
-thermo_diffusion_out.e

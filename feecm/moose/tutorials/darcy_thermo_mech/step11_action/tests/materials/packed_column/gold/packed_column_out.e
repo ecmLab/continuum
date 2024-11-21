@@ -1,1 +1,0 @@
-../../../../../step10_multiapps/tests/materials/packed_column/gold/packed_column_out.e

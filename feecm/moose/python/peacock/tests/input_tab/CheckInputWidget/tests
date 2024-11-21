@@ -1,7 +1,0 @@
-[Tests]
-  [CheckInputWidget]
-    type = PythonUnitTest
-    input = test_CheckInputWidget.py
-    display_required = true
-  []
-[]

@@ -1,1 +1,0 @@
-../../FVHeatFluxBC/gold/local_kappa_out.e

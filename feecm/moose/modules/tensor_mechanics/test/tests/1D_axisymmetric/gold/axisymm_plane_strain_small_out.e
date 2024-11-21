@@ -1,1 +1,0 @@
-axisymm_plane_strain_incremental_out.e

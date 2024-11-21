@@ -1,1 +1,0 @@
-youngs_modulus_function_temp_out.e

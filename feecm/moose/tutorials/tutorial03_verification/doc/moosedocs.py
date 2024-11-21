@@ -1,1 +1,0 @@
-../../darcy_thermo_mech/doc/moosedocs.py

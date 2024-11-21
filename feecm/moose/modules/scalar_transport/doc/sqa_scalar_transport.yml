@@ -1,9 +1,0 @@
-directories:
-    - ${MOOSE_DIR}/modules/scalar_transport/test/tests
-specs:
-    - tests
-dependencies:
-    - framework
-repos:
-    default: https://github.com/idaholab/moose
-reports: !include ${MOOSE_DIR}/modules/scalar_transport/doc/sqa_reports.yml

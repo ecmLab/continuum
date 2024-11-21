@@ -1,6 +1,0 @@
-[Tests]
-  deprecated = True
-  [test]
-    requirement = "This should error"
-  []
-[]

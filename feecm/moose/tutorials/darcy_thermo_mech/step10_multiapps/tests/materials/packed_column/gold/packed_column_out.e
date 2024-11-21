@@ -1,1 +1,0 @@
-../../../../../step09_mechanics/tests/materials/packed_column/gold/packed_column_out.e
