@@ -1,1 +1,0 @@
-!template load file=stubs/moose_action.md.template name=AddCoupledSolidKinSpeciesAction syntax=/ReactionNetwork/SolidKineticReactions/AddCoupledSolidKinSpeciesAction

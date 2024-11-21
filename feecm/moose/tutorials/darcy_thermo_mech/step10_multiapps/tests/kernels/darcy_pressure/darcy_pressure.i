@@ -1,1 +1,0 @@
-../../../../step09_mechanics/tests/kernels/darcy_pressure/darcy_pressure.i

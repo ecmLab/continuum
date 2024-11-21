@@ -1,1 +1,0 @@
-cylinder_friction_cartesian_out.e

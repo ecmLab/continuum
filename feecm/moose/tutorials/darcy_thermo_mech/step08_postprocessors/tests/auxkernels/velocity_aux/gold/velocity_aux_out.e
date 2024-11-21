@@ -1,1 +1,0 @@
-../../../../../step07_adaptivity/tests/auxkernels/velocity_aux/gold/velocity_aux_out.e

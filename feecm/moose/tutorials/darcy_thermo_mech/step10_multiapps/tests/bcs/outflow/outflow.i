@@ -1,1 +1,0 @@
-../../../../step09_mechanics/tests/bcs/outflow/outflow.i

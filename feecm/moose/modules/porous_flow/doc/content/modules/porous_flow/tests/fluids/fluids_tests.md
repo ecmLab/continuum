@@ -1,3 +1,0 @@
-# Fluids test description
-
-TODO

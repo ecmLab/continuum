@@ -1,1 +1,0 @@
-../../function_dirichlet_bc/gold/test_out.e

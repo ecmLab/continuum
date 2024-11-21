@@ -1,1 +1,0 @@
-generalized_plane_strain_squares_out.e
