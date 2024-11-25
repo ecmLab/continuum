@@ -1,1 +1,0 @@
-../../../../step05_heat_conduction/tests/kernels/simple_diffusion/simple_diffusion.i

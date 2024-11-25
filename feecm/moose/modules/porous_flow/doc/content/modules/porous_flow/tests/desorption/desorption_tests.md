@@ -1,3 +1,0 @@
-# Desorption test descriptions
-
-TODO

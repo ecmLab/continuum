@@ -1,7 +1,0 @@
-[Tests]
-  [PythonConsoleWidget]
-    type = PythonUnitTest
-    input = test_PythonConsoleWidget.py
-    display_required = true
-  []
-[]

@@ -1,1 +1,0 @@
-wave_rayleigh_newmark_out.e

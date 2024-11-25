@@ -1,7 +1,0 @@
-[Tests]
-  [CheckRequirements]
-    type = PythonUnitTest
-    input = test_CheckRequirements.py
-    display_required = true
-  []
-[]

@@ -1,1 +1,0 @@
-../../user_object_based/gold/linesearch_out.e

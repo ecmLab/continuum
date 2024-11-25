@@ -1,7 +1,0 @@
-[Tests]
-  [./simple_diffusion]
-    type = 'Exodiff'
-    input = 'simple_transient_diffusion.i'
-    exodiff = 'simple_transient_diffusion_out.e'
-  [../]
-[]

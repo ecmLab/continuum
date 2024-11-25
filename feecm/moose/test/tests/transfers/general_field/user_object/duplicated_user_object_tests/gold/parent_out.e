@@ -1,1 +1,0 @@
-../../../../multiapp_userobject_transfer/gold/parent_out.e

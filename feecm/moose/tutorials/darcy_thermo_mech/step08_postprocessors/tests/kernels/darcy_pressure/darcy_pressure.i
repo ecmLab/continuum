@@ -1,1 +1,0 @@
-../../../../step07_adaptivity/tests/kernels/darcy_pressure/darcy_pressure.i

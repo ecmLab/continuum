@@ -1,1 +1,0 @@
-../../FVHeatFluxBC/gold/local_k_out.e

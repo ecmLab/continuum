@@ -1,1 +1,0 @@
-../../smeared_cracking/gold/cracking_plane_stress_out.e

@@ -1,1 +1,0 @@
-../../../../multiapp_userobject_transfer/gold/main_nearest_sub_app_out.e

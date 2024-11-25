@@ -1,1 +1,0 @@
-../../../../../step09_mechanics/tests/kernels/simple_diffusion/gold/simple_diffusion_out.e

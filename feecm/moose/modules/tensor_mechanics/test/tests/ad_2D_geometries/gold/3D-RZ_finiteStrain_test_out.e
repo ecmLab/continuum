@@ -1,1 +1,0 @@
-../../2D_geometries/gold/3D-RZ_finiteStrain_test_out.e

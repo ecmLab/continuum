@@ -1,5 +1,0 @@
-[Mesh]
-  [ebsd]
-    type = EBSDMeshGenerator
-  []
-[]
