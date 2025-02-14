@@ -1,0 +1,109 @@
+variable  cfrs   equal 0.1
+variable  coEd   equal 100000 
+variable  pres   equal 300
+
+atom_style	granular
+atom_modify	map array
+boundary	f f f	#periodic in z
+newton		off
+
+communicate	single vel yes
+
+units		micro
+
+read_restart    restart/l1.restart
+
+region		reg block -20.5 70.5 -20.5 70.5 -0.5 100.5 units box
+neighbor	0.2 bin
+neigh_modify	delay 0
+
+
+#Material properties required for new pair styles
+
+fix 		m1 all property/global youngsModulus peratomtype 18.5e6 18.5e6 
+fix 		m2 all property/global poissonsRatio peratomtype 0.3 0.3 
+fix 		m3 all property/global coefficientRestitution peratomtypepair 2 0.1 0.1 0.1 0.1
+fix 		m4 all property/global coefficientFriction peratomtypepair 2 ${cfrs} ${cfrs} ${cfrs} ${cfrs} 
+fix 		m5 all property/global coefficientRollingFriction peratomtypepair 2 ${cfrs} ${cfrs} ${cfrs} ${cfrs} 
+fix 		m6 all property/global cohesionEnergyDensity peratomtypepair 2 ${coEd} 0 0 0
+
+#New pair style
+pair_style gran model hertz tangential history cohesion sjkr rolling_friction epsd2 
+pair_coeff	* *
+
+timestep	0.0002
+group walls type 2
+group free type 1
+
+fix     zwalls1  free wall/gran model hertz tangential history primitive type 2 zplane 0
+fix     zwalls2  free wall/gran model hertz tangential history primitive type 2 zplane 200
+fix     cylwalls free wall/gran model hertz tangential history primitive type 2 zcylinder 50 0 0
+
+fix		integr all nve/sphere
+
+compute        ker   all   erotate/sphere                  # Compute the rotational kinetic energy of all particles
+compute        fc    all   pair/gran/local id pos force
+compute        frc   walls   reduce sum fz                   # Total pressure on ghost particles
+compute        posw  walls   reduce ave z                   # Total pressure on ghost particles
+variable       prs  equal  (c_frc)/(1000*3.1415*50*50)    # Pressure in unit of MPa
+variable       init_pos equal 62.312168 
+variable       strain   equal (${init_pos}-c_posw)/${init_pos}
+# Print info to screen, include step, total atom number, kinetic nergy, compute_1(Rotational energy), volume
+thermo_style    custom step atoms ke c_ker vol v_prs c_posw v_strain v_init_pos
+thermo          20000                              # Print thermodynamics every 500 stimesteps
+thermo_modify   lost ignore norm no
+compute_modify	thermo_temp dynamic yes
+
+fix 3 walls move linear 0 0 0
+
+run  100000
+
+change_box all z final 0 65 units box
+
+label loop1
+  fix 3 walls move linear 0 0 0.05
+  run 2000
+  if "${prs} < 0.5" then "jump cycle.in loop2"
+jump cycle.in loop1
+
+label loop2
+  fix 3 walls move linear 0 0 0
+  run 20000
+  if "${prs} > 1.1" then "jump cycle.in loop1"
+run 100000
+ 
+label loop3a
+
+variable    nt equal 1
+variable    cycles equal 1   
+
+dump	dmp all custom 500000 post_press_rate0002_1/dump*.liggghts id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
+dump    dmp3 all local 500000 post_fc0002_1/dumpfc*.liggghts c_fc[1] c_fc[2] c_fc[3] c_fc[4] c_fc[5] c_fc[6] c_fc[7] c_fc[8] c_fc[9] c_fc[10] c_fc[11] c_fc[12]
+
+label loop3
+label loop31
+  fix   3 walls move linear 0.0 0.0 -0.002
+  run   200000
+  if "${strain} > 0.1" then "jump cycle.in loop32"
+jump cycle.in loop31
+
+label loop32
+  fix   3 walls move linear 0.0 0.0 0.0
+  run   20000
+
+label loop33
+  fix   3 walls move linear 0.0 0.0 0.002
+  run 200000
+  if "${prs} < 1" then "jump cycle.in loop34"
+jump cycle.in loop33
+
+label loop34
+  fix   3 walls move linear 0.0 0.0 0.0
+  variable    nt equal ${nt}+1
+  if "${nt} > ${cycles}" then "jump cycle.in loopG"
+jump cycle.in loop3
+
+label loopG
+run 1
+
+write_restart ./restart/cycle.restart
