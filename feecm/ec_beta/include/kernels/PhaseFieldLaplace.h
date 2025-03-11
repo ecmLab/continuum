@@ -9,5 +9,6 @@ class PhaseFieldLaplace : public ADKernel
         virtual ADReal computeQpResidual() override;
         
         const ADMaterialProperty<Real> & _k0;
+        const ADMaterialProperty<Real> & _scale;
         
 };
