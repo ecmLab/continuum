@@ -1,0 +1,51 @@
+name: Documentation
+
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install Conda environment with Micromamba
+        uses: mamba-org/provision-with-micromamba@main
+        with:
+          environment-file: false
+          environment-name: moose
+          channels: conda-forge,https://conda.software.inl.gov/public
+          extra-specs: |
+            moose-tools
+            moose-libmesh
+
+      - name: Compile EEL
+        shell: bash -l {0}
+        run: |
+          make -j 2
+
+      - name: Build documentation
+        shell: bash -l {0}
+        run: |
+          mkdir gh-pages
+          cd doc
+          ./moosedocs.py check
+          ./moosedocs.py build --destination ../gh-pages/
+
+      - name: Deploy to GitHub Pages
+        if: ${{ github.event_name == 'push' }}
+        uses: JamesIves/github-pages-deploy-action@4.1.4
+        with:
+          branch: gh-pages
+          folder: gh-pages
+          single-commit: true
