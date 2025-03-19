@@ -2,17 +2,18 @@ clc; clear; myFigureSetting;
 
 ifg = 0;
 %Geometric parameter
-xBL = 0.265;      % width of the BL, in unit um
-yBL = 0.265;      % thickness of the BL, in unit um
-diaAg = 0.04;      % diameter of Ag, in unit um
-diaPr = 0.11;      % diameter of Ag, in unit um
+xBL = 10;      % width of the BL, in unit um
+yBL = 20;      % thickness of the BL, in unit um
+diaAg = 0.5;      % diameter of Ag, in unit um
+diaPr = 0.5;      % diameter of pore, in unit um
 %Electrochemical parameters
 F_RT  = 0.03868;  % The combined constant F/RT when T=300K, in unit 1/mV
 a0    = 0.5;      % Reaction rate for the charge transfer reaction, set as symmetric anodic and cathodic reaction for now
 % For LPS vs Li-metal system
 iSE_exc = 1.3;        % The exchange current density, 13 is based on the ASR=2 Ohm, in unit mA/cm^2; LPS/Li metal interface from paper
-iAg_exc = iSE_exc*5;  % The exchange current density, 13 is based on the ASR=2 Ohm, in unit mA/cm^2; LPS/Li metal interface from paper
-iCC_exc = iSE_exc*10; % The exchange current density, 13 is based on the ASR=2 Ohm, in unit mA/cm^2; LPS/Li metal interface from paper
+iAg_exc = 10;       % The exchange current density, 13 is based on the ASR=2 Ohm, in unit mA/cm^2; LPS/Li metal interface from paper
+iCC_exc = iSE_exc; % The exchange current density, 13 is based on the ASR=2 Ohm, in unit mA/cm^2; LPS/Li metal interface from paper
+i0      = 0.68;     % applied current density, in unit mA/cm^2
 % For change variables
 sgmLi = 10.^(linspace(-1.1,1.1,12));  % The ionic conductivity, set as variable for parameter studies, in unit mS/cm
 sgmEn = 10.^(linspace(1.0,3.6,14));  % The ionic conductivity, set as variable for parameter studies, in unit mS/cm
@@ -30,18 +31,8 @@ for jAg = 1 : length(vAg)
     eval(tmpStr);
     tmpStr  = ['ccPot_Ag',num2str(jAg),'= csvread(''../rst/Vlt_ccPot_Ag-',num2str(jAg),'.csv'',1,0);'];
     eval(tmpStr);
-    tmpStr  = ['x1Pot_Ag',num2str(jAg),'= csvread(''../rst/Vlt_z1Pot_Ag-',num2str(jAg),'.csv'',1,0);'];
-    eval(tmpStr);
-    tmpStr  = ['x2Pot_Ag',num2str(jAg),'= csvread(''../rst/Vlt_z2Pot_Ag-',num2str(jAg),'.csv'',1,0);'];
-    eval(tmpStr);
-    tmpStr  = ['x3Pot_Ag',num2str(jAg),'= csvread(''../rst/Vlt_z3Pot_Ag-',num2str(jAg),'.csv'',1,0);'];
-    eval(tmpStr);
 
 %% Data analysis
-% Compute the Li potential along the Y1 line
-    tmpStr  = ['midPot_Ag',num2str(jAg),'= [x1Pot_Ag',num2str(jAg),';porePot_Ag',num2str(jAg),'(porePot_Ag',...
-                num2str(jAg),'(:,5)>0,:);x2Pot_Ag',num2str(jAg),';agPot_Ag',num2str(jAg),'(agPot_Ag',num2str(jAg),'(:,5)>0,:);x3Pot_Ag',num2str(jAg),'];'];
-    eval(tmpStr);
 % Compute normal current density from the analytic Butler-Volmer relation:
  % i_n = i_exc * (exp(alpha*eta*F/RT)-exp(-alpha*eta*F/RT))
     tmpStr  = ['seEta_Ag',num2str(jAg),'  = - sePot_Ag',num2str(jAg),'(:,2) - sePot_Ag',num2str(jAg),'(:,3);'];
@@ -68,34 +59,21 @@ for jAg = 1 : length(vAg)
     tmpStr   =['agIave(jAg) = sum(agCrnt_Ag',num2str(jAg),')/length(agCrnt_Ag',num2str(jAg),');'];  eval(tmpStr);
 
     % Compute the total current ratio at each interfaces
-    tmpStr   =['seIr(jAg) = -mean(seCrnt_Ag',num2str(jAg),');'];  eval(tmpStr);
-    tmpStr   =['ccIr(jAg) = -mean(ccCrnt_Ag',num2str(jAg),');'];  eval(tmpStr);
-    tmpStr   =['poreIr(jAg) = -mean(poreCrnt_Ag',num2str(jAg),')*pi*diaPr/yBL;'];  eval(tmpStr);
-    tmpStr   =['agIr(jAg) = -mean(agCrnt_Ag',num2str(jAg),')*pi*diaAg/yBL;'];  eval(tmpStr);
-
-% Compute the Li potential along the middle line
-% midPot_Ag1   = [x1Pot_Ag1;porePot_Ag1(porePot_Ag1(:,5)>0,:);x2Pot_Ag1;agPot_Ag1(agPot_Ag1(:,5)>0,:);x3Pot_Ag1];
-
-% % Compute normal current density from the analytic Butler-Volmer relation:
-%  % i_n = i_exc * (exp(alpha*eta*F/RT)-exp(-alpha*eta*F/RT))
-% seEta_Ag1  = - sePot_Ag1(:,2) - sePot_Ag1(:,3); 
-% seCrnt_Ag1 = iSE_exc * (exp(a0*F_RT*seEta_Ag1) - exp(-a0*F_RT*seEta_Ag1));
-% poreEta_Ag1  = - porePot_Ag1(:,2) - porePot_Ag1(:,3); 
-% poreCrnt_Ag1 = iSE_exc * (exp(a0*F_RT*poreEta_Ag1) - exp(-a0*F_RT*poreEta_Ag1));
-% agEta_Ag1  = vAg(1) - agPot_Ag1(:,2) - agPot_Ag1(:,3); 
-% agCrnt_Ag1 = iAg_exc * (exp(a0*F_RT*agEta_Ag1) - exp(-a0*F_RT*agEta_Ag1));
-% ccEta_Ag1  = - ccPot_Ag1(:,2) - ccPot_Ag1(:,3); 
-% ccCrnt_Ag1 = iCC_exc * (exp(a0*F_RT*ccEta_Ag1) - exp(-a0*F_RT*ccEta_Ag1));
+    tmpStr   =['seIr(jAg) = -mean(seCrnt_Ag',num2str(jAg),')/i0;'];  eval(tmpStr);
+    tmpStr   =['ccIr(jAg) = -mean(ccCrnt_Ag',num2str(jAg),')/i0;'];  eval(tmpStr);
+    tmpStr   =['poreIr(jAg) = -mean(poreCrnt_Ag',num2str(jAg),')*pi*diaPr/xBL/i0;'];  eval(tmpStr);
+    tmpStr   =['agIr(jAg) = -mean(agCrnt_Ag',num2str(jAg),')*pi*diaAg/xBL/i0;'];  eval(tmpStr);
 
 end
 
 %% Plotting
 % Plot potential at sgm= 0.8 mS/cm, ASR= 2 Ohm*cm^2 as a function of x coordinate at four different interfaces
-ifg = ifg + 1;
-figure(ifg)
-plot(sePot_Ag1(:,4),sePot_Ag1(:,3),'-b',ccPot_Ag1(:,4),ccPot_Ag1(:,3),'-r',midPot_Ag1(:,4),midPot_Ag1(:,3),'-k');
-legend('SE','CC','Center');
-title('Voltage at Interface, in mV');
+% ifg = ifg + 1;
+% figure(ifg)
+% plot(sePot_Ag1(:,4),sePot_Ag1(:,3),'-b',ccPot_Ag1(:,4),ccPot_Ag1(:,3),'-r',midPot_Ag1(:,4),midPot_Ag1(:,3),'-k');
+% legend('SE','CC','Center');
+% title('Voltage at Interface, in mV');
+
 % Plot the current at sgm= 0.1 mS/cm, ASR= 2 Ohm*cm^2 and varying AgLi particle equilibrium potential in the surface defect = [0, -1, -2, -3, -4 ,-5] mV
 ifg = ifg + 1;
 figure(ifg)

@@ -1,13 +1,13 @@
 lx   = 0.5;       // width of the SE, in unit um
-ly   = 1;       // thickness of the SE, in unit um
-dh   = 0.5;       // length of the pre-existing crack, in unit um
+ly   = 10;       // thickness of the SE, in unit um
+dh   = 5;       // length of the pre-existing crack, in unit um
 dw   = 0.05;        // width of the pre-existing crack located at the bottom middle, in unit um
-hLi  = 0.2;        // length of the current Li metal, in unit um
-hAg  = hLi/2;    // location of the Ag, in unit um
+hLi  = 2;        // length of the current Li metal, in unit um
+hAg  = 1;    // location of the Ag, in unit um
 dAg  = 0.05;      // size of the Ag, in unit um
 
 m0SE  = 0.01;    // mesh characteristic length for corner points of SE
-m1SE  = 0.0001;   // mesh characteristic length for defect points of SE
+m1SE  = 0.0005;   // mesh characteristic length for defect points of SE
 
 //**** Create SE geometry**/
 Point(1)    = {dw, 0, 0, m1SE};
@@ -28,13 +28,13 @@ Line(4)     = {4,5};
 Circle(5)   = {5,6,7};
 Line(6)     = {7,8};
 Line(7)     = {8,9};
-//Circle(8)   = {10,11,9};
-Line(8)     = {9,10};
+Circle(8)   = {10,11,9};
+//Line(8)     = {9,10};
 Line(9)     = {10,1};
 
 //*** Create loops for SE **/
-//Curve Loop(10) = {1:7,-8,9};
-Curve Loop(10) = {1:9};
+Curve Loop(10) = {1:7,-8,9};
+//Curve Loop(10) = {1:9};
 
 //*** Create blocks for the SE and Li-metal **/
 Plane Surface(1) = {10};
