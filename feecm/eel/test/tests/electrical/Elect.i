@@ -1,0 +1,95 @@
+[GlobalParams]
+    energy_densities='q'
+[]
+[Mesh]
+    [box]
+        type = GeneratedMeshGenerator
+        xmin=0
+        xmax=1
+        nx=10
+        dim=1
+    []
+    
+[]
+[Variables]
+    [phi]
+        order=FIRST
+        family=LAGRANGE
+    []
+[]
+[Kernels]
+    [Laplace]
+        type=RankOneDivergence
+        variable=phi
+        vector=i
+    []
+    [Source]
+        type=BodyForce
+        variable=phi
+        function=charge
+    []
+        
+[]
+[AuxVariables]
+    [anaPhi]
+        order=FIRST
+        family=LAGRANGE
+    []
+[]
+[AuxKernels]
+    [anaPhiAux]
+        type=FunctionAux
+        variable=anaPhi
+        function=analyticalPhi
+    []
+[]
+[Functions]
+    [analyticalPhi]
+        type=ParsedFunction
+        expression = '3.565*exp(x)-4.71*x^2+7.1*x-3.4'
+    []
+    [charge]
+        type=ParsedFunction
+        expression = '2.32+exp(x)*(-7.13-3.565*x)+18.84*x'
+    []
+    [conductivity]
+        type=ParsedFunction
+        expression='1+x'
+    []
+[]
+[Materials]
+    [conductivity]
+        type=ADGenericFunctionMaterial
+        prop_names='sigma'
+        prop_values='conductivity'
+    []
+    #EnergyDensity
+    [ElectericalEnergy]
+        type=BulkChargeTransport
+        electrical_energy_density='q'
+        electric_potential=phi
+        electric_conductivity=sigma
+    []
+    # Current Density as Force
+    [current]
+        type= CurrentDensity
+        current_density=i
+        electric_potential=phi
+        #electric_conductivity=sigma
+    []
+[]
+[BCs]
+    [left]
+        type=FunctionDirichletBC
+        variable=phi
+        boundary='left right'
+        function=analyticalPhi
+    []
+[]
+[Executioner]
+    type=Steady
+    solve_type=NEWTON
+[]
+[Outputs]
+    exodus=true
+[]
