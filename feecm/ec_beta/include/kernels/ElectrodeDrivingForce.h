@@ -8,16 +8,17 @@ public:
 	ElectrodeDrivingForce(const InputParameters & parameters);
 protected:
 	virtual ADReal computeQpResidual() override;
+	const VariableValue & _pot;
+	const VariableValue & _ref_pot;
+	const VariableValue & _conc;
+	const ADMaterialProperty<Real> & _h;
 	const Real & _alpha;
 	const Real & _beta;
 	const Real & _n;
 	const Real & _R;
 	const Real & _T;
 	const Real & _F;
-	const ADMaterialProperty<Real> & _h;
 	const Real & _scale;
-	const VariableValue & _pot;
-	const VariableValue & _ref_pot;
-	const VariableValue & _conc;
+	
 };
 #endif //ELECTRODEDRIVINGFORCE_H

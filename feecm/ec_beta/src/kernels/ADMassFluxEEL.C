@@ -12,10 +12,10 @@ ADMassFluxEEL::validParams()
   params.addRequiredParam<MaterialPropertyName>("mobility", "The mobility coefficient.");
   params.addRequiredParam<MaterialPropertyName>("conductivity", "The conductivity coefficient.");
   //params.addParam<Real>("zIons", 1, "The charge state of the ions, default be positive 1");
-  params.addParam<Real>("c0", "The reference concentration");
   params.addParam<Real>("F", 96485 , "The value of F ,in unit C/mole");
   params.addParam<Real>("R", 8.854 , "The value of R ,in unit J/(mole*K)");
   params.addParam<Real>("T", 298 , "The value of T ,in unit K");
+  params.addParam<Real>("c0", "The reference concentration");
   params.addParam<Real>("scale", 1, "The Scalar Constant, when T = 300K.");
   return params;
 }
