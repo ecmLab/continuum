@@ -8,10 +8,10 @@ ADPoissonEquation::validParams()
   InputParameters params = ADKernel::validParams();
   params.addClassDescription("Implements the Poisson equation ∇ · (σ/F ∇φ) = zc");
   params.addRequiredCoupledVar("coupled_concentration", "The coupled concentration variable");
+  params.addParam<Real>("F", 96485.3383, "Faraday constant in C/mol");
   params.addRequiredParam<Real>("sigma", "Conductivity");
   params.addRequiredParam<Real>("z", "Charge number");
   params.addParam<Real>("scale",1, "Scale Parameter");
-  params.addParam<Real>("F", 96485.3383, "Faraday constant in C/mol");
   return params;
 }
 
@@ -20,8 +20,8 @@ ADPoissonEquation::ADPoissonEquation(const InputParameters & parameters)
     _coupled_concentration(adCoupledValue("coupled_concentration")),
     _F(getParam<Real>("F")),
     _sigma(getParam<Real>("sigma")),
-    _scale(getParam<Real>("scale")),
-    _z(getParam<Real>("z"))
+    _z(getParam<Real>("z")),
+    _scale(getParam<Real>("scale"))
 {
 }
 
