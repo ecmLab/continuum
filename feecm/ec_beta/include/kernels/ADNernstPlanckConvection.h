@@ -16,7 +16,6 @@ protected:
   virtual ADReal computeQpResidual();
   
   const ADVariableGradient & _grad_V;
-
   const MaterialProperty<Real> & _diffusivity;
   const Real & _zIons;
   const Real & _F_RT;

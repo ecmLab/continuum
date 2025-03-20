@@ -17,8 +17,8 @@ protected:
   
   const ADVariableGradient & _grad_V;
 
-  const MaterialProperty<Real> & _conductivity;
   const MaterialProperty<Real> & _mobility;
+  const MaterialProperty<Real> & _conductivity;
   const Real & _F;
   const Real & _R;
   const Real & _T;

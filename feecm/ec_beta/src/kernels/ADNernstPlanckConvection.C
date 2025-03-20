@@ -20,9 +20,9 @@ ADNernstPlanckConvection::ADNernstPlanckConvection(const InputParameters & param
    : ADKernel(parameters),
     _grad_V(adCoupledGradient("Voltage")),
     _diffusivity(getMaterialProperty<Real>("diffusivity")),
-    _scale(getParam<Real>("scale")),
+    _zIons(getParam<Real>("zIons")),
     _F_RT(getParam<Real>("F_RT")),
-    _zIons(getParam<Real>("zIons"))
+    _scale(getParam<Real>("scale"))
 
 {
 }

@@ -8,8 +8,8 @@ public:
 	CouplingFreeEnergy(const InputParameters & parameters);
 protected:
 	virtual ADReal computeQpResidual() override;
+	const VariableValue & _coupledVar;
 	const ADMaterialProperty<Real> & _c;
 	const Real & _scale;
-	const VariableValue & _coupledVar;
 };
 #endif //COUPLINGFREEENERGY_H
