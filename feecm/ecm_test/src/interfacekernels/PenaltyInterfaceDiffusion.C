@@ -3,8 +3,11 @@
 
 registerMooseObject("electro_chemo_mechApp", PenaltyInterfaceDiffusion);
 
+// InputParameters
+// PenaltyInterfaceDiffusion::validParams()
+template <>
 InputParameters
-PenaltyInterfaceDiffusion::validParams()
+validParams<PenaltyInterfaceDiffusion>()
 {
   InputParameters params = ADInterfaceKernel::validParams();
   params.addRequiredParam<Real>(

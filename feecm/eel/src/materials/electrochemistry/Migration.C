@@ -27,7 +27,7 @@ Migration::Migration(const InputParameters & parameters)
 void
 Migration::computeQpProperties()
 {
-  _E[_qp] = _sigma[_qp] / _F * _grad_Phi[_qp] * _grad_mu[_qp];
-  _d_E_d_grad_Phi[_qp] = _sigma[_qp] / _F * _grad_mu[_qp];
-  _d_E_d_grad_mu[_qp] = _sigma[_qp] / _F * _grad_Phi[_qp];
+  _E[_qp] = _sigma[_qp] / (_F) * _grad_Phi[_qp] * _grad_mu[_qp];
+  _d_E_d_grad_Phi[_qp] = _sigma[_qp]/ (_F) * _grad_mu[_qp];
+  _d_E_d_grad_mu[_qp] = _sigma[_qp] / (_F) * _grad_Phi[_qp];
 }

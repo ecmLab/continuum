@@ -107,9 +107,9 @@ GapEquilibriateConstraint::computeQpResidual(Moose::MortarType mortar_type)
             if (_include_gap)
             {
                 // we are creating a dual version of phys points primary and secondary here...
-                DualRealVectorValue dual_phys_points_primary;
-                DualRealVectorValue dual_phys_points_secondary;
-                DualRealVectorValue dual_normals;
+                RealVectorValue dual_phys_points_primary;
+                RealVectorValue dual_phys_points_secondary;
+                RealVectorValue dual_normals;
                 for (unsigned int i = 0; i < LIBMESH_DIM; ++i)
                 {
                   dual_phys_points_primary(i) = _phys_points_primary[_qp](i);
