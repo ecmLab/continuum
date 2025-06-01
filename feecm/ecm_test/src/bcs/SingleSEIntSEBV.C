@@ -1,7 +1,7 @@
 
 #include "SingleSEIntSEBV.h"
 
-registerADMooseObject("electro_chemo_mechApp", SingleSEIntSEBV);
+registerADMooseObject("ecmApp", SingleSEIntSEBV);
 
 InputParameters
 SingleSEIntSEBV::validParams()

@@ -1,23 +1,12 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
-/* 
- * File:   ADChemoMechanoDiffusionBase.C
- * Author: srinath
- * 
- * Created on September 21, 2020, 10:57 AM
- */
 
 #include "ADChemoMechanoDiffusionBase.h"
 
-//registerMooseObject("electro_chemo_mechApp", ADChemoMechanoDiffusion);
-//registerMooseObject("electro_chemo_mechApp", ADChemoMechanoAnisoDiffusion);
+//registerMooseObject("ecmApp", ADChemoMechanoDiffusion);
+//registerMooseObject("ecmApp", ADChemoMechanoAnisoDiffusion);
 //
 //
-//template<typename T> 
+//template<typename T>
 //InputParameters
 //ADChemoMechanoDiffusionTempl<T>::validParams()
 //{
@@ -26,7 +15,7 @@
 //                             "from a material property and "
 //                             "computes the gradient of the chemical potential from "
 //                             "elastic and growth contributions");
-//  params.addCoupledVar("stress_based_chemical_potential", 
+//  params.addCoupledVar("stress_based_chemical_potential",
 //                          "Name of the variable for the stress_based_chemical_potential");
 //
 //  params.set<bool>("use_displaced_mesh") = false;
@@ -38,13 +27,13 @@
 //  : ADMatDiffusionBase<T>(parameters),
 //    _mu_coupled(isCoupled("stress_based_chemical_potential")),
 //    _mu_var(_mu_coupled ? coupled("stress_based_chemical_potential") : 0)
-//{  
+//{
 //    if (_mu_coupled)
 //        _grad_mu = &adCoupledGradient("stress_based_chemical_potential");
 //
 //}
 //
-//template<typename T> 
+//template<typename T>
 //ADRealVectorValue
 //ADChemoMechanoDiffusionTempl<T>::precomputeQpResidual()
 //{

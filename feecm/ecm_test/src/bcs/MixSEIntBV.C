@@ -1,7 +1,7 @@
 
 #include "MixSEIntBV.h"
 
-registerADMooseObject("electro_chemo_mechApp", MixSEIntBV);
+registerADMooseObject("ecmApp", MixSEIntBV);
 
 InputParameters
 MixSEIntBV::validParams()
@@ -30,7 +30,7 @@ MixSEIntBV::MixSEIntBV(const InputParameters & parameters)
   // Get the parameters from the Material object
    _exchange_current(getADMaterialProperty<Real>("exchange_current")),
    _reaction_rate(getADMaterialProperty<Real>("reaction_rate")),
- 
+
   // Get the parameters from the input file
    _LiPotElectrode(parameters.get<MaterialPropertyName>("LiPotElectrode")),
    _LiPotEle(getADMaterialProperty<Real>(_LiPotElectrode)),

@@ -1,15 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/* 
- * File:   computeGlobalFlux.C
- * Author: srinath
- * 
- * Created on January 25, 2022, 2:09 PM
- */
 
 #include "CZMcomputeGlobalFluxBase.h"
 
@@ -45,7 +33,7 @@ CZMcomputeGlobalFluxBase::CZMcomputeGlobalFluxBase(const InputParameters & param
     _dinterface_flux_djump(
         getMaterialPropertyByName<RealVectorValue>(_base_name + "dinterface_flux_djump")),
     _total_rotation(getMaterialPropertyByName<RankTwoTensor>(_base_name + "total_rotation"))
-        
+
 {
 }
 

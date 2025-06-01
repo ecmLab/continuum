@@ -1,19 +1,7 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/* 
- * File:   PorousFlowSinkScaledCoupledVar.C
- * Author: srinath
- * 
- * Created on October 19, 2021, 6:36 PM
- */
 
 #include "PorousFlowSinkScaledCoupledVar.h"
 
-registerMooseObject("electro_chemo_mechApp", PorousFlowSinkScaledCoupledVar);
+registerMooseObject("ecmApp", PorousFlowSinkScaledCoupledVar);
 
 InputParameters
 PorousFlowSinkScaledCoupledVar::validParams()
@@ -27,12 +15,12 @@ PorousFlowSinkScaledCoupledVar::validParams()
     return params;
 }
 
-PorousFlowSinkScaledCoupledVar::PorousFlowSinkScaledCoupledVar(const InputParameters& parameters) 
+PorousFlowSinkScaledCoupledVar::PorousFlowSinkScaledCoupledVar(const InputParameters& parameters)
     : PorousFlowSink(parameters),
     _scale(isParamValid("scale") ? getParam<Real>("scale") : 1.0),
     _coupled_var(coupledValue("v"))
-     
-{     
+
+{
 }
 
 Real

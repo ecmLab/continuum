@@ -1,7 +1,7 @@
 
 #include "LiPotInSE.h"
 
-registerMooseObject("electro_chemo_mechApp", LiPotInSE);
+registerMooseObject("ecmApp", LiPotInSE);
 
 InputParameters
 LiPotInSE::validParams()

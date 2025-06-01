@@ -1,18 +1,8 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/cppFiles/class.cc to edit this template
- */
 
-/* 
- * File:   ComputeSurfaceConcentrationAux.C
- * Author: srinath
- * 
- * Created on March 21, 2022, 9:09 AM
- */
 
 #include "ComputeSurfaceConcentrationAux.h"
 
-registerMooseObject("electro_chemo_mechApp", ComputeSurfaceConcentrationAux);
+registerMooseObject("ecmApp", ComputeSurfaceConcentrationAux);
 
 InputParameters
 ComputeSurfaceConcentrationAux::validParams()
@@ -36,7 +26,7 @@ ComputeSurfaceConcentrationAux::ComputeSurfaceConcentrationAux(const InputParame
         _diffusion_coefficient(getADMaterialProperty<Real>("diffusion_coefficient")),
         _scale(getParam<Real>("scale"))
 {
-    
+
 }
 
 Real

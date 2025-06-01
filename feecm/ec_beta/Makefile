@@ -7,16 +7,14 @@
 #
 ###############################################################################
 # Use the MOOSE submodule if it exists and MOOSE_DIR is not set
-#MOOSE_SUBMODULE    := $(CURDIR)/moose
-#ifneq ($(wildcard $(MOOSE_SUBMODULE)/framework/Makefile),)
-#  MOOSE_DIR        ?= $(MOOSE_SUBMODULE)
-#else
-#  MOOSE_DIR        ?= $(shell dirname `pwd`)/moose
-#endif
+MOOSE_SUBMODULE    := $(CURDIR)/moose
+ifneq ($(wildcard $(MOOSE_SUBMODULE)/framework/Makefile),)
+  MOOSE_DIR        ?= $(MOOSE_SUBMODULE)
+else
+  MOOSE_DIR        ?= $(shell dirname `pwd`)/moose
+endif
 
-MOOSE_DIR := /Users/ashokgrg19/projects/moose
-
-# ifeq ($(wildcard $(MOOSE_DIR)/framework/Makefile),)
+#ifeq ($(wildcard $(MOOSE_DIR)/framework/Makefile),)
 #  $(error MOOSE directory not found at $(MOOSE_DIR))
 # endif
 # framework
@@ -41,7 +39,7 @@ FLUID_PROPERTIES            := no
 FSI                         := no
 FUNCTIONAL_EXPANSION_TOOLS  := no
 GEOCHEMISTRY                := no
-HEAT_CONDUCTION             := yes
+HEAT_TRANSFER               := yes
 LEVEL_SET                   := no
 MISC                        := no
 NAVIER_STOKES               := no
@@ -55,15 +53,14 @@ RDG                         := no
 RICHARDS                    := no
 STOCHASTIC_TOOLS            := no
 THERMAL_HYDRAULICS          := no
-TENSOR_MECHANICS            := yes
+SOLID_MECHANICS             := yes
 XFEM                        := no
 
 include $(MOOSE_DIR)/modules/modules.mk
 ###############################################################################
 
 # dep apps
-#APPLICATION_DIR    := $(CURDIR)
-APPLICATION_DIR    := /Users/ashokgrg19/projects/continuum/feecm/ec_beta
+APPLICATION_DIR    := $(CURDIR)
 APPLICATION_NAME   := ec_beta
 BUILD_EXEC         := yes
 GEN_REVISION       := no

@@ -1,7 +1,7 @@
 
 #include "SingleSEElectrodeNeumann.h"
 
-registerADMooseObject("electro_chemo_mechApp", SingleSEElectrodeNeumann);
+registerADMooseObject("ecmApp", SingleSEElectrodeNeumann);
 
 InputParameters
 SingleSEElectrodeNeumann::validParams()

@@ -1,18 +1,8 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/cppFiles/class.cc to edit this template
- */
 
-/* 
- * File:   ADCoupledButlerVolmerForce.C
- * Author: srinathcs
- * 
- * Created on March 17, 2022, 11:33 AM
- */
 
 #include "ADCoupledButlerVolmerForce.h"
 
-registerMooseObject("electro_chemo_mechApp",ADCoupledButlerVolmerForce);
+registerMooseObject("ecmApp",ADCoupledButlerVolmerForce);
 
 InputParameters
 ADCoupledButlerVolmerForce::validParams()
@@ -26,7 +16,7 @@ ADCoupledButlerVolmerForce::validParams()
     params.addParam<Real>("faraday",96.4853329, "Faraday's constant");
     params.addParam<Real>("temperature", 298, "Temperature");
     params.addParam<Real>("gas_constant", 8.314462681,"Universal Gas Constant");
-    params.addParam<Real>("exchange_current_density", 
+    params.addParam<Real>("exchange_current_density",
             "Constant exchange current density");
     return params;
 }
@@ -42,7 +32,7 @@ ADCoupledButlerVolmerForce::ADCoupledButlerVolmerForce(const InputParameters & p
         _num_electrode_potential_var(coupled("electrode_potential_var")),
         _electrode_potential(adCoupledValue("electrode_potential_var")),
         _equilibrium_potential(getADMaterialProperty<Real>("equlibrium_potential"))
-{   
+{
 }
 
 ADReal

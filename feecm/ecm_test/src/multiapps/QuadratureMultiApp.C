@@ -1,14 +1,4 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/cppFiles/class.cc to edit this template
- */
 
-/* 
- * File:   QuadratureMultiApp.C
- * Author: srinathcs
- * 
- * Created on March 22, 2022, 2:34 PM
- */
 
 //MOOSE includes
 #include "QuadratureMultiApp.h"
@@ -54,11 +44,11 @@ QuadratureMultiApp::fillPositions()
         std::unique_ptr<QBase> qrule (fe_type.default_quadrature_rule (2, extraorder));
         fe->attach_quadrature_rule (qrule.get());
         fe->reinit(elem_ptr);
-        for (auto i=0; i<q_points.size(); ++i){ 
+        for (auto i=0; i<q_points.size(); ++i){
             _positions.push_back(q_points[i]);
         }
     }
-      
+
   }
   // Use the comm from the problem this MultiApp is part of
   libMesh::ParallelObject::comm().allgather(_positions);

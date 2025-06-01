@@ -1,31 +1,9 @@
-/*
- * Copyright (C) 2020 srinath
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
 
-/* 
- * File:   ADComputeEquilibriumPotential.C
- * Author: srinath
- * 
- * Created on October 22, 2020, 6:16 PM
- */
 
 #include "ADComputeEquilibriumPotential.h"
 #include "Function.h"
 
-registerADMooseObject("electro_chemo_mechApp", ADComputeEquilibriumPotential);
+registerADMooseObject("ecmApp", ADComputeEquilibriumPotential);
 
 InputParameters
 ADComputeEquilibriumPotential::validParams()
@@ -71,24 +49,24 @@ ADComputeEquilibriumPotential::ADComputeEquilibriumPotential(const InputParamete
       _reaction_rate_function(getParam<FunctionName>("reaction_rate_function")!= ""
             ? &getFunction("reaction_rate_function") : NULL),
       _is_ocv(getParam<bool>("is_ocv")),
-      _swelling_chemical_potential(_include_mechanical_effects ? 
-          &getADMaterialProperty<Real>(_base_name + "swelling_chemical_potential") 
+      _swelling_chemical_potential(_include_mechanical_effects ?
+          &getADMaterialProperty<Real>(_base_name + "swelling_chemical_potential")
            : nullptr),
-      _elastic_chemical_potential(_include_mechanical_effects ? 
-          &getADMaterialProperty<Real>(_base_name + "elastic_chemical_potential") 
-        : nullptr),       
+      _elastic_chemical_potential(_include_mechanical_effects ?
+          &getADMaterialProperty<Real>(_base_name + "elastic_chemical_potential")
+        : nullptr),
       _equilibrium_potential(declareADPropertyByName<Real>(_base_name + "equilibrium_potential")),
       _chemical_potential(declareADProperty<Real>(_base_name + "chemical_potential")),
-      _state_of_charge(declareADProperty<Real>(_base_name + "state_of_charge")), 
+      _state_of_charge(declareADProperty<Real>(_base_name + "state_of_charge")),
       _diff_potential(getParam<MooseEnum>("potential").getEnum<DiffPotential>())
-{   
-        
+{
+
     if (isParamValid("reaction_rate") && _reaction_rate_function)
     {
         mooseError("Cannot define both reaction rate and reaction rate function");
     }
 }
-      
+
 void
 ADComputeEquilibriumPotential::computeQpProperties()
 {
@@ -100,20 +78,20 @@ ADComputeEquilibriumPotential::computeQpProperties()
     ADReal c = 0.0;
     if (_has_conc) {
         c = (*_concentration)[_qp] > 0 ? (*_concentration)[_qp]: ADReal(0.0);
-        cbar = c/_c0;    
+        cbar = c/_c0;
         if ((*_concentration)[_qp] < 0.001 * _c0)
-                cbar = 0.001; 
+                cbar = 0.001;
         if ((*_concentration)[_qp] > 0.999 * _c0)
             cbar = 0.999;
     }
     _state_of_charge[_qp]  = cbar;
-    
+
 
     if (_include_reaction_rate)
     {
         if (_reaction_rate_function)
         {
-//            auto p = _q_point[_qp]; 
+//            auto p = _q_point[_qp];
             const Point p;
             auto reaction_rate = _reaction_rate_function->value(MetaPhysicL::raw_value(cbar), p);
             _equilibrium_potential[_qp] += (_is_ocv ? reaction_rate : reaction_rate*prefac*prefac2);
@@ -136,19 +114,19 @@ ADComputeEquilibriumPotential::computeQpProperties()
             }
             else if (_diff_potential == DiffPotential::Bower)
                 chem = std::log(cbar);
-            
+
 //            _equilibrium_potential[_qp] -= prefac * chem * prefac2;
             _chemical_potential[_qp] += prefac * chem;
         }
     }
     if (_include_mechanical_effects)
     {
-        auto mech = (*_swelling_chemical_potential)[_qp]; 
+        auto mech = (*_swelling_chemical_potential)[_qp];
         if (!_exclude_elastic_energy)
             mech += (*_elastic_chemical_potential)[_qp];
 //        _equilibrium_potential[_qp] -=  mech * prefac2;
         _chemical_potential[_qp] += mech;
     }
     _equilibrium_potential[_qp] -= prefac2 * _chemical_potential[_qp];
-    
+
 }

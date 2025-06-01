@@ -1,21 +1,10 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
-/* 
- * File:   DiffusionFluxNormalToBoundaryAux.C
- * Author: srinath
- * 
- * Created on October 18, 2019, 8:50 AM
- */
 
 #include "DiffusionFluxNormalToBoundaryAux.h"
 #include "Assembly.h"
 #include "metaphysicl/raw_type.h"
 
-registerMooseObject("electro_chemo_mechApp", DiffusionFluxNormalToBoundaryAux);
+registerMooseObject("ecmApp", DiffusionFluxNormalToBoundaryAux);
 
 // defineLegacyParams(DiffusionFluxNormalToBoundaryAux);
 
@@ -43,7 +32,7 @@ DiffusionFluxNormalToBoundaryAux::DiffusionFluxNormalToBoundaryAux(const InputPa
 Real
 DiffusionFluxNormalToBoundaryAux::computeValue()
 {
-//    auto dim = 
+//    auto dim =
     RealVectorValue flux;
     for (int i =0; i < LIBMESH_DIM; i++)
     {
@@ -51,4 +40,3 @@ DiffusionFluxNormalToBoundaryAux::computeValue()
     }
   return flux * _normals[_qp];
 }
-

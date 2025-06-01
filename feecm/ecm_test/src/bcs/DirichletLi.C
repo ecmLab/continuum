@@ -1,7 +1,7 @@
 
 #include "DirichletLi.h"
 
-registerADMooseObject("electro_chemo_mechApp", DirichletLi);
+registerADMooseObject("ecmApp", DirichletLi);
 
 InputParameters
 DirichletLi::validParams()
@@ -10,7 +10,7 @@ DirichletLi::validParams()
 
    // Add a coupled parameter: potEn
    params.addRequiredCoupledVar("potEn", "The potential of Electron");
-  
+
    return params;
 }
 

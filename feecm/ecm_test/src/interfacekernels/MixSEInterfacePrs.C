@@ -1,6 +1,6 @@
 #include "MixSEInterfacePrs.h"
 
-registerMooseObject("electro_chemo_mechApp", MixSEInterfacePrs);
+registerMooseObject("ecmApp", MixSEInterfacePrs);
 
 InputParameters
 MixSEInterfacePrs::validParams()

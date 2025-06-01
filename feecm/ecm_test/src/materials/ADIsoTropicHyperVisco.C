@@ -11,7 +11,7 @@
 
 #include "ElasticityTensorTools.h"
 
-registerADMooseObject("electro_chemo_mechApp", ADIsoTropicHyperVisco);
+registerADMooseObject("ecmApp", ADIsoTropicHyperVisco);
 
 InputParameters
 ADIsoTropicHyperVisco::validParams()
@@ -50,7 +50,7 @@ ADIsoTropicHyperVisco::ADIsoTropicHyperVisco(const InputParameters & parameters)
     _shear_initial_resistance = _Y0 / std::sqrt(3.0);
     _shear_saturation = _Ysat / std::sqrt(3.0);
     _shear_initial_hardness = _H0 / 3.0;
-    _check_range = true;   
+    _check_range = true;
 //    _line_search = false;
 
     /*--------------------------------------------*/
@@ -83,8 +83,8 @@ void
 ADIsoTropicHyperVisco::computeStressInitialize(
     const ADReal & effective_trial_stress, const ADRankFourTensor & elasticity_tensor)
 {
-  
-  _hardening_variable[_qp] = _shear_initial_hardness 
+
+  _hardening_variable[_qp] = _shear_initial_hardness
                             * std::pow((1.0 - (_strength_variable_old[_qp] / _shear_saturation)), _ahard);
   _yield_strength[_qp] = _strength_variable[_qp] * std::sqrt(3.0);
 }
@@ -94,7 +94,7 @@ ADIsoTropicHyperVisco::iterationFinalize(ADReal scalar)
 {
     if (scalar >= 0.0)
         _strength_variable[_qp] = _strength_variable_old[_qp] + _dt * _hardening_variable[_qp] * scalar;
-        
+
     else
         _strength_variable[_qp] = _strength_variable_old[_qp];
 }
@@ -104,8 +104,8 @@ ADIsoTropicHyperVisco::computeResidual(
     const ADReal & effective_trial_stress, const ADReal & scalar)
 {
   ADReal residual = 0.0;
-  
-  if (scalar < 0.0) 
+
+  if (scalar < 0.0)
       return  effective_trial_stress/_three_shear_modulus/3.0;
 
   _strength_variable[_qp] = computeHardeningValue(scalar);
@@ -125,10 +125,10 @@ ADIsoTropicHyperVisco::computeDerivative(
 
     if (scalar < 1e-8)
             return -_dt;
-    if (scalar > 0) {        
+    if (scalar > 0) {
         auto hslope = computeHardeningDerivative(scalar);
         auto fac1 = hslope * std::pow((scalar/_shear_rate), _mrate);
-        auto fac2 = _strength_variable[_qp] * (_mrate/_shear_rate) * 
+        auto fac2 = _strength_variable[_qp] * (_mrate/_shear_rate) *
                    std::pow((scalar / _shear_rate), _mrate-1.0);
         derivative = -_three_shear_modulus/3.0 * _dt - fac1 -fac2;
     } else
@@ -167,7 +167,7 @@ Real
 ADIsoTropicHyperVisco:: computeTimeStepLimit()
 {
     Real scalar_inelastic_strain_incr;
-    
+
     scalar_inelastic_strain_incr = std::abs (MetaPhysicL::raw_value(_effective_inelastic_strain[_qp] -
             _effective_inelastic_strain_old[_qp]))/ _max_inelastic_increment;
 //    if (MooseUtils::absoluteFuzzyEqual(scalar_inelastic_strain_incr, 0.0))

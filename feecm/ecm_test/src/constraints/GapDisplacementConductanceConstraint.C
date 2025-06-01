@@ -1,22 +1,11 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
-/* 
- * File:   GapDisplacementConductanceConstraint.C
- * Author: srinath
- * 
- * Created on October 3, 2019, 8:16 PM
- */
 
 #include "GapDisplacementConductanceConstraint.h"
 #include "Function.h"
 #include "SubProblem.h"
 #include "MaterialBase.h"
 
-registerADMooseObject("electro_chemo_mechApp", GapDisplacementConductanceConstraint);
+registerADMooseObject("ecmApp", GapDisplacementConductanceConstraint);
 
 InputParameters
 GapDisplacementConductanceConstraint::validParams()
@@ -50,14 +39,14 @@ GapDisplacementConductanceConstraint::GapDisplacementConductanceConstraint(const
   : ADMortarConstraint(parameters),
     _k_function(isParamValid("k_function") ? & this->getFunction("k_function") : NULL),
     _conductance(getParam<MooseEnum>("conductanceType").getEnum<Conductance>()),
-    _my_k(getParam<Real>("k")), 
+    _my_k(getParam<Real>("k")),
     _gas_constant(getParam<Real>("R")),
     _temp(getParam<Real>("temperature")),
     _faraday(getParam<Real>("faraday")),
     _disp_name(parameters.getVecMooseType("displacements")),
     _n_disp(_disp_name.size()),
     _disp_secondary(_n_disp),
-    _disp_primary(_n_disp), 
+    _disp_primary(_n_disp),
     _include_concentration(getParam<bool>("include_concentration")),
     _concentration_var((isParamValid("concentration") && _include_concentration)
 
@@ -69,15 +58,15 @@ GapDisplacementConductanceConstraint::GapDisplacementConductanceConstraint(const
     _surface_type(getParam<MooseEnum>("surfaceType").getEnum<SurfaceType>()),
     _compute(getParam<MooseEnum>("computeType").getEnum<Compute>()),
     _RTF(_gas_constant * _temp/_faraday)
-    
+
 {
     if (_k_function == NULL && !parameters.isParamSetByUser("k"))
         mooseError("Either k or k_function must be given");
     if (_surface_type == SurfaceType::Primary)
     {
-        _flux_sign = -1.0; 
+        _flux_sign = -1.0;
         if (_concentration_var)  _concentration = &_concentration_var->adSlnNeighbor();
-        
+
     }
     else if (_surface_type == SurfaceType::Secondary)
     {
@@ -86,7 +75,7 @@ GapDisplacementConductanceConstraint::GapDisplacementConductanceConstraint(const
     }
 //    if (_concentration_var)
 //    {
-//        /// (TBD) Need to add code to make sure that primary and secondary surfaces can 
+//        /// (TBD) Need to add code to make sure that primary and secondary surfaces can
 //        //// be switched
 //        if (_surface_type == SurfaceType::Primary)
 //        {
@@ -125,7 +114,7 @@ GapDisplacementConductanceConstraint::GapDisplacementConductanceConstraint(const
 ADReal
 GapDisplacementConductanceConstraint::computeQpResidual(Moose::MortarType mortar_type)
 {
-    
+
   switch (mortar_type)
   {
     case Moose::MortarType::Primary:
@@ -137,14 +126,14 @@ GapDisplacementConductanceConstraint::computeQpResidual(Moose::MortarType mortar
         auto residual = _lambda[_qp] * _test[_i][_qp];
         _k = _my_k;
         auto i0 = _k;
-//        if (_has_primary) 
+//        if (_has_primary)
         {
             if (_include_gap)
             {
                 // we are creating a dual version of phys points primary and secondary here...
-                DualRealVectorValue dual_phys_points_primary;
-                DualRealVectorValue dual_phys_points_secondary;
-                DualRealVectorValue dual_normals;
+                ADRealVectorValue dual_phys_points_primary;
+                ADRealVectorValue dual_phys_points_secondary;
+                ADRealVectorValue dual_normals;
                 for (unsigned int i = 0; i < LIBMESH_DIM; ++i)
                 {
                   dual_phys_points_primary(i) = _phys_points_primary[_qp](i);
@@ -160,16 +149,16 @@ GapDisplacementConductanceConstraint::computeQpResidual(Moose::MortarType mortar
                   dual_phys_points_secondary(i).derivatives() = (*_disp_secondary[i])[_qp].derivatives();
                 }
 
-                auto gap = (dual_phys_points_primary - dual_phys_points_secondary) * dual_normals;            
+                auto gap = (dual_phys_points_primary - dual_phys_points_secondary) * dual_normals;
                 if (_k_function)
                     computeConductance(gap);
             }
-            
+
             switch(_conductance)
             {
                 /// Convert all quantities to exchange current density for uniform formulation
                 case Conductance::Rct:
-                    if (_k > 0.0) 
+                    if (_k > 0.0)
                         i0 = _RTF /_k;
                     else i0 = 1e20;
                     break;
@@ -184,30 +173,30 @@ GapDisplacementConductanceConstraint::computeQpResidual(Moose::MortarType mortar
             else
             {
                 /// (TBD) check to make sure sign is right when primary and secondary
-                /// surfaces are switched .... 
+                /// surfaces are switched ....
                 if (_compute == Compute::Linear_Butler_Volmer)
-                    residual = _test[_i][_qp] * 
+                    residual = _test[_i][_qp] *
                         (_lambda[_qp] +  i0/_RTF * (_flux_sign * (_u_secondary[_qp] - _u_primary[_qp]) - eq_pot_qp));
                 else if (_compute == Compute::Butler_Volmer)
                 {
-                    residual = _test[_i][_qp] * 
+                    residual = _test[_i][_qp] *
                         (_lambda[_qp] + 2.0 *i0 *std::sinh(( _flux_sign * (_u_secondary[_qp] - _u_primary[_qp]) - eq_pot_qp)/_RTF/2.0));
                 }
-                
+
             }
 
-        } 
+        }
 //        else return _lambda[_qp];
         return residual;
-    } 
-      
+    }
+
     default:
       return 0;
   }
 }
 
 
-void 
+void
 GapDisplacementConductanceConstraint::computeConductance(const ADReal & gap)
 {
  if (_k_function)
@@ -222,4 +211,3 @@ GapDisplacementConductanceConstraint::computeConductance(const ADReal & gap)
 //     if (gap > 1e-4) _k = 0.0;
  }
 }
-

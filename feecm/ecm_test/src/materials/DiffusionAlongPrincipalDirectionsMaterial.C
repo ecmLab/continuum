@@ -1,19 +1,8 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
-/* 
- * File:   DiffusionAlongPrincipalDirectionsMaterial.C
- * Author: srinath
- * 
- * Created on August 14, 2020, 12:43 PM
- */
 
 #include "DiffusionAlongPrincipalDirectionsMaterial.h"
 
-registerADMooseObject("electro_chemo_mechApp", ADDiffusionAlongPrincipalDirectionsMaterial);
+registerADMooseObject("ecmApp", ADDiffusionAlongPrincipalDirectionsMaterial);
 
 InputParameters ADDiffusionAlongPrincipalDirectionsMaterial::validParams()
 {
@@ -21,7 +10,7 @@ InputParameters ADDiffusionAlongPrincipalDirectionsMaterial::validParams()
     params.addParam<std::string>("base_name", "Base name for material class");
     params.addClassDescription("Provides a diffusivity tensor based on 3 principal directions");
     params.addRequiredParam<RealVectorValue>("diffusivity_vector", "Diffusivity along 3 principal directions ");
-    params.addParam<MaterialPropertyName>("diffusivity", "diffusivity", 
+    params.addParam<MaterialPropertyName>("diffusivity", "diffusivity",
             "Name of the diffusivity");
     return params;
 }
@@ -33,7 +22,7 @@ ADDiffusionAlongPrincipalDirectionsMaterial::ADDiffusionAlongPrincipalDirections
     _swell_normal(getADMaterialProperty<RealVectorValue>("swell_normal")),
     _diffusivity(declareADPropertyByName<RealTensorValue>(_base_name + getParam<MaterialPropertyName>("diffusivity")))
 {
-    
+
 }
 
 void ADDiffusionAlongPrincipalDirectionsMaterial::computeQpProperties()
@@ -46,9 +35,9 @@ void ADDiffusionAlongPrincipalDirectionsMaterial::computeQpProperties()
 
     D1.vectorOuterProduct(m_v1, m_v1);
     D2.vectorOuterProduct(m_v2, m_v2);
-    D3.vectorOuterProduct(m_v3, m_v3);  
-    
-    _diffusivity[_qp] = _diffusivity_values(0)* D1 + 
+    D3.vectorOuterProduct(m_v3, m_v3);
+
+    _diffusivity[_qp] = _diffusivity_values(0)* D1 +
                         _diffusivity_values(1)* D2 +
                         _diffusivity_values(2)* D3;
 }

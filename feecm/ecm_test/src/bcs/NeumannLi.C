@@ -1,7 +1,7 @@
 
 #include "NeumannLi.h"
 
-registerADMooseObject("electro_chemo_mechApp", NeumannLi);
+registerADMooseObject("ecmApp", NeumannLi);
 
 InputParameters
 NeumannLi::validParams()

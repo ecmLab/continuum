@@ -1,7 +1,7 @@
 
 #include "ParamDiffusion.h"
 
-registerADMooseObject("electro_chemo_mechApp", ParamDiffusion);
+registerADMooseObject("ecmApp", ParamDiffusion);
 
 InputParameters
 ParamDiffusion::validParams()
@@ -25,4 +25,3 @@ ParamDiffusion::computeQpResidual()
 //  return 10000 * _conductivity_coef[_qp] * ADDiffusion<compute_stage>::precomputeQpResidual();
   return 10000 * _conductivity_coef[_qp] * _grad_test[_i][_qp] * _grad_u[_qp];
 }
-

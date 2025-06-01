@@ -1,22 +1,11 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
-/* 
- * File:   EqualNormalFluxConstraint.C
- * Author: srinath
- * 
- * Created on January 28, 2021, 1:21 PM
- */
 
 #include "EqualNormalFluxConstraint.h"
 
 #include "SubProblem.h"
 #include "FEProblem.h"
 
-registerMooseObject("electro_chemo_mechApp", EqualNormalFluxConstraint);
+registerMooseObject("ecmApp", EqualNormalFluxConstraint);
 
 InputParameters
 EqualNormalFluxConstraint::validParams()
@@ -35,7 +24,7 @@ EqualNormalFluxConstraint::validParams()
       "The material property name providing the quantity to equilibrate on the secondary side");
   params.addParam<bool>("primary_tensor", false, "Is the material property tensor_valued");
   params.addParam<bool>("secondary_tensor", false, "Is the material property tensor_valued");
-  
+
   return params;
 }
 
@@ -54,16 +43,16 @@ EqualNormalFluxConstraint::EqualNormalFluxConstraint(const InputParameters & par
 ADReal
 EqualNormalFluxConstraint::computeQpResidual(Moose::MortarType mortar_type)
 {
-       
+
   switch (mortar_type)
   {
     case Moose::MortarType::Secondary:
-      return _lambda[_qp] * _test_secondary[_i][_qp]; 
+      return _lambda[_qp] * _test_secondary[_i][_qp];
     case Moose::MortarType::Primary:
       return _lambda[_qp] * _test_primary[_i][_qp];
     case Moose::MortarType::Lower:
     {
-        ADRealVectorValue gradup; 
+        ADRealVectorValue gradup;
         ADRealVectorValue gradus;
         auto residual = _lambda[_qp] * _test[_i][_qp];
 //        if (_has_primary)
@@ -76,10 +65,10 @@ EqualNormalFluxConstraint::computeQpResidual(Moose::MortarType mortar_type)
                 gradus = (*_secondary_mat_prop_real)[_qp] * _grad_u_secondary[_qp];
             else
                 gradus = (*_secondary_mat_prop_tensor)[_qp] * _grad_u_secondary[_qp];
-                
+
             residual = ((gradup - gradus) * _normals[_qp]  + _lambda[_qp]) * _test[_i][_qp];
         }
-                    
+
 //        return residual;
     }
     default:

@@ -1,13 +1,13 @@
 
 #include "MixSEVoidBV.h"
 
-registerADMooseObject("electro_chemo_mechApp", MixSEVoidBV);
+registerADMooseObject("ecmApp", MixSEVoidBV);
 
 InputParameters
 MixSEVoidBV::validParams()
 {
 
-  InputParameters params = ADIntegratedBC::validParams(); 
+  InputParameters params = ADIntegratedBC::validParams();
   params.addClassDescription("Compute the deposition boundary condition.");
 
 // Add a coupled parameter: potLi

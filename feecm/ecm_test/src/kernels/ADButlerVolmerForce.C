@@ -1,6 +1,6 @@
 #include "ADButlerVolmerForce.h"
 
-registerADMooseObject("electro_chemo_mechApp", ADButlerVolmerForce);
+registerADMooseObject("ecmApp", ADButlerVolmerForce);
 
 InputParameters
 ADButlerVolmerForce::validParams()
@@ -18,7 +18,7 @@ ADButlerVolmerForce::ADButlerVolmerForce(const InputParameters & parameters)
         _base_name(isParamValid("base_name") ? getParam<std::string>("base_name") + "_" : ""),
         _scale(getParam<Real>("scale")),
         _mat_property(getADMaterialPropertyByName<Real>(_base_name + getParam<MaterialPropertyName>("mat_prop_name")))
-{   
+{
 }
 
 ADReal

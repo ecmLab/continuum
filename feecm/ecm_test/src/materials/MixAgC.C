@@ -2,7 +2,7 @@
 #include "MixAgC.h"
 #include "Function.h"
 
-registerADMooseObject("electro_chemo_mechApp", MixAgC);
+registerADMooseObject("ecmApp", MixAgC);
 
 InputParameters MixAgC::validParams()
 {
@@ -37,7 +37,7 @@ InputParameters MixAgC::validParams()
 
 // Add a required parameter.  If this isn't provided in the input file MOOSE will error.
     params.addRequiredParam<Real>("LiPotCathode", "The Li chemical potential in Cathode, unit V.");
- 
+
   return params;
 }
 
