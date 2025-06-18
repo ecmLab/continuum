@@ -430,7 +430,7 @@ T_penalty = 1
     ideal_gas_constant = ${R}
     temperature = T_ref
     reference_concentration = ${c_ref_entropy}
-    
+    reference_chemical_potential=0.0
   []
   [chemical_potential]
     type = ChemicalPotential
@@ -725,7 +725,7 @@ T_penalty = 1
     cutback_factor_at_failure = 0.1
     linear_iteration_ratio = 100
   []
-  end_time = 10000
+  end_time = 1000
 []
 
 [Outputs]
