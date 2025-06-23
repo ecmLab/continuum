@@ -1,71 +1,66 @@
-I = 0.005 #mA
-width = 0.05 #mm
-in = '${fparse -I/width}'
-t0 = '${fparse -1e-2/in}'
-
-sigma_a = 0.2 #mS/mm
-sigma_e = 0.1 #mS/mm
-sigma_cp = 0.05 #mS/mm
-sigma_ca = 0.2 #mS/mm
-sigma_cm = 0.05 #mS/mm
-
-Phi_penalty = 10
-
-cmin_a = 1e-4 #mmol/mm^3
-cmax_a = 1e-3 #mmol/mm^3
-c_e = 5e-4 #mmol/mm^3
-cmax_c = 1e-3 #mmol/mm^3
-c_ref_entropy = 5e-5
-D_cp = 5e-5 #mm^2/s
-D_cm = 1e-4 #mm^2/s
-D_a = 5e-4 #mm^2/s
-D_e = 1e-4 #mm^2/s
-
-c_penalty = 1
-
+## Universal Constants
 R = 8.3145 #mJ/mmol/K
 T0 = 300 #K
 F = 96485 #mC/mmol
 
-i0_a = 1e-1 #mA/mm^2
-i0_c = 1e-1 #mA/mm^2
+## Experimental parameters
+I = 0.00001   # Total cuurent, in mA
+width = 0.01  # model width, in mm; assuming the model depth is 1mm
+in = '${fparse -I/width}'  # the current density, in mA/mm^2
+C  =   1e-3   # Total capacity = in * t0, in mAh/mm^2
+t0 = '${fparse -C/in}'  # total charging time, in hours
 
-E_cp = 6e4
-E_cm = 5e4
-E_e = 5e4
-E_a = 1e5
+## Material parameters
+# concentrations range of pristine Materials
+cmin_a = 1e-4 # minimal Na concentration in anode, mmol/mm^3
+cmax_a = 4e-2 # maximal Na concentration in anode, mmol/mm^3. Pure Na is 4.2e-2
+c_e    = 5e-4 #??? Na concentration in NPS, in mmol/mm^3
+cmax_c = 1e-2 # maximal Na concentration in cathode, mmol/mm^3. Full Na2S is 2.4e-2
+c_ref_entropy = 4.2e-2 # reference Na concentration, use Na metal
+Omega = 333  # Molar volume of Na15Sn4 from Material project, in mm^3/mmol
+beta = 1  # Swelling coefficient of Na15Sn4, dimensionless
+# Transport parameters for Na-ions
+sigma_e = 0.01   # Ionic conductivity of NPS, in mS/mm
+sigma_a = 0.01   #??? Why would there is conductivity in the anode?? in mS/mm
+sigma_cm = 0.01  # Ionic conductivity of NPS in the cathode, in mS/mm
+sigma_cp = 0.1   #??? What this mean?? assuming fast. in mS/mm
+sigma_ca = 0.1   #??? What this mean?? assuming fast. in mS/mm
+# Transport parameters for Na-atoms
+D_a = 1e-7   # Na diffusivity in Na15Sn4 is 1.4e-8 mm^2/s
+D_e = 1e-4   #??? Why would there is diffusivity in the electrolyte?? mm^2/s
+D_cp = 1e-2  # Na diffusivity in Sulfur cathode, assuming fast. mm^2/s
+D_cm = 1e-4  #??? Why would there is diffusivity in the electrolyte?? mm^2/s
+# Exchange current densities for the B-V reactions
+i0_a = 5e-4 # From reference paper, in mA/mm^2
+i0_c = 1e-1 # assuming fast. mA/mm^2
+# Mechanical properties
+E_a = 1.34e2 # Young's modulus of Na15Sn4, in MPa
+E_e = 1.53e2 # Young's modulus of SE, in MPa
+E_cp = 6e3
+E_cm = 5e3
+nu_a = 0.34  # Poisson ratio of pure Na metal is 0.34
+nu_e = 0.39  # From Material Project
 nu_cp = 0.3
 nu_cm = 0.25
-nu_e = 0.25
-nu_a = 0.3
 
+## Penalty factors for solving varialbles
+Phi_penalty = 10
+c_penalty = 1
 u_penalty = 1e8
 
-Omega = 140
-beta = 1e-4
-CTE = 1e-5
-
-rho = 2.5e-9 #Mg/mm^3
-cv = 2.7e8 #mJ/Mg/K
-kappa = 2e-4 #mJ/mm/K/s
-htc = 9.5e-3
-
-T_penalty = 1
-
 [GlobalParams]
-  energy_densities = 'dot(psi_m) dot(psi_c) chi q q_ca zeta'
+  energy_densities = 'dot(psi_m) dot(psi_c) q q_ca zeta'
   deformation_gradient = F
   mechanical_deformation_gradient = Fm
   eigen_deformation_gradient = Fg
   swelling_deformation_gradient = Fs
-  thermal_deformation_gradient = Ft
   displacements = 'disp_x disp_y'
 []
 
 [Mesh]
   [battery]
     type = FileMeshGenerator
-    file = 'gold/ssb.msh'
+    file = 'data/ssb_flat.msh'
   []
   [interfaces]
     type = BreakMeshByBlockGenerator
@@ -77,7 +72,7 @@ T_penalty = 1
 []
 
 [Variables]
-  [Phi_ca]
+  [Phi_ca]  ##???
     block = cm
   []
   [Phi]
@@ -87,9 +82,6 @@ T_penalty = 1
   [disp_x]
   []
   [disp_y]
-  []
-  [T]
-    initial_condition = ${T0}
   []
 []
 
@@ -118,18 +110,6 @@ T_penalty = 1
       scalar_type = ThirdInvariant
       execute_on = 'INITIAL TIMESTEP_END'
     []
-  []
-  [Jt]
-    order = CONSTANT
-    family = MONOMIAL
-    [AuxKernel]
-      type = ADRankTwoScalarAux
-      rank_two_tensor = Ft
-      scalar_type = ThirdInvariant
-      execute_on = 'INITIAL TIMESTEP_END'
-    []
-  []
-  [Phi0]
   []
 []
 
@@ -179,7 +159,7 @@ T_penalty = 1
     variable = Phi
     vector = i
   []
-  [charge_balance_ca]
+  [charge_balance_ca] ##???
     type = RankOneDivergence
     variable = Phi_ca
     vector = i_ca
@@ -209,24 +189,6 @@ T_penalty = 1
     component = 1
     tensor = pk1
     factor = -1
-  []
-  # Energy balance
-  [energy_balance_1]
-    type = EnergyBalanceTimeDerivative
-    variable = T
-    density = rho
-    specific_heat = cv
-  []
-  [energy_balance_2]
-    type = RankOneDivergence
-    variable = T
-    vector = h
-  []
-  [heat_source]
-    type = MaterialSource
-    variable = T
-    prop = r
-    coefficient = -1
   []
 []
 
@@ -262,14 +224,6 @@ T_penalty = 1
     factor = 1
     boundary = 'a_e cm_cp'
   []
-  [heat]
-    type = MaterialInterfaceNeumannBC
-    variable = T
-    neighbor_var = T
-    prop = he
-    factor = 1
-    boundary = 'a_e cm_cp e_a cp_cm'
-  []
   [continuity_c]
     type = InterfaceContinuity
     variable = c
@@ -277,7 +231,7 @@ T_penalty = 1
     penalty = ${c_penalty}
     boundary = 'cm_e'
   []
-  [continuity_Phi_ca]
+  [continuity_Phi_ca] ##???
     type = InterfaceContinuity
     variable = Phi_ca
     neighbor_var = Phi
@@ -303,13 +257,6 @@ T_penalty = 1
     variable = disp_y
     neighbor_var = disp_y
     penalty = ${u_penalty}
-    boundary = 'cp_cm cm_e e_a'
-  []
-  [continuity_T]
-    type = InterfaceContinuity
-    variable = T
-    neighbor_var = T
-    penalty = ${T_penalty}
     boundary = 'cp_cm cm_e e_a'
   []
 []
@@ -345,23 +292,7 @@ T_penalty = 1
     type = DirichletBC
     variable = disp_y
     value = 0
-    boundary = 'bottom'
-  []
-  [hconv]
-    type = ADMatNeumannBC
-    variable = T
-    boundary = 'left right'
-    value = -1
-    boundary_material = qconv
-  []
-[]
-
-[Constraints]
-  [ev_y]
-    type = EqualValueBoundaryConstraint
-    variable = disp_y
-    penalty = ${u_penalty}
-    secondary = top
+    boundary = 'bottom top'
   []
 []
 
@@ -383,14 +314,12 @@ T_penalty = 1
     electrical_energy_density = q
     electric_potential = Phi
     electric_conductivity = sigma
-    temperature = T
   []
   [charge_transport_ca]
     type = BulkChargeTransport
     electrical_energy_density = q_ca
     electric_potential = Phi_ca
     electric_conductivity = sigma_ca
-    temperature = T
     block = cm
   []
   [current_density]
@@ -429,13 +358,13 @@ T_penalty = 1
     ideal_gas_constant = ${R}
     temperature = T_ref
     reference_concentration = ${c_ref_entropy}
-    reference_chemical_potential=0.0
+    reference_chemical_potential = 0.0
   []
   [chemical_potential]
     type = ChemicalPotential
     chemical_potential = mu
     concentration = c
-    energy_densities = 'dot(psi_m) dot(psi_c) chi q q_ca zeta m'
+    energy_densities = 'dot(psi_m) dot(psi_c) q q_ca zeta m'
   []
   [diffusion]
     type = MassDiffusion
@@ -475,7 +404,6 @@ T_penalty = 1
   []
   [charge_transfer_anode_elyte]
     type = ChargeTransferReaction
-    electrode = true
     charge_transfer_current_density = ie
     charge_transfer_mass_flux = je
     charge_transfer_heat_flux = he
@@ -485,13 +413,12 @@ T_penalty = 1
     exchange_current_density = ${i0_a}
     faraday_constant = ${F}
     ideal_gas_constant = ${R}
-    temperature = T
+    temperature = ${T0}
     open_circuit_potential = U
     boundary = 'a_e'
   []
   [charge_transfer_elyte_anode]
     type = ChargeTransferReaction
-    electrode = false
     charge_transfer_current_density = ie
     charge_transfer_mass_flux = je
     charge_transfer_heat_flux = he
@@ -501,13 +428,12 @@ T_penalty = 1
     exchange_current_density = ${i0_a}
     faraday_constant = ${F}
     ideal_gas_constant = ${R}
-    temperature = T
+    temperature = ${T0}
     open_circuit_potential = U
     boundary = 'e_a'
   []
   [charge_transfer_cathode_elyte]
     type = ChargeTransferReaction
-    electrode = true
     charge_transfer_current_density = ie
     charge_transfer_mass_flux = je
     charge_transfer_heat_flux = he
@@ -517,13 +443,12 @@ T_penalty = 1
     exchange_current_density = ${i0_c}
     faraday_constant = ${F}
     ideal_gas_constant = ${R}
-    temperature = T
+    temperature = ${T0}
     open_circuit_potential = U
     boundary = 'cp_cm'
   []
   [charge_transfer_elyte_cathode]
     type = ChargeTransferReaction
-    electrode = false
     charge_transfer_current_density = ie
     charge_transfer_mass_flux = je
     charge_transfer_heat_flux = he
@@ -533,43 +458,9 @@ T_penalty = 1
     exchange_current_density = ${i0_c}
     faraday_constant = ${F}
     ideal_gas_constant = ${R}
-    temperature = T
+    temperature = ${T0}
     open_circuit_potential = U
     boundary = 'cm_cp'
-  []
-
-  # Thermal
-  [thermal_properties]
-    type = ADGenericConstantMaterial
-    prop_names = 'rho cv kappa'
-    prop_values = '${rho} ${cv} ${kappa}'
-  []
-  [heat_conduction]
-    type = FourierPotential
-    thermal_energy_density = chi
-    thermal_conductivity = kappa
-    temperature = T
-  []
-  [heat_flux]
-    type = HeatFlux
-    heat_flux = h
-    temperature = T
-    output_properties = h
-    outputs = exodus
-  []
-  [heat_source]
-    type = VariationalHeatSource
-    heat_source = r
-    temperature = T
-    output_properties = r
-    outputs = exodus
-  []
-  [conv]
-    type = ADParsedMaterial
-    f_name = qconv
-    function = '${htc}*(T-T_ref)'
-    args = 'T T_ref'
-    boundary = 'left right'
   []
 
   # Mechanical
@@ -609,12 +500,6 @@ T_penalty = 1
     molar_volume = ${Omega}
     swelling_coefficient = beta
   []
-  [thermal_expansion]
-    type = ThermalDeformationGradient
-    temperature = T
-    reference_temperature = T_ref
-    CTE = ${CTE}
-  []
   [defgrad]
     type = MechanicalDeformationGradient
   []
@@ -624,7 +509,6 @@ T_penalty = 1
     lambda = lambda
     shear_modulus = G
     concentration = c
-    temperature = T
     non_swelling_pressure = p
     output_properties = 'p'
     outputs = exodus
@@ -717,7 +601,7 @@ T_penalty = 1
   [TimeStepper]
     type = IterationAdaptiveDT
     dt = '${fparse t0/50}'
-    optimal_iterations = 6
+    optimal_iterations = 60
     iteration_window = 1
     growth_factor = 1.2
     cutback_factor = 0.2
@@ -730,6 +614,7 @@ T_penalty = 1
 [Outputs]
   exodus = true
   csv = true
-  print_linear_residuals = false
-  checkpoint = true
+  file_base = rst/ecm_flat
+#  print_linear_residuals = false
+#  checkpoint = true
 []

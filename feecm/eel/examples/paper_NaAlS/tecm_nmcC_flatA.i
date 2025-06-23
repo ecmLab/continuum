@@ -1,56 +1,60 @@
-I = 0.005 #mA
-width = 0.05 #mm
-in = '${fparse -I/width}'
-t0 = '${fparse -1e-2/in}'
-
-sigma_a = 0.2 #mS/mm
-sigma_e = 0.1 #mS/mm
-sigma_cp = 0.05 #mS/mm
-sigma_ca = 0.2 #mS/mm
-sigma_cm = 0.05 #mS/mm
-
-Phi_penalty = 10
-
-cmin_a = 1e-4 #mmol/mm^3
-cmax_a = 1e-3 #mmol/mm^3
-c_e = 5e-4 #mmol/mm^3
-cmax_c = 1e-3 #mmol/mm^3
-c_ref_entropy = 5e-5
-D_cp = 5e-5 #mm^2/s
-D_cm = 1e-4 #mm^2/s
-D_a = 5e-4 #mm^2/s
-D_e = 1e-4 #mm^2/s
-
-c_penalty = 1
-
+## Universal Constants
 R = 8.3145 #mJ/mmol/K
 T0 = 300 #K
 F = 96485 #mC/mmol
 
-i0_a = 1e-1 #mA/mm^2
-i0_c = 1e-1 #mA/mm^2
+## Experimental parameters
+I = 0.00001   # Total cuurent, in mA
+width = 0.01  # model width, in mm; assuming the model depth is 1mm
+in = '${fparse -I/width}'  # the current density, in mA/mm^2
+C  =   1e-3   # Total capacity = in * t0, in mAh/mm^2
+t0 = '${fparse -C/in}'  # total charging time, in hours
 
-E_cp = 6e4
-E_cm = 5e4
-E_e = 5e4
-E_a = 1e5
+## Material parameters
+# concentrations range of pristine Materials
+cmin_a = 1e-4 # minimal Na concentration in anode, mmol/mm^3
+cmax_a = 4e-2 # maximal Na concentration in anode, mmol/mm^3. Pure Na is 4.2e-2
+c_e    = 5e-4 #??? Na concentration in NPS, in mmol/mm^3
+cmax_c = 1e-2 # maximal Na concentration in cathode, mmol/mm^3. Full Na2S is 2.4e-2
+c_ref_entropy = 4.2e-2 # reference Na concentration, use Na metal
+Omega = 333  # Molar volume of Na15Sn4 from Material project, in mm^3/mmol
+beta = 1e-4  # Swelling coefficient of Na15Sn4, dimensionless
+# Transport parameters for Na-ions
+sigma_e = 0.01   # Ionic conductivity of NPS, in mS/mm
+sigma_a = 0.01   #??? Why would there is conductivity in the anode?? in mS/mm
+sigma_cm = 0.01  # Ionic conductivity of NPS in the cathode, in mS/mm
+sigma_cp = 0.1   #??? What this mean?? assuming fast. in mS/mm
+sigma_ca = 0.1   #??? What this mean?? assuming fast. in mS/mm
+# Transport parameters for Na-atoms
+D_a = 2e-8   # Na diffusivity in Na15Sn4 is 1.4e-8 mm^2/s
+D_e = 1e-4   #??? Why would there is diffusivity in the electrolyte?? mm^2/s
+D_cp = 1e-2  # Na diffusivity in Sulfur cathode, assuming fast. mm^2/s
+D_cm = 1e-4  #??? Why would there is diffusivity in the electrolyte?? mm^2/s
+# Exchange current densities for the B-V reactions
+i0_a = 5e-4 # From reference paper, in mA/mm^2
+i0_c = 1e-1 # assuming fast. mA/mm^2
+# Mechanical properties
+E_a = 1.34e2 # Young's modulus of Na15Sn4, in MPa
+E_e = 1.53e3 # Young's modulus of SE, in MPa
+E_cp = 6e3
+E_cm = 5e3
+nu_a = 0.34  # Poisson ratio of pure Na metal is 0.34
+nu_e = 0.39  # From Material Project
 nu_cp = 0.3
 nu_cm = 0.25
-nu_e = 0.25
-nu_a = 0.3
 
+## Penalty factors for solving varialbles
+Phi_penalty = 10
+c_penalty = 1
 u_penalty = 1e8
-
-Omega = 140
-beta = 1e-4
-CTE = 1e-5
-
-rho = 2.5e-9 #Mg/mm^3
-cv = 2.7e8 #mJ/Mg/K
-kappa = 2e-4 #mJ/mm/K/s
-htc = 9.5e-3
-
 T_penalty = 1
+
+## Thermal properties, not important for the current study
+rho = 2.5e-9 # Equivalent density of the model, in Mg/mm^3
+cv = 2.7e8   # Heat capacity, in mJ/Mg/K
+kappa = 2e-4 # Thermal conductivity, in mJ/mm/K/s
+htc = 9.5e-3 # Heat transfer coefficient, in mJ/mm^2/K/s
+CTE = 1e-5   # Thermal expansion coefficient, dimensionless
 
 [GlobalParams]
   energy_densities = 'dot(psi_m) dot(psi_c) chi q q_ca zeta'
@@ -65,7 +69,7 @@ T_penalty = 1
 [Mesh]
   [battery]
     type = FileMeshGenerator
-    file = 'gold/ssb.msh'
+    file = 'data/ssb_flat.msh'
   []
   [interfaces]
     type = BreakMeshByBlockGenerator
@@ -77,7 +81,7 @@ T_penalty = 1
 []
 
 [Variables]
-  [Phi_ca]
+  [Phi_ca]  ##???
     block = cm
   []
   [Phi]
@@ -179,7 +183,7 @@ T_penalty = 1
     variable = Phi
     vector = i
   []
-  [charge_balance_ca]
+  [charge_balance_ca] ##???
     type = RankOneDivergence
     variable = Phi_ca
     vector = i_ca
@@ -277,7 +281,7 @@ T_penalty = 1
     penalty = ${c_penalty}
     boundary = 'cm_e'
   []
-  [continuity_Phi_ca]
+  [continuity_Phi_ca] ##???
     type = InterfaceContinuity
     variable = Phi_ca
     neighbor_var = Phi
@@ -429,7 +433,7 @@ T_penalty = 1
     ideal_gas_constant = ${R}
     temperature = T_ref
     reference_concentration = ${c_ref_entropy}
-    reference_chemical_potential=0.0
+    reference_chemical_potential = 0.0
   []
   [chemical_potential]
     type = ChemicalPotential
@@ -475,7 +479,6 @@ T_penalty = 1
   []
   [charge_transfer_anode_elyte]
     type = ChargeTransferReaction
-    electrode = true
     charge_transfer_current_density = ie
     charge_transfer_mass_flux = je
     charge_transfer_heat_flux = he
@@ -491,7 +494,6 @@ T_penalty = 1
   []
   [charge_transfer_elyte_anode]
     type = ChargeTransferReaction
-    electrode = false
     charge_transfer_current_density = ie
     charge_transfer_mass_flux = je
     charge_transfer_heat_flux = he
@@ -507,7 +509,6 @@ T_penalty = 1
   []
   [charge_transfer_cathode_elyte]
     type = ChargeTransferReaction
-    electrode = true
     charge_transfer_current_density = ie
     charge_transfer_mass_flux = je
     charge_transfer_heat_flux = he
@@ -523,7 +524,6 @@ T_penalty = 1
   []
   [charge_transfer_elyte_cathode]
     type = ChargeTransferReaction
-    electrode = false
     charge_transfer_current_density = ie
     charge_transfer_mass_flux = je
     charge_transfer_heat_flux = he
@@ -717,19 +717,20 @@ T_penalty = 1
   [TimeStepper]
     type = IterationAdaptiveDT
     dt = '${fparse t0/50}'
-    optimal_iterations = 6
+    optimal_iterations = 60
     iteration_window = 1
     growth_factor = 1.2
     cutback_factor = 0.2
     cutback_factor_at_failure = 0.1
     linear_iteration_ratio = 100
   []
-  end_time = 10000
+  end_time = 1000
 []
 
 [Outputs]
   exodus = true
   csv = true
-  print_linear_residuals = false
-  checkpoint = true
+  file_base = rst/flat
+#  print_linear_residuals = false
+#  checkpoint = true
 []
