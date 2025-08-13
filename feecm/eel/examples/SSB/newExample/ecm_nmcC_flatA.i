@@ -60,7 +60,7 @@ u_penalty = 1e8
 [Mesh]
   [battery]
     type = FileMeshGenerator
-    file = 'data/ssb_flat.msh'
+    file = 'data/nmcC_flatA.msh'
   []
   [interfaces]
     type = BreakMeshByBlockGenerator
@@ -389,7 +389,6 @@ u_penalty = 1e8
     type = ADParsedMaterial
     f_name = U
     function = 'x:=c/${cmax_a}; 2.77e-4*x^2-0.0069*x+0.0785'
-    # function = 'x:=c/${cmax_a}; -(122.12*x^6-321.81*x^5+315.59*x^4-141.26*x^3+28.218*x^2-1.9057*x+0.0785)*ramp'
     args = c
     material_property_names = 'ramp'
     block = 'a'

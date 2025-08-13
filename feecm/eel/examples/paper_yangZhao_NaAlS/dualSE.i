@@ -1,108 +1,78 @@
-I = 1e-3 #mA
-width = 0.03 #mm
-in = '${fparse -I}'
-t0 = '${fparse -1e-2/in}'
-dt = '${fparse t0/10}'
-
-sigma_a = 1e0 #mS/mm
-sigma_e = 1e-1 #mS/mm
-sigma_c = 1e-2 #mS/mm
-
-l0 = 0
-l1 = 0.04
-l2 = 0.07
-l3 = 0.12
-#min and max concentration
-cmin = 1e-4 #mmol/mm^3
-cmax = 1e-3 #mmol/mm^3
-#Diffusion Coefficient
-D_a = 1e-3 #mm^2/s
-D_e = 1e-4 #mm^2/s
-D_c = 5e-5 #mm^2/s
-
+## Universal Constants
 R = 8.3145 #mJ/mmol/K
 T0 = 300 #K
 F = 96485 #mC/mmol
 
-#exchange current
-i0_a = 1e-1 #mA/mm^2
-i0_c = 1e-1 #mA/mm^2
+## Experimental parameters
+I = 0.00001   # Total cuurent, in mA
+width = 0.01  # model width, in mm; assuming the model depth is 1mm
+in = '${fparse I/width}'  # the current density, in mA/mm^2
+C  =   1e-4   # Total capacity = in * t0, in mAh/mm^2
+t0 = '${fparse abs(C/in)}'  # total charging time, in hours
+dt = '${fparse t0/500}'      # Inital time step, to be adapted in TimeStepper, in s
+rmpT = '${fparse t0*10}'
+endT = '${fparse t0*3600}'
 
-#Young Modulus
-E_c = 1e5
-E_e = 1e4
-E_a = 2e5
+## Material parameters
+# concentrations range of pristine Materials
+cmin_a = 1e-4 # minimal Na concentration in anode, mmol/mm^3
+cmax_a = 4e-2 # maximal Na concentration in anode, mmol/mm^3. Pure Na is 4.2e-2
+c_e    = 5e-4 #??? Na concentration in NPS, in mmol/mm^3
+cmax_c = 1e-2 # maximal Na concentration in cathode, mmol/mm^3. Full Na2S is 2.4e-2
+c_ref_entropy = 4.2e-2 # reference Na concentration, use Na metal
+phi_eq_e = 1.12 # Equilibrium potential of SE vs Na metal, in V
+Omega = 333  # Molar volume of Na15Sn4 from Material project, in mm^3/mmol
+beta_a = 1  # Swelling coefficient of Na15Sn4, dimensionless
+beta_e = 0.1  # Swelling coefficient of SE, dimensionless
+beta_c = 0.00001  # Swelling coefficient of NMC, dimensionless
+# Transport parameters for Na-ions
+sigma_e1 = 0.01   # Ionic conductivity of NPS, in mS/mm
+sigma_e2 = 0.004   # Ionic conductivity of NAlS, in mS/mm
+sigma_a = 0.1   #??? Why would there is conductivity in the anode?? in mS/mm
+sigma_c = 0.1   #??? What this mean?? assuming fast. in mS/mm
+# Transport parameters for Na-atoms
+D_a = 5e-7   # Na diffusivity in Na15Sn4 is 1.4e-8 mm^2/s
+D_e = 1e-2   #??? Why would there is diffusivity in the electrolyte?? mm^2/s
+D_c = 1e-2  # Na diffusivity in Sulfur cathode, assuming fast. mm^2/s
+# Exchange current densities for the B-V reactions
+#i0_a = 5e-4 # From reference paper, in mA/mm^2
+i0_a = 5e-2 # From reference paper, in mA/mm^2
+i0_c = 1e-1 # assuming fast. mA/mm^2
+# Mechanical properties
+E_a = 1.34e2 # Young's modulus of Na15Sn4, in MPa
+E_e1 = 1.53e2 # Young's modulus of NPS, in MPa
+E_e2 = 1.53e2 # Young's modulus of NAlS, in MPa
+E_c = 100e3  # Young's modulus of NMC, in MPa
+nu_a = 0.34  # Poisson ratio of pure Na metal is 0.34
+nu_e = 0.39  # From Material Project
+nu_c = 0.3   # Poisson ratio of NMC
 
-# Poisson ratio
-nu_c = 0.3
-nu_e = 0.25
-nu_a = 0.3
-#penalty for the displacement continuity
+## Model geometry
+#la = 0.02  # Length of Anode, in mm
+#le = 0.04  # Length of SE, in mm
+#lc = 0.02  # Length of cathode, in mm
+
+## Penalty factors for solving varialbles
+c_penalty = 1e8
 u_penalty = 1e8
 
-#Salt molar volume
-Omega = 60
-#Swelling Coefficient (alpha s in paper)
-beta = 1e-3
-#Thermal Expansion Coefficient (used CTE instead of alpha^t in paper)
-CTE = 1e-5
-
-#Density
-rho = 2.5e-9 #Mg/mm^3
-#specific heat
-cv = 2.7e8 #mJ/Mg/K
-#thrermal conndectivity
-kappa = 2e-4 #mJ/mm/K/s
-
-T_penalty = 2e-1
-
 [GlobalParams]
-  energy_densities = 'dot(psi_m) dot(psi_c) chi q zeta m'
+  energy_densities = 'dot(psi_m) dot(psi_c) q zeta m'
   deformation_gradient = F
   mechanical_deformation_gradient = Fm
   eigen_deformation_gradient = Fg
   swelling_deformation_gradient = Fs
-  thermal_deformation_gradient = Ft
+  displacements = 'disp_x disp_y'
 []
 
 [Mesh]
   [battery]
-    type = GeneratedMeshGenerator
-    dim = 2
-    xmin = ${l0}
-    xmax = ${l3}
-    ymin = 0
-    ymax = ${width}
-    nx = 60
-    ny = 15
-  []
-  [anode]
-    type = SubdomainBoundingBoxGenerator
-    input = battery
-    block_id = 1
-    block_name = anode
-    bottom_left = '${l0} 0 0'
-    top_right = '${l1} ${width} 0'
-  []
-  [elyte]
-    type = SubdomainBoundingBoxGenerator
-    input = anode
-    block_id = 2
-    block_name = elyte
-    bottom_left = '${l1} 0 0'
-    top_right = '${l2} ${width} 0'
-  []
-  [cathode]
-    type = SubdomainBoundingBoxGenerator
-    input = elyte
-    block_id = 3
-    block_name = cathode
-    bottom_left = '${l2} 0 0'
-    top_right = '${l3} ${width} 0'
+    type = FileMeshGenerator
+    file = 'data/oneDefect1um_twoSE.msh'
   []
   [interfaces]
     type = BreakMeshByBlockGenerator
-    input = cathode
+    input = battery
     add_interface_on_two_sides = true
     split_interface = true
   []
@@ -117,55 +87,82 @@ T_penalty = 2e-1
   []
   [disp_y]
   []
-  [T]
-    initial_condition = ${T0}
-  []
 []
 
 [AuxVariables]
   [c_ref]
-  	#initial_condition = 5e-4
   []
   [T_ref]
     initial_condition = ${T0}
   []
+  [pk1_xx]
+    order = CONSTANT
+    family = MONOMIAL
+    [AuxKernel]
+      type = ADRankTwoAux
+      rank_two_tensor = pk1
+      variable = pk1_xx
+      index_i = 0
+      index_j = 0
+    []
+  []
+  [stress]
+    order = CONSTANT
+    family = MONOMIAL
+    [AuxKernel]
+      type = ADRankTwoScalarAux
+      rank_two_tensor = pk1
+      scalar_type = Hydrostatic
+      execute_on = 'INITIAL TIMESTEP_END'
+    []
+  []
+  [Js]
+    order = CONSTANT
+    family = MONOMIAL
+    [AuxKernel]
+      type = ADRankTwoScalarAux
+      rank_two_tensor = Fs
+      scalar_type = ThirdInvariant
+      execute_on = 'INITIAL TIMESTEP_END'
+    []
+  []
 []
 
 [ICs]
-  [c_min]
+  [c_a]
     type = ConstantIC
     variable = c
-    value = ${cmin}
+    value = ${cmin_a}
     block = 'anode'
   []
-  [c_mid]
+  [c_e]
     type = ConstantIC
     variable = c
-    value = '${fparse (cmax+cmin)/2}'
-    block = 'elyte'
+    value = ${c_e}
+    block = 'elyte1 elyte2'
   []
-  [c_max]
+  [c_c]
     type = ConstantIC
     variable = c
-    value = ${cmax}
+    value = ${cmax_c}
     block = 'cathode'
   []
-  [c_ref_min]
+  [c_ref_a]
     type = ConstantIC
     variable = c_ref
-    value = ${cmin}
+    value = ${cmin_a}
     block = 'anode'
   []
-  [c_ref_mid]
+  [c_ref_e]
     type = ConstantIC
     variable = c_ref
-    value = '${fparse (cmax+cmin)/2}'
-    block = 'elyte'
+    value = ${c_e}
+    block = 'elyte1 elyte2'
   []
-  [c_ref_max]
+  [c_ref_c]
     type = ConstantIC
     variable = c_ref
-    value = ${cmax}
+    value = ${cmax_c}
     block = 'cathode'
   []
 []
@@ -202,24 +199,6 @@ T_penalty = 2e-1
     tensor = pk1
     factor = -1
   []
-  # Energy balance
-  [energy_balance_1]
-    type = EnergyBalanceTimeDerivative
-    variable = T
-    density = rho
-    specific_heat = cv
-  []
-  [energy_balance_2]
-    type = RankOneDivergence
-    variable = T
-    vector = h
-  []
-  [heat_source]
-    type = MaterialSource
-    variable = T
-    prop = r
-    coefficient = -1
-  []
 []
 
 [InterfaceKernels]
@@ -228,63 +207,56 @@ T_penalty = 2e-1
     variable = Phi
     neighbor_var = Phi
     prop = ie
-    factor = -1
-    boundary = 'elyte_anode cathode_elyte'
+    factor = 1
+    boundary = 'anode_elyte1 cathode_elyte2'
   []
-  [positive_current]
+  [negative_mass]
     type = MaterialInterfaceNeumannBC
+    variable = c
+    neighbor_var = c
+    prop = je
+    factor = 1
+    boundary = 'anode_elyte1 cathode_elyte2'
+  []
+  [continuity_phi]
+    type = InterfaceContinuity
     variable = Phi
     neighbor_var = Phi
-    prop = ie
-    boundary = 'anode_elyte elyte_cathode'
-  []
-  [heat]
-    type = MaterialInterfaceNeumannBC
-    variable = T
-    neighbor_var = T
-    prop = he
-    factor = 1
-    boundary = 'anode_elyte elyte_cathode elyte_anode cathode_elyte'
+    penalty = ${c_penalty}
+    boundary = 'elyte1_elyte2'
   []
   [continuity_disp_x]
     type = InterfaceContinuity
     variable = disp_x
     neighbor_var = disp_x
     penalty = ${u_penalty}
-    boundary = 'anode_elyte elyte_cathode'
+    boundary = 'anode_elyte1 elyte1_elyte2 elyte2_cathode'
   []
   [continuity_disp_y]
     type = InterfaceContinuity
     variable = disp_y
     neighbor_var = disp_y
     penalty = ${u_penalty}
-    boundary = 'anode_elyte elyte_cathode'
-  []
-  [continuity_T]
-    type = InterfaceContinuity
-    variable = T
-    neighbor_var = T
-    penalty = ${T_penalty}
-    boundary = 'anode_elyte elyte_cathode'
+    boundary = 'anode_elyte1 elyte1_elyte2 elyte2_cathode'
   []
 []
 
 [Functions]
-  [in]
-    type = PiecewiseLinear
-    x = '0 ${t0}'
-    y = '0 ${in}'
-  []
+ [in]
+   type = PiecewiseLinear
+   x = '0  ${dt}  ${endT}'  # Time points: start, ramp_end, simulation_end
+   y = '0  ${in}    ${in}'  # Values: initial, ramp_target, constant_value
+ []
 []
 
 [BCs]
-  [left]
+  [current]
     type = FunctionNeumannBC
     variable = Phi
     boundary = right
     function = in
   []
-  [right]
+  [potential]
     type = DirichletBC
     variable = Phi
     boundary = left
@@ -302,16 +274,10 @@ T_penalty = 2e-1
     value = 0
     boundary = 'bottom'
   []
-  [open]
-    type = OpenBC
-    variable = c
-    flux = jm
-    boundary = 'left right'
-  []
 []
 
 [Constraints]
-  [y]
+  [ev_y]
     type = EqualValueBoundaryConstraint
     variable = disp_y
     penalty = ${u_penalty}
@@ -324,26 +290,27 @@ T_penalty = 2e-1
   [conductivity]
     type = ADPiecewiseConstantByBlockMaterial
     prop_name = 'sigma'
-    subdomain_to_prop_value = 'anode ${sigma_a} elyte ${sigma_e} cathode ${sigma_c}'
+    subdomain_to_prop_value = 'anode ${sigma_a} elyte1 ${sigma_e1} elyte2 ${sigma_e2} cathode ${sigma_c}'
   []
   [charge_transport]
     type = BulkChargeTransport
     electrical_energy_density = q
     electric_potential = Phi
     electric_conductivity = sigma
-    temperature = T
   []
   [current_density]
     type = CurrentDensity
     current_density = i
     electric_potential = Phi
+    output_properties = i
+    outputs = exodus
   []
 
   # Chemical reactions
   [diffusivity]
     type = ADPiecewiseConstantByBlockMaterial
     prop_name = 'D'
-    subdomain_to_prop_value = 'anode ${D_a} elyte ${D_e} cathode ${D_c}'
+    subdomain_to_prop_value = 'anode ${D_a} elyte1 ${D_e} elyte2 ${D_e} cathode ${D_c}'
   []
   [mobility]
     type = ADParsedMaterial
@@ -357,9 +324,9 @@ T_penalty = 2e-1
     chemical_energy_density = psi_c
     concentration = c
     ideal_gas_constant = ${R}
-    temperature = T
-    reference_concentration = c_ref
-    reference_chemical_potential = 1e3
+    temperature = T_ref
+    reference_concentration = ${c_ref_entropy}
+    reference_chemical_potential=0.0
   []
   [chemical_potential]
     type = ChemicalPotential
@@ -376,6 +343,7 @@ T_penalty = 2e-1
     type = MassFlux
     mass_flux = j
     chemical_potential = mu
+    outputs = exodus
   []
 
   # Migration
@@ -399,11 +367,13 @@ T_penalty = 2e-1
     type = ADGenericFunctionMaterial
     prop_names = 'ramp'
     prop_values = 'if(t<${t0},t/${t0},1)'
+    #prop_values = 0
   []
   [OCP_anode_graphite]
     type = ADParsedMaterial
     f_name = U
-    function = 'x:=c/${cmax}; -(122.12*x^6-321.81*x^5+315.59*x^4-141.26*x^3+28.218*x^2-1.9057*x+0.0785)*ramp'
+#    function = 'x:=c/${cmax_a}; (2.77e-4*x^2-0.0069*x+0.0785)*ramp'
+    function = 'x:=c/${cmax_a}; (2.77e-4*x^2-0.0069*x+0.0785)-${phi_eq_e}'
     args = c
     material_property_names = 'ramp'
     block = 'anode'
@@ -411,30 +381,14 @@ T_penalty = 2e-1
   [OCP_cathode_NMC111]
     type = ADParsedMaterial
     f_name = U
-    function = 'x:=c/${cmax}; (6.0826-6.9922*x+7.1062*x^2-5.4549e-5*exp(124.23*x-114.2593)-2.5947*x^3)*ramp'
+#    function = 'x:=c/${cmax_c}; (6.0826-6.9922*x+7.1062*x^2-5.4549e-5*exp(124.23*x-114.2593)-2.5947*x^3)*ramp'
+    function = 'x:=c/${cmax_c}; 6.0826-6.9922*x+7.1062*x^2-5.4549e-5*exp(124.23*x-114.2593)-2.5947*x^3-${phi_eq_e}'
     args = c
     material_property_names = 'ramp'
     block = 'cathode'
   []
-  [charge_transfer_anode_elyte]
-    type = ChargeTransferReaction
-    #electrode = true
-    charge_transfer_current_density = ie
-    charge_transfer_mass_flux = je
-    charge_transfer_heat_flux = he
-    electric_potential = Phi
-    neighbor_electric_potential = Phi
-    charge_transfer_coefficient = 0.5
-    exchange_current_density = ${i0_a}
-    faraday_constant = ${F}
-    ideal_gas_constant = ${R}
-    temperature = T
-    open_circuit_potential = U
-    boundary = 'anode_elyte'
-  []
   [charge_transfer_elyte_anode]
     type = ChargeTransferReaction
-    #electrode = false
     charge_transfer_current_density = ie
     charge_transfer_mass_flux = je
     charge_transfer_heat_flux = he
@@ -444,13 +398,14 @@ T_penalty = 2e-1
     exchange_current_density = ${i0_a}
     faraday_constant = ${F}
     ideal_gas_constant = ${R}
-    temperature = T
+    temperature = ${T0}
     open_circuit_potential = U
-    boundary = 'elyte_anode'
+    boundary = 'anode_elyte1'
+    output_properties = ie
+    outputs = exodus
   []
   [charge_transfer_cathode_elyte]
     type = ChargeTransferReaction
-    #electrode = true
     charge_transfer_current_density = ie
     charge_transfer_mass_flux = je
     charge_transfer_heat_flux = he
@@ -460,48 +415,11 @@ T_penalty = 2e-1
     exchange_current_density = ${i0_c}
     faraday_constant = ${F}
     ideal_gas_constant = ${R}
-    temperature = T
+    temperature = ${T0}
     open_circuit_potential = U
-    boundary = 'cathode_elyte'
-  []
-  [charge_transfer_elyte_cathode]
-    type = ChargeTransferReaction
-    #electrode = false
-    charge_transfer_current_density = ie
-    charge_transfer_mass_flux = je
-    charge_transfer_heat_flux = he
-    electric_potential = Phi
-    neighbor_electric_potential = Phi
-    charge_transfer_coefficient = 0.5
-    exchange_current_density = ${i0_c}
-    faraday_constant = ${F}
-    ideal_gas_constant = ${R}
-    temperature = T
-    open_circuit_potential = U
-    boundary = 'elyte_cathode'
-  []
-
-  # Thermal
-  [thermal_properties]
-    type = ADGenericConstantMaterial
-    prop_names = 'rho cv kappa'
-    prop_values = '${rho} ${cv} ${kappa}'
-  []
-  [heat_conduction]
-    type = FourierPotential
-    thermal_energy_density = chi
-    thermal_conductivity = kappa
-    temperature = T
-  []
-  [heat_flux]
-    type = HeatFlux
-    heat_flux = h
-    temperature = T
-  []
-  [heat_source]
-    type = VariationalHeatSource
-    heat_source = r
-    temperature = T
+    boundary = 'cathode_elyte2'
+    output_properties = ie
+    outputs = exodus
   []
 
   # Mechanical
@@ -511,11 +429,17 @@ T_penalty = 2e-1
     prop_values = '${fparse E_c*nu_c/(1+nu_c)/(1-2*nu_c)} ${fparse E_c/2/(1+nu_c)}'
     block = cathode
   []
-  [stiffness_e]
+  [stiffness_e1]
     type = ADGenericConstantMaterial
     prop_names = 'lambda G'
-    prop_values = '${fparse E_e*nu_e/(1+nu_e)/(1-2*nu_e)} ${fparse E_e/2/(1+nu_e)}'
-    block = elyte
+    prop_values = '${fparse E_e1*nu_e/(1+nu_e)/(1-2*nu_e)} ${fparse E_e1/2/(1+nu_e)}'
+    block = 'elyte1'
+  []
+  [stiffness_e2]
+    type = ADGenericConstantMaterial
+    prop_names = 'lambda G'
+    prop_values = '${fparse E_e2*nu_e/(1+nu_e)/(1-2*nu_e)} ${fparse E_e2/2/(1+nu_e)}'
+    block = 'elyte2'
   []
   [stiffness_a]
     type = ADGenericConstantMaterial
@@ -524,9 +448,10 @@ T_penalty = 2e-1
     block = anode
   []
   [swelling_coefficient]
-    type = ADGenericConstantMaterial
-    prop_names = 'beta'
-    prop_values = '${beta}'
+    type = ADPiecewiseConstantByBlockMaterial
+    prop_name = 'beta'
+    subdomain_to_prop_value = 'anode ${beta_a} elyte1 ${beta_e} elyte2 ${beta_e} cathode ${beta_c}'
+#    prop_values = '${beta}'
   []
   [swelling]
     type = SwellingDeformationGradient
@@ -534,12 +459,6 @@ T_penalty = 2e-1
     reference_concentration = c_ref
     molar_volume = ${Omega}
     swelling_coefficient = beta
-  []
-  [thermal_expansion]
-    type = ThermalDeformationGradient
-    temperature = T
-    reference_temperature = T_ref
-    CTE = ${CTE}
   []
   [defgrad]
     type = MechanicalDeformationGradient
@@ -551,7 +470,9 @@ T_penalty = 2e-1
     lambda = lambda
     shear_modulus = G
     concentration = c
-    temperature = T
+    non_swelling_pressure = p
+    output_properties = 'p'
+    outputs = exodus
   []
   [pk1]
     type = FirstPiolaKirchhoffStress
@@ -577,7 +498,7 @@ T_penalty = 2e-1
   []
   [V]
     type = ParsedPostprocessor
-    function = 'V_r - V_l'
+    function = 'V_l - V_r'
     pp_names = 'V_l V_r'
     execute_on = 'INITIAL TIMESTEP_END'
   []
@@ -585,7 +506,7 @@ T_penalty = 2e-1
     type = ADSideIntegralMaterialProperty
     property = i
     component = 0
-    boundary = right
+    boundary = left
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [dt]
@@ -642,7 +563,7 @@ T_penalty = 2e-1
   [mass_e]
     type = ElementIntegralVariablePostprocessor
     variable = c
-    block = elyte
+    block = 'elyte1 elyte2'
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [mass_c]
@@ -653,30 +574,34 @@ T_penalty = 2e-1
   []
 []
 
-[UserObjects]
-  [kill_a]
-    type = Terminator
-    expression = 'c_a_max >= ${cmax}'
-    message = 'Concentration in anode exceeds the maximum allowable value.'
+[VectorPostprocessors]
+  [deposition_current]
+    type = SideValueSampler
+    variable = 'ie'
+    boundary = anode_elyte1
+    sort_by = y
+    execute_on = 'final'
   []
-  [kill_c]
-    type = Terminator
-    expression = 'c_c_min <= ${cmin}'
-    message = 'Concentration in cathode is below the minimum allowable value.'
+  [pressure]
+    type = SideValueSampler
+    variable = 'stress'
+    boundary = anode_elyte1
+    sort_by = y
+    execute_on = 'final'
   []
 []
 
 [Executioner]
   type = Transient
-  solve_type = PJFNK
+  solve_type = NEWTON
 
   petsc_options_iname = '-pc_type'
   petsc_options_value = 'lu'
   automatic_scaling = true
-  line_search = none
+  line_search = bt
 
   nl_rel_tol = 1e-6
-  nl_abs_tol = 1e-8
+  nl_abs_tol = 1e-10
   nl_max_its = 20
 
   [Predictor]
@@ -687,20 +612,24 @@ T_penalty = 2e-1
   [TimeStepper]
     type = IterationAdaptiveDT
     dt = ${dt}
-    optimal_iterations = 7
-    iteration_window = 2
-    growth_factor = 1.2
+    optimal_iterations = 20
+    iteration_window = 5
+    growth_factor = 1.5
     cutback_factor = 0.5
     cutback_factor_at_failure = 0.2
-    linear_iteration_ratio = 1000000
+    linear_iteration_ratio = 1000
   []
-  end_time = 100000
+  end_time = ${endT}
 []
 
 [Outputs]
-  file_base = 'CC_charging_I_${I}_pos'
-  csv = true
-  exodus = true
-  print_linear_residuals = false
-  checkpoint = true
+  file_base = rst/oneDefect1um_twoSE
+  [exodus]
+    type = Exodus
+  []
+  [csv]
+    type = CSV
+    execute_postprocessors_on='TIMESTEP_END'
+    execute_vector_postprocessors_on='final'
+  []
 []
