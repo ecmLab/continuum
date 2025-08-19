@@ -48,7 +48,7 @@ variable        cof_all       equal     0.1     # Same for all pairs
 variable        corf_all      equal     0.1     # Same for all pairs
 
 # Young's modulus
-variable        Yam           equal     5.e6    # AM (Active Material)
+variable        Yam           equal     5.e6    # AM (Active Material) [Unit: KPa]
 variable        Ycc           equal     50.e6  # CC1 and CC2 (Current Collectors)
 variable        Yse           equal     5.e6  # SE (Solid Electrolyte)
 variable        Yww           equal     50.e6    # Wall

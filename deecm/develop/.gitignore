@@ -1,0 +1,67 @@
+# ~/.gitignore for LIGGGHTS Projects
+
+##################################
+## LIGGGHTS Simulation Output  ##
+##################################
+
+# Ignore all dump files, which contain raw particle data and are usually very large.
+dump.*
+
+# Ignore VTK post-processing files. Wildcards cover different file extensions.
+*.vtk
+*.vtp
+*.vtu
+*.vts
+*.vtm
+*.pvd
+
+# Ignore common directories used for simulation output and post-processing.
+# Using trailing slashes ensures only directories are matched.
+post/
+POST/
+vtk/
+VTK/
+output/
+out/
+results/
+
+# Log files can become large. Uncomment the line below if you want to ignore them.
+# log.liggghts
+
+
+##################################
+## LIGGGHTS Build & Compilation ##
+##################################
+
+# Ignore LIGGGHTS executables (e.g., lmp_auto, lmp_mpi).
+lmp_*
+
+# Ignore object files and libraries generated during compilation.
+*.o
+*.a
+*.so
+
+# Ignore common build directories.
+build/
+bin/
+obj/
+
+
+##################################
+##  General System & Editor    ##
+##################################
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux/Vim
+*.swp
+*.swo
+*~
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
