@@ -1,15 +1,4 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
-/* 
- * File:   CZMComputeVariableJumpBase.C
- * Author: srinath
- * 
- * Created on January 25, 2022, 1:06 PM
- */
 
 #include "CZMComputeVariableJumpBase.h"
 #include "CohesiveZoneModelTools.h"
@@ -26,7 +15,7 @@ CZMComputeVariableJumpBase::validParams()
   params.suppressParameter<bool>("use_displaced_mesh");
   params.addParam<std::string>("base_name", "Material property base name");
   params.addParam<bool>("include_gap", true, "Gap inclusion");
- 
+
   return params;
 }
 
@@ -36,7 +25,7 @@ CZMComputeVariableJumpBase::CZMComputeVariableJumpBase(const InputParameters & p
                    ? getParam<std::string>("base_name") + "_"
                    : ""),
     _include_gap(getParam<bool>("include_gap")),
-     _czm_total_rotation(_include_gap ? 
+     _czm_total_rotation(_include_gap ?
          &getMaterialPropertyByName<RankTwoTensor>(_base_name + "czm_total_rotation") : nullptr),
      _total_rotation(
         declarePropertyByName<RankTwoTensor>(_base_name + "total_rotation")),
@@ -49,7 +38,7 @@ CZMComputeVariableJumpBase::CZMComputeVariableJumpBase(const InputParameters & p
     _variable = &coupledValue("variable",0);
     if (isParamValid("neighbor_variable"))
         _variable_neighbor = &coupledNeighborValue("neighbor_variable",0);
-    else 
+    else
         _variable_neighbor = &coupledNeighborValue("variable",0);
 }
 

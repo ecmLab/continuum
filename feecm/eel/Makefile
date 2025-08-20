@@ -7,13 +7,12 @@
 #
 ###############################################################################
 # Use the MOOSE submodule if it exists and MOOSE_DIR is not set
-# MOOSE_SUBMODULE    := $(CURDIR)/moose
-# ifneq ($(wildcard $(MOOSE_SUBMODULE)/framework/Makefile),)
-#   MOOSE_DIR        ?= $(MOOSE_SUBMODULE)
-# else
-#   MOOSE_DIR        ?= $(shell dirname `pwd`)/moose
-# endif
-MOOSE_DIR := /Users/ashokgrg19/projects/moose
+ MOOSE_SUBMODULE    := $(CURDIR)/moose
+ ifneq ($(wildcard $(MOOSE_SUBMODULE)/framework/Makefile),)
+   MOOSE_DIR        ?= $(MOOSE_SUBMODULE)
+ else
+   MOOSE_DIR        ?= $(shell dirname `pwd`)/moose
+ endif
 
 ifeq ($(wildcard $(MOOSE_DIR)/framework/Makefile),)
  $(error MOOSE directory not found at $(MOOSE_DIR))
@@ -50,15 +49,14 @@ RDG                         := no
 RICHARDS                    := no
 STOCHASTIC_TOOLS            := no
 THERMAL_HYDRAULICS          := no
-TENSOR_MECHANICS            := yes
+SOLID_MECHANICS             := yes
 XFEM                        := no
 
 include $(MOOSE_DIR)/modules/modules.mk
 ###############################################################################
 
 # dep apps
-APPLICATION_DIR    := /Users/ashokgrg19/projects/continuum/feecm/eel
-#APPLICATION_DIR    := $(CURDIR)
+APPLICATION_DIR    := $(CURDIR)
 APPLICATION_NAME   := eel
 BUILD_EXEC         := yes
 GEN_REVISION       := no

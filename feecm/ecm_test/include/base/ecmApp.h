@@ -11,15 +11,14 @@
 
 #include "MooseApp.h"
 
-class ecm_fullTestApp : public MooseApp
+class ecmApp : public MooseApp
 {
 public:
   static InputParameters validParams();
 
-  ecm_fullTestApp(InputParameters parameters);
-  virtual ~ecm_fullTestApp();
+  ecmApp(InputParameters parameters);
+  virtual ~ecmApp();
 
   static void registerApps();
-  static void registerAll(Factory & f, ActionFactory & af, Syntax & s, bool use_test_objs = false);
+  static void registerAll(Factory & f, ActionFactory & af, Syntax & s);
 };
-

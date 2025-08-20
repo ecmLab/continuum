@@ -1,7 +1,7 @@
 
 #include "DirichletEn.h"
 
-registerADMooseObject("electro_chemo_mechApp", DirichletEn);
+registerADMooseObject("ecmApp", DirichletEn);
 
 InputParameters
 DirichletEn::validParams()

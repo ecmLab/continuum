@@ -1,15 +1,4 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
-/* 
- * File:   computeLocalFluxBase.C
- * Author: srinath
- * 
- * Created on January 25, 2022, 1:57 PM
- */
 #include "Assembly.h"
 #include "CZMcomputeLocalFluxBase.h"
 
@@ -43,7 +32,7 @@ CZMcomputeLocalFluxBase::CZMcomputeLocalFluxBase(const InputParameters & paramet
         declarePropertyByName<RealVectorValue>(_base_name + "dinterface_flux_djump")),
     _interface_variable_jump(
         getMaterialPropertyByName<Real>(_base_name + "interface_variable_jump")),
-    _interface_displacement_jump(_include_gap ? 
+    _interface_displacement_jump(_include_gap ?
         &getMaterialPropertyByName<RealVectorValue>(_base_name + "interface_displacement_jump") : nullptr)
 {
 }
@@ -59,7 +48,3 @@ CZMcomputeLocalFluxBase::computeQpProperties()
 {
   computeInterfaceFluxAndDerivatives();
 }
-
-
-
-

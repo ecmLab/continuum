@@ -36,8 +36,8 @@ Plane Surface(1) = {clSE};
 
 //*** Mesh control
 Mesh.RecombineAll = 1;
-Mesh.Algorithm = 6; // Frontal-Delaunay
 Mesh.RecombinationAlgorithm = 2;
+Mesh.Algorithm = 8; // Frontal-Quad
 
 //*** Assign names to boundaries and blocks **/
 //+

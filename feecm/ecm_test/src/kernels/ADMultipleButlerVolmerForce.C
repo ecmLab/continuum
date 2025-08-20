@@ -1,20 +1,10 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/cppFiles/class.cc to edit this template
- */
 
-/* 
- * File:   ADMultipleButlerVolmerForce.C
- * Author: srinath
- * 
- * Created on March 24, 2022, 4:48 PM
- */
 
 #include <vector>
 
 #include "ADMultipleButlerVolmerForce.h"
 
-registerADMooseObject("electro_chemo_mechApp", ADMultipleButlerVolmerForce);
+registerADMooseObject("ecmApp", ADMultipleButlerVolmerForce);
 
 InputParameters
 ADMultipleButlerVolmerForce::validParams()
@@ -45,18 +35,18 @@ ADMultipleButlerVolmerForce::ADMultipleButlerVolmerForce(const InputParameters &
             auto abc = base_name + getParam<MaterialPropertyName>("mat_prop_name");
             auto xyz = xxx->hasADMaterialPropertyByName<Real>(abc);
             if (!xyz)
-                mooseError("Material " + models[i] + " requires ", 
+                mooseError("Material " + models[i] + " requires ",
                         getParam<MaterialPropertyName>("mat_prop_name"));
             else{
                 _mat_properties.push_back(&(xxx->getADMaterialProperty<Real>(abc)));
             }
         } else
         {
-            mooseError("Material " + models[i] + 
+            mooseError("Material " + models[i] +
                     " is not compatible with ADMultiCoupledForce");
         }
     }
-    
+
 }
 
 ADReal

@@ -1,6 +1,6 @@
 #include "SingleSEInterface.h"
 
-registerMooseObject("electro_chemo_mechApp", SingleSEInterface);
+registerMooseObject("ecmApp", SingleSEInterface);
 
 InputParameters
 SingleSEInterface::validParams()
@@ -51,4 +51,3 @@ SingleSEInterface::computeQpResidual(Moose::DGResidualType type)
 
   return r;
 }
-

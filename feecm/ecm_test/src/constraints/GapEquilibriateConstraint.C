@@ -1,15 +1,4 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
-/* 
- * File:   GapEquilibriateConstraint.C
- * Author: srinath
- * 
- * Created on January 19, 2021, 3:50 PM
- */
 
 #include "GapEquilibriateConstraint.h"
 
@@ -17,7 +6,7 @@
 #include "SubProblem.h"
 #include "MaterialBase.h"
 
-registerADMooseObject("electro_chemo_mechApp", GapEquilibriateConstraint);
+registerADMooseObject("ecmApp", GapEquilibriateConstraint);
 
 InputParameters
 GapEquilibriateConstraint::validParams()
@@ -53,14 +42,14 @@ GapEquilibriateConstraint::validParams()
 GapEquilibriateConstraint::GapEquilibriateConstraint(const InputParameters & parameters)
   : ADMortarConstraint(parameters),
     _k_function(isParamValid("k_function") ? & this->getFunction("k_function") : NULL),
-    _my_k(getParam<Real>("k")), 
+    _my_k(getParam<Real>("k")),
     _gas_constant(getParam<Real>("R")),
     _temp(getParam<Real>("temperature")),
     _faraday(getParam<Real>("faraday")),
     _disp_name(parameters.getVecMooseType("displacements")),
     _n_disp(_disp_name.size()),
     _disp_secondary(_n_disp),
-    _disp_primary(_n_disp), 
+    _disp_primary(_n_disp),
     _include_gap(getParam<bool>("include_gap")),
     _one_sided(getParam<MooseEnum>("one_sided").getEnum<OneSided>()),
     _pref(getParam<MooseEnum>("prefactor").getEnum<preFactor>())
@@ -91,7 +80,7 @@ GapEquilibriateConstraint::GapEquilibriateConstraint(const InputParameters & par
 ADReal
 GapEquilibriateConstraint::computeQpResidual(Moose::MortarType mortar_type)
 {
-    
+
   switch (mortar_type)
   {
     case Moose::MortarType::Primary:
@@ -102,14 +91,14 @@ GapEquilibriateConstraint::computeQpResidual(Moose::MortarType mortar_type)
     {
         auto residual = _lambda[_qp] * _test[_i][_qp];
         _k = _my_k;
-//        if (_has_primary) 
+//        if (_has_primary)
         {
             if (_include_gap)
             {
                 // we are creating a dual version of phys points primary and secondary here...
-                DualRealVectorValue dual_phys_points_primary;
-                DualRealVectorValue dual_phys_points_secondary;
-                DualRealVectorValue dual_normals;
+                ADRealVectorValue dual_phys_points_primary;
+                ADRealVectorValue dual_phys_points_secondary;
+                ADRealVectorValue dual_normals;
                 for (unsigned int i = 0; i < LIBMESH_DIM; ++i)
                 {
                   dual_phys_points_primary(i) = _phys_points_primary[_qp](i);
@@ -125,18 +114,18 @@ GapEquilibriateConstraint::computeQpResidual(Moose::MortarType mortar_type)
                   dual_phys_points_secondary(i).derivatives() = (*_disp_secondary[i])[_qp].derivatives();
                 }
 
-                auto gap = (dual_phys_points_primary - dual_phys_points_secondary) * dual_normals;            
+                auto gap = (dual_phys_points_primary - dual_phys_points_secondary) * dual_normals;
                 if (_k_function)
                     computeConductance(gap);
             }
-            
+
             /// (TBD) check to make sure sign is right when primary and secondary
-            /// surfaces are switched .... 
+            /// surfaces are switched ....
 //            if (_u_primary[_qp] < 0 || _u_secondary[_qp] < 0)
 //                return residual;
             if (!_primary_mat_prop || !_secondary_mat_prop)
                 return residual;
-            
+
             auto diff_mat_prop_qp = _k/_prefactor * ((*_primary_mat_prop)[_qp] - (*_secondary_mat_prop)[_qp]);
 //            auto diff_mat_prop_qp = _k/_prefactor * (_u_primary[_qp] - _u_secondary[_qp]);
             if (_one_sided == OneSided::Primary_Secondary)
@@ -147,20 +136,20 @@ GapEquilibriateConstraint::computeQpResidual(Moose::MortarType mortar_type)
             {
                 if (diff_mat_prop_qp < 0) diff_mat_prop_qp = 0.0;
             }
-            
-            residual = _test[_i][_qp] * 
+
+            residual = _test[_i][_qp] *
                     (_lambda[_qp] + diff_mat_prop_qp);
         }
         return residual;
-    } 
-      
+    }
+
     default:
       return 0;
   }
 }
 
 
-void 
+void
 GapEquilibriateConstraint::computeConductance(const ADReal & gap)
 {
  if (_k_function)
@@ -175,4 +164,3 @@ GapEquilibriateConstraint::computeConductance(const ADReal & gap)
 //     if (gap > 1e-4) _k = 0.0;
  }
 }
-

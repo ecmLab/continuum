@@ -6,44 +6,44 @@
 //*
 //* Licensed under LGPL 2.1, please see LICENSE for details
 //* https://www.gnu.org/licenses/lgpl-2.1.html
-#include "ecm_fullTestApp.h"
-#include "ecm_fullApp.h"
+#include "ecmTestApp.h"
+#include "ecmApp.h"
 #include "Moose.h"
 #include "AppFactory.h"
 #include "MooseSyntax.h"
 #include "ModulesApp.h"
 
 InputParameters
-ecm_fullTestApp::validParams()
+ecmTestApp::validParams()
 {
-  InputParameters params = electro_chemo_mechApp::validParams();
+  InputParameters params = ecmApp::validParams();
   return params;
 }
 
-ecm_fullTestApp::ecm_fullTestApp(InputParameters parameters) : MooseApp(parameters)
+ecmTestApp::ecmTestApp(InputParameters parameters) : MooseApp(parameters)
 {
-  ecm_fullTestApp::registerAll(
+  ecmTestApp::registerAll(
       _factory, _action_factory, _syntax, getParam<bool>("allow_test_objects"));
 }
 
-ecm_fullTestApp::~ecm_fullTestApp() {}
+ecmTestApp::~ecmTestApp() {}
 
 void
-ecm_fullTestApp::registerAll(Factory & f, ActionFactory & af, Syntax & s, bool use_test_objs)
+ecmTestApp::registerAll(Factory & f, ActionFactory & af, Syntax & s, bool use_test_objs)
 {
-  electro_chemo_mechApp::registerAll(f, af, s);
+  ecmApp::registerAll(f, af, s);
   if (use_test_objs)
   {
-    Registry::registerObjectsTo(f, {"ecm_fullTestApp"});
-    Registry::registerActionsTo(af, {"ecm_fullTestApp"});
+    Registry::registerObjectsTo(f, {"ecmTestApp"});
+    Registry::registerActionsTo(af, {"ecmTestApp"});
   }
 }
 
 void
-ecm_fullTestApp::registerApps()
+ecmTestApp::registerApps()
 {
-  registerApp(ecm_fullApp);
-  registerApp(ecm_fullTestApp);
+  registerApp(ecmApp);
+  registerApp(ecmTestApp);
 }
 
 /***************************************************************************************************
@@ -51,12 +51,12 @@ ecm_fullTestApp::registerApps()
  **************************************************************************************************/
 // External entry point for dynamic application loading
 extern "C" void
-ecm_fullTestApp__registerAll(Factory & f, ActionFactory & af, Syntax & s)
+ecmTestApp__registerAll(Factory & f, ActionFactory & af, Syntax & s)
 {
-  ecm_fullTestApp::registerAll(f, af, s);
+  ecmTestApp::registerAll(f, af, s);
 }
 extern "C" void
-ecm_fullTestApp__registerApps()
+ecmTestApp__registerApps()
 {
-  cm_fullTestApp::registerApps();
+  ecmTestApp::registerApps();
 }

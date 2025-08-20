@@ -1,20 +1,9 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
-/* 
- * File:   PressureLMConductanceConstraint.C
- * Author: srinath
- * 
- * Created on October 3, 2019, 8:16 PM
- */
 
 #include "PressureLMConductanceConstraint.h"
 #include "Function.h"
 
-registerADMooseObject("electro_chemo_mechApp", PressureLMConductanceConstraint);
+registerADMooseObject("ecmApp", PressureLMConductanceConstraint);
 
 InputParameters
 PressureLMConductanceConstraint::validParams()
@@ -36,7 +25,7 @@ PressureLMConductanceConstraint::validParams()
 
 PressureLMConductanceConstraint::PressureLMConductanceConstraint(const InputParameters & parameters)
   : ADMortarConstraint(parameters),
-    _my_k(getParam<Real>("k")), 
+    _my_k(getParam<Real>("k")),
     _threshold_pressure(getParam<Real>("threshold_pressure")),
     _contact_pressure_name(parameters.getMooseType("contact_pressure"))
 {
@@ -67,9 +56,9 @@ PressureLMConductanceConstraint::computeQpResidual(Moose::MortarType mortar_type
       }
 //      else
 //          return _lambda[_qp] * _test[_i][_qp];
-//      
-    } 
-      
+//
+    }
+
     default:
       return 0;
   }

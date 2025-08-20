@@ -1,20 +1,8 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/* 
- * File:   MaterialDiffusionFluxBC.C
- * Author: srinath
- * 
- * Created on February 12, 2021, 5:22 PM
- */
 
 #include "MaterialDiffusionFluxBC.h"
 
 
-registerMooseObject("electro_chemo_mechApp", MaterialDiffusionFluxBC);
+registerMooseObject("ecmApp", MaterialDiffusionFluxBC);
 
 InputParameters
 MaterialDiffusionFluxBC::validParams()
@@ -29,7 +17,7 @@ MaterialDiffusionFluxBC::MaterialDiffusionFluxBC(const InputParameters& paramete
         : ADIntegratedBC(parameters),
         _diffusivity(&getADMaterialProperty<Real>("diffusivity"))
 {
-    
+
 }
 
 

@@ -1,18 +1,7 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/cppFiles/class.cc to edit this template
- */
-
-/* 
- * File:   ADADInterfaceDiffusion.C
- * Author: srinath
- * 
- * Created on March 28, 2022, 5:01 PM
- */
 
 #include "ADInterfaceDiffusion.h"
 
-registerMooseObject("electro_chemo_mechApp", ADInterfaceDiffusion);
+registerMooseObject("ecmApp", ADInterfaceDiffusion);
 
 InputParameters
 ADInterfaceDiffusion::validParams()
@@ -51,4 +40,3 @@ ADInterfaceDiffusion::computeQpResidual(Moose::DGResidualType type)
 
   return r;
 }
-

@@ -1,20 +1,9 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
-/* 
- * File:   CZMButlerVolmer.C
- * Author: srinath
- * 
- * Created on January 25, 2022, 4:04 PM
- */
 
 #include "CZMButlerVolmer.h"
 #include "Function.h"
 
-registerMooseObject("electro_chemo_mechApp", CZMButlerVolmer);
+registerMooseObject("ecmApp", CZMButlerVolmer);
 
 InputParameters
 CZMButlerVolmer::validParams()
@@ -27,7 +16,7 @@ CZMButlerVolmer::validParams()
     params.addRequiredParam<FunctionName>("k_function", "Function of the relevant gap problem");
     params.addRequiredParam<Real>("max_separation","separation at failure for 0 flux");
     MooseEnum conductanceType("CONDUCTANCE RCT EXCHANGE_CURRENT_DENSITY", "EXCHANGE_CURRENT_DENSITY");
-    params.addParam<MooseEnum>("conductanceType", conductanceType, "What type of conductance");    
+    params.addParam<MooseEnum>("conductanceType", conductanceType, "What type of conductance");
     params.addCoupledVar("eq_potential_coupled_var", "The name of coupled variable "
         "controlling the equilibrium potential");
     params.addParam<bool>("include_equil", false, "Include contribution of "
@@ -56,16 +45,16 @@ CZMButlerVolmer::CZMButlerVolmer(const InputParameters& parameters)
         _compute_type(getParam<MooseEnum>("computeType").getEnum<Compute>()),
         _cref(getParam<Real>("cref")),
         _reaction_rate_function(getParam<FunctionName>("reaction_rate_function")!= ""
-            ? &getFunction("reaction_rate_function") : NULL), 
+            ? &getFunction("reaction_rate_function") : NULL),
         _faraday(getParam<Real>("faraday")),
         _temperature(getParam<Real>("temperature")),
-        _gas_constant(getParam<Real>("R")), 
+        _gas_constant(getParam<Real>("R")),
         _equilibrium_potential(declarePropertyByName<Real>("equilibrium_potential")),
-        _RTF(_gas_constant * _temperature/_faraday), 
+        _RTF(_gas_constant * _temperature/_faraday),
         _flux_sign(_surface_type == SurfaceType::Secondary ? 1.0 : -1.0)
 
 {
-    
+
     if (_include_equil)
     {
         if (_surface_type == SurfaceType::Secondary)
@@ -74,7 +63,7 @@ CZMButlerVolmer::CZMButlerVolmer(const InputParameters& parameters)
         }
         else if (_surface_type == SurfaceType::Primary) {
             _coupled_value = &coupledValue("eq_potential_coupled_var",0);
-        } else 
+        } else
         {
             _coupled_value = nullptr;
         }
@@ -92,17 +81,17 @@ void
 CZMButlerVolmer::computeInterfaceFluxAndDerivatives()
 {
     // interface jump is always computed as secondary - primary
-    // In the butler volmer problem the overpotential is always defined as Electrode - Electrolyte 
+    // In the butler volmer problem the overpotential is always defined as Electrode - Electrolyte
     // So in the material class we can adjust which surface is the electrode, using surface_type parameter
     /// The default for this parameter
     Real cbar = 0.0;
-    
+
     _equilibrium_potential[_qp] = 0.0;
     if (_coupled_value){
         cbar = (*_coupled_value)[_qp]/_cref;
         const Point p;
         _equilibrium_potential[_qp] = _reaction_rate_function->value(cbar, p);
-    } 
+    }
     // Compute value of gap conductance from the function
     // TODO can make this a function of space
     const Point p;
@@ -112,7 +101,7 @@ CZMButlerVolmer::computeInterfaceFluxAndDerivatives()
     {
         /// Convert all quantities to exchange current density for uniform formulation
         case Conductance::Rct:
-            if (k > 0.0) 
+            if (k > 0.0)
                 i0 = _RTF /k;
             else i0 = 1e20;
             break;
@@ -120,22 +109,22 @@ CZMButlerVolmer::computeInterfaceFluxAndDerivatives()
             i0 *= _RTF;
         case Conductance::Exchange_Current_density:
             i0 = k;
-            
+
     }
-    
-    auto flux = i0; 
+
+    auto flux = i0;
     auto flux_deriv = i0;
     if (_compute_type == Compute::Linear_Butler_Volmer)
     {
-        flux *= (_flux_sign * _interface_variable_jump[_qp]  
+        flux *= (_flux_sign * _interface_variable_jump[_qp]
                        - _equilibrium_potential[_qp])/_RTF;
         flux_deriv = i0 * _flux_sign / _RTF;
     }
     else if (_compute_type == Compute::Butler_Volmer)
     {
-        flux = i0 * 2.0 * std::sinh(( _flux_sign * _interface_variable_jump[_qp] 
+        flux = i0 * 2.0 * std::sinh(( _flux_sign * _interface_variable_jump[_qp]
                                         - _equilibrium_potential[_qp])/_RTF/2.0);
-        flux_deriv = i0 * 2.0 * _flux_sign * std::cosh((_flux_sign * _interface_variable_jump[_qp] 
+        flux_deriv = i0 * 2.0 * _flux_sign * std::cosh((_flux_sign * _interface_variable_jump[_qp]
                                         - _equilibrium_potential[_qp])/_RTF/2.0)
                                         /_RTF/2.0;
     }
@@ -143,18 +132,18 @@ CZMButlerVolmer::computeInterfaceFluxAndDerivatives()
         flux = 0.0;
         flux_deriv = 0.0;
     }
-    
+
     if (_include_gap)
     {
         // Include other models here
         if ((*_interface_displacement_jump)[_qp](0) < _d){
            _interface_flux[_qp] = flux * (-(*_interface_displacement_jump)[_qp](0) + _d );
             _dinterface_flux_dvariablejump[_qp] = flux_deriv * (-(*_interface_displacement_jump)[_qp](0) + _d );
-        
+
             _dinterface_flux_djump[_qp](0) = -flux;
             _dinterface_flux_djump[_qp](1) = 0;
             _dinterface_flux_djump[_qp](2) = 0;
-        } else 
+        } else
         {
             _interface_flux[_qp] = 0.0;
             _dinterface_flux_dvariablejump[_qp] = 0.0;
@@ -163,13 +152,13 @@ CZMButlerVolmer::computeInterfaceFluxAndDerivatives()
             _dinterface_flux_djump[_qp](2) = 0;
 
         }
-    } else 
+    } else
     {
-        _interface_flux[_qp] = flux; 
+        _interface_flux[_qp] = flux;
         _dinterface_flux_dvariablejump[_qp] = flux_deriv;
         _dinterface_flux_djump[_qp](0) = 0.0;
         _dinterface_flux_djump[_qp](1) = 0;
         _dinterface_flux_djump[_qp](2) = 0;
     }
-    
+
 }

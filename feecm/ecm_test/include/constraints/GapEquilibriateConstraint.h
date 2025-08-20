@@ -1,15 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/* 
- * File:   GapEquilibriateConstraint.h
- * Author: srinath
- *
- * Created on January 19, 2021, 3:50 PM
- */
 
 /**
  * This Constraint implements thermal contact using a "gap
@@ -59,18 +47,18 @@ protected:
    * Computes the residual for the LM equation, lambda = (k/l)*(T^(1) - PT^(2)).
    */
   virtual ADReal computeQpResidual(Moose::MortarType mortar_type) override;
-  
+
   virtual void computeConductance(const ADReal & penetration);
 
-  /// Conductivity of the gap medium 
+  /// Conductivity of the gap medium
   const Function * _k_function;
 
   ADReal _my_k;
   ADReal _k;
   const Real _gas_constant;
-  const Real _temp; 
-  const Real _faraday; 
-  
+  const Real _temp;
+  const Real _faraday;
+
 
     ///@{Displacement variables
   const std::vector<std::string> _disp_name;
@@ -79,13 +67,13 @@ protected:
   std::vector<const ADVariableValue *> _disp_primary;
 
   bool _include_concentration;
-  
+
 
   const ADMaterialProperty<Real> * _primary_mat_prop;
   const ADMaterialProperty<Real> * _secondary_mat_prop;
 
   bool _include_gap;
-  
+
   enum class OneSided
   {
     Primary_Secondary,
@@ -93,16 +81,14 @@ protected:
     None
   } _one_sided;
 //  const Real _RTF;
-  
+
   enum class preFactor
   {
-      RTF, 
+      RTF,
       RT,
       None
   } _pref;
-  Real _prefactor; 
-  
+  Real _prefactor;
+
 ///@}
   };
-
-

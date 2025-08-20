@@ -1,7 +1,7 @@
 
 #include "CurrentDensity.h"
 
-registerMooseObject("electro_chemo_mechApp", CurrentDensity);
+registerMooseObject("ecmApp", CurrentDensity);
 
 InputParameters
 CurrentDensity::validParams()

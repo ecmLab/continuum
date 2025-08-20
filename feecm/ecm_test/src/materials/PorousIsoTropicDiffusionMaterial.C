@@ -1,18 +1,8 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/cppFiles/class.cc to edit this template
- */
 
-/* 
- * File:   PorousIsoTropicDiffusionMaterial.C
- * Author: srinathcs
- * 
- * Created on March 23, 2022, 4:25 PM
- */
 
 #include "PorousIsoTropicDiffusionMaterial.h"
 
-registerMooseObject("electro_chemo_mechApp", PorousIsotropicDiffusionMaterial);
+registerMooseObject("ecmApp", PorousIsotropicDiffusionMaterial);
 
 InputParameters
 PorousIsotropicDiffusionMaterial::validParams()
@@ -31,7 +21,7 @@ PorousIsotropicDiffusionMaterial::validParams()
 
 PorousIsotropicDiffusionMaterial::PorousIsotropicDiffusionMaterial(const InputParameters & parameters)
         : ADIsotropicDiffusionMaterial(parameters),
-        _volume_fraction(getParam<Real>("volume_fraction")), 
+        _volume_fraction(getParam<Real>("volume_fraction")),
         _bruggeman_factor(getParam<Real>("Bruggeman_factor")),
         _diffusion_model(getParam<MooseEnum>("diffusion_model").getEnum<DiffusionModel>()),
         _tortuosity(getParam<Real>("tortuosity")),
@@ -42,7 +32,7 @@ PorousIsotropicDiffusionMaterial::PorousIsotropicDiffusionMaterial(const InputPa
         if (!isParamValid("tortuosity"))
             mooseError("Cannot have a tortuosity correction without a tortuosity value");
     }
- 
+
 }
 
 Real

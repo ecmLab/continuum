@@ -23,7 +23,8 @@ ChargeTransferReaction::validParams()
                                 "The dimensionless charge transfer coefficient");
   params.addRequiredParam<Real>("faraday_constant", "The Faraday's constant");
   params.addRequiredParam<Real>("ideal_gas_constant", "The ideal gas constant");
-  params.addRequiredCoupledVar("temperature", "The temperature");
+  params.addRequiredParam<Real>("temperature", "The temperature");
+//  params.addRequiredCoupledVar("temperature", "The temperature");
   params.addRequiredCoupledVar("electric_potential", "Electric potential");
   params.addRequiredCoupledVar("neighbor_electric_potential", "Neighbor electric potential");
   params.addRequiredParam<MaterialPropertyName>("open_circuit_potential",
@@ -45,8 +46,9 @@ ChargeTransferReaction::ChargeTransferReaction(const InputParameters & parameter
     _alpha(getParam<Real>("charge_transfer_coefficient")),
     _F(getParam<Real>("faraday_constant")),
     _R(getParam<Real>("ideal_gas_constant")),
-    _T(adCoupledValue("temperature")),
-    _T_neighbor(adCoupledNeighborValue("temperature")),
+    _T(getParam<Real>("temperature")),
+//    _T(adCoupledValue("temperature")),
+//    _T_neighbor(adCoupledNeighborValue("temperature")),
     _Phi_s(adCoupledValue("electric_potential")),
     _Phi_e(adCoupledNeighborValue("neighbor_electric_potential")),
     _U(getADMaterialProperty<Real>("open_circuit_potential")),
@@ -74,8 +76,8 @@ ChargeTransferReaction::computeQpProperties()
     eta += (*_rho)[_qp] * _i_old[_qp];
 
   // Current density
-  ADReal T = (_T[_qp] + _T_neighbor[_qp]) / 2;
-  ADReal coef = _alpha * _F / _R / T;
+//  ADReal T = (_T[_qp] + _T_neighbor[_qp]) / 2;
+  ADReal coef = _alpha * _F / _R / _T;
   _i[_qp] = _i0 * (std::exp(coef * eta) - std::exp(-coef * eta));
 
   // Mass flux

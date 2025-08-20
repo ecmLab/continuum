@@ -2,7 +2,7 @@
 #include "SingleSE.h"
 #include "Function.h"
 
-registerADMooseObject("electro_chemo_mechApp", SingleSE);
+registerADMooseObject("ecmApp", SingleSE);
 
 InputParameters
 SingleSE::validParams()
@@ -32,7 +32,7 @@ SingleSE::validParams()
 
 // Add a required parameter.  If this isn't provided in the input file MOOSE will error.
     params.addRequiredParam<Real>("LiPotCathode", "The Li chemical potential in Cathode, unit V.");
-  
+
    return params;
 }
 

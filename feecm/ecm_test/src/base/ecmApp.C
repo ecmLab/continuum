@@ -1,11 +1,11 @@
-#include "ecm_fullApp.h"
+#include "ecmApp.h"
 #include "Moose.h"
 #include "AppFactory.h"
 #include "ModulesApp.h"
 #include "MooseSyntax.h"
 
 InputParameters
-ecm_fullApp::validParams()
+ecmApp::validParams()
 {
   InputParameters params = MooseApp::validParams();
 
@@ -15,39 +15,39 @@ ecm_fullApp::validParams()
   return params;
 }
 
-ecm_fullApp::ecm_fullApp(InputParameters parameters) : MooseApp(parameters)
+ecmApp::ecmApp(InputParameters parameters) : MooseApp(parameters)
 {
-  ecm_fullApp::registerAll(_factory, _action_factory, _syntax);
+  ecmApp::registerAll(_factory, _action_factory, _syntax);
 }
 
-ecm_fullApp::~ecm_fullApp() {}
+ecmApp::~ecmApp() {}
 
 void
-ecm_fullApp::registerAll(Factory & f, ActionFactory & af, Syntax & s)
+ecmApp::registerAll(Factory & f, ActionFactory & af, Syntax & s)
 {
   ModulesApp::registerAll(f, af, s);
-  Registry::registerObjectsTo(f, {"ecm_fullApp"});
-  Registry::registerActionsTo(af, {"ecm_fullApp"});
+  Registry::registerObjectsTo(f, {"ecmApp"});
+  Registry::registerActionsTo(af, {"ecmApp"});
 
   /* register custom execute flags, action syntax, etc. here */
 }
 
 void
-ecm_fullApp::registerApps()
+ecmApp::registerApps()
 {
-  registerApp(ecm_fullApp);
+  registerApp(ecmApp);
 }
 
 /***************************************************************************************************
  *********************** Dynamic Library Entry Points - DO NOT MODIFY ******************************
  **************************************************************************************************/
 extern "C" void
-ecm_fullApp__registerAll(Factory & f, ActionFactory & af, Syntax & s)
+ecmApp__registerAll(Factory & f, ActionFactory & af, Syntax & s)
 {
-  ecm_fullApp::registerAll(f, af, s);
+  ecmApp::registerAll(f, af, s);
 }
 extern "C" void
-ecm_fullApp__registerApps()
+ecmApp__registerApps()
 {
-  ecm_fullApp::registerApps();
+  ecmApp::registerApps();
 }

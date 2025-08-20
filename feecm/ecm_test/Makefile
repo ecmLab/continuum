@@ -31,7 +31,7 @@ CONTACT                     := yes
 EXTERNAL_PETSC_SOLVER       := no
 FLUID_PROPERTIES            := yes
 FUNCTIONAL_EXPANSION_TOOLS  := yes
-HEAT_CONDUCTION             := yes
+HEAT_TRANSFER               := yes
 LEVEL_SET                   := no
 MISC                        := no
 NAVIER_STOKES               := no
@@ -39,9 +39,8 @@ PHASE_FIELD                 := yes
 POROUS_FLOW                 := yes
 RDG                         := no
 RICHARDS                    := no
-SOLID_MECHANICS             := no
+SOLID_MECHANICS             := yes 
 STOCHASTIC_TOOLS            := no
-TENSOR_MECHANICS            := yes
 XFEM                        := yes
 
 include $(MOOSE_DIR)/modules/modules.mk
@@ -49,7 +48,7 @@ include $(MOOSE_DIR)/modules/modules.mk
 
 # dep apps
 APPLICATION_DIR    := $(CURDIR)
-APPLICATION_NAME   := ecm_full
+APPLICATION_NAME   := ecm
 BUILD_EXEC         := yes
 GEN_REVISION       := no
 include            $(FRAMEWORK_DIR)/app.mk

@@ -1,18 +1,8 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/cppFiles/class.cc to edit this template
- */
 
-/* 
- * File:   ADExchangeCurrentDensityMaterial.C
- * Author: srinath
- * 
- * Created on March 21, 2022, 3:51 PM
- */
 
 #include "ADExchangeCurrentDensityMaterial.h"
 
-registerADMooseObject("electro_chemo_mechApp", ADExchangeCurrentDensityMaterial);
+registerADMooseObject("ecmApp", ADExchangeCurrentDensityMaterial);
 
 InputParameters
 ADExchangeCurrentDensityMaterial::validParams()
@@ -31,12 +21,12 @@ ADExchangeCurrentDensityMaterial::validParams()
 }
 
 ADExchangeCurrentDensityMaterial::ADExchangeCurrentDensityMaterial(const InputParameters & parameters)
-        : ADMaterial(parameters), 
+        : ADMaterial(parameters),
         _base_name(isParamValid("base_name") ? getParam<std::string>("base_name") + "_" : ""),
         _i0(declareADProperty<Real>(_base_name + getParam<MaterialPropertyName>("exchange_current_density_name"))),
         _exchange_type(getParam<MooseEnum>("exchange_current_density_type").getEnum<ExchangeCurrentDensityType>()),
-        _concentration(adCoupledValue("concentration")), 
-        _i_ref(getParam<Real>("reference_current_density")), 
+        _concentration(adCoupledValue("concentration")),
+        _i_ref(getParam<Real>("reference_current_density")),
         _cmax(getParam<Real>("cmax"))
 {
     if (_exchange_type == ExchangeCurrentDensityType::Lithium_Insertion && _cmax <= 0.0)
@@ -54,7 +44,7 @@ ADExchangeCurrentDensityMaterial::computeQpProperties()
         case ExchangeCurrentDensityType::Lithium_Insertion:
             auto cbar = _concentration[_qp] /_cmax;
             if (_concentration[_qp] < 0.001 * _cmax)
-                cbar = 0.001; 
+                cbar = 0.001;
             if (_concentration[_qp] > 0.999 * _cmax)
                 cbar = 0.999;
             _i0[_qp] = 2.0 * _i_ref * std::sqrt(cbar * (1.0 - cbar));

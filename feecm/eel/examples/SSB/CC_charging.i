@@ -49,7 +49,6 @@ rho = 2.5e-9 #Mg/mm^3
 cv = 2.7e8 #mJ/Mg/K
 kappa = 2e-4 #mJ/mm/K/s
 htc = 9.5e-3
-#reference_chemical_potential=0.0
 
 T_penalty = 1
 
@@ -430,7 +429,7 @@ T_penalty = 1
     ideal_gas_constant = ${R}
     temperature = T_ref
     reference_concentration = ${c_ref_entropy}
-    
+    reference_chemical_potential=0.0
   []
   [chemical_potential]
     type = ChemicalPotential

@@ -1,33 +1,10 @@
-/*
- * Copyright (C) 2020 srinath
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/* 
- * File:   ADButlerVolmerBC.C
- * Author: srinath
- * 
- * Created on October 20, 2020, 8:25 AM
- */
 
 #include "ADButlerVolmerBC.h"
 
 #include "Function.h"
 
 
-registerMooseObject("electro_chemo_mechApp", ADButlerVolmerBC);
+registerMooseObject("ecmApp", ADButlerVolmerBC);
 
 InputParameters
 ADButlerVolmerBC::validParams()
@@ -49,9 +26,9 @@ ADButlerVolmerBC::ADButlerVolmerBC(const InputParameters & parameters)
         _faraday(getParam<Real>("faraday")),
         _gas_constant(getParam<Real>("R")),
         _temp(getParam<Real>("Temperature")),
-        _current(isParamValid("current_density") ? getParam<Real>("current_density") : 0), 
-        _equilibrium_potential(&getADMaterialProperty<Real>("equilibrium_potential") ? &getADMaterialProperty<Real>("equilibrium_potential") : NULL), 
-        _func(getParam<FunctionName>("current_density_function") != "" 
+        _current(isParamValid("current_density") ? getParam<Real>("current_density") : 0),
+        _equilibrium_potential(&getADMaterialProperty<Real>("equilibrium_potential") ? &getADMaterialProperty<Real>("equilibrium_potential") : NULL),
+        _func(getParam<FunctionName>("current_density_function") != ""
                             ? &getFunction("current_density_function") : NULL)
 {
     if (isParamValid("current_density") && _func)

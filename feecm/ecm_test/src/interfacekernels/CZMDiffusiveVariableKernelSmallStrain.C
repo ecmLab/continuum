@@ -4,16 +4,16 @@
  * and open the template in the editor.
  */
 
-/* 
+/*
  * File:   CZMDiffusiveVariableKernelSmallStrain.C
  * Author: srinath
- * 
+ *
  * Created on January 25, 2022, 8:27 AM
  */
 
 #include "CZMDiffusiveVariableKernelSmallStrain.h"
 
-registerMooseObject("electro_chemo_mechApp", CZMDiffusiveVariableKernelSmallStrain);
+registerMooseObject("ecmApp", CZMDiffusiveVariableKernelSmallStrain);
 
 InputParameters
 CZMDiffusiveVariableKernelSmallStrain::validParams()
@@ -31,7 +31,7 @@ CZMDiffusiveVariableKernelSmallStrain::CZMDiffusiveVariableKernelSmallStrain(con
 {
 }
 
-Real 
+Real
 CZMDiffusiveVariableKernelSmallStrain::computeDResidualDVariable(
     const Moose::DGJacobianType & type) const
 {

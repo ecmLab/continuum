@@ -1,7 +1,7 @@
 
 #include "MixSEMetalEn.h"
 
-registerADMooseObject("electro_chemo_mechApp", MixSEMetalEn);
+registerADMooseObject("ecmApp", MixSEMetalEn);
 
 InputParameters
 MixSEMetalEn::validParams()

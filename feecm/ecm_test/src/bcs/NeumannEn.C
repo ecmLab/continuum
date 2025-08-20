@@ -1,12 +1,12 @@
 
 #include "NeumannEn.h"
 
-registerADMooseObject("electro_chemo_mechApp", NeumannEn);
+registerADMooseObject("ecmApp", NeumannEn);
 
 InputParameters
 NeumannEn::validParams()
 {
-   
+
   InputParameters params = ADIntegratedBC::validParams();
   params.addClassDescription("The Neumann boundary condition for electron at Cathode side.");
   params.addRequiredParam<MaterialPropertyName>("LiPotElectrode", "The Li potental in anode or cathode, in V.");
@@ -19,7 +19,7 @@ NeumannEn::validParams()
         "F_RT",
         38.68,
         "The constant of F/RT, when T = 300K.");
- 
+
   return params;
 }
 
