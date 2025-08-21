@@ -155,15 +155,15 @@ fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 8387
 # BC_types: bottom type (CC1=2), top type (CC2=6)
 # BC_potentials: bottom potential (0V), top potential (0.04V)
 fix             battery_solver all battery/sor omega 0.5 tolerance 1e-5 max_iter 10000000 &
-                BC_types 2 6 BC_potentials 0.0 0.04 SE_type 3 AM_type 1 temperature 303.
+                BC_types 2 6 BC_potentials 0.04 0.0 SE_type 3 AM_type 1 temperature 303.
 
 # 5. Lithium diffusion - only for AM particles
 # Diffusion coefficients in m^2/s (may need adjustment for micro units)
 fix             li_diffusion am lithium_diffusion AM_type 1 D_min 1e-15 D_poor 1e-14 D_rich 1e-13 &
-                kappa 20.0 c_li_max 83874.0 x_li_max 1.0
+                kappa 20.0 c_li_max 83874.0
 
 # 6. Radius expansion for Si particles (optional)
-fix             radius_expand am radius_expansion AM_type 1 update_every 10 max_updates 100000
+fix             radius_expand am radius_expansion AM_type 1 update_every 1 max_updates 1000000
 
 # --- 10. COMPUTE SETUP FOR MONITORING ---
 # Lithium content statistics
@@ -225,7 +225,7 @@ print           "  c_current_sum = total current flow"
 print           "================================================"
 
 # Main simulation run
-run             9000
+run             100000
 
 # --- 14. FINAL ANALYSIS ---
 print           "================================================"

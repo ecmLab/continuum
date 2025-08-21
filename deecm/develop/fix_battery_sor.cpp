@@ -32,8 +32,11 @@
 
 -------------------------------------------------------------------------
     Contributing author and copyright for this file:
-    
+    Created by: Joseph Vazquez
     Copyright 2024-     DCS Computing GmbH, Linz
+
+    Notes: 
+    - Hydrostatic stress calculation may be commented out
 ------------------------------------------------------------------------- */
 
 #include "fix_battery_sor.h"
