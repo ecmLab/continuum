@@ -208,8 +208,6 @@ FixBatterySOR::FixBatterySOR(LAMMPS *lmp, int narg, char **arg) :
       iarg += 2;
     } else error->all(FLERR,"Illegal fix battery/sor command");
   }
-
-  // Don't create property atoms in constructor - move to post_create()
   
   scalar_flag = 1;
   global_freq = 1;
