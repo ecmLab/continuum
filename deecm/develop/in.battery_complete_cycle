@@ -15,7 +15,7 @@ newton          off
 communicate     single vel yes
 
 # Set timestep
-timestep        1.e-7
+timestep        0.000005
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
