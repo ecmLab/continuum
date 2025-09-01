@@ -1,4 +1,4 @@
-// Copyright 2023, UChicago Argonne, LLC All Rights Reserved
+// Copyright 2025, ToBeDecided, All Rights Reserved
 // License: L-GPL 3.0
 #pragma once
 
@@ -35,7 +35,7 @@ inner(const ADRankTwoTensor & a, const ADRankTwoTensor & b)
 
 }
 
-namespace EelUtils
+namespace TecmUtils
 {
 typedef Eigen::Matrix<ADReal, Eigen::Dynamic, 1> ADRealEigenVector;
 typedef Eigen::Matrix<ADReal, Eigen::Dynamic, Eigen::Dynamic> ADRealEigenMatrix;

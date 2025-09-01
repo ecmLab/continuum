@@ -1,4 +1,4 @@
-// Copyright 2023, UChicago Argonne, LLC All Rights Reserved
+// Copyright 2025, ToBeDecided, All Rights Reserved
 // License: L-GPL 3.0
 #include "ChemicalEnergyDensity.h"
 

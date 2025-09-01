@@ -51,11 +51,11 @@ ChemicalPotential::computeProperties()
   }
 }
 
-EelUtils::ADRealEigenVector
+TecmUtils::ADRealEigenVector
 ChemicalPotential::L2Projection()
 {
-  using EelUtils::ADRealEigenMatrix;
-  using EelUtils::ADRealEigenVector;
+  using TecmUtils::ADRealEigenMatrix;
+  using TecmUtils::ADRealEigenVector;
 
   unsigned int n_local_dofs = _c_var->numberOfDofs();
   ADRealEigenVector re = ADRealEigenVector::Zero(n_local_dofs);

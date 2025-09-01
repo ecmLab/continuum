@@ -1,10 +1,10 @@
-// Copyright 2023, UChicago Argonne, LLC All Rights Reserved
+// Copyright 2025, ToBeDecided, All Rights Reserved
 // License: L-GPL 3.0
 #pragma once
 
 #include "Material.h"
 #include "DerivativeMaterialInterface.h"
-#include "EelUtils.h"
+#include "TecmUtils.h"
 #include <Eigen/Dense>
 
 class ChemicalPotential : public DerivativeMaterialInterface<Material>
@@ -39,5 +39,5 @@ protected:
   const VariableTestGradient & _grad_test;
 
 private:
-  EelUtils::ADRealEigenVector L2Projection();
+  TecmUtils::ADRealEigenVector L2Projection();
 };
