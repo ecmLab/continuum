@@ -15,7 +15,7 @@ newton          off
 communicate     single vel yes
 
 # Set timestep
-timestep        0.000005
+timestep        5.e-6
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
@@ -38,11 +38,11 @@ neigh_modify    every 1 delay 0 check yes
 
 # --- 5. RE-ESTABLISH MATERIAL PROPERTIES ---
 # Young's modulus (from compaction script)
-variable        Yam           equal     5.e6    # AM (Active Material)
-variable        Ycc           equal     50.e6   # CC1 and CC2 (Current Collectors)
-variable        Yse           equal     5.e6    # SE (Solid Electrolyte)
-variable        Yww           equal     50.e6   # Wall
-variable        Yghost        equal     50.e6   # Ghost particles
+variable        Yam           equal     5.e6    # AM (Active Material) [kPA]
+variable        Ycc           equal     50.e6   # CC1 and CC2 (Current Collectors) [kPA]
+variable        Yse           equal     5.e6    # SE (Solid Electrolyte) [kPA]
+variable        Yww           equal     50.e6   # Wall [kPA]
+variable        Yghost        equal     50.e6   # Ghost particles [kPA]
 variable        particle_poissons_ratio equal 0.4
 
 # Material properties
@@ -140,7 +140,7 @@ if              "${n_am} == 0" then "print 'ERROR: No AM particles found!'" quit
 
 # 1. Initialize lithium content (Li/Si molar ratio) - only for AM particles
 # Using micro units: adjust parameters accordingly
-fix             li_content am property/atom/lithium_content initial 0.15 target 0.8 max 1.0
+fix             li_content am property/atom/lithium_content initial 0.15 target 0.8 max 0.89
 
 # 2. Calculate equilibrium potential - only for AM particles
 # Temperature in K, potentials in V
@@ -155,7 +155,7 @@ fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 8387
 # BC_types: bottom type (CC1=2), top type (CC2=6)
 # BC_potentials: bottom potential (0V), top potential (0.04V)
 fix             battery_solver all battery/sor omega 0.5 tolerance 1e-5 max_iter 10000000 &
-                BC_types 2 6 BC_potentials 0.04 0.0 SE_type 3 AM_type 1 temperature 303.
+                BC_types 2 6 BC_potentials 0.04 0.00 SE_type 3 AM_type 1 temperature 303.
 
 # 5. Lithium diffusion - only for AM particles
 # Diffusion coefficients in m^2/s (may need adjustment for micro units)
@@ -163,7 +163,7 @@ fix             li_diffusion am lithium_diffusion AM_type 1 D_min 1e-15 D_poor 1
                 kappa 20.0 c_li_max 83874.0
 
 # 6. Radius expansion for Si particles (optional)
-fix             radius_expand am radius_expansion AM_type 1 update_every 1 max_updates 1000000
+fix             radius_expand am radius_expansion AM_type 1 update_every 10 max_updates 1000000
 
 # --- 10. COMPUTE SETUP FOR MONITORING ---
 # Lithium content statistics
