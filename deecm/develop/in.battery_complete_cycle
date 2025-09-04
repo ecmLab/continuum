@@ -19,7 +19,8 @@ timestep        5.e-6
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
-read_restart    compacted_battery.restart
+read_restart    compacted_battery1.restart
+# read_data     compacted_battery1.data  # Alternative if restart has issues
 
 # --- 3. RE-ESTABLISH GROUPS ---
 # Define groups based on particle types from the compaction script
@@ -32,15 +33,20 @@ group  cc1   type  2   # Current Collector 1 (bottom) - will be 0V
 # Groups for particles affected by walls
 group  ptc   type  1 3 # Types affected by walls
 
+# --- 3.5. ZERO ALL VELOCITIES ---
+# Set all velocities to zero to start from rest
+velocity all zero linear
+velocity all zero angular
+
 # --- 4. NEIGHBOR SETTINGS ---
 neighbor        0.001 bin
 neigh_modify    every 1 delay 0 check yes
 
 # --- 5. RE-ESTABLISH MATERIAL PROPERTIES ---
 # Young's modulus (from compaction script)
-variable        Yam           equal     5.e6    # AM (Active Material) [kPA]
+variable        Yam           equal     48.5.e6    # AM (Active Material) [kPA]
 variable        Ycc           equal     50.e6   # CC1 and CC2 (Current Collectors) [kPA]
-variable        Yse           equal     5.e6    # SE (Solid Electrolyte) [kPA]
+variable        Yse           equal     23.e6    # SE (Solid Electrolyte) [kPA]
 variable        Yww           equal     50.e6   # Wall [kPA]
 variable        Yghost        equal     50.e6   # Ghost particles [kPA]
 variable        particle_poissons_ratio equal 0.4
@@ -81,12 +87,12 @@ fix             m5 all property/global coefficientRollingFriction peratomtypepai
 
 # Cohesion energy density (from compaction script)
 fix             m6 all property/global cohesionEnergyDensity peratomtypepair 6 &
-                100000  100000  100000  0       10000   10000  &
-                100000  100000  100000  0       10000   10000  &
-                100000  100000  100000  0       10000   10000  &
-                0       0       0       0       0       0      &
-                10000   10000   10000   0       100000  10000  &
-                10000   10000   10000   0       10000   100000
+                100000  100000  100000  0       0   100000  &
+                100000  100000  100000  0       0   100000  &
+                100000  100000  100000  0       0   100000  &
+                0       0       0       0       0   0       &
+                0       0       0       0       0   0       &
+                100000  100000  100000  0       0   100000
 
 # --- 6. PAIR STYLE AND WALLS ---
 pair_style gran model hertz tangential history cohesion sjkr
@@ -103,15 +109,15 @@ fix zwalls2 ptc wall/gran model hertz tangential history primitive type 4 zplane
 # --- 7. INTEGRATION ---
 fix             integr all nve/sphere
 
+# Warn if timestep > 10% of Rayleigh time or 10% of Hertz time
+fix             ts_check all check/timestep/gran 1 0.1 0.1 warn yes
+
 # --- 8. ANALYSIS SETUP ---
 # Get current positions of different layers
 compute         z_cc1_avg cc1 reduce ave z
 compute         z_am_avg am reduce ave z
 compute         z_se_avg se reduce ave z
 compute         z_cc2_avg cc2 reduce ave z
-
-# Run to get initial positions
-run             0
 
 # Print layer information
 variable        z_cc1 equal c_z_cc1_avg
@@ -163,7 +169,7 @@ fix             li_diffusion am lithium_diffusion AM_type 1 D_min 1e-15 D_poor 1
                 kappa 20.0 c_li_max 83874.0
 
 # 6. Radius expansion for Si particles (optional)
-fix             radius_expand am radius_expansion AM_type 1 update_every 10 max_updates 1000000
+fix             radius_expand am radius_expansion AM_type 1 update_every 1 max_updates 1000000
 
 # --- 10. COMPUTE SETUP FOR MONITORING ---
 # Lithium content statistics
@@ -190,17 +196,21 @@ compute         phi_cc2_avg cc2 reduce ave f_electricPotential
 # Current flow at AM-SE interfaces
 compute         current_avg am reduce ave f_currentAMSE
 
+variable       ts_rayleigh equal f_ts_check[1]
+variable       ts_hertz    equal f_ts_check[2]
+variable       ts_skin     equal f_ts_check[3]
+
 # --- 11. OUTPUT SETTINGS ---
 # Thermo output
 thermo_style    custom step atoms ke c_li_max c_eq_avg c_ex_avg c_phi_se_avg c_phi_am_avg &
-                c_phi_cc1_avg c_phi_cc2_avg c_current_avg
+                c_phi_cc1_avg c_phi_cc2_avg c_current_avg v_ts_rayleigh v_ts_hertz v_ts_skin
 thermo          100
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 100 post_bat2/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
-                f_lithiumContent f_equilibriumPotential f_exchangeCurrentDensity &
-                f_electricPotential f_currentAMSE f_hydrostaticStress
+# dump            dmp_battery all custom 100 post_bat2/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+#                f_lithiumContent f_equilibriumPotential f_exchangeCurrentDensity &
+#                f_electricPotential f_currentAMSE f_hydrostaticStress
 
 # --- 12. EQUILIBRATION RUN ---
 print           "Running short equilibration to stabilize compacted structure with battery physics..."
@@ -225,11 +235,9 @@ print           "  c_current_sum = total current flow"
 print           "================================================"
 
 # Main simulation run
-run             100000
+run             1000
 
 # --- 14. FINAL ANALYSIS ---
 print           "================================================"
 print           "Simulation complete"
 print           "================================================"
-
-print           "Check dump files in post_battery/ for detailed particle data"
