@@ -48,7 +48,7 @@ variable        cof_all       equal     0.1     # Same for all pairs
 variable        corf_all      equal     0.1     # Same for all pairs
 
 # Young's modulus
-variable        Yam           equal     48.5.e6    # AM (Active Material) [kPa]
+variable        Yam           equal     48.5e6    # AM (Active Material) [kPa]
 variable        Ycc           equal     50.e6  # CC1 and CC2 (Current Collectors) [kPa]
 variable        Yse           equal     23.e6  # SE (Solid Electrolyte) [kPa]
 variable        Yww           equal     50.e6    # Wall [kPa]
@@ -200,5 +200,5 @@ if "${prs1} < ${tarp1}" then "jump SELF loop3"
 run 100000
 
 # Save compacted state
-write_restart   compacted_battery1.restart
-write_data      compacted_battery1.data
+write_restart   comp_bat.restart
+write_data      comp_bat.data
