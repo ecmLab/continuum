@@ -1,4 +1,4 @@
-// Copyright 2025, ToBeDecided, All Rights Reserved
+// Copyright 2025, CEWLAB, All Rights Reserved
 // License: L-GPL 3.0
 #pragma once
 
@@ -8,10 +8,13 @@
  * Material class that provides all characteristic scales and dimensionless parameters
  * for the TECM non-dimensionalization framework.
  * 
- * Based on Li-ion battery characteristic scales:
+ * Based on Li metal + Li6PS5Cl + NMC battery system characteristic scales:
+ * - Concentration: c₀ = Li concentration in Li6PS5Cl solid electrolyte (primary scale)
  * - Length: L₀ = Fc₀D₀/j₀ (diffusion length based on electrochemical kinetics)
  * - Time: t₀ = L₀²/D₀ = F²c₀²D₀/j₀²
- * - Concentration: c₀ = Li-ion concentration in Li metal
+ * 
+ * Note: Li conductivity σ₀ and diffusivity D₀ are related via Nernst-Einstein:
+ * σ₀ = F²c₀D₀/(RT₀) ≈ 0.39 S/m
  * - Potential: φ₀ = RT₀/F (thermal voltage)
  * - Chemical potential: μ₀ = RT₀
  * - Current density: j₀ = exchange current density at Li metal/SE interface
@@ -28,7 +31,7 @@ public:
 
 protected:
   ///@{ Characteristic scales (dimensional reference values)
-  /// Reference concentration [mol/m³]
+  /// Li concentration in Li6PS5Cl solid electrolyte [mol/m³] (primary scale)
   const Real _c0;
   /// Reference temperature [K]  
   const Real _T0;
@@ -45,6 +48,8 @@ protected:
   ///@}
 
   ///@{ Computed characteristic scales
+  /// Reference diffusivity (output as material property for other materials)
+  MaterialProperty<Real> & _D0_prop;
   /// Characteristic length [m]
   MaterialProperty<Real> & _L0;
   /// Characteristic time [s]

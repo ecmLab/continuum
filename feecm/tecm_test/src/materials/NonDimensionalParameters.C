@@ -9,12 +9,14 @@ NonDimensionalParameters::validParams()
   params.addClassDescription("Material class providing characteristic scales and dimensionless "
                             "parameters for TECM non-dimensionalization framework");
 
-  // Characteristic scale parameters (with typical Li-ion battery values as defaults)
-  params.addParam<Real>("c0", 29400.0, "Reference concentration [mol/m³] (Li in Li metal)");
+  // Characteristic scale parameters (Li metal + Li6PS5Cl + NMC battery system)
+  params.addParam<Real>("c0", 41528.0, "Li concentration in Li6PS5Cl solid electrolyte [mol/m³] (primary scale)");
   params.addParam<Real>("T0", 298.0, "Reference temperature [K]");
-  params.addParam<Real>("D0", 1.0e-14, "Reference diffusivity [m²/s] (Li in graphite)");
+  params.addParam<Real>("D0", 2.5e-12, "Li diffusivity in Li6PS5Cl solid electrolyte [m²/s]");
   params.addParam<Real>("j0", 1.0, "Exchange current density [A/m²] (Li metal/SE interface)");
   params.addParam<Real>("Omega0", 1.304e-5, "Li molar volume in Li metal [m³/mol]");
+  
+  // Note: Li conductivity σ₀ = F²c₀D₀/(RT₀) ≈ 0.39 S/m via Nernst-Einstein relation
   params.addParam<Real>("F", 96485.0, "Faraday constant [C/mol]");
   params.addParam<Real>("R", 8.314, "Gas constant [J/mol/K]");
 
@@ -35,6 +37,7 @@ NonDimensionalParameters::NonDimensionalParameters(const InputParameters & param
     _F(getParam<Real>("F")),
     _R(getParam<Real>("R")),
     // Characteristic scales
+    _D0_prop(declareProperty<Real>("D0")),
     _L0(declareProperty<Real>("L0")),
     _t0(declareProperty<Real>("t0")),
     _phi0(declareProperty<Real>("phi0")),
@@ -51,6 +54,9 @@ NonDimensionalParameters::NonDimensionalParameters(const InputParameters & param
 void
 NonDimensionalParameters::computeQpProperties()
 {
+  // Store D0 as material property for other materials to access
+  _D0_prop[_qp] = _D0;
+  
   // Characteristic length: L₀ = Fc₀D₀/j₀
   _L0[_qp] = _F * _c0 * _D0 / _j0;
   

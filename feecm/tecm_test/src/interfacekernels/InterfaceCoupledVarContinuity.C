@@ -1,4 +1,4 @@
-// Copyright 2025, ToBeDecided, All Rights Reserved
+// Copyright 2025, CEWLAB, All Rights Reserved
 // License: L-GPL 3.0
 #include "InterfaceCoupledVarContinuity.h"
 

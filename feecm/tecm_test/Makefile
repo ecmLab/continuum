@@ -1,7 +1,7 @@
 ###############################################################################
 ################### MOOSE Application Standard Makefile #######################
 ###############################################################################
-#  Copyright 2025, ToBeDecided, All Rights Reserved
+#  Copyright 2025, CEWLAB, All Rights Reserved
 #
 # Optional Environment variables
 # MOOSE_DIR        - Root directory of the MOOSE project
