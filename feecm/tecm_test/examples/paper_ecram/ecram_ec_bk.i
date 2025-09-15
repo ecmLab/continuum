@@ -8,19 +8,21 @@
 V_gate = 2.0  # V (positive for Li+ intercalation)
 
 # PEO electrolyte properties
-sigma_e = 1e-5    # S/m (ionic conductivity in 1wt%LiClO4-PEO electrolyte)
+sigma_e = 1e-3    # S/m (total ionic conductivity in 1wt%LiClO4-PEO electrolyte)
 c_Li_e = 110      # mol/m^3 (Li+ concentration in electrolyte, LiClO4 is very dilute)
-D_Li = 2.4e-14    # m^2/s (Li+ diffusivity in electrolyte, based on Nernst-Einstein relation)
+D_Li = 2.4e-12    # m^2/s (Li+ diffusivity in electrolyte, based on Nernst-Einstein relation)
+t_plus = 0.5      # Li+ transference number (ClO4- maintains electroneutrality)
 
 # 2D material properties
 sigma_c = 1e6    # S/m (electronic conductivity of graphene)
 c_Li_c = 10       # mol/m^3 (Li+ concentration in channel initially)
+D_Li_c = 2.4e-16  # m^2/s (Li+ diffusivity in 2D channel - much slower than electrolyte)
 #sigma_c = 10    # S/m (electronic conductivity of MoS2)
 #c_max = 30000     # mol/m^3 (maximum Li+ intercalation capacity in C, LiC6)
 #c_max = 60000    # mol/m^3 (maximum Li+ intercalation capacity in MoS2, Li1MoS2)
 
 # Intercalation kinetics
-i0 = 1e-4         # A/m^2 (exchange current density for intercalation)
+i0 = 1e-2         # A/m^2 (exchange current density for intercalation)
 alpha = 0.5       # charge transfer coefficient
 U_eq = 0.1       # V (equilibrium potential)
 
@@ -49,7 +51,7 @@ t_device = 5e-7    # m (device height)
     ymin = 0
     ymax = ${t_device}
     nx = 50
-    ny = 92
+    ny = 100
   []
 
   # Define electrolyte region
@@ -163,6 +165,7 @@ t_device = 5e-7    # m (device height)
   []
 []
 
+
 [InterfaceKernels]
   # Li+ intercalation current at electrolyte/2D material interface
   [intercalation_current]
@@ -222,11 +225,11 @@ t_device = 5e-7    # m (device height)
     electric_potential = Phi
   []
 
-  # Li+ transport in electrolyte
+  # Li+ transport properties (block-specific)
   [li_diffusivity]
-    type = ADGenericConstantMaterial
-    prop_names = 'D_Li'
-    prop_values = '${D_Li}'
+    type = ADPiecewiseConstantByBlockMaterial
+    prop_name = 'D_Li'
+    subdomain_to_prop_value = 'electrolyte ${D_Li} channel ${D_Li_c}'
   []
 
   [li_mobility]
@@ -234,7 +237,8 @@ t_device = 5e-7    # m (device height)
     property_name = M_Li
     coupled_variables = 'c T'
     material_property_names = 'D_Li'
-    expression = 'D_Li*c/${R}/T'
+    # Effective mobility using transference number (ClO4- maintains electroneutrality)
+    expression = '${t_plus}*D_Li*max(c,1e-6)/${R}/T'
   []
 
   [chemical_energy]
@@ -268,13 +272,25 @@ t_device = 5e-7    # m (device height)
     chemical_potential = mu
     electric_conductivity = sigma
     faraday_constant = ${F}
+    block = 'electrolyte'
   []
 
-  [total_mass_flux]
+  # Mass flux in electrolyte (diffusion + migration)
+  [total_mass_flux_electrolyte]
     type = MassFlux
     mass_flux = j_total
     energy_densities = 'zeta m'
     chemical_potential = mu
+    block = 'electrolyte'
+  []
+
+  # Mass flux in channel (diffusion only)
+  [total_mass_flux_channel]
+    type = MassFlux
+    mass_flux = j_total
+    energy_densities = 'zeta'
+    chemical_potential = mu
+    block = 'channel'
   []
 
   # Li+ intercalation kinetics (Butler-Volmer)
@@ -344,11 +360,11 @@ t_device = 5e-7    # m (device height)
   petsc_options_iname = '-pc_type'
   petsc_options_value = 'lu'
   automatic_scaling = true
-  line_search = none
+  line_search = basic
 
-  nl_rel_tol = 1e-10
-  nl_abs_tol = 1e-10
-  nl_max_its = 50
+  nl_rel_tol = 1e-8
+  nl_abs_tol = 1e-8
+  nl_max_its = 25
 
   # Predictor like working model
   [Predictor]
@@ -359,7 +375,7 @@ t_device = 5e-7    # m (device height)
 
   [TimeStepper]
     type = ConstantDT
-    dt = 0.1
+    dt = 0.05
   []
 
   end_time = 1.0
