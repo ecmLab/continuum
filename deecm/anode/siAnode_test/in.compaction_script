@@ -199,6 +199,21 @@ if "${prs1} < ${tarp1}" then "jump SELF loop3"
 
 run 100000
 
+#------------------------Relax Process------------------------------------------------------
+fix 5 cc1 move linear 0 0 -0.02
+
+# 5. Run fifth period: move bottom layer downward until pressure decrease
+label loop6
+  run   10000
+  if "${prs} < 0.1" then "jump SELF loop7"
+jump SELF loop6
+
+# Hold so that kinetic energy decrease
+label loop7
+fix 5 cc1 move linear 0 0 0.0
+
+run 100000
+
 # Save compacted state
 write_restart   comp_bat.restart
 write_data      comp_bat.data
