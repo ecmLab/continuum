@@ -204,7 +204,7 @@ fix 5 cc1 move linear 0 0 -0.02
 # 5. Run fifth period: move bottom layer downward until pressure decrease
 label loop6
   run   5000
-  if "${prs} < 0.1" then "jump SELF loop7"
+  if "${prs1} < 0.1" then "jump SELF loop7"
 jump SELF loop6
 
 # Hold so that kinetic energy decrease
