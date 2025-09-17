@@ -19,8 +19,8 @@ timestep        5.e-6
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
-read_restart    comp_bat.restart
-# read_data     comp_bat.data  # Alternative if restart has issues
+read_restart    comp_bat_lax.restart
+# read_data     comp_bat_lax.data  # Alternative if restart has issues
 
 # --- 3. RE-ESTABLISH GROUPS ---
 # Define groups based on particle types from the compaction script
@@ -33,11 +33,6 @@ group  cc1   type  2   # Current Collector 1 (bottom) - will be 0V
 # Groups for particles affected by walls
 group  ptc   type  1 3 # Types affected by walls
 
-# --- 3.5. ZERO ALL VELOCITIES ---
-# Set all velocities to zero to start from rest
-velocity all zero linear
-velocity all zero angular
-
 # --- 4. NEIGHBOR SETTINGS ---
 neighbor        0.001 bin
 neigh_modify    every 1 delay 0 check yes
@@ -49,6 +44,7 @@ variable        Ycc           equal     50.e6   # CC1 and CC2 (Current Collector
 variable        Yse           equal     23.e6    # SE (Solid Electrolyte) [kPA]
 variable        Yww           equal     50.e6   # Wall [kPA]
 variable        Yghost        equal     50.e6   # Ghost particles [kPA]
+
 variable        particle_poissons_ratio equal 0.4
 
 # Material properties
@@ -208,9 +204,9 @@ thermo          100
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-# dump            dmp_battery all custom 100 post_bat2/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
-#                f_lithiumContent f_equilibriumPotential f_exchangeCurrentDensity &
-#                f_electricPotential f_currentAMSE f_hydrostaticStress
+dump            dmp_battery all custom 100 post_bat2/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+                f_lithiumContent f_equilibriumPotential f_exchangeCurrentDensity &
+                f_electricPotential f_currentAMSE f_hydrostaticStress
 
 # --- 12. EQUILIBRATION RUN ---
 print           "Running short equilibration to stabilize compacted structure with battery physics..."
@@ -235,7 +231,7 @@ print           "  c_current_sum = total current flow"
 print           "================================================"
 
 # Main simulation run
-run             1000
+run             10000
 
 # --- 14. FINAL ANALYSIS ---
 print           "================================================"
