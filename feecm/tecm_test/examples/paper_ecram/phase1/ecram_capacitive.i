@@ -7,7 +7,7 @@ c_Li_e = 110      # mol/m^3 (initial concentration)
 c_ClO4_e = 110    # mol/m^3
 z_Li = 1          # Li+ valence
 z_ClO4 = -1       # ClO4- valence
-# R = 8.314         # J/(mol·K) (unused)
+R = 8.314         # J/(mol·K) (unused)
 T = 300           # K
 F = 96485         # C/mol
 epsilon_r = 30    # relative permittivity
@@ -21,8 +21,8 @@ D_Li = 2.4e-12    # m^2/s (Li+ diffusivity)
 D_ClO4 = 2.0e-12  # m^2/s (ClO4- diffusivity)
 
 # Geometry
-L_total = 1e-7    # m (1 μm length)
-t_device = 5e-7   # m (0.5 μm height)
+L_total = 1e-8    # m (1 μm length)
+t_device = 5e-8   # m (0.5 μm height)
 
 [Mesh]
   [base]
@@ -60,6 +60,18 @@ t_device = 5e-7   # m (0.5 μm height)
     family = MONOMIAL
     order = CONSTANT
   []
+  [grad_c_Li_x]      # Li+ concentration gradient x-component [mol/m^4]
+    family = MONOMIAL
+    order = CONSTANT
+  []
+  [grad_c_ClO4_x]    # ClO4- concentration gradient x-component [mol/m^4]
+    family = MONOMIAL
+    order = CONSTANT
+  []
+  [grad_Psi_x]       # Potential gradient x-component [V/m]
+    family = MONOMIAL
+    order = CONSTANT
+  []
 []
 
 [ICs]
@@ -87,20 +99,42 @@ t_device = 5e-7   # m (0.5 μm height)
     fixed_charge_density = 0.0
   []
 
-  # Electric field calculation
-  [E_x_calc]
+  # Electric field calculation: E_x = -dPsi/dx
+  [grad_Psi_x]
     type = VariableGradientComponent
-    variable = E_x
+    variable = grad_Psi_x
     gradient_variable = Psi
     component = x
   []
+  [E_x]
+    type = ParsedAux
+    variable = E_x
+    coupled_variables = 'grad_Psi_x'
+    expression = '-grad_Psi_x'
+  []
 
-  # Current density proportional to electric field
+  # Concentration gradient calculations
+  [grad_c_Li_x_calc]
+    type = VariableGradientComponent
+    variable = grad_c_Li_x
+    gradient_variable = c_Li
+    component = x
+  []
+  [grad_c_ClO4_x_calc]
+    type = VariableGradientComponent
+    variable = grad_c_ClO4_x
+    gradient_variable = c_ClO4
+    component = x
+  []
+
+  # Correct ionic current density: j = F * (z_Li * J_Li + z_ClO4 * J_ClO4)
+  # where J_i = -D_i * grad_c_i + D_i * c_i * z_i * F/(RT) * E_x
+  # Note: E_x = -grad_Psi_x, so electromigration term is +D_i * c_i * z_i * F/(RT) * E_x
   [current_calc]
     type = ParsedAux
     variable = current_density
-    coupled_variables = 'E_x'
-    expression = 'E_x * 1e-12'
+    coupled_variables = 'c_Li c_ClO4 grad_c_Li_x grad_c_ClO4_x E_x'
+    expression = '${F} * (${z_Li} * (-${D_Li} * grad_c_Li_x + ${fparse D_Li * z_Li * F / (8.314 * T)} * c_Li * E_x) + ${z_ClO4} * (-${D_ClO4} * grad_c_ClO4_x + ${fparse D_ClO4 * z_ClO4 * F / (8.314 * T)} * c_ClO4 * E_x))'
   []
 []
 
@@ -124,10 +158,14 @@ t_device = 5e-7   # m (0.5 μm height)
     diffusivity = D_Li
   []
   [li_electromigration]
-    type = CoupledForce
+    type = ADNernstPlanckConvection
     variable = c_Li
-    v = E_x
-    coef = 1e-7
+    diffusivity = D_Li
+    valence = ${z_Li}
+    faraday_constant = ${F}
+    gas_constant = ${R}
+    temperature = ${T}
+    potential = Psi
   []
 
   # ClO4- transport: time + diffusion + electromigration
@@ -141,10 +179,14 @@ t_device = 5e-7   # m (0.5 μm height)
     diffusivity = D_ClO4
   []
   [clo4_electromigration]
-    type = CoupledForce
+    type = ADNernstPlanckConvection
     variable = c_ClO4
-    v = E_x
-    coef = -1e-7
+    diffusivity = D_ClO4
+    valence = ${z_ClO4}
+    faraday_constant = ${F}
+    gas_constant = ${R}
+    temperature = ${T}
+    potential = Psi
   []
 []
 
@@ -212,15 +254,15 @@ t_device = 5e-7   # m (0.5 μm height)
   solve_type = NEWTON
 
   start_time = 0
-  end_time = 1000000
+  end_time = 1000
   dtmin = 0.0001
   dtmax = 10
 
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 0.1
+    dt = 0.01
     optimal_iterations = 10
-    growth_factor = 1.5
+    growth_factor = 1.2
     cutback_factor = 0.5
   []
 
@@ -238,38 +280,19 @@ t_device = 5e-7   # m (0.5 μm height)
   [li_left]
     type = PointValue
     variable = c_Li
-    point = '1e-8 2.5e-7 0'
+    point = '1e-9 2.5e-8 0'
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [li_center]
     type = PointValue
     variable = c_Li
-    point = '5e-8 2.5e-7 0'
+    point = '5e-9 2.5e-8 0'
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [li_right]
     type = PointValue
     variable = c_Li
-    point = '9.9e-8 2.5e-7 0'
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-
-  [clo4_left]
-    type = PointValue
-    variable = c_ClO4
-    point = '1e-8 2.5e-7 0'
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-  [clo4_center]
-    type = PointValue
-    variable = c_ClO4
-    point = '5e-8 2.5e-7 0'
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-  [clo4_right]
-    type = PointValue
-    variable = c_ClO4
-    point = '9.9e-8 2.5e-7 0'
+    point = '9.9e-9 2.5e-8 0'
     execute_on = 'INITIAL TIMESTEP_END'
   []
 
@@ -317,6 +340,48 @@ t_device = 5e-7   # m (0.5 μm height)
     variable = current_density
     value_type = max
     execute_on = 'INITIAL TIMESTEP_END'
+  []
+
+  # Track concentration variations to quantify redistribution
+  [li_concentration_spread]
+    type = ParsedPostprocessor
+    pp_names = 'li_left li_right'
+    expression = 'abs(li_left - li_right)'
+    execute_on = 'TIMESTEP_END'
+  []
+
+  [clo4_left]
+    type = PointValue
+    variable = c_ClO4
+    point = '1e-9 2.5e-8 0'
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [clo4_right]
+    type = PointValue
+    variable = c_ClO4
+    point = '9.9e-9 2.5e-8 0'
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+
+  [clo4_concentration_spread]
+    type = ParsedPostprocessor
+    pp_names = 'clo4_left clo4_right'
+    expression = 'abs(clo4_left - clo4_right)'
+    execute_on = 'TIMESTEP_END'
+  []
+
+  # Monitor relative changes from initial concentrations
+  [li_relative_change_left]
+    type = ParsedPostprocessor
+    pp_names = 'li_left'
+    expression = '(li_left - 110) / 110'
+    execute_on = 'TIMESTEP_END'
+  []
+  [li_relative_change_right]
+    type = ParsedPostprocessor
+    pp_names = 'li_right'
+    expression = '(li_right - 110) / 110'
+    execute_on = 'TIMESTEP_END'
   []
 []
 
