@@ -132,6 +132,10 @@ variable        n_ghost equal count(ghost)
 fix 1 cc1 move linear 0 0 0
 fix 2 cc2 move linear 0 0 0
 
+# --- 8.5. PRESSURE COMPUTATION ON CC1 ---
+compute         frc1    cc1    reduce sum fz
+variable        prs1    equal  -(c_frc1)*2.5e-6
+
 # --- 9. BATTERY PHYSICS MODELS ---
 print           "================================================"
 print           "Setting up battery physics on compacted bed..."
@@ -139,33 +143,6 @@ print           "================================================"
 
 # Check if we have AM particles
 if              "${n_am} == 0" then "print 'ERROR: No AM particles found!'" quit
-
-# 1. Initialize lithium content (Li/Si molar ratio) - only for AM particles
-# Using micro units: adjust parameters accordingly
-fix             li_content am property/atom/lithium_content initial 0.15 target 0.8 max 0.89
-
-# 2. Calculate equilibrium potential - only for AM particles
-# Temperature in K, potentials in V
-fix             eq_pot am equilibrium_potential temperature 303. U_eq0 0.35 A 20 B -15
-
-# 3. Calculate exchange current density - only for AM particles
-# k_r in A/m^2, concentrations in mol/m^3
-# Note: May need to adjust these values for micro units
-fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 83874. c_electrolyte 50608.
-
-# 4. SOR solver for electric potential with type-based boundary conditions
-# BC_types: bottom type (CC1=2), top type (CC2=6)
-# BC_potentials: bottom potential (0V), top potential (0.04V)
-fix             battery_solver all battery/sor omega 0.5 tolerance 1e-5 max_iter 10000000 &
-                BC_types 2 6 BC_potentials 0.04 0.00 SE_type 3 AM_type 1 temperature 303.
-
-# 5. Lithium diffusion - only for AM particles
-# Diffusion coefficients in m^2/s (may need adjustment for micro units)
-fix             li_diffusion am lithium_diffusion AM_type 1 D_min 1e-15 D_poor 1e-14 D_rich 1e-13 &
-                kappa 20.0 c_li_max 83874.0
-
-# 6. Radius expansion for Si particles (optional)
-fix             radius_expand am radius_expansion AM_type 1 update_every 1 max_updates 1000000
 
 # --- 10. COMPUTE SETUP FOR MONITORING ---
 # Lithium content statistics
@@ -198,42 +175,91 @@ variable       ts_skin     equal f_ts_check[3]
 
 # --- 11. OUTPUT SETTINGS ---
 # Thermo output
-thermo_style    custom step atoms ke c_li_max c_eq_avg c_ex_avg c_phi_se_avg c_phi_am_avg &
-                c_phi_cc1_avg c_phi_cc2_avg c_current_avg v_ts_rayleigh v_ts_hertz v_ts_skin
+thermo_style    custom step atoms ke c_li_avg c_eq_avg c_ex_avg c_phi_se_avg c_phi_am_avg &
+                c_phi_cc1_avg c_phi_cc2_avg c_current_avg v_ts_rayleigh v_ts_hertz v_ts_skin v_prs1
 thermo          100
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 100 post_bat2/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_battery all custom 100 post_bat_lax/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_lithiumContent f_equilibriumPotential f_exchangeCurrentDensity &
                 f_electricPotential f_currentAMSE f_hydrostaticStress
 
 # --- 12. EQUILIBRATION RUN ---
-print           "Running short equilibration to stabilize compacted structure with battery physics..."
+print           "Running short equilibration to stabilize compacted structure..."
 run             1000
 
-# --- 13. MAIN SIMULATION ---
+# --- 13. MAIN SIMULATION WITH BATTERY PHYSICS CYCLING ---
 print           "================================================"
-print           "Starting main battery simulation with type-based BCs..."
-print           "Boundary conditions:"
-print           "  CC1 (type 2) at 0.0 V"
-print           "  CC2 (type 6) at 0.04 V"
-print           "Monitor thermo output for evolution of values:"
-print           "  c_li_avg = lithium content (AM particles)"
-print           "  c_eq_avg = equilibrium potential (AM particles)"
-print           "  c_ex_avg = exchange current density (AM particles)"
-print           "  c_phi_se_avg = SE electric potential"
-print           "  c_phi_am_avg = AM electric potential"
-print           "  c_phi_cc1_avg = CC1 electric potential (should be 0.0 V)"
-print           "  c_phi_cc2_avg = CC2 electric potential (should be 0.04 V)"
-print           "  c_current_avg = average current at AM-SE interfaces"
-print           "  c_current_sum = total current flow"
+print           "Starting main battery simulation with cycling..."
 print           "================================================"
 
-# Main simulation run
-run             10000
+# Initialize loop counter
+variable        loop_count equal 0
+
+# Main cycling loop
+label           main_loop
+
+print           "Cycle ${loop_count}: Starting battery physics..."
+
+# 1. Unfix nve/sphere
+unfix           integr
+
+# 2. Fix all battery physics in correct order
+# Initialize lithium content (Li/Si molar ratio) - only for AM particles
+fix             li_content am property/atom/lithium_content initial 0.15 target 0.8 max 0.89
+
+# Calculate equilibrium potential - only for AM particles
+fix             eq_pot am equilibrium_potential temperature 303. U_eq0 0.35 A 20 B -15
+
+# Calculate exchange current density - only for AM particles
+fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 83874. c_electrolyte 50608.
+
+# SOR solver for electric potential with type-based boundary conditions
+fix             battery_solver all battery/sor omega 0.5 tolerance 1e-5 max_iter 10000000 &
+                BC_types 2 6 BC_potentials 0.04 0.00 SE_type 3 AM_type 1 temperature 303.
+
+# Lithium diffusion - only for AM particles
+fix             li_diffusion am lithium_diffusion AM_type 1 D_min 1e-15 D_poor 1e-14 D_rich 1e-13 &
+                kappa 20.0 c_li_max 83874.0
+
+# Radius expansion for Si particles (optional)
+fix             radius_expand am radius_expansion AM_type 1 update_every 1 max_updates 1000000
+
+# 3. Run for 1 timestep
+run             1
+
+# 4. Unfix all battery physics
+unfix           li_content
+unfix           eq_pot
+unfix           exch_current
+unfix           battery_solver
+unfix           li_diffusion
+unfix           radius_expand
+
+# 5. Fix nve/sphere
+fix             integr all nve/sphere
+
+# 6. Start relax loop - move bottom layer downward
+fix             5 cc1 move linear 0 0 -0.02
+
+# Run fifth period: move bottom layer downward until pressure decrease
+label           loop6
+run             5000
+if              "${prs1} < 0.1" then "jump SELF loop7"
+jump            SELF loop6
+
+# Hold so that kinetic energy decrease
+label           loop7
+fix             5 cc1 move linear 0 0 0.0
+
+# Increment loop counter
+variable        loop_count equal ${loop_count}+1
+
+# Check if we should continue looping
+if              "${loop_count} <= 60" then "jump SELF main_loop"
 
 # --- 14. FINAL ANALYSIS ---
 print           "================================================"
-print           "Simulation complete"
+print           "Simulation complete after ${loop_count} cycles"
 print           "================================================"
