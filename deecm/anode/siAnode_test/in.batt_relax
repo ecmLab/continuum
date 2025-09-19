@@ -19,8 +19,8 @@ timestep        5.e-6
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
-# read_restart    comp_bat_lax.restart
-read_data     comp_bat_lax.data
+# read_restart    data/comp300_bat_10MPa.restart
+read_data     data/comp300_bat_10MPa.data
 
 # --- 3. RE-ESTABLISH GROUPS ---
 # Define groups based on particle types from the compaction script
@@ -202,7 +202,7 @@ thermo          1000
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 1000 post_bat_lax/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_battery all custom 2000 post_bat_10Mpa/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_lithiumContent f_equilibriumPotential f_exchangeCurrentDensity &
                 f_electricPotential f_currentAMSE f_hydrostaticStress
 
@@ -284,7 +284,7 @@ fix             5 cc1 move linear 0 0 0.0
 variable        loop_count equal ${loop_count}+1
 
 # Check if we should continue looping
-if              "${loop_count} <= 60" then "jump SELF main_loop"
+if              "${loop_count} <= 600" then "jump SELF main_loop"
 
 # --- 14. FINAL ANALYSIS ---
 print           "================================================"
