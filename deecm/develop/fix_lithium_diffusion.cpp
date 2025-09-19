@@ -259,7 +259,7 @@ void FixLithiumDiffusion::setup(int vflag)
     if (mask[i] & groupbit && type[i] == AM_type) {
       double Omega_Si = 10.96e-6;
       double radius_m = radius[i] * 1.0e-6;
-      silicon_content[i] = ((4.0/3.0) * M_PI * radius_m * radius_m * radius_m) / ((1.0 + initial_lithium_content) * Omega_Si);
+      silicon_content[i] = ((4.0/3.0) * M_PI * radius_m * radius_m * radius_m) / ( Omega_Si);
       
       // Initialize lithium concentration
       double x_li = lithium_content[i];

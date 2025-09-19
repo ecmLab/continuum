@@ -14,7 +14,7 @@ newton          off
 
 communicate     single vel yes
 
-# Set timestep
+# Set timestep (Do not change radius update optimized for this value)
 timestep        5.e-6
 
 # --- 2. READ RESTART FILE ---
@@ -198,11 +198,11 @@ variable       ts_skin     equal f_ts_check[3]
 # Thermo output
 thermo_style    custom step atoms ke c_li_avg c_eq_avg c_ex_avg c_phi_se_avg c_phi_am_avg &
                 c_phi_cc1_avg c_phi_cc2_avg c_current_avg v_ts_rayleigh v_ts_hertz v_ts_skin v_prs1
-thermo          1000
+thermo          50000
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 2000 post_bat_10Mpa/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_battery all custom 50000 post_bat_10Mpa/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_lithiumContent f_equilibriumPotential f_exchangeCurrentDensity &
                 f_electricPotential f_currentAMSE f_hydrostaticStress
 
