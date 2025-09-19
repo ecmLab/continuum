@@ -100,12 +100,12 @@ fix     m5 all property/global coefficientRollingFriction peratomtypepair 6 &
 
 # Cohesion energy density (6x6)
 fix     m6 all property/global cohesionEnergyDensity peratomtypepair 6 &
-        100000  100000  100000  0       0   100000  &
-        100000  100000  100000  0       0   100000  &
-        100000  100000  100000  0       0   100000  &
-        0       0       0       0       0   0       &
-        0       0       0       0       0   0       &
-        100000  100000  100000  0       0   100000
+        100000  50000  100000  0       0   50000   &
+        50000   0      50000   0       0   0       &
+        100000  50000  100000  0       0   50000   &
+        0       0      0       0       0   0       &
+        0       0      0       0       0   0       &
+        50000   0      50000   0       0   0
 
 #---------------------Define Pair Style and Walls----------------------------------------
 pair_style gran model hertz tangential history cohesion sjkr
@@ -147,7 +147,7 @@ thermo          1000
 thermo_modify   lost ignore norm no
 
 # Optional: Dump for visualization
-dump    dmp_final all custom 50000 post_c/compact_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius
+dump    dmp_final all custom 50000 post_c300_10/compact_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius
 
 #------------------------Compaction Process------------------------------------------------------
 fix 3 ghost move linear 0 0 0.2
@@ -199,12 +199,12 @@ if "${prs1} < ${tarp1}" then "jump SELF loop3"
 run 100000
 
 #------------------------Relax Process------------------------------------------------------
-fix 5 cc1 move linear 0 0 -0.02
+fix 5 cc1 move linear 0 0 -0.2
 
 # 5. Run fifth period: move bottom layer downward until pressure decrease
 label loop6
   run   5000
-  if "${prs1} < 0.1" then "jump SELF loop7"
+  if "${prs1} < 10" then "jump SELF loop7"
 jump SELF loop6
 
 # Hold so that kinetic energy decrease
@@ -215,5 +215,5 @@ fix 5 cc1 move linear 0 0 0.0
 run 100000
 
 # Save compacted state
-write_restart   comp_bat_lax.restart
-write_data      comp_bat_lax.data
+write_restart   comp300_bat_10MPa.restart
+write_data      comp300_bat_10MPa.data

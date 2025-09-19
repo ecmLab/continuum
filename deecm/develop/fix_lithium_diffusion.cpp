@@ -402,7 +402,7 @@ void FixLithiumDiffusion::update_lithium_content()
     if (mask[i] & groupbit && type[i] == AM_type) {
       // dn_Li/dt = flux (Equation 10)
        
-      lithium_content[i] += (lithium_flux[i] * dt) / silicon_content[i]; // Li/Si Molar Ratio
+      lithium_content[i] += (lithium_flux[i] * dt * 2.0e16) / silicon_content[i]; // Li/Si Molar Ratio (2e16 based on 5e-5 timestep in main this simulates 0.1s of EC in 1 run)
 
       // Ensure lithium content stays within bounds using values from lithium_content manager
       if (lithium_content[i] < initial_lithium_content) lithium_content[i] = initial_lithium_content;

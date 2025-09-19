@@ -82,13 +82,13 @@ fix             m5 all property/global coefficientRollingFriction peratomtypepai
                 ${corf_all} ${corf_all} ${corf_all} ${corf_all} ${corf_all} ${corf_all}
 
 # Cohesion energy density (from compaction script)
-fix             m6 all property/global cohesionEnergyDensity peratomtypepair 6 &
-                100000  100000  100000  0       0   100000  &
-                100000  100000  100000  0       0   100000  &
-                100000  100000  100000  0       0   100000  &
-                0       0       0       0       0   0       &
-                0       0       0       0       0   0       &
-                100000  100000  100000  0       0   100000
+fix     m6 all property/global cohesionEnergyDensity peratomtypepair 6 &
+        100000  50000  100000  0       0   50000   &
+        50000   0      50000   0       0   0       &
+        100000  50000  100000  0       0   50000   &
+        0       0      0       0       0   0       &
+        0       0      0       0       0   0       &
+        50000   0      50000   0       0   0
 
 # --- 6. PAIR STYLE AND WALLS ---
 pair_style gran model hertz tangential history cohesion sjkr
@@ -144,6 +144,27 @@ print           "================================================"
 # Check if we have AM particles
 if              "${n_am} == 0" then "print 'ERROR: No AM particles found!'" quit
 
+# Initialize battery physics fixes first to create the fix properties
+# Initialize lithium content (Li/Si molar ratio) - only for AM particles
+fix             li_content am property/atom/lithium_content initial 0.15 target 0.8 max 0.89
+
+# Calculate equilibrium potential - only for AM particles
+fix             eq_pot am equilibrium_potential temperature 303. U_eq0 0.35 A 20 B -15
+
+# Calculate exchange current density - only for AM particles
+fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 83874. c_electrolyte 50608.
+
+# SOR solver for electric potential with type-based boundary conditions
+fix             battery_solver all battery/sor omega 0.5 tolerance 1e-5 max_iter 10000000 &
+                BC_types 2 6 BC_potentials 0.04 0.00 SE_type 3 AM_type 1 temperature 303.
+
+# Lithium diffusion - only for AM particles
+fix             li_diffusion am lithium_diffusion AM_type 1 D_min 1e-15 D_poor 1e-14 D_rich 1e-13 &
+                kappa 20.0 c_li_max 83874.0
+
+# Radius expansion for Si particles (optional)
+fix             radius_expand am radius_expansion AM_type 1 update_every 1 max_updates 1000000
+
 # --- 10. COMPUTE SETUP FOR MONITORING ---
 # Lithium content statistics
 compute         li_avg am reduce ave f_lithiumContent
@@ -177,17 +198,13 @@ variable       ts_skin     equal f_ts_check[3]
 # Thermo output
 thermo_style    custom step atoms ke c_li_avg c_eq_avg c_ex_avg c_phi_se_avg c_phi_am_avg &
                 c_phi_cc1_avg c_phi_cc2_avg c_current_avg v_ts_rayleigh v_ts_hertz v_ts_skin v_prs1
-thermo          100
+thermo          1000
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 100 post_bat_lax/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_battery all custom 1000 post_bat_lax/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_lithiumContent f_equilibriumPotential f_exchangeCurrentDensity &
                 f_electricPotential f_currentAMSE f_hydrostaticStress
-
-# --- 12. EQUILIBRATION RUN ---
-print           "Running short equilibration to stabilize compacted structure..."
-run             1000
 
 # --- 13. MAIN SIMULATION WITH BATTERY PHYSICS CYCLING ---
 print           "================================================"
@@ -205,7 +222,16 @@ print           "Cycle ${loop_count}: Starting battery physics..."
 # 1. Unfix nve/sphere
 unfix           integr
 
-# 2. Fix all battery physics in correct order
+# 2. Unfix existing battery physics (if this is the first iteration)
+if              "${loop_count} == 0" then &
+"unfix          li_content" &
+"unfix          eq_pot" &
+"unfix          exch_current" &
+"unfix          battery_solver" &
+"unfix          li_diffusion" &
+"unfix          radius_expand"
+
+# 3. Fix all battery physics in correct order
 # Initialize lithium content (Li/Si molar ratio) - only for AM particles
 fix             li_content am property/atom/lithium_content initial 0.15 target 0.8 max 0.89
 
@@ -226,10 +252,10 @@ fix             li_diffusion am lithium_diffusion AM_type 1 D_min 1e-15 D_poor 1
 # Radius expansion for Si particles (optional)
 fix             radius_expand am radius_expansion AM_type 1 update_every 1 max_updates 1000000
 
-# 3. Run for 1 timestep
+# 4. Run EC for 1 timestep, equivelent to 0.1 real seconds, while particles are frozen
 run             1
 
-# 4. Unfix all battery physics
+# 5. Unfix all battery physics
 unfix           li_content
 unfix           eq_pot
 unfix           exch_current
@@ -237,20 +263,21 @@ unfix           battery_solver
 unfix           li_diffusion
 unfix           radius_expand
 
-# 5. Fix nve/sphere
+# 6. Fix nve/sphere
 fix             integr all nve/sphere
 
-# 6. Start relax loop - move bottom layer downward
-fix             5 cc1 move linear 0 0 -0.02
+# 7. Start relax loop - move bottom layer downward
+fix             5 cc1 move linear 0 0 -0.2
 
-# Run fifth period: move bottom layer downward until pressure decrease
+# Run fifth period: move bottom layer downward until pressure decrease maintain Stack pressure
 label           loop6
-run             5000
-if              "${prs1} < 0.1" then "jump SELF loop7"
+run             10000
+if              "${prs1} < 10" then "jump SELF loop7"
 jump            SELF loop6
 
 # Hold so that kinetic energy decrease
 label           loop7
+unfix           5
 fix             5 cc1 move linear 0 0 0.0
 
 # Increment loop counter
