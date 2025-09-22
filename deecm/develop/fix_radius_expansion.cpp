@@ -199,7 +199,7 @@ void FixRadiusExpansion::setup(int vflag)
     if (mask[i] & groupbit && type[i] == AM_type) {
       // Only set initial_radius if it hasn't been set yet (value is 0.0)
       if (initial_radius[i] == 0.0) {
-        initial_radius[i] = radius[i];
+        initial_radius[i] = radius[i]; // Units in μm
       }
       
       // Calculate initial particle volume
@@ -250,23 +250,24 @@ void FixRadiusExpansion::update_particle_radius()
     if (mask[i] & groupbit && type[i] == AM_type) {
       double x_Li = lithium_content[i];  // Li/Si molar ratio
       double n_Si = silicon_content[i];  // Moles of silicon
-      double n_Li = x_Li * n_Si;          // Moles of lithium
+      // double n_Li = x_Li * n_Si;          // Moles of lithium
 
       // Final volume of the particle: V = Omega_Si * n_Si + Omega_Li * n_Li
-      particle_volume[i] = Omega_Si * n_Si + Omega_Li_eff * n_Li;
+      // particle_volume[i] = Omega_Si * n_Si + Omega_Li_eff * n_Li; Original for Si Anode
+      particle_volume[i] = (initial_radius[i] * initial_radius[i] * initial_radius[i] * (4.0/3.0) * M_PI) * (0.2314*pow(x_Li,3) - 0.4919*pow(x_Li,2) + 0.3548*x_Li + 1); // For NMC811 if x_Li is in range 0-1
 
       // The new radius is derived from the new volume
       // V = (4/3) * pi * r^3, so r = cbrt(3V/(4*pi))
-      radius[i] = cbrt((3.0 * particle_volume[i]) / (4.0 * M_PI));
+      radius[i] = cbrt((3.0 * particle_volume[i]) / (4.0 * M_PI)); // Units in μm
 
       // Convert from m to μm (LIGGGHTS units)
-      radius[i] = radius[i] * 1.0e6;
+      // radius[i] = radius[i] * 1.0e6;
 
-      // Safety check - don't let radius shrink below initial
+      // Safety check - don't let radius shrink below initial and dont allow more than 9.43% Volume Expansion
       if (radius[i] < initial_radius[i]) {
         radius[i] = initial_radius[i];
-      } else if (radius[i] > 2.0 * initial_radius[i]) {
-        radius[i] = 2.0 * initial_radius[i];
+      } else if (radius[i] > 1.0305 * initial_radius[i]) {
+        radius[i] = 1.0305 * initial_radius[i];
         if (comm->me == 0 && screen) {
           fprintf(screen,"Warning: Particle %d reached maximum expansion limit\n", atom->tag[i]);
         }

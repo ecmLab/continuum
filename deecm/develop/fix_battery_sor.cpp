@@ -58,7 +58,7 @@
 using namespace LAMMPS_NS;
 using namespace FixConst;
 
-#define SMALL 1e-10
+#define SMALL 1e-15
 #define MAX_EXP_ARG 20.0  // Prevent exp() overflow
 
 /* ---------------------------------------------------------------------- */
@@ -581,8 +581,9 @@ double FixBatterySOR::calculate_current_AM_SE(int i_AM, int j_SE, double phi_el_
   
   // Calculate overpotential
   // Note: phi_el_AM should be the equilibrium potential for AM particles
-  double eta = 0 - phi_el_SE - U_eq;
-  
+  // double eta = 0 - phi_el_SE - U_eq; // for Anode
+  double eta = 0 + phi_el_SE - U_eq; // For Cathode
+
   // Limit overpotential to prevent numerical overflow
   // if (eta > 0.9) eta = 0.9;
   // if (eta < -0.9) eta = -0.9;

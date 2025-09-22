@@ -64,8 +64,8 @@ FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
   kappa(20),
   F(96485.0),                // C/mol
   c_li_max(83874.0),         // mol/m³
-  initial_lithium_content(0.15),  // Default value
-  target_lithium_content(0.8),    // Default value
+  initial_lithium_content(0.0),  // Default value
+  target_lithium_content(0.9),    // Default value
   max_lithium_content(1.0),       // Default value
   lithium_content(NULL),
   lithium_concentration(NULL),
@@ -257,7 +257,7 @@ void FixLithiumDiffusion::setup(int vflag)
   
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit && type[i] == AM_type) {
-      double Omega_Si = 10.96e-6;
+      double Omega_Si = 20.44e-6; // m³/mol (Molar Volume of Silicon 10.96e-6)
       double radius_m = radius[i] * 1.0e-6;
       silicon_content[i] = ((4.0/3.0) * M_PI * radius_m * radius_m * radius_m) / ( Omega_Si);
       
@@ -316,13 +316,14 @@ void FixLithiumDiffusion::calculate_diffusion_coefficient()
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit && type[i] == AM_type) {
       double x_li = lithium_content[i];
-      double x_ratio = x_li / max_lithium_content; // Chi ratio using max_lithium_content
+      // double x_ratio = x_li / max_lithium_content; // Chi ratio using max_lithium_content
       
-      // Equation 11: D_Li-Si = D_min + D_poor * exp(-kappa*x_Li/x_max) + D_rich * exp(kappa*(x_Li/x_max - 1))
-      double term1 = D_poor * exp(-kappa * x_ratio);
-      double term2 = D_rich * exp(kappa * (x_ratio - 1.0));
+      // // Equation 11: D_Li-Si = D_min + D_poor * exp(-kappa*x_Li/x_max) + D_rich * exp(kappa*(x_Li/x_max - 1))
+      // double term1 = D_poor * exp(-kappa * x_ratio);
+      // double term2 = D_rich * exp(kappa * (x_ratio - 1.0));
       
-      diffusion_coefficient[i] = D_min + term1 + term2;
+      // diffusion_coefficient[i] = D_min + term1 + term2;
+      diffusion_coefficient[i] = (2.242731e-14 * x_li) + 2.531562e-15; // Linear increase Diffusion Coefficient m²/s based on x_li from 0 to 1 (based on DOI: 10.1021/acs.chemmater.2c03834)
     }
   }
 }
@@ -401,9 +402,13 @@ void FixLithiumDiffusion::update_lithium_content()
   for (i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit && type[i] == AM_type) {
       // dn_Li/dt = flux (Equation 10)
-       
-      lithium_content[i] += (lithium_flux[i] * dt * 2.0e16) / silicon_content[i]; // Li/Si Molar Ratio (2e16 based on 5e-5 timestep in main this simulates 0.1s of EC in 1 run)
-
+      
+      // Update Notes: The scalling factor needs to be toned down initially to avoid large jumps in lithium content
+      // When Lithium content is at least 0.7 then you can use the max scaling factor of 2e16
+      // The scaling factor is based on a timestep of 5e-6 us in main, so it simulates 0.1s of EC in 1 run
+      double s_factor = 2.0e10; // 0.1s / 5e-12s 
+      lithium_content[i] += (lithium_flux[i] * dt * s_factor) / silicon_content[i]; // Li Molar Ratio (Silicon Content is actually NMC811)
+ 
       // Ensure lithium content stays within bounds using values from lithium_content manager
       if (lithium_content[i] < initial_lithium_content) lithium_content[i] = initial_lithium_content;
       if (lithium_content[i] > target_lithium_content) lithium_content[i] = target_lithium_content;

@@ -235,8 +235,8 @@ void FixExchangeCurrentDensity::calculate_exchange_current_density()
       double term1 = pow((c_li / c_li_max) * c_Li_plus_q, alpha_a);
       double term2 = pow(c_li, 1.0 - alpha_c);
       
-      exchange_current_density[i] = F * k_r * term1 * term2;
-      // exchange_current_density[i] = 0.0001; // Set exchange current density to a fixed value
+      // exchange_current_density[i] = F * k_r * term1 * term2; // A/m²
+      exchange_current_density[i] = 0.11; // A/m² - NMC Constant Value (DOI: 10.1021/acsami.2c06460)
     }
   }
 }

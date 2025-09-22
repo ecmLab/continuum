@@ -49,8 +49,8 @@ void FixPropertyAtomLithiumContent::post_create()
 
 FixPropertyAtomLithiumContent::FixPropertyAtomLithiumContent(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg),
-  initial_lithium_content(0.15),
-  target_lithium_content(0.8),
+  initial_lithium_content(0.0),
+  target_lithium_content(0.9),
   max_lithium_content(1.0),
   lithium_content(NULL),
   fix_lithium_content(NULL)

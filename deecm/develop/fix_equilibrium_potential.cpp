@@ -217,20 +217,33 @@ void FixEquilibriumPotential::calculate_equilibrium_potential()
       double x_norm2 = x_norm * x_norm;
       double x_norm3 = x_norm2 * x_norm;
       double x_norm4 = x_norm3 * x_norm;
-      double x_norm5 = x_norm4 * x_norm;
-      double x_norm6 = x_norm5 * x_norm;
-      double x_norm7 = x_norm6 * x_norm;
-      double x_norm8 = x_norm7 * x_norm;
-      double x_norm9 = x_norm8 * x_norm;
-      double x_norm10 = x_norm9 * x_norm;
-      double x_norm11 = x_norm10 * x_norm;
-      double x_norm12 = x_norm11 * x_norm;
+      // double x_norm5 = x_norm4 * x_norm;
+      // double x_norm6 = x_norm5 * x_norm;
+      // double x_norm7 = x_norm6 * x_norm;
+      // double x_norm8 = x_norm7 * x_norm;
+      // double x_norm9 = x_norm8 * x_norm;
+      // double x_norm10 = x_norm9 * x_norm;
+      // double x_norm11 = x_norm10 * x_norm;
+      // double x_norm12 = x_norm11 * x_norm;
       
-      equilibrium_potential[i] = 2.60481e4 * x_norm12 - 1.65849e5 * x_norm11 + 4.6562e5 * x_norm10
-                                - 7.59309e5 * x_norm9 + 7.97656e5 * x_norm8 - 5.6595e5 * x_norm7
-                                + 2.76551e5 * x_norm6 - 9.31284e4 * x_norm5 + 2.12529e4 * x_norm4
-                                - 3.16719e3 * x_norm3 + 2.89822e2 * x_norm2 - 1.5121e1 * x_norm
-                                + 5.5141e-1;
+      double numerator1 = -17709.3425099138 * x_norm4 + 
+                       49563.5287557803 * x_norm3 + 
+                       -84640.8295904228 * x_norm2 + 
+                       -4980.8894321468 * x_norm + 
+                       56960.9582619908;
+
+      double denominator1 = x_norm3 + 
+                         -14391.9820106230 * x_norm2 + 
+                         1641.3022786177 * x_norm + 
+                         12525.8318098236;
+      
+      equilibrium_potential[i] = numerator1 / denominator1;
+
+      // equilibrium_potential[i] = 2.60481e4 * x_norm12 - 1.65849e5 * x_norm11 + 4.6562e5 * x_norm10
+      //                           - 7.59309e5 * x_norm9 + 7.97656e5 * x_norm8 - 5.6595e5 * x_norm7
+      //                           + 2.76551e5 * x_norm6 - 9.31284e4 * x_norm5 + 2.12529e4 * x_norm4
+      //                           - 3.16719e3 * x_norm3 + 2.89822e2 * x_norm2 - 1.5121e1 * x_norm
+      //                           + 5.5141e-1;
       
       // OLD EQUATION - COMMENTED OUT FOR REFERENCE
       // double term1 = log((1.0 - x_li/x_Li_max) / (x_li/x_Li_max));
