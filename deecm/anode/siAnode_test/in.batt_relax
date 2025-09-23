@@ -243,7 +243,7 @@ fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 8387
 
 # SOR solver for electric potential with type-based boundary conditions
 fix             battery_solver all battery/sor omega 0.5 tolerance 1e-5 max_iter 10000000 &
-                BC_types 2 6 BC_potentials 0.04 0.00 SE_type 3 AM_type 1 temperature 303.
+                BC_types 2 6 BC_potentials 3.55 0.00 SE_type 3 AM_type 1 temperature 303.
 
 # Lithium diffusion - only for AM particles
 fix             li_diffusion am lithium_diffusion AM_type 1 D_min 1e-15 D_poor 1e-14 D_rich 1e-13 &
