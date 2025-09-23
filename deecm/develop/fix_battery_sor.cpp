@@ -464,8 +464,8 @@ void FixBatterySOR::solve_sor_iteration()
       double phi_new = (phi_sum + cur_sum) / coeff_sum; // Updated 7/30/2025
       
       // Check for NaN
-      if (std::isnan(phi_new)) { // Old: phi_new != phi_new
-        error->warning(FLERR,"NaN detected in SE potential calculation");
+      if (std::isnan(phi_new) || std::isinf(phi_new))  {
+        error->warning(FLERR,"Numerical instability detected");
         phi_el[i] = phi_el_old[i];
       } else {
         phi_el[i] = phi_el_old[i] + omega * (phi_new - phi_el_old[i]);
