@@ -155,8 +155,8 @@ fix             eq_pot am equilibrium_potential temperature 303. U_eq0 0.35 A 20
 fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 83874. c_electrolyte 50608.
 
 # SOR solver for electric potential with type-based boundary conditions
-fix             battery_solver all battery/sor omega 0.5 tolerance 1e-5 max_iter 10000000 &
-                BC_types 2 6 BC_potentials 3.55 0.0 SE_type 3 AM_type 1 temperature 303.
+fix             battery_solver all battery/sor omega 0.6 tolerance 1e-2 max_iter 1000000 &
+                BC_types 2 6 BC_potentials 0.00 0.00 SE_type 3 AM_type 1 temperature 303.
 
 # Lithium diffusion - only for AM particles
 fix             li_diffusion am lithium_diffusion AM_type 1 D_min 1e-15 D_poor 1e-14 D_rich 1e-13 &
@@ -198,7 +198,7 @@ variable       ts_skin     equal f_ts_check[3]
 # Thermo output
 thermo_style    custom step atoms ke c_li_avg c_eq_avg c_ex_avg c_phi_se_avg c_phi_am_avg &
                 c_phi_cc1_avg c_phi_cc2_avg c_current_avg v_ts_rayleigh v_ts_hertz v_ts_skin v_prs1
-thermo          50000
+thermo          10000
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
@@ -242,8 +242,8 @@ fix             eq_pot am equilibrium_potential temperature 303. U_eq0 0.35 A 20
 fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 83874. c_electrolyte 50608.
 
 # SOR solver for electric potential with type-based boundary conditions
-fix             battery_solver all battery/sor omega 0.5 tolerance 1e-5 max_iter 10000000 &
-                BC_types 2 6 BC_potentials 3.55 0.00 SE_type 3 AM_type 1 temperature 303.
+fix             battery_solver all battery/sor omega 0.6 tolerance 1e-2 max_iter 1000000 &
+                BC_types 2 6 BC_potentials 0.00 0.00 SE_type 3 AM_type 1 temperature 303.
 
 # Lithium diffusion - only for AM particles
 fix             li_diffusion am lithium_diffusion AM_type 1 D_min 1e-15 D_poor 1e-14 D_rich 1e-13 &

@@ -145,10 +145,10 @@ FixBatterySOR::FixBatterySOR(LAMMPS *lmp, int narg, char **arg) :
   sigma_SE(0.05), // S/m
   alpha_a(0.5), //unitless
   alpha_c(0.5),
-  BC_bottom_type(2),      // Default: CC1
-  BC_top_type(6),         // Default: CC2
-  phi_el_BC_bottom(0.0),  // Default: 0V at bottom
-  phi_el_BC_top(0.04),    // Default: 0.04V at top
+  BC_bottom_type(2),      // Default: CC1 Cathode
+  BC_top_type(6),         // Default: CC2 Anode
+  phi_el_BC_bottom(0.0),  // Default: 0V Initially
+  phi_el_BC_top(0.0),    // Default: 0V Always on Anode
   phi_el(NULL),
   phi_el_old(NULL),
   equilibrium_potential(NULL),
@@ -386,8 +386,9 @@ void FixBatterySOR::solve_sor_iteration()
   firstneigh = list->firstneigh;
   
   // Store old values for SE particles only
+  // NOTE: Also storing for BC_bottom_type now since it can evolve
   for (i = 0; i < nlocal; i++) {
-    if (type[i] == SE_type) {
+    if (type[i] == SE_type || type[i] == BC_bottom_type) {
       phi_el_old[i] = phi_el[i];
     }
   }
@@ -401,8 +402,8 @@ void FixBatterySOR::solve_sor_iteration()
   for (ii = 0; ii < inum; ii++) { // 1
     i = ilist[ii];
     
-    // Only update SE particles, skip AM and boundary condition particles
-    if (type[i] != SE_type) continue;
+    // Only update SE particles, skip AM and top boundary condition particles
+    if (type[i] != SE_type && type[i] != BC_bottom_type) continue;
     
     // For SE particles: solve diffusion equation
     xtmp = x[i][0];
@@ -431,8 +432,8 @@ void FixBatterySOR::solve_sor_iteration()
         double contact_area = calculate_contact_area(i, j); //Should be m2
         
         if (contact_area > 0.0) { // 4
-          if (type[j] == SE_type) {
-            // SE-SE conductivity
+          if (type[j] == SE_type || type[j] == BC_bottom_type) {
+            // SE-SE or SE-BC_bottom or BC_bottom-BC_bottom conductivity
             double conductance = sigma_SE * contact_area / r_SI;
             phi_sum += conductance * phi_el[j];
             coeff_sum += conductance;
@@ -448,7 +449,7 @@ void FixBatterySOR::solve_sor_iteration()
             // Add current contribution to SE particle
             cur_sum += i_pq * contact_area; // Local current in a SE particle due to electro-chemical reaction
             
-          } else if (type[j] == BC_bottom_type || type[j] == BC_top_type) {
+          } else if (type[j] == BC_top_type) {
             // SE in contact with boundary condition particle (CC1 or CC2)
             // These act as Dirichlet boundary conditions
             double conductance = sigma_SE * contact_area / r_SI;
@@ -491,12 +492,15 @@ void FixBatterySOR::apply_boundary_conditions()
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
       // Bottom boundary condition particles (e.g., CC1)
+      // COMMENTED OUT - Let bottom BC evolve naturally
+      /*
       if (type[i] == BC_bottom_type) {
         phi_el[i] = phi_el_BC_bottom;
         phi_el_old[i] = phi_el_BC_bottom;
       }
+      */
       // Top boundary condition particles (e.g., CC2)
-      else if (type[i] == BC_top_type) {
+      if (type[i] == BC_top_type) {
         phi_el[i] = phi_el_BC_top;
         phi_el_old[i] = phi_el_BC_top;
       }
@@ -579,14 +583,31 @@ double FixBatterySOR::calculate_current_AM_SE(int i_AM, int j_SE, double phi_el_
   double U_eq = equilibrium_potential[i_AM];
   double i_0 = exchange_current_density[i_AM];
   
+  double **x = atom->x;
+  double z_AM = x[i_AM][2];  // Assuming z is the vertical direction
+
+  // Get domain bounds in z-direction
+  double z_min = 24;
+  double z_max = 74.5;
+ 
+  // Calculate normalized position (0 at bottom, 1 at top)
+  double z_normalized = (z_AM - z_min) / (z_max - z_min);
+
+  // Ensure normalized position is within [0,1] bounds
+  if (z_normalized < 0.0) z_normalized = 0.0;
+  if (z_normalized > 1.0) z_normalized = 1.0;
+
+  // Linear gradient: 3.55V at bottom (z_normalized=0) to 0V at top (z_normalized=1)
+  double electron_potential = 3.55 * (1.0 - z_normalized);
+
   // Calculate overpotential
   // Note: phi_el_AM should be the equilibrium potential for AM particles
   // double eta = 0 - phi_el_SE - U_eq; // for Anode
-  double eta = 0 + phi_el_SE - U_eq; // For Cathode
+  double eta = electron_potential - phi_el_SE - U_eq; // For Cathode
 
   // Limit overpotential to prevent numerical overflow
-  // if (eta > 0.9) eta = 0.9;
-  // if (eta < -0.9) eta = -0.9;
+  if (eta > 0.9) eta = 0.9;
+  if (eta < -0.9) eta = -0.9;
   
   // Butler-Volmer equation with stress effect
   double RT = R * T;
