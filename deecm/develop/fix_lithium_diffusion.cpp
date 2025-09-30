@@ -257,9 +257,9 @@ void FixLithiumDiffusion::setup(int vflag)
   
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit && type[i] == AM_type) {
-      double Omega_Si = 20.44e-6; // m³/mol (Molar Volume of Silicon 10.96e-6)
+      double Omega_NMC = 20.44e-6; // m³/mol (Molar Volume of Silicon 10.96e-6)
       double radius_m = radius[i] * 1.0e-6;
-      silicon_content[i] = ((4.0/3.0) * M_PI * radius_m * radius_m * radius_m) / ( Omega_Si);
+      silicon_content[i] = ((4.0/3.0) * M_PI * radius_m * radius_m * radius_m) / ( Omega_NMC);
       
       // Initialize lithium concentration
       double x_li = lithium_content[i];
@@ -395,6 +395,7 @@ void FixLithiumDiffusion::update_lithium_content()
     
     // Add current contribution (Equation 10)
     // Current from AM to SE contributes to lithium flux
+    // lithium_flux[i] -= current_AM_SE[i] / F; // Original
     lithium_flux[i] -= current_AM_SE[i] / F;
   } // 1
   

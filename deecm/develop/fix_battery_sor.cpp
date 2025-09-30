@@ -354,34 +354,57 @@ void FixBatterySOR::setup(int vflag)
   int *type = atom->type;
   int *mask = atom->mask;
   
+  // Check if potentials have already been initialized
+  // by checking if any particle has non-zero potential
+  bool already_initialized = false;
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
-      // Initialize both potentials based on particle type
-      if (type[i] == SE_type) {
-        // SE/CBD particles - have both potentials
-        phi_el[i] = 0.0;
-        phi_el_old[i] = 0.0;
-        phi_ed[i] = 0.0;
-        phi_ed_old[i] = 0.0;
-      } else if (type[i] == AM_type) {
-        // AM particles - have electronic potential
-        phi_el[i] = 0.0;  // Not used in AM
-        phi_el_old[i] = 0.0;
-        phi_ed[i] = 0.0;
-        phi_ed_old[i] = 0.0;
-      } else if (type[i] == BC_bottom_type) {
-        // Bottom boundary condition (CC)
-        phi_el[i] = phi_el_BC_bottom;
-        phi_el_old[i] = phi_el_BC_bottom;
-        // Electronic potential will be computed based on current flux
-        phi_ed[i] = 0.0;  
-        phi_ed_old[i] = 0.0;
-      } else if (type[i] == BC_top_type) {
-        // Top boundary condition (Anode)
-        phi_el[i] = phi_el_BC_top;
-        phi_el_old[i] = phi_el_BC_top;
-        phi_ed[i] = phi_ed_BC_anode;  // 0V at anode
-        phi_ed_old[i] = phi_ed_BC_anode;
+      if (fabs(phi_el[i]) > SMALL || fabs(phi_ed[i]) > SMALL) {
+        already_initialized = true;
+        break;
+      }
+    }
+  }
+  
+  // Only initialize if not already done
+  if (!already_initialized) {
+    for (int i = 0; i < nlocal; i++) {
+      if (mask[i] & groupbit) {
+        // Initialize both potentials based on particle type
+        if (type[i] == SE_type) {
+          // SE/CBD particles - have both potentials
+          phi_el[i] = 0.0;
+          phi_el_old[i] = 0.0;
+          phi_ed[i] = 0.0;
+          phi_ed_old[i] = 0.0;
+        } else if (type[i] == AM_type) {
+          // AM particles - have electronic potential
+          phi_el[i] = 0.0;  // Not used in AM
+          phi_el_old[i] = 0.0;
+          phi_ed[i] = 0.0;
+          phi_ed_old[i] = 0.0;
+        } else if (type[i] == BC_bottom_type) {
+          // Bottom boundary condition (CC)
+          phi_el[i] = phi_el_BC_bottom;
+          phi_el_old[i] = phi_el_BC_bottom;
+          // Electronic potential will be computed based on current flux
+          phi_ed[i] = 0.0;  
+          phi_ed_old[i] = 0.0;
+        } else if (type[i] == BC_top_type) {
+          // Top boundary condition (Anode)
+          phi_el[i] = phi_el_BC_top;
+          phi_el_old[i] = phi_el_BC_top;
+          phi_ed[i] = phi_ed_BC_anode;  // 0V at anode
+          phi_ed_old[i] = phi_ed_BC_anode;
+        }
+      }
+    }
+  } else {
+    // If already initialized, just update the old values
+    for (int i = 0; i < nlocal; i++) {
+      if (mask[i] & groupbit) {
+        phi_el_old[i] = phi_el[i];
+        phi_ed_old[i] = phi_ed[i];
       }
     }
   }
@@ -516,7 +539,7 @@ void FixBatterySOR::solve_sor_iteration()
           else if (type[j] == BC_top_type) sigma_ed_j = sigma_ed_CC;  // Assuming anode is also CC
           
           // Effective conductivity (harmonic mean)
-          double sigma_ed_eff = 2.0 * sigma_ed_i * sigma_ed_j / (sigma_ed_i + sigma_ed_j + SMALL);
+          double sigma_ed_eff = 2.0 * sigma_ed_i * sigma_ed_j / (sigma_ed_i + sigma_ed_j);
           
           // === Electronic potential update ===
           if (sigma_ed_eff > 0.0) {
@@ -551,17 +574,10 @@ void FixBatterySOR::solve_sor_iteration()
       // For CC (BC_bottom_type), add current flux contribution
       double current_contribution = 0.0;
       if (type[i] == BC_bottom_type) {
-        // Apply current flux BC at the free end of CC
-        // This is a simplified implementation - you may need to refine based on geometry
-        double **x = atom->x;
-        double z_pos = x[i][2];
-        double z_min = 24.0;  // Adjust based on your domain
-        
+        // Apply current flux BC at CC
         // Apply flux only at the bottom CC particles
-        if (fabs(z_pos - z_min) < 1.0) {  // Within 1 micrometer of bottom
-          double cross_area = calculate_cross_sectional_area();
-          current_contribution = current_flux_CC * cross_area / coeff_ed_sum;
-        }
+        double cross_area = calculate_cross_sectional_area();
+        current_contribution = current_flux_CC * cross_area / coeff_ed_sum;
       }
       
       double phi_ed_new = (phi_ed_sum + current_contribution) / coeff_ed_sum;
@@ -574,7 +590,7 @@ void FixBatterySOR::solve_sor_iteration()
     }
     
     // Update electrolyte potential for SE particles only
-    if (type[i] == SE_type && coeff_el_sum > SMALL) {
+    if (type[i] == SE_type || type[i] == BC_bottom_type) {
       double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum;
       
       if (!std::isnan(phi_el_new) && !std::isinf(phi_el_new)) {
@@ -721,10 +737,10 @@ double FixBatterySOR::calculate_current_AM_SE(int i_AM, int j_SE, double phi_ed_
   double arg2 = -alpha_c * F * eta / RT - sigma_m * 9e-6 / RT;
   
   // Prevent exponential overflow
-  if (arg1 > MAX_EXP_ARG) arg1 = MAX_EXP_ARG;
-  if (arg1 < -MAX_EXP_ARG) arg1 = -MAX_EXP_ARG;
-  if (arg2 > MAX_EXP_ARG) arg2 = MAX_EXP_ARG;
-  if (arg2 < -MAX_EXP_ARG) arg2 = -MAX_EXP_ARG;
+  // if (arg1 > MAX_EXP_ARG) arg1 = MAX_EXP_ARG;
+  // if (arg1 < -MAX_EXP_ARG) arg1 = -MAX_EXP_ARG;
+  // if (arg2 > MAX_EXP_ARG) arg2 = MAX_EXP_ARG;
+  // if (arg2 < -MAX_EXP_ARG) arg2 = -MAX_EXP_ARG;
   
   double exp_term1 = exp(arg1);
   double exp_term2 = exp(arg2);
@@ -733,7 +749,7 @@ double FixBatterySOR::calculate_current_AM_SE(int i_AM, int j_SE, double phi_ed_
   double i_pq = i_0 * (exp_term1 - exp_term2);
   
   // Limit current to prevent numerical issues
-  double i_max = 1000.0;  // A/m^2
+  double i_max = 10000.0;  // A/m^2
   if (i_pq > i_max) i_pq = i_max;
   if (i_pq < -i_max) i_pq = -i_max;
   
