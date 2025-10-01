@@ -395,7 +395,6 @@ void FixLithiumDiffusion::update_lithium_content()
     
     // Add current contribution (Equation 10)
     // Current from AM to SE contributes to lithium flux
-    // lithium_flux[i] -= current_AM_SE[i] / F; // Original
     lithium_flux[i] -= current_AM_SE[i] / F;
   } // 1
   

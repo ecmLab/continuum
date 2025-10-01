@@ -577,7 +577,7 @@ void FixBatterySOR::solve_sor_iteration()
         // Apply current flux BC at CC
         // Apply flux only at the bottom CC particles
         double cross_area = calculate_cross_sectional_area();
-        current_contribution = current_flux_CC * cross_area / coeff_ed_sum;
+        current_contribution = current_flux_CC * cross_area / coeff_ed_sum; // Consider removing coeff
       }
       
       double phi_ed_new = (phi_ed_sum + current_contribution) / coeff_ed_sum;
@@ -591,7 +591,7 @@ void FixBatterySOR::solve_sor_iteration()
     
     // Update electrolyte potential for SE particles only
     if (type[i] == SE_type || type[i] == BC_bottom_type) {
-      double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum;
+      double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum; // Verified this is the correct way
       
       if (!std::isnan(phi_el_new) && !std::isinf(phi_el_new)) {
         phi_el[i] = phi_el_old[i] + omega * (phi_el_new - phi_el_old[i]);
@@ -749,9 +749,9 @@ double FixBatterySOR::calculate_current_AM_SE(int i_AM, int j_SE, double phi_ed_
   double i_pq = i_0 * (exp_term1 - exp_term2);
   
   // Limit current to prevent numerical issues
-  double i_max = 10000.0;  // A/m^2
-  if (i_pq > i_max) i_pq = i_max;
-  if (i_pq < -i_max) i_pq = -i_max;
+  // double i_max = 1000.0;  // A/m^2
+  // if (i_pq > i_max) i_pq = i_max;
+  // if (i_pq < -i_max) i_pq = -i_max;
   
   return i_pq;
 }
