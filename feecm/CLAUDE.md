@@ -44,7 +44,7 @@ Each application has test runners:
 ```bash
 # Run tests for specific applications
 ./ec_beta/run_tests
-./ecm_test/run_tests  
+./ecm_test/run_tests
 ./eel/run_tests
 
 # Unit tests
@@ -52,6 +52,23 @@ Each application has test runners:
 ./ecm_test/unit/run_tests
 ./eel/unit/run_tests
 ```
+
+## Running Input Files - Important Workflow
+
+**CRITICAL RULE**: Always run input files from their directory location, not from the application root.
+
+### Correct Workflow:
+```bash
+# Navigate to input file directory first
+cd examples/phase2_EDL/
+# Then run with relative path to executable
+../../tecm_test-opt -i single_ion.i
+```
+
+### Why this matters:
+- MOOSE resolves relative paths (output directories, file references) relative to current working directory
+- Input files often use relative paths like `file_base = rst/output_name`
+- Ensures proper file organization and output placement
 
 ## MOOSE Modules Used
 

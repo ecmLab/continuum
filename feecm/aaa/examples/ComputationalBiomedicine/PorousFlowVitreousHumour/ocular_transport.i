@@ -1,0 +1,147 @@
+#if we need to model concentration c, make e(-kd*t) =1 i.e. Neumann BC 
+# and for this we need to decrease the value of a_1 from 10^-8 to 10^-10
+# the mesh file is not uploaded in the github
+# Boundary conditions and initial conditions selection are very important for ocular pharmacokinetics
+# Drug pharmacokinetics will be added as a source/reaction term in the advection-diffusion-reaction equation
+
+[Mesh]
+  #dim = 2
+  type = FileMesh
+  file = EyeMesh_1.unv
+  #block_id = '1'
+  block_name = 'VitreousVolume'
+  #boundary_id = '1 2 3'
+  boundary_name = 'Hyaloid Lens Retina'
+ []
+
+[Variables]
+  [./pressure]
+  [../]
+  [./c]
+    initial_condition = 300 # Start at room concentration (unit kg/m^3)
+  [../]
+[]
+
+[AuxVariables]
+  [./velocity_x]
+    order = CONSTANT
+    family = MONOMIAL
+  [../]
+  [./velocity_y]
+    order = CONSTANT
+    family = MONOMIAL
+  [../]
+  [./velocity_z]
+    order = CONSTANT
+    family = MONOMIAL
+  [../]
+[]
+
+[Kernels]
+  [./ocular_pressure]
+    type = EyePressure
+    variable = pressure
+  [../]
+[./drug_diffusion]
+    type = MatDiffusion
+    variable = c
+    D_name = diff_coefficient
+  [../]
+  [./c_dot]
+    type = TimeDerivative
+    variable = c
+  [../]
+  [./drug_convection]
+    type = SpeciesConvection
+    variable = c
+    ocular_pressure = pressure # variable input into kernel = main variable as input file name 
+  [../]
+[]
+
+[AuxKernels]
+  [./velocity_x]
+    type = SpeciesVelocity
+    variable = velocity_x
+    component = x
+    execute_on = timestep_end
+    ocular_pressure = pressure
+  [../]
+  [./velocity_y]
+    type = SpeciesVelocity
+    variable = velocity_y
+    component = y
+    execute_on = timestep_end
+    ocular_pressure = pressure
+  [../]
+  [./velocity_z]
+    type = SpeciesVelocity
+    variable = velocity_z
+    component = z
+    execute_on = timestep_end
+    ocular_pressure = pressure
+  [../]
+[]
+
+[Functions]
+  [./inlet_function]
+    type = ParsedFunction
+    value = 2000*sin(0.466*pi*t) # Inlet signal from Fig. 3
+  [../]
+  [./outlet_function]
+    type = ParsedFunction
+    value = 2000*cos(0.466*pi*t) # Outlet signal from Fig. 3
+  [../]
+[]
+
+[BCs]
+  [./inlet]
+    type = FunctionDirichletBC
+    variable = pressure
+    boundary = left
+    function = inlet_function
+  [../]
+  [./outlet]
+    type = FunctionDirichletBC
+    variable = pressure
+    boundary = right
+    function = outlet_function
+  [../]
+  [./inlet_concentration]
+    type = DirichletBC
+    variable = c
+    boundary = left
+    value = 350 # (C)
+  [../]
+  [./outlet_concentration]
+    type = HeatConductionOutflow
+    variable = c
+    boundary = right
+  [../]
+[]
+
+[Materials]
+  [./column]
+    type = OcularMaterialProperties #for uniform and isotropic properties
+    block = 0
+    #sphere_radius = 1
+  [../]
+[]
+
+[Problem]
+  type = FEProblem
+  coord_type = RZ
+  rz_coord_axis = X
+[]
+
+[Executioner]
+  type = Transient
+  num_steps = 300
+  dt = 0.1
+  solve_type = PJFNK
+  petsc_options_iname = '-pc_type -pc_hypre_type'
+  petsc_options_value = 'hypre boomeramg'
+[]
+
+[Outputs]
+  exodus = true
+[]
