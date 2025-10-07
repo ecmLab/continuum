@@ -155,7 +155,7 @@ fix             eq_pot am equilibrium_potential temperature 303. U_eq0 0.35 A 20
 fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 83874. c_electrolyte 50608.
 
 # SOR solver for electric potential with type-based boundary conditions (cathode anode)
-fix             battery_solver all battery/sor omega 0.9 tolerance 1e-12 max_iter 1000000 &
+fix             battery_solver all battery/sor omega 0.5 tolerance 1e-12 max_iter 1000000 &
                 BC_types 2 6 BC_potentials 0.55 0.00 BC_electronic 0.0 0.11 conductivities 0.05 100.0 200.0 300.0 &
                 SE_type 3 AM_type 1 temperature 303.
 
@@ -250,7 +250,7 @@ fix             eq_pot am equilibrium_potential temperature 303. U_eq0 0.35 A 20
 fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 83874. c_electrolyte 50608.
 
 # SOR solver for electric potential with type-based boundary conditions (cathode anode)
-fix             battery_solver all battery/sor omega 0.9 tolerance 1e-12 max_iter 1000000 &
+fix             battery_solver all battery/sor omega 0.5 tolerance 1e-12 max_iter 1000000 &
                 BC_types 2 6 BC_potentials 0.55 0.00 BC_electronic 0.0 -0.11 conductivities 0.05 100.0 200.0 300.0 &
                 SE_type 3 AM_type 1 temperature 303.
 

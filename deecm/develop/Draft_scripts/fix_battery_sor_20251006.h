@@ -122,7 +122,6 @@ class FixBatterySOR : public Fix {
   class FixPropertyAtom *fix_exchange_current_density;
   class FixPropertyAtom *fix_current_AM_SE;
   class FixPropertyAtom *fix_hydrostatic_stress;
-  class FixPropertyAtom *fix_init_flag;
   
   // Particle type groups
   int BC_bottom_type;        // Atom type for bottom BC particles (CC)
@@ -140,6 +139,7 @@ class FixBatterySOR : public Fix {
   void apply_boundary_conditions();
   void calculate_hydrostatic_stress();
   double calculate_contact_area(int, int);
+  double calculate_cross_sectional_area();
   double calculate_current_AM_SE(int, int, double, double, double);
   double check_convergence();
 };
