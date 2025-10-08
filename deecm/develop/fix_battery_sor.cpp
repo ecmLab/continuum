@@ -562,7 +562,7 @@ void FixBatterySOR::solve_sor_iteration()
           
           // === Electronic potential update === (SE, AM, CC)
           if (type[i] == SE_type || type[i] == AM_type || type[i] == BC_bottom_type) {
-            if (type[j] == SE_type || type[j] == AM_type) {
+            if (type[j] == SE_type || type[j] == AM_type || type[j] == BC_top_type) {
             double conductance_ed = sigma_ed_eff * contact_area / r_SI;
             phi_ed_sum += conductance_ed * phi_ed[j];
             coeff_ed_sum += conductance_ed;
@@ -572,6 +572,11 @@ void FixBatterySOR::solve_sor_iteration()
               phi_ed_sum += conductance_ed * phi_ed[j];
               coeff_ed_sum += conductance_ed;
               cur_ed += current_flux_CC * contact_area;
+
+            } else if (type[j] == BC_bottom_type && type[i] == BC_bottom_type) {
+              double conductance_ed = sigma_ed_eff * contact_area / r_SI;
+              phi_ed_sum += conductance_ed * phi_ed[j];
+              coeff_ed_sum += conductance_ed;
             }
           }
           
@@ -586,7 +591,7 @@ void FixBatterySOR::solve_sor_iteration()
 
             } else if (type[j] == AM_type) {
               // SE-AM interface: calculate current from AM to SE using Butler-Volmer
-              double i_pq = calculate_current_AM_SE(j, i, phi_ed[j], phi_el[i], hydrostatic_stress[j]);
+              double i_pq = calculate_current_AM_SE(j, i, phi_ed[i], phi_el[i], hydrostatic_stress[j]);
               current_AM_SE[j] += i_pq * contact_area;
               
               // Add current contribution to SE particle

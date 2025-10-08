@@ -20,7 +20,7 @@ timestep        5.e-6
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
 # read_restart    data/comp300_bat_10MPa.restart
-read_data     data/comp300_bat_10MPa.data
+read_data     data/comp_bat.data
 
 # --- 3. RE-ESTABLISH GROUPS ---
 # Define groups based on particle types from the compaction script
@@ -154,9 +154,9 @@ fix             eq_pot am equilibrium_potential temperature 303. U_eq0 0.35 A 20
 # Calculate exchange current density - only for AM particles
 fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 83874. c_electrolyte 50608.
 
-# SOR solver for electric potential with type-based boundary conditions (cathode anode)
-fix             battery_solver all battery/sor omega 0.5 tolerance 1e-12 max_iter 1000000 &
-                BC_types 2 6 BC_potentials 0.55 0.00 BC_electronic 0.0 0.11 conductivities 0.05 100.0 200.0 300.0 &
+# SOR solver for electric potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
+fix             battery_solver all battery/sor omega 0.5 tolerance 1e-10 max_iter 100000000000 &
+                BC_types 2 6 BC_potentials 0.00 0.00 BC_electronic 0.0 10.00 conductivities 0.05 1e-3 1e-3 1e7 &
                 SE_type 3 AM_type 1 temperature 303.
 
 # Lithium diffusion - only for AM particles
@@ -209,7 +209,7 @@ thermo          1000
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 10000 post_bat_10Mpa_1/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_battery all custom 10000 post_bat_10Mpa_3/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_lithiumContent f_equilibriumPotential f_exchangeCurrentDensity &
                 f_electrolytePotential f_electronicPotential &
                 f_currentAMSE f_hydrostaticStress
@@ -250,8 +250,8 @@ fix             eq_pot am equilibrium_potential temperature 303. U_eq0 0.35 A 20
 fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 83874. c_electrolyte 50608.
 
 # SOR solver for electric potential with type-based boundary conditions (cathode anode)
-fix             battery_solver all battery/sor omega 0.5 tolerance 1e-12 max_iter 1000000 &
-                BC_types 2 6 BC_potentials 0.55 0.00 BC_electronic 0.0 -0.11 conductivities 0.05 100.0 200.0 300.0 &
+fix             battery_solver all battery/sor omega 0.5 tolerance 1e-10 max_iter 100000000000 &
+                BC_types 2 6 BC_potentials 0.00 0.00 BC_electronic 0.0 10.00 conductivities 0.05 1e-3 1e-3 1e7 &
                 SE_type 3 AM_type 1 temperature 303.
 
 # Lithium diffusion - only for AM particles
@@ -275,23 +275,23 @@ unfix           radius_expand
 # 6. Fix nve/sphere
 fix             integr all nve/sphere
 
-# 7. Start relax loop - maintain stack pressure at 10
+# 7. Start relax loop - maintain stack pressure at 300
 label           loop6
 
 # Check pressure and adjust cc1 movement accordingly
-if              "${prs1} > 10" then &
+if              "${prs1} > 300" then &
                 "fix 5 cc1 move linear 0 0 -0.2" &
-                elif "${prs1} < 10" &
+                elif "${prs1} < 300" &
                 "fix 5 cc1 move linear 0 0 0.2" &
                 else &
                 "fix 5 cc1 move linear 0 0 0.0"
 
-# Run for 10000 timesteps
+# Run for 1000 timesteps
 run             1000
 
 # Check if pressure is close to target (within tolerance)
-variable        prs_diff equal abs(${prs1}-10)
-if              "${prs_diff} < 0.1" then "jump SELF loop7"
+variable        prs_diff equal abs(${prs1}-300)
+if              "${prs_diff} < 1.0" then "jump SELF loop7"
 jump            SELF loop6
 
 # Hold so that kinetic energy decrease
