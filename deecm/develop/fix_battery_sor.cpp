@@ -726,7 +726,7 @@ double FixBatterySOR::calculate_contact_area(int i, int j)
 
 /* ---------------------------------------------------------------------- */
 
-double FixBatterySOR::calculate_current_AM_SE(int i_AM, int j_SE, double phi_ed_AM, double phi_el_SE, double sigma_m)
+double FixBatterySOR::calculate_current_AM_SE(int i_AM, int j_SE, double phi_ed, double phi_el, double sigma_m)
 {
   // Get equilibrium potential and exchange current density for AM particle
   double U_eq = equilibrium_potential[i_AM];
@@ -734,7 +734,7 @@ double FixBatterySOR::calculate_current_AM_SE(int i_AM, int j_SE, double phi_ed_
 
   // Calculate overpotential for NMC cathode
   // η = φ_ed - φ_el - U_eq
-  double eta = phi_ed_AM - phi_el_SE - U_eq;
+  double eta = phi_ed - phi_el - U_eq;
 
   // Butler-Volmer equation with stress effect
   double RT = R * T;
