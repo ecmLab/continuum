@@ -74,6 +74,7 @@ class FixBatterySOR : public Fix {
   int max_iterations;        // Maximum SOR iterations
   int current_iteration;     // Current iteration count
   double convergence_error;  // Current convergence error
+  bool include_AM_SE_current; // Whether to include current from AM to SE
   
   // Physical parameters
   double R;                  // Gas constant (8.31 J/mol·K)

@@ -443,9 +443,49 @@ void FixBatterySOR::pre_force(int vflag)
 
 /* ---------------------------------------------------------------------- */
 
+// void FixBatterySOR::post_force(int vflag)
+// {
+//   // Solve using SOR iterations for both potentials
+//   current_iteration = 0;
+//   convergence_error = 1.0;
+  
+//   while (current_iteration < max_iterations && convergence_error > tolerance) {
+//     solve_sor_iteration();
+//     convergence_error = check_convergence();
+//     current_iteration++;
+//   }
+  
+//   if (current_iteration >= max_iterations && comm->me == 0) {
+//     error->warning(FLERR,"Battery SOR did not converge");
+//   }
+// }
+
 void FixBatterySOR::post_force(int vflag)
 {
-  // Solve using SOR iterations for both potentials
+  // Phase 1: Solve without AM-SE interface currents
+  include_AM_SE_current = false;
+  
+  current_iteration = 0;
+  convergence_error = 1.0;
+  int phase1_iterations = 0;
+  
+  while (current_iteration < max_iterations && convergence_error > tolerance) {
+    solve_sor_iteration();
+    convergence_error = check_convergence();
+    current_iteration++;
+    phase1_iterations++;
+  }
+  
+  if (comm->me == 0) {
+    if (current_iteration >= max_iterations) {
+      error->warning(FLERR,"Battery SOR Phase 1 did not converge");
+    }
+  }
+  
+  // Phase 2: Solve with AM-SE interface currents
+  include_AM_SE_current = true;
+  // include_AM_SE_current = false; // Temporarily disabled for stability
+
   current_iteration = 0;
   convergence_error = 1.0;
   
@@ -456,9 +496,10 @@ void FixBatterySOR::post_force(int vflag)
   }
   
   if (current_iteration >= max_iterations && comm->me == 0) {
-    error->warning(FLERR,"Battery SOR did not converge");
+    error->warning(FLERR,"Battery SOR Phase 2 did not converge");
   }
 }
+
 
 /* ---------------------------------------------------------------------- */
 
@@ -475,6 +516,168 @@ void FixBatterySOR::updatePtrs()
 }
 
 /* ---------------------------------------------------------------------- */
+
+// void FixBatterySOR::solve_sor_iteration()
+// {
+//   int i,j,ii,jj,inum,jnum;
+//   int *ilist,*jlist,*numneigh,**firstneigh;
+//   double xtmp,ytmp,ztmp,delx,dely,delz,rsq,r,r_SI;
+//   double phi_el_sum,coeff_el_sum,cur_sum,cur_ed;
+//   double phi_ed_sum,coeff_ed_sum;
+  
+//   double **x = atom->x;
+//   double *radius = atom->radius;
+//   int *type = atom->type;
+//   int *mask = atom->mask;
+//   int nlocal = atom->nlocal;
+  
+//   inum = list->inum;
+//   ilist = list->ilist;
+//   numneigh = list->numneigh;
+//   firstneigh = list->firstneigh;
+  
+//   // Store old values for all particles
+//   for (i = 0; i < nlocal; i++) {
+//     if (mask[i] & groupbit) {
+//       phi_el_old[i] = phi_el[i];
+//       phi_ed_old[i] = phi_ed[i];
+//     }
+//   }
+
+//   // Reset current_AM_SE for all particles
+//   for (int i = 0; i < nlocal; i++) {
+//     current_AM_SE[i] = 0.0;
+//   }
+
+//   // SOR iteration for both potentials
+//   for (ii = 0; ii < inum; ii++) {
+//     i = ilist[ii];
+    
+//     // Skip top boundary (anode) particles as they have fixed potentials
+//     if (type[i] == BC_top_type) continue;
+    
+//     xtmp = x[i][0];
+//     ytmp = x[i][1];
+//     ztmp = x[i][2];
+    
+//     phi_el_sum = 0.0;
+//     coeff_el_sum = 0.0;
+//     cur_sum = 0.0;
+//     cur_ed = 0.0;
+//     phi_ed_sum = 0.0;
+//     coeff_ed_sum = 0.0;
+    
+//     jlist = firstneigh[i];
+//     jnum = numneigh[i];
+    
+//     // Determine electronic conductivity for particle i
+//     double sigma_ed_i = 0.0;
+//     if (type[i] == AM_type) sigma_ed_i = sigma_ed_AM;
+//     else if (type[i] == SE_type) sigma_ed_i = sigma_ed_SE;
+//     else if (type[i] == BC_bottom_type) sigma_ed_i = sigma_ed_CC;
+    
+//     for (jj = 0; jj < jnum; jj++) {
+//       j = jlist[jj];
+//       j &= NEIGHMASK;
+      
+//       delx = xtmp - x[j][0];
+//       dely = ytmp - x[j][1];
+//       delz = ztmp - x[j][2];
+//       rsq = delx*delx + dely*dely + delz*delz;
+//       r = sqrt(rsq);  // micrometers
+//       r_SI = r * 1.0e-6;  // Convert to m
+      
+//       if (r < (radius[i] + radius[j])) {
+//         double contact_area = calculate_contact_area(i, j); // m2
+        
+//         if (contact_area > 0.0) {
+//           // Determine electronic conductivity for particle j
+//           double sigma_ed_j = 0.0;
+//           if (type[j] == AM_type) sigma_ed_j = sigma_ed_AM;
+//           else if (type[j] == SE_type) sigma_ed_j = sigma_ed_SE;
+//           else if (type[j] == BC_bottom_type) sigma_ed_j = sigma_ed_CC;
+//           else if (type[j] == BC_top_type) sigma_ed_j = sigma_ed_CC;  // Assuming anode is also a CC
+          
+//           // Effective conductivity (harmonic mean)
+//           double sigma_ed_eff = 2.0 * sigma_ed_i * sigma_ed_j / (sigma_ed_i + sigma_ed_j);
+          
+//           // === Electronic potential update === (SE, AM, CC)
+//           if (type[i] == SE_type || type[i] == AM_type || type[i] == BC_bottom_type) {
+//             if (type[j] == SE_type || type[j] == AM_type || type[j] == BC_top_type) {
+//             double conductance_ed = sigma_ed_eff * contact_area / r_SI;
+//             phi_ed_sum += conductance_ed * phi_ed[j];
+//             coeff_ed_sum += conductance_ed;
+
+//             } else if (type[i] == AM_type && type[j] == SE_type) {
+//               double i_pq = calculate_current_AM_SE(j, i, phi_ed[i], phi_el[j], hydrostatic_stress[j]);
+//               cur_ed += -1 * i_pq * contact_area;
+
+//             } else if (type[j] == BC_bottom_type && type[i] != BC_bottom_type) {
+//               double conductance_ed = sigma_ed_eff * contact_area / r_SI;
+//               phi_ed_sum += conductance_ed * phi_ed[j];
+//               coeff_ed_sum += conductance_ed;
+//               cur_ed += current_flux_CC * contact_area;
+
+//             } else if (type[j] == BC_bottom_type && type[i] == BC_bottom_type) {
+//               double conductance_ed = sigma_ed_eff * contact_area / r_SI;
+//               phi_ed_sum += conductance_ed * phi_ed[j];
+//               coeff_ed_sum += conductance_ed;
+//             }
+//           }
+          
+//           // === Electrolyte potential update (SE and Bottom CC particles only) ===
+//           if (type[i] == SE_type) {
+//             if (type[j] == SE_type || type[j] == BC_top_type) {
+//               // SE-SE or SE-BC conductivity
+//               double conductance = sigma_el * contact_area / r_SI;
+//               phi_el_sum += conductance * phi_el[j];
+//               coeff_el_sum += conductance;
+
+
+//             } else if (type[j] == AM_type) {
+//               // SE-AM interface: calculate current from AM to SE using Butler-Volmer
+//               double i_pq = calculate_current_AM_SE(j, i, phi_ed[j], phi_el[i], hydrostatic_stress[j]);
+//               current_AM_SE[j] += i_pq * contact_area;
+              
+//               // Add current contribution to SE particle
+//               cur_sum += i_pq * contact_area;
+//             }
+//           }
+//         }
+//       }
+//     }
+    
+//     // Update electronic potential for AM, SE, and CC particles
+//     if ((type[i] == AM_type || type[i] == SE_type || type[i] == BC_bottom_type) && coeff_ed_sum > SMALL) {
+      
+//       double phi_ed_new = (phi_ed_sum + cur_ed) / coeff_ed_sum;
+      
+//       if (!std::isnan(phi_ed_new) && !std::isinf(phi_ed_new)) {
+//         phi_ed[i] = phi_ed_old[i] + omega * (phi_ed_new - phi_ed_old[i]);
+//       } else {
+//         phi_ed[i] = phi_ed_old[i];
+//       }
+//     }
+    
+//     // Update electrolyte potential for SE particles only
+//     if ((type[i] == SE_type) && coeff_el_sum > SMALL) {
+//       double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum; // Verified this is the correct way
+      
+//       if (!std::isnan(phi_el_new) && !std::isinf(phi_el_new)) {
+//         phi_el[i] = phi_el_old[i] + omega * (phi_el_new - phi_el_old[i]);
+//       } else {
+//         phi_el[i] = phi_el_old[i];
+//       }
+//     }
+//   }
+  
+//   // Apply boundary conditions after each iteration
+//   apply_boundary_conditions();
+  
+//   // Forward communication for both potentials
+//   fix_phi_el->do_forward_comm();
+//   fix_phi_ed->do_forward_comm();
+// }
 
 void FixBatterySOR::solve_sor_iteration()
 {
@@ -563,10 +766,17 @@ void FixBatterySOR::solve_sor_iteration()
           // === Electronic potential update === (SE, AM, CC)
           if (type[i] == SE_type || type[i] == AM_type || type[i] == BC_bottom_type) {
             if (type[j] == SE_type || type[j] == AM_type || type[j] == BC_top_type) {
-            double conductance_ed = sigma_ed_eff * contact_area / r_SI;
-            phi_ed_sum += conductance_ed * phi_ed[j];
-            coeff_ed_sum += conductance_ed;
-            
+              double conductance_ed = sigma_ed_eff * contact_area / r_SI;
+              phi_ed_sum += conductance_ed * phi_ed[j];
+              coeff_ed_sum += conductance_ed;
+
+            } else if (type[i] == AM_type && type[j] == SE_type) {
+              // Only include AM-SE interface current if flag is set
+              if (include_AM_SE_current) {
+                double i_pq = calculate_current_AM_SE(i, j, phi_ed[i], phi_el[j], hydrostatic_stress[j]);
+                cur_ed += -1 * i_pq * contact_area;
+              }
+
             } else if (type[j] == BC_bottom_type && type[i] != BC_bottom_type) {
               double conductance_ed = sigma_ed_eff * contact_area / r_SI;
               phi_ed_sum += conductance_ed * phi_ed[j];
@@ -583,19 +793,26 @@ void FixBatterySOR::solve_sor_iteration()
           // === Electrolyte potential update (SE and Bottom CC particles only) ===
           if (type[i] == SE_type) {
             if (type[j] == SE_type || type[j] == BC_top_type) {
-              // SE-SE or SE-BC conductivity
               double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
-
+            
+            } else if (type[j] == BC_bottom_type) {
+              if (!include_AM_SE_current) {
+                double conductance = sigma_el * contact_area / r_SI;
+                phi_el_sum += conductance * phi_el[j];
+                coeff_el_sum += conductance;
+              }
 
             } else if (type[j] == AM_type) {
-              // SE-AM interface: calculate current from AM to SE using Butler-Volmer
-              double i_pq = calculate_current_AM_SE(j, i, phi_ed[i], phi_el[i], hydrostatic_stress[j]);
-              current_AM_SE[j] += i_pq * contact_area;
-              
-              // Add current contribution to SE particle
-              cur_sum += i_pq * contact_area;
+              // SE-AM interface: only include current if flag is set
+              if (include_AM_SE_current) {
+                double i_pq = calculate_current_AM_SE(j, i, phi_ed[j], phi_el[i], hydrostatic_stress[j]);
+                current_AM_SE[j] += i_pq * contact_area;
+                
+                // Add current contribution to SE particle
+                cur_sum += i_pq * contact_area;
+              }
             }
           }
         }
@@ -616,7 +833,7 @@ void FixBatterySOR::solve_sor_iteration()
     
     // Update electrolyte potential for SE particles only
     if ((type[i] == SE_type) && coeff_el_sum > SMALL) {
-      double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum; // Verified this is the correct way
+      double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum;
       
       if (!std::isnan(phi_el_new) && !std::isinf(phi_el_new)) {
         phi_el[i] = phi_el_old[i] + omega * (phi_el_new - phi_el_old[i]);

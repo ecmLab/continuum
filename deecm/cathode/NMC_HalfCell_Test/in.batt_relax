@@ -155,8 +155,8 @@ fix             eq_pot am equilibrium_potential temperature 303. U_eq0 0.35 A 20
 fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 83874. c_electrolyte 50608.
 
 # SOR solver for electric potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
-fix             battery_solver all battery/sor omega 0.5 tolerance 1e-10 max_iter 100000000000 &
-                BC_types 2 6 BC_potentials 0.00 0.00 BC_electronic 0.0 1.0 conductivities 0.05 1e-3 1e-3 1e7 &
+fix             battery_solver all battery/sor omega 0.5 tolerance 1e-8 max_iter 1000000 &
+                BC_types 2 6 BC_potentials -4.54 0.00 BC_electronic 0.0 1.0 conductivities 0.05 1e-3 1e-3 1e7 &
                 SE_type 3 AM_type 1 temperature 303.
 
 # Lithium diffusion - only for AM particles
@@ -209,7 +209,7 @@ thermo          1000
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 10000 post_bat_10Mpa_4/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_battery all custom 10000 2_post_bat_300Mpa/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_lithiumContent f_equilibriumPotential f_exchangeCurrentDensity &
                 f_electrolytePotential f_electronicPotential &
                 f_currentAMSE f_hydrostaticStress
@@ -250,8 +250,8 @@ fix             eq_pot am equilibrium_potential temperature 303. U_eq0 0.35 A 20
 fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 83874. c_electrolyte 50608.
 
 # SOR solver for electric potential with type-based boundary conditions (cathode anode)
-fix             battery_solver all battery/sor omega 0.5 tolerance 1e-10 max_iter 100000000000 &
-                BC_types 2 6 BC_potentials 0.00 0.00 BC_electronic 0.0 1.0 conductivities 0.05 1e-3 1e-3 1e7 &
+fix             battery_solver all battery/sor omega 0.5 tolerance 1e-8 max_iter 1000000 &
+                BC_types 2 6 BC_potentials -4.54 0.00 BC_electronic 0.0 1.0 conductivities 0.05 1e-3 1e-3 1e7 &
                 SE_type 3 AM_type 1 temperature 303.
 
 # Lithium diffusion - only for AM particles
@@ -303,7 +303,7 @@ fix             5 cc1 move linear 0 0 0.0
 variable        loop_count equal ${loop_count}+1
 
 # Check if we should continue looping
-if              "${loop_count} <= 60" then "jump SELF main_loop"
+if              "${loop_count} <= 3" then "jump SELF main_loop"
 
 # --- 14. FINAL ANALYSIS ---
 print           "================================================"

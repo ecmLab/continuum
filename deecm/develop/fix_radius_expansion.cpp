@@ -198,10 +198,10 @@ void FixRadiusExpansion::setup(int vflag)
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit && type[i] == AM_type) {
       // Only set initial_radius if it hasn't been set yet (value is 0.0)
-      if (initial_radius[i] == 0.0) {
-        initial_radius[i] = radius[i]; // Units in μm
-      }
-      
+      // if (initial_radius[i] == 0.0) {
+      //   initial_radius[i] = radius[i]; // Units in μm
+      // }
+      initial_radius[i] = radius[i]; // Units in μm
       // Calculate initial particle volume
       double V_initial = (4.0/3.0) * M_PI * initial_radius[i] * initial_radius[i] * initial_radius[i];
       particle_volume[i] = V_initial;
