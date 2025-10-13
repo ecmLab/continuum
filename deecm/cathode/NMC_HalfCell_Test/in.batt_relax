@@ -155,7 +155,7 @@ fix             eq_pot am equilibrium_potential temperature 303. U_eq0 0.35 A 20
 fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 83874. c_electrolyte 50608.
 
 # SOR solver for electric potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
-fix             battery_solver all battery/sor omega 0.5 tolerance 1e-8 max_iter 1000000 &
+fix             battery_solver all battery/sor omega 0.5 tolerance 1e-12 max_iter 1000000 &
                 BC_types 2 6 BC_potentials -4.54 0.00 BC_electronic 0.0 1.0 conductivities 0.05 1e-3 1e-3 1e7 &
                 SE_type 3 AM_type 1 temperature 303.
 
@@ -205,11 +205,11 @@ variable       ts_skin     equal f_ts_check[3]
 # Thermo output
 thermo_style    custom step atoms ke c_li_max c_eq_avg c_ex_avg c_phi_el_se_avg c_phi_ed_se_avg &
                 c_phi_ed_cc1_avg c_phi_ed_cc2_avg c_current_avg v_ts_rayleigh v_ts_hertz v_ts_skin v_prs1
-thermo          1000
+thermo          1
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 10000 2_post_bat_300Mpa/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_battery all custom 1 5_post_bat_300Mpa/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_lithiumContent f_equilibriumPotential f_exchangeCurrentDensity &
                 f_electrolytePotential f_electronicPotential &
                 f_currentAMSE f_hydrostaticStress
@@ -250,7 +250,7 @@ fix             eq_pot am equilibrium_potential temperature 303. U_eq0 0.35 A 20
 fix             exch_current am exchange_current_density k_r 6e-12 c_li_max 83874. c_electrolyte 50608.
 
 # SOR solver for electric potential with type-based boundary conditions (cathode anode)
-fix             battery_solver all battery/sor omega 0.5 tolerance 1e-8 max_iter 1000000 &
+fix             battery_solver all battery/sor omega 0.5 tolerance 1e-12 max_iter 1000000 &
                 BC_types 2 6 BC_potentials -4.54 0.00 BC_electronic 0.0 1.0 conductivities 0.05 1e-3 1e-3 1e7 &
                 SE_type 3 AM_type 1 temperature 303.
 
@@ -262,7 +262,7 @@ fix             li_diffusion am lithium_diffusion AM_type 1 D_min 1e-15 D_poor 1
 fix             radius_expand am radius_expansion AM_type 1 update_every 1 max_updates 1000000
 
 # 4. Run EC for 1 timestep, equivelent to 0.1 real seconds, while particles are frozen
-run             1
+run             100
 
 # 5. Unfix all battery physics
 unfix           li_content
@@ -276,34 +276,34 @@ unfix           radius_expand
 fix             integr all nve/sphere
 
 # 7. Start relax loop - maintain stack pressure at 300
-label           loop6
+# label           loop6
 
 # Check pressure and adjust cc1 movement accordingly
-if              "${prs1} > 300" then &
-                "fix 5 cc1 move linear 0 0 -0.2" &
-                elif "${prs1} < 300" &
-                "fix 5 cc1 move linear 0 0 0.2" &
-                else &
-                "fix 5 cc1 move linear 0 0 0.0"
+#if              "${prs1} > 300" then &
+#                "fix 5 cc1 move linear 0 0 -0.2" &
+#                elif "${prs1} < 300" &
+#                "fix 5 cc1 move linear 0 0 0.2" &
+#                else &
+#                "fix 5 cc1 move linear 0 0 0.0"
 
 # Run for 1000 timesteps
-run             1000
+#run             1000
 
 # Check if pressure is close to target (within tolerance)
-variable        prs_diff equal abs(${prs1}-300)
-if              "${prs_diff} < 1.0" then "jump SELF loop7"
-jump            SELF loop6
+#variable        prs_diff equal abs(${prs1}-300)
+#if              "${prs_diff} < 1.0" then "jump SELF loop7"
+#jump            SELF loop6
 
 # Hold so that kinetic energy decrease
-label           loop7
-unfix           5
-fix             5 cc1 move linear 0 0 0.0
+#label           loop7
+#unfix           5
+#fix             5 cc1 move linear 0 0 0.0
 
 # Increment loop counter
 variable        loop_count equal ${loop_count}+1
 
 # Check if we should continue looping
-if              "${loop_count} <= 3" then "jump SELF main_loop"
+if              "${loop_count} <= 1" then "jump SELF main_loop"
 
 # --- 14. FINAL ANALYSIS ---
 print           "================================================"

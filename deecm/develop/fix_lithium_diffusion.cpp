@@ -406,7 +406,7 @@ void FixLithiumDiffusion::update_lithium_content()
       // Update Notes: The scalling factor needs to be toned down initially to avoid large jumps in lithium content
       // When Lithium content is at least 0.7 then you can use the max scaling factor of 2e16
       // The scaling factor is based on a timestep of 5e-6 us in main, so it simulates 0.1s of EC in 1 run
-      double s_factor = 2.0e9; // 0.01s / 5e-12s 
+      double s_factor = 2.0e11; // 1s / 5e-12s 
       lithium_content[i] += (lithium_flux[i] * dt * s_factor) / silicon_content[i]; // Li Molar Ratio (Silicon Content is actually NMC811)
  
       // Ensure lithium content stays within bounds using values from lithium_content manager
