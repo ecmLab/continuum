@@ -40,21 +40,21 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(battery/sor,FixBatterySOR)
+FixStyle(battery/eis,FixBatteryEIS)
 
 #else
 
-#ifndef LMP_FIX_BATTERY_SOR_H
-#define LMP_FIX_BATTERY_SOR_H
+#ifndef LMP_FIX_BATTERY_EIS_H
+#define LMP_FIX_BATTERY_EIS_H
 
 #include "fix.h"
 
 namespace LAMMPS_NS {
 
-class FixBatterySOR : public Fix {
+class FixBatteryEIS : public Fix {
  public:
-  FixBatterySOR(class LAMMPS *, int, char **);
-  virtual ~FixBatterySOR();
+  FixBatteryEIS(class LAMMPS *, int, char **);
+  virtual ~FixBatteryEIS();
   virtual void post_create();
   int setmask();
   void init();
@@ -68,10 +68,10 @@ class FixBatterySOR : public Fix {
   virtual void updatePtrs();
   
  protected:
-  // SOR parameters
-  double omega;              // SOR relaxation parameter (1.9)
+  // EIS parameters
+  double omega;              // EIS relaxation parameter (1.9)
   double tolerance;          // Convergence tolerance
-  int max_iterations;        // Maximum SOR iterations
+  int max_iterations;        // Maximum EIS iterations
   int current_iteration;     // Current iteration count
   double convergence_error;  // Current convergence error
   bool include_AM_SE_current; // Whether to include current from AM to SE
@@ -138,7 +138,7 @@ class FixBatterySOR : public Fix {
   class NeighList *list;
   
   // Methods
-  void solve_sor_iteration();
+  void solve_eis_iteration();
   void apply_boundary_conditions();
   void calculate_hydrostatic_stress();
   double calculate_contact_area(int, int);
@@ -153,38 +153,38 @@ class FixBatterySOR : public Fix {
 
 /* ERROR/WARNING messages:
 
-E: Illegal fix battery/sor command
+E: Illegal fix battery/eis command
 
 Self-explanatory. Check the input script syntax and compare to the
 documentation for the command.
 
-E: Fix battery/sor requires newton pair off
+E: Fix battery/eis requires newton pair off
 
 This fix requires newton pair off for proper force calculation.
 
-E: Fix battery/sor requires fix equilibrium_potential
+E: Fix battery/eis requires fix equilibrium_potential
 
-Fix equilibrium_potential must be defined before fix battery/sor.
+Fix equilibrium_potential must be defined before fix battery/eis.
 
-E: Fix battery/sor requires fix exchange_current_density
+E: Fix battery/eis requires fix exchange_current_density
 
-Fix exchange_current_density must be defined before fix battery/sor.
+Fix exchange_current_density must be defined before fix battery/eis.
 
 E: Could not find required property/atom fixes
 
 Internal error - missing required property/atom fixes.
 
-E: Invalid particle types for battery/sor
+E: Invalid particle types for battery/eis
 
 SE_type and AM_type must be valid atom types.
 
-E: Invalid boundary condition types for battery/sor
+E: Invalid boundary condition types for battery/eis
 
 BC_bottom_type and BC_top_type must be valid atom types.
 
-W: Battery SOR did not converge
+W: Battery EIS did not converge
 
-The SOR solver did not converge within the maximum iterations.
+The EIS solver did not converge within the maximum iterations.
 
 W: Numerical instability detected
 
