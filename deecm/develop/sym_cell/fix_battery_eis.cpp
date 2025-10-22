@@ -130,20 +130,20 @@ void FixBatteryEIS::post_create()
     fix_phi_ed_old = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
   }
 
-  // Register property/atom for current density AM-SE
-  fix_current_AM_SE = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentAMSE","property/atom","scalar",0,0,style,false));
-  if(!fix_current_AM_SE) {
+  // Register property/atom for current density Li-SE
+  fix_current_Li_SE = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentLiSE","property/atom","scalar",0,0,style,false));
+  if(!fix_current_Li_SE) {
     const char* fixarg[10];
-    fixarg[0]="currentAMSE";
+    fixarg[0]="currentLiSE";
     fixarg[1]="all";
     fixarg[2]="property/atom";
-    fixarg[3]="currentAMSE";
+    fixarg[3]="currentLiSE";
     fixarg[4]="scalar";
     fixarg[5]="no";
     fixarg[6]="yes";
     fixarg[7]="no";
     fixarg[8]="0.0";
-    fix_current_AM_SE = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
+    fix_current_Li_SE = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
   }
 
   // Register property/atom for hydrostatic stress
@@ -192,38 +192,30 @@ FixBatteryEIS::FixBatteryEIS(LAMMPS *lmp, int narg, char **arg) :
   T(303.0), // K
   F(96485.0), // C/mol
   sigma_el(0.05), // Electrolyte conductivity (S/m) - for SE
-  sigma_ed_AM(100.0), // Electronic conductivity for AM (S/m)
   sigma_ed_SE(200.0), // Electronic conductivity for CBD/SE (S/m)
   sigma_ed_CC(300.0), // Electronic conductivity for CC (S/m)
   alpha_a(0.5), //unitless
   alpha_c(0.5),
-  BC_bottom_type(2),      // Default: CC1 Cathode
-  BC_top_type(6),         // Default: CC2 Anode
+  BC_bottom_type(2),      // Default: CC1 Refrence
+  BC_top_type(3),         // Default: CC2 Anode
   phi_el_BC_bottom(0.0),  // Default: 0V Initially for electrolyte
-  phi_el_BC_top(0.0),     // Default: 0V Always on Anode for electrolyte
+  phi_el_BC_top(0.01),     // Default: 10mV Always on Anode for electrolyte
   phi_ed_BC_anode(0.0),   // Electronic potential at anode = 0V
-  current_flux_CC(0.11),  // Current flux at CC free end (A/m2)
   phi_el(NULL),
   phi_el_old(NULL),
   phi_ed(NULL),
   phi_ed_old(NULL),
-  equilibrium_potential(NULL),
-  exchange_current_density(NULL),
-  current_AM_SE(NULL),
+  current_Li_SE(NULL),
   hydrostatic_stress(NULL),
   fix_phi_el(NULL),
   fix_phi_el_old(NULL),
   fix_phi_ed(NULL),
   fix_phi_ed_old(NULL),
-  fix_equilibrium_potential(NULL),
-  fix_exchange_current_density(NULL),
-  fix_current_AM_SE(NULL),
+  fix_current_Li_SE(NULL),
   fix_hydrostatic_stress(NULL),
   fix_init_flag(NULL),
   groupbit_SE(0),
-  groupbit_AM(0),
-  SE_type(3),
-  AM_type(1),
+  SE_type(1),
   list(NULL)
 {
   if (narg < 3)
@@ -260,25 +252,13 @@ FixBatteryEIS::FixBatteryEIS(LAMMPS *lmp, int narg, char **arg) :
       phi_el_BC_bottom = force->numeric(FLERR,arg[iarg+1]);
       phi_el_BC_top = force->numeric(FLERR,arg[iarg+2]);
       iarg += 3;
-    } else if (strcmp(arg[iarg],"BC_electronic") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal fix battery/eis command");
-      phi_ed_BC_anode = force->numeric(FLERR,arg[iarg+1]);
-      current_flux_CC = force->numeric(FLERR,arg[iarg+2]);
-      iarg += 3;
-    } else if (strcmp(arg[iarg],"conductivities") == 0) {
-      if (iarg+5 > narg) error->all(FLERR,"Illegal fix battery/eis command");
+    } else if (strcmp(arg[iarg],"conductivity") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix battery/eis command");
       sigma_el = force->numeric(FLERR,arg[iarg+1]);      // Electrolyte
-      sigma_ed_AM = force->numeric(FLERR,arg[iarg+2]);   // AM electronic
-      sigma_ed_SE = force->numeric(FLERR,arg[iarg+3]);   // CBD/SE electronic
-      sigma_ed_CC = force->numeric(FLERR,arg[iarg+4]);   // CC electronic
-      iarg += 5;
+      iarg += 2;
     } else if (strcmp(arg[iarg],"SE_type") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix battery/eis command");
       SE_type = force->inumeric(FLERR,arg[iarg+1]);
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"AM_type") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix battery/eis command");
-      AM_type = force->inumeric(FLERR,arg[iarg+1]);
       iarg += 2;
     } else error->all(FLERR,"Illegal fix battery/eis command");
   }
@@ -317,29 +297,20 @@ void FixBatteryEIS::init()
   if (force->newton_pair == 1)
     error->all(FLERR,"Fix battery/eis requires newton pair off");
 
-  // Find required fixes
-  fix_equilibrium_potential = static_cast<FixPropertyAtom*>(modify->find_fix_property("equilibriumPotential","property/atom","scalar",0,0,style));
-  if(!fix_equilibrium_potential)
-    error->all(FLERR,"Fix battery/eis requires equilibriumPotential property");
-    
-  fix_exchange_current_density = static_cast<FixPropertyAtom*>(modify->find_fix_property("exchangeCurrentDensity","property/atom","scalar",0,0,style));
-  if(!fix_exchange_current_density)
-    error->all(FLERR,"Fix battery/eis requires exchangeCurrentDensity property");
-
   // Get all property fixes
   fix_phi_el = static_cast<FixPropertyAtom*>(modify->find_fix_property("electrolytePotential","property/atom","scalar",0,0,style));
   fix_phi_el_old = static_cast<FixPropertyAtom*>(modify->find_fix_property("electrolytePotentialOld","property/atom","scalar",0,0,style));
   fix_phi_ed = static_cast<FixPropertyAtom*>(modify->find_fix_property("electronicPotential","property/atom","scalar",0,0,style));
   fix_phi_ed_old = static_cast<FixPropertyAtom*>(modify->find_fix_property("electronicPotentialOld","property/atom","scalar",0,0,style));
-  fix_current_AM_SE = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentAMSE","property/atom","scalar",0,0,style));
+  fix_current_Li_SE = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentLiSE","property/atom","scalar",0,0,style));
   fix_hydrostatic_stress = static_cast<FixPropertyAtom*>(modify->find_fix_property("hydrostaticStress","property/atom","scalar",0,0,style));
   fix_init_flag = static_cast<FixPropertyAtom*>(modify->find_fix_property("batteryInitFlag","property/atom","scalar",0,0,style));
 
-  if(!fix_phi_el || !fix_phi_el_old || !fix_phi_ed || !fix_phi_ed_old || !fix_current_AM_SE || !fix_hydrostatic_stress || !fix_init_flag)
+  if(!fix_phi_el || !fix_phi_el_old || !fix_phi_ed || !fix_phi_ed_old || !fix_current_Li_SE || !fix_hydrostatic_stress || !fix_init_flag)
     error->all(FLERR,"Could not find required property/atom fixes");
 
   // Validate particle types
-  if (SE_type < 1 || SE_type > atom->ntypes || AM_type < 1 || AM_type > atom->ntypes)
+  if (SE_type < 1 || SE_type > atom->ntypes)
     error->all(FLERR,"Invalid particle types for battery/eis");
     
   if (BC_bottom_type < 1 || BC_bottom_type > atom->ntypes || BC_top_type < 1 || BC_top_type > atom->ntypes)
@@ -389,29 +360,19 @@ void FixBatteryEIS::setup(int vflag)
       if (mask[i] & groupbit) {
         // Initialize both potentials based on particle type
         if (type[i] == SE_type) {
-          // SE/CBD particles - have both potentials
           phi_el[i] = 0.0;
           phi_el_old[i] = 0.0;
           phi_ed[i] = 0.0;
           phi_ed_old[i] = 0.0;
-        } else if (type[i] == AM_type) {
-          // AM particles - have electronic potential
-          phi_el[i] = 0.0;  // Not used in AM
-          phi_el_old[i] = 0.0;
-          phi_ed[i] = 0.0;
-          phi_ed_old[i] = 0.0;
         } else if (type[i] == BC_bottom_type) {
-          // Bottom boundary condition (CC)
           phi_el[i] = phi_el_BC_bottom;
           phi_el_old[i] = phi_el_BC_bottom;
-          // Electronic potential will be computed based on current flux
           phi_ed[i] = 0.0;  
           phi_ed_old[i] = 0.0;
         } else if (type[i] == BC_top_type) {
-          // Top boundary condition (Anode)
           phi_el[i] = phi_el_BC_top;
           phi_el_old[i] = phi_el_BC_top;
-          phi_ed[i] = phi_ed_BC_anode;  // 0V at anode
+          phi_ed[i] = phi_ed_BC_anode;
           phi_ed_old[i] = phi_ed_BC_anode;
         }
         init_flag[i] = 1.0;
@@ -437,34 +398,15 @@ void FixBatteryEIS::pre_force(int vflag)
 {
   updatePtrs();
   
-  // Calculate hydrostatic stress for AM particles
+  // Calculate hydrostatic stress for Li particles
   calculate_hydrostatic_stress();
 }
 
 /* ---------------------------------------------------------------------- */
 
-// void FixBatteryEIS::post_force(int vflag)
-// {
-//   // Solve using EIS iterations for both potentials
-//   current_iteration = 0;
-//   convergence_error = 1.0;
-  
-//   while (current_iteration < max_iterations && convergence_error > tolerance) {
-//     solve_eis_iteration();
-//     convergence_error = check_convergence();
-//     current_iteration++;
-//   }
-  
-//   if (current_iteration >= max_iterations && comm->me == 0) {
-//     error->warning(FLERR,"Battery EIS did not converge");
-//   }
-// }
-
 void FixBatteryEIS::post_force(int vflag)
 {
-  // Phase 1: Solve without AM-SE interface currents
-  include_AM_SE_current = false;
-  include_bottom_BC = false; // False does not allow bottom_BC to update phi_el
+  // Phase 1: Solve with Li-SE interface currents
   
   current_iteration = 0;
   convergence_error = 1.0;
@@ -480,39 +422,6 @@ void FixBatteryEIS::post_force(int vflag)
       error->warning(FLERR,"Battery EIS Phase 1 did not converge");
     }
   }
-  
-  // Phase 2: Solve with AM-SE interface currents for once iteration
-  include_AM_SE_current = true;
-  include_bottom_BC = true; // True allows bottom_BC to update phi_el
-
-  current_iteration = 0;
-  convergence_error = 1.0;
-  
-  while (current_iteration < 1 && convergence_error > tolerance) {
-    solve_eis_iteration();
-    convergence_error = check_convergence();
-    current_iteration++;
-  }
-  
-  // Phase 3: Solve after AM-SE interface currents
-  include_AM_SE_current = false;
-  include_bottom_BC = true;
-  
-  current_iteration = 0;
-  convergence_error = 1.0;
-  
-  while (current_iteration < max_iterations && convergence_error > tolerance) {
-    solve_eis_iteration();
-    convergence_error = check_convergence();
-    current_iteration++;
-  }
-  
-  if (comm->me == 0) {
-    if (current_iteration >= max_iterations) {
-      error->warning(FLERR,"Battery EIS Phase 3 did not converge");
-    }
-  }
-  
 }
 
 
@@ -524,175 +433,11 @@ void FixBatteryEIS::updatePtrs()
   phi_el_old = fix_phi_el_old->vector_atom;
   phi_ed = fix_phi_ed->vector_atom;
   phi_ed_old = fix_phi_ed_old->vector_atom;
-  equilibrium_potential = fix_equilibrium_potential->vector_atom;
-  exchange_current_density = fix_exchange_current_density->vector_atom;
-  current_AM_SE = fix_current_AM_SE->vector_atom;
+  current_Li_SE = fix_current_Li_SE->vector_atom;
   hydrostatic_stress = fix_hydrostatic_stress->vector_atom;
 }
 
 /* ---------------------------------------------------------------------- */
-
-// void FixBatteryEIS::solve_eis_iteration()
-// {
-//   int i,j,ii,jj,inum,jnum;
-//   int *ilist,*jlist,*numneigh,**firstneigh;
-//   double xtmp,ytmp,ztmp,delx,dely,delz,rsq,r,r_SI;
-//   double phi_el_sum,coeff_el_sum,cur_sum,cur_ed;
-//   double phi_ed_sum,coeff_ed_sum;
-  
-//   double **x = atom->x;
-//   double *radius = atom->radius;
-//   int *type = atom->type;
-//   int *mask = atom->mask;
-//   int nlocal = atom->nlocal;
-  
-//   inum = list->inum;
-//   ilist = list->ilist;
-//   numneigh = list->numneigh;
-//   firstneigh = list->firstneigh;
-  
-//   // Store old values for all particles
-//   for (i = 0; i < nlocal; i++) {
-//     if (mask[i] & groupbit) {
-//       phi_el_old[i] = phi_el[i];
-//       phi_ed_old[i] = phi_ed[i];
-//     }
-//   }
-
-//   // Reset current_AM_SE for all particles
-//   for (int i = 0; i < nlocal; i++) {
-//     current_AM_SE[i] = 0.0;
-//   }
-
-//   // EIS iteration for both potentials
-//   for (ii = 0; ii < inum; ii++) {
-//     i = ilist[ii];
-    
-//     // Skip top boundary (anode) particles as they have fixed potentials
-//     if (type[i] == BC_top_type) continue;
-    
-//     xtmp = x[i][0];
-//     ytmp = x[i][1];
-//     ztmp = x[i][2];
-    
-//     phi_el_sum = 0.0;
-//     coeff_el_sum = 0.0;
-//     cur_sum = 0.0;
-//     cur_ed = 0.0;
-//     phi_ed_sum = 0.0;
-//     coeff_ed_sum = 0.0;
-    
-//     jlist = firstneigh[i];
-//     jnum = numneigh[i];
-    
-//     // Determine electronic conductivity for particle i
-//     double sigma_ed_i = 0.0;
-//     if (type[i] == AM_type) sigma_ed_i = sigma_ed_AM;
-//     else if (type[i] == SE_type) sigma_ed_i = sigma_ed_SE;
-//     else if (type[i] == BC_bottom_type) sigma_ed_i = sigma_ed_CC;
-    
-//     for (jj = 0; jj < jnum; jj++) {
-//       j = jlist[jj];
-//       j &= NEIGHMASK;
-      
-//       delx = xtmp - x[j][0];
-//       dely = ytmp - x[j][1];
-//       delz = ztmp - x[j][2];
-//       rsq = delx*delx + dely*dely + delz*delz;
-//       r = sqrt(rsq);  // micrometers
-//       r_SI = r * 1.0e-6;  // Convert to m
-      
-//       if (r < (radius[i] + radius[j])) {
-//         double contact_area = calculate_contact_area(i, j); // m2
-        
-//         if (contact_area > 0.0) {
-//           // Determine electronic conductivity for particle j
-//           double sigma_ed_j = 0.0;
-//           if (type[j] == AM_type) sigma_ed_j = sigma_ed_AM;
-//           else if (type[j] == SE_type) sigma_ed_j = sigma_ed_SE;
-//           else if (type[j] == BC_bottom_type) sigma_ed_j = sigma_ed_CC;
-//           else if (type[j] == BC_top_type) sigma_ed_j = sigma_ed_CC;  // Assuming anode is also a CC
-          
-//           // Effective conductivity (harmonic mean)
-//           double sigma_ed_eff = 2.0 * sigma_ed_i * sigma_ed_j / (sigma_ed_i + sigma_ed_j);
-          
-//           // === Electronic potential update === (SE, AM, CC)
-//           if (type[i] == SE_type || type[i] == AM_type || type[i] == BC_bottom_type) {
-//             if (type[j] == SE_type || type[j] == AM_type || type[j] == BC_top_type) {
-//             double conductance_ed = sigma_ed_eff * contact_area / r_SI;
-//             phi_ed_sum += conductance_ed * phi_ed[j];
-//             coeff_ed_sum += conductance_ed;
-
-//             } else if (type[i] == AM_type && type[j] == SE_type) {
-//               double i_pq = calculate_current_AM_SE(j, i, phi_ed[i], phi_el[j], hydrostatic_stress[j]);
-//               cur_ed += -1 * i_pq * contact_area;
-
-//             } else if (type[j] == BC_bottom_type && type[i] != BC_bottom_type) {
-//               double conductance_ed = sigma_ed_eff * contact_area / r_SI;
-//               phi_ed_sum += conductance_ed * phi_ed[j];
-//               coeff_ed_sum += conductance_ed;
-//               cur_ed += current_flux_CC * contact_area;
-
-//             } else if (type[j] == BC_bottom_type && type[i] == BC_bottom_type) {
-//               double conductance_ed = sigma_ed_eff * contact_area / r_SI;
-//               phi_ed_sum += conductance_ed * phi_ed[j];
-//               coeff_ed_sum += conductance_ed;
-//             }
-//           }
-          
-//           // === Electrolyte potential update (SE and Bottom CC particles only) ===
-//           if (type[i] == SE_type) {
-//             if (type[j] == SE_type || type[j] == BC_top_type) {
-//               // SE-SE or SE-BC conductivity
-//               double conductance = sigma_el * contact_area / r_SI;
-//               phi_el_sum += conductance * phi_el[j];
-//               coeff_el_sum += conductance;
-
-
-//             } else if (type[j] == AM_type) {
-//               // SE-AM interface: calculate current from AM to SE using Butler-Volmer
-//               double i_pq = calculate_current_AM_SE(j, i, phi_ed[j], phi_el[i], hydrostatic_stress[j]);
-//               current_AM_SE[j] += i_pq * contact_area;
-              
-//               // Add current contribution to SE particle
-//               cur_sum += i_pq * contact_area;
-//             }
-//           }
-//         }
-//       }
-//     }
-    
-//     // Update electronic potential for AM, SE, and CC particles
-//     if ((type[i] == AM_type || type[i] == SE_type || type[i] == BC_bottom_type) && coeff_ed_sum > SMALL) {
-      
-//       double phi_ed_new = (phi_ed_sum + cur_ed) / coeff_ed_sum;
-      
-//       if (!std::isnan(phi_ed_new) && !std::isinf(phi_ed_new)) {
-//         phi_ed[i] = phi_ed_old[i] + omega * (phi_ed_new - phi_ed_old[i]);
-//       } else {
-//         phi_ed[i] = phi_ed_old[i];
-//       }
-//     }
-    
-//     // Update electrolyte potential for SE particles only
-//     if ((type[i] == SE_type) && coeff_el_sum > SMALL) {
-//       double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum; // Verified this is the correct way
-      
-//       if (!std::isnan(phi_el_new) && !std::isinf(phi_el_new)) {
-//         phi_el[i] = phi_el_old[i] + omega * (phi_el_new - phi_el_old[i]);
-//       } else {
-//         phi_el[i] = phi_el_old[i];
-//       }
-//     }
-//   }
-  
-//   // Apply boundary conditions after each iteration
-//   apply_boundary_conditions();
-  
-//   // Forward communication for both potentials
-//   fix_phi_el->do_forward_comm();
-//   fix_phi_ed->do_forward_comm();
-// }
 
 void FixBatteryEIS::solve_eis_iteration()
 {
@@ -721,18 +466,17 @@ void FixBatteryEIS::solve_eis_iteration()
     }
   }
 
-  // Reset current_AM_SE for all particles
+  // Reset current_Li_SE for all particles
   for (int i = 0; i < nlocal; i++) {
-    current_AM_SE[i] = 0.0;
+    current_Li_SE[i] = 0.0;
   }
 
   // EIS iteration for both potentials
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
     
-    // Skip top boundary (anode) particles as they have fixed potentials
-    // Note: Need to update it so that BC_top_types phi_el can update based on current applied. The phi_ed remains fixed.
-    if (type[i] == BC_top_type) continue;
+    // Skip top and bottom boundary particles as they have fixed potentials
+    if (type[i] == BC_top_type || type[i] == BC_bottom_type) continue;
     
     xtmp = x[i][0];
     ytmp = x[i][1];
@@ -750,9 +494,7 @@ void FixBatteryEIS::solve_eis_iteration()
     
     // Determine electronic conductivity for particle i
     double sigma_ed_i = 0.0;
-    if (type[i] == AM_type) sigma_ed_i = sigma_ed_AM;
     else if (type[i] == SE_type) sigma_ed_i = sigma_ed_SE;
-    else if (type[i] == BC_bottom_type) sigma_ed_i = sigma_ed_CC;
     
     for (jj = 0; jj < jnum; jj++) {
       j = jlist[jj];
@@ -769,98 +511,29 @@ void FixBatteryEIS::solve_eis_iteration()
         double contact_area = calculate_contact_area(i, j); // m2
         
         if (contact_area > 0.0) {
-          // Determine electronic conductivity for particle j
-          double sigma_ed_j = 0.0;
-          if (type[j] == AM_type) sigma_ed_j = sigma_ed_AM;
-          else if (type[j] == SE_type) sigma_ed_j = sigma_ed_SE;
-          else if (type[j] == BC_bottom_type) sigma_ed_j = sigma_ed_CC;
-          else if (type[j] == BC_top_type) sigma_ed_j = sigma_ed_CC;  // Assuming anode is also a CC
-          
-          // Effective conductivity (harmonic mean)
-          double sigma_ed_eff = 2.0 * sigma_ed_i * sigma_ed_j / (sigma_ed_i + sigma_ed_j);
-          
-          // === Electronic potential update === (SE, AM, CC)
-          if (type[i] == SE_type || type[i] == AM_type || type[i] == BC_bottom_type) {
-            if (type[j] == SE_type || type[j] == AM_type || type[j] == BC_top_type) {
-              double conductance_ed = sigma_ed_eff * contact_area / r_SI;
-              phi_ed_sum += conductance_ed * phi_ed[j];
-              coeff_ed_sum += conductance_ed;
-
-              // When updating to carbon change SE to CB
-            } else if (type[i] == SE_type && type[j] == AM_type) {
-              // Only include AM-SE interface current if flag is set
-              if (include_AM_SE_current) {
-                double i_pq = calculate_current_AM_SE(j, i, phi_ed[j], phi_el[i], hydrostatic_stress[j]);
-                cur_ed += -1 * i_pq * contact_area;
-              }
-
-            } else if (type[j] == BC_bottom_type && type[i] != BC_bottom_type) {
-              double conductance_ed = sigma_ed_eff * contact_area / r_SI;
-              phi_ed_sum += conductance_ed * phi_ed[j];
-              coeff_ed_sum += conductance_ed;
-              cur_ed += current_flux_CC * contact_area;
-
-            } else if (type[j] == BC_bottom_type && type[i] == BC_bottom_type) {
-              double conductance_ed = sigma_ed_eff * contact_area / r_SI;
-              phi_ed_sum += conductance_ed * phi_ed[j];
-              coeff_ed_sum += conductance_ed;
-            }
-          }
-          
           // === Electrolyte potential update (SE and Bottom CC particles only) ===
-          // Bottom Type becuase I need to find solve for a stable system first
-          if (type[i] == SE_type || type[i] == BC_bottom_type) {
-            if (type[j] == SE_type || type[j] == BC_bottom_type) {
+          if (type[i] == SE_type) {
+            if (type[j] == SE_type) {
               double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
             
-              // il · nLi = iapp at z = L + Ls; [from the separator to the Li metal anode] [https://doi.org/10.1016/j.jmps.2019.05.003]
-            } else if (type[j] == BC_top_type) {
+            } else if (type[j] == BC_top_type || type[j] == BC_bottom_type) {
               double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
-              cur_sum += -1 * current_flux_CC * contact_area;
-
-            } else if (type[i] == SE_type && type[j] == AM_type) {
-              // SE-AM interface: only include current if flag is set
-              if (include_AM_SE_current) {
-                double i_pq = calculate_current_AM_SE(j, i, phi_ed[j], phi_el[i], hydrostatic_stress[j]);
-                current_AM_SE[j] += i_pq * contact_area;
+              double i_pq = calculate_current_Li_SE(j, i, phi_el[j], phi_el[i], hydrostatic_stress[j]);
+              current_Li_SE[i] += -1 * i_pq * contact_area;
                 
-                // Add current contribution to SE particle
-                cur_sum += i_pq * contact_area;
-              }
-            }
+              // Add current contribution to SE particle
+              cur_sum += i_pq * contact_area;
           }
         }
       }
     }
     
-    // Update electronic potential for AM, SE, and CC particles
-    if ((type[i] == AM_type || type[i] == SE_type || type[i] == BC_bottom_type) && coeff_ed_sum > SMALL) {
-      
-      double phi_ed_new = (phi_ed_sum + cur_ed) / coeff_ed_sum;
-      
-      if (!std::isnan(phi_ed_new) && !std::isinf(phi_ed_new)) {
-        phi_ed[i] = phi_ed_old[i] + omega * (phi_ed_new - phi_ed_old[i]);
-      } else {
-        phi_ed[i] = phi_ed_old[i];
-      }
-    }
-    
     // Update electrolyte potential for SE particles only
     if ((type[i] == SE_type) && coeff_el_sum > SMALL) {
-      double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum;
-      
-      if (!std::isnan(phi_el_new) && !std::isinf(phi_el_new)) {
-        phi_el[i] = phi_el_old[i] + omega * (phi_el_new - phi_el_old[i]);
-      } else {
-        phi_el[i] = phi_el_old[i];
-      }
-    }
-    // Update electrolyte potential for Bottom CC particles if flag is set to true
-    if ((type[i] == BC_bottom_type && include_bottom_BC) && coeff_el_sum > SMALL) {
       double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum;
       
       if (!std::isnan(phi_el_new) && !std::isinf(phi_el_new)) {
@@ -891,13 +564,18 @@ void FixBatteryEIS::apply_boundary_conditions()
     if (mask[i] & groupbit) {
       // Top boundary condition particles (Anode) - fixed potentials
       if (type[i] == BC_top_type) {
-        // phi_el[i] = phi_el_BC_top;      // Electrolyte potential not fixed at anode (il · nLi = iapp at z = L + Ls;)
-        // phi_el_old[i] = phi_el_BC_top;
-        phi_ed[i] = phi_ed_BC_anode;    // Fixed electronic potential (0V)
-        phi_ed_old[i] = phi_ed_BC_anode;
+        phi_el[i] = phi_el_BC_top;      // Electrolyte potential not fixed at anode
+        phi_el_old[i] = phi_el_BC_top;
+        // phi_ed[i] = phi_ed_BC_anode;    // Fixed electronic potential (0V) Ignoring electric for now
+        // phi_ed_old[i] = phi_ed_BC_anode;
       }
-      // Note: BC_bottom_type (CC) particles have current flux BC, not Dirichlet
-      // Their potentials evolve naturally based on the current flux
+      // Bottom boundary condition particles (CC1) - fixed potentials
+      else if (type[i] == BC_bottom_type) {
+        phi_el[i] = phi_el_BC_bottom;  // Fixed electrolyte potential (0V)
+        phi_el_old[i] = phi_el_BC_bottom;
+        // phi_ed[i] = 0.0;               // Electronic potential not fixed at CC1
+        // phi_ed_old[i] = 0.0;
+      }
     }
   }
 }
@@ -913,7 +591,7 @@ void FixBatteryEIS::calculate_hydrostatic_stress()
   int nlocal = atom->nlocal;
   
   for (int i = 0; i < nlocal; i++) {
-    if (mask[i] & groupbit && type[i] == AM_type) {
+    if (mask[i] & groupbit && type[i] == Li_type) {
       // Calculate magnitude of force
       double force_conversion = 1.0e-9;  // LAMMPS force micro nN to N SI
       double fmag = sqrt(f[i][0]*f[i][0] + f[i][1]*f[i][1] + f[i][2]*f[i][2]) * force_conversion;  // N
@@ -971,11 +649,11 @@ double FixBatteryEIS::calculate_contact_area(int i, int j)
 
 /* ---------------------------------------------------------------------- */
 
-double FixBatteryEIS::calculate_current_AM_SE(int i_AM, int j_SE, double phi_ed, double phi_el, double sigma_m)
+double FixBatteryEIS::calculate_current_Li_SE(int i_Li, int j_SE, double phi_ed, double phi_el, double sigma_m)
 {
-  // Get equilibrium potential and exchange current density for AM particle
-  double U_eq = equilibrium_potential[i_AM];
-  double i_0 = exchange_current_density[i_AM];
+  // Get equilibrium potential and exchange current density for Li particle
+  double U_eq = 0.0;
+  double i_0 = 0.01; // A/m2, placeholder value
 
   // Calculate overpotential for NMC cathode
   // η = φ_ed - φ_el - U_eq
@@ -997,7 +675,7 @@ double FixBatteryEIS::calculate_current_AM_SE(int i_AM, int j_SE, double phi_ed,
   double exp_term1 = exp(arg1);
   double exp_term2 = exp(arg2);
   
-  // Current density from AM to SE
+  // Current density from Li to SE
   double i_pq = i_0 * (exp_term1 - exp_term2);
   
   // Limit current to prevent numerical issues
@@ -1027,8 +705,8 @@ double FixBatteryEIS::check_convergence()
         if (diff_el > local_error) local_error = diff_el;
       }
       
-      // Check electronic potential convergence for AM, SE, and CC particles
-      if (type[i] == AM_type || type[i] == SE_type || type[i] == BC_bottom_type) {
+      // Check electronic potential convergence for Li, SE, and CC particles
+      if (type[i] == Li_type || type[i] == SE_type || type[i] == BC_bottom_type) {
         double diff_ed = fabs(phi_ed[i] - phi_ed_old[i]);
         if (diff_ed > local_error) local_error = diff_ed;
       }

@@ -74,8 +74,6 @@ class FixBatteryEIS : public Fix {
   int max_iterations;        // Maximum EIS iterations
   int current_iteration;     // Current iteration count
   double convergence_error;  // Current convergence error
-  bool include_AM_SE_current; // Whether to include current from AM to SE
-  bool include_bottom_BC;     // Whether to include bottom BC
   
   // Physical parameters
   double R;                  // Gas constant (8.31 J/mol·K)
@@ -84,7 +82,6 @@ class FixBatteryEIS : public Fix {
   
   // Conductivity parameters
   double sigma_el;           // Electrolyte conductivity (SE) (S/m)
-  double sigma_ed_AM;        // Electronic conductivity for AM (S/m)
   double sigma_ed_SE;        // Electronic conductivity for CBD/SE (S/m)
   double sigma_ed_CC;        // Electronic conductivity for CC (S/m)
   
@@ -95,7 +92,6 @@ class FixBatteryEIS : public Fix {
   double phi_el_BC_bottom;   // Electrolyte potential at bottom boundary
   double phi_el_BC_top;      // Electrolyte potential at top boundary
   double phi_ed_BC_anode;    // Electronic potential at anode (0V)
-  double current_flux_CC;    // Current flux at CC free end (A/m2)
   
   // Property pointers - Electrolyte
   double *phi_el;            // Electrolyte potential
@@ -106,10 +102,8 @@ class FixBatteryEIS : public Fix {
   double *phi_ed_old;        // Old electronic potential (for convergence)
   
   // Property pointers - Other
-  double *equilibrium_potential;
-  double *exchange_current_density;
-  double *current_AM_SE;     // Current density from AM to SE
-  double *hydrostatic_stress; // Hydrostatic stress on AM particles
+  double *current_Li_SE;     // Current density from Li to SE
+  double *hydrostatic_stress; // Hydrostatic stress on Li particles
   
   // Fix pointers - Electrolyte
   class FixPropertyAtom *fix_phi_el;
@@ -120,9 +114,7 @@ class FixBatteryEIS : public Fix {
   class FixPropertyAtom *fix_phi_ed_old;
   
   // Fix pointers - Other
-  class FixPropertyAtom *fix_equilibrium_potential;
-  class FixPropertyAtom *fix_exchange_current_density;
-  class FixPropertyAtom *fix_current_AM_SE;
+  class FixPropertyAtom *fix_current_Li_SE;
   class FixPropertyAtom *fix_hydrostatic_stress;
   class FixPropertyAtom *fix_init_flag;
   
@@ -130,9 +122,7 @@ class FixBatteryEIS : public Fix {
   int BC_bottom_type;        // Atom type for bottom BC particles (CC)
   int BC_top_type;           // Atom type for top BC particles (Anode)
   int groupbit_SE;           // Group bit for SE particles
-  int groupbit_AM;           // Group bit for AM particles
   int SE_type;               // Atom type for SE particles
-  int AM_type;               // Atom type for AM particles
   
   // Neighbor list
   class NeighList *list;
@@ -142,7 +132,7 @@ class FixBatteryEIS : public Fix {
   void apply_boundary_conditions();
   void calculate_hydrostatic_stress();
   double calculate_contact_area(int, int);
-  double calculate_current_AM_SE(int, int, double, double, double);
+  double calculate_current_Li_SE(int, int, double, double, double);
   double check_convergence();
 };
 
@@ -162,21 +152,13 @@ E: Fix battery/eis requires newton pair off
 
 This fix requires newton pair off for proper force calculation.
 
-E: Fix battery/eis requires fix equilibrium_potential
-
-Fix equilibrium_potential must be defined before fix battery/eis.
-
-E: Fix battery/eis requires fix exchange_current_density
-
-Fix exchange_current_density must be defined before fix battery/eis.
-
 E: Could not find required property/atom fixes
 
 Internal error - missing required property/atom fixes.
 
 E: Invalid particle types for battery/eis
 
-SE_type and AM_type must be valid atom types.
+SE_type and Li_type must be valid atom types.
 
 E: Invalid boundary condition types for battery/eis
 

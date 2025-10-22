@@ -72,7 +72,7 @@ fix     m6 all property/global cohesionEnergyDensity peratomtypepair 4 &
         50000   100000  100000  0 &
         100000  0       0       0 &
         100000  0       0       0 &
-        0       0       0       0 &
+        0       0       0       0
 
 #---------------------Define Pair Style and Walls----------------------------------------
 pair_style gran model hertz tangential history cohesion sjkr
