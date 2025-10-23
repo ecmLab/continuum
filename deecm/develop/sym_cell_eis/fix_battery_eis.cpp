@@ -424,7 +424,6 @@ void FixBatteryEIS::post_force(int vflag)
   }
 }
 
-
 /* ---------------------------------------------------------------------- */
 
 void FixBatteryEIS::updatePtrs()
@@ -493,8 +492,8 @@ void FixBatteryEIS::solve_eis_iteration()
     jnum = numneigh[i];
     
     // Determine electronic conductivity for particle i
-    double sigma_ed_i = 0.0;
-    else if (type[i] == SE_type) sigma_ed_i = sigma_ed_SE;
+    double sigma_ed_i = sigma_ed_SE;
+    // if (type[i] == SE_type) sigma_ed_i = sigma_ed_SE;
     
     for (jj = 0; jj < jnum; jj++) {
       j = jlist[jj];
@@ -527,6 +526,7 @@ void FixBatteryEIS::solve_eis_iteration()
                 
               // Add current contribution to SE particle
               cur_sum += i_pq * contact_area;
+            }
           }
         }
       }
@@ -560,12 +560,19 @@ void FixBatteryEIS::apply_boundary_conditions()
   int *type = atom->type;
   int nlocal = atom->nlocal;
   
+  // Get current simulation time in microseconds (since units are "micro")
+  double t = update->dt * update->ntimestep;
+  t = t * 1.0e-6; // Convert to seconds
+
+  // Calculate sinusoidal boundary condition: 0.005*sin(t*5e10) + 0.005
+  double phi_el_BC_top_sinusoidal = 0.005 * sin(t * 5.0e10) + 0.005;
+
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
       // Top boundary condition particles (Anode) - fixed potentials
       if (type[i] == BC_top_type) {
-        phi_el[i] = phi_el_BC_top;      // Electrolyte potential not fixed at anode
-        phi_el_old[i] = phi_el_BC_top;
+        phi_el[i] = phi_el_BC_top_sinusoidal;      // Electrolyte potential not fixed at anode
+        phi_el_old[i] = phi_el_BC_top_sinusoidal;
         // phi_ed[i] = phi_ed_BC_anode;    // Fixed electronic potential (0V) Ignoring electric for now
         // phi_ed_old[i] = phi_ed_BC_anode;
       }
@@ -591,7 +598,7 @@ void FixBatteryEIS::calculate_hydrostatic_stress()
   int nlocal = atom->nlocal;
   
   for (int i = 0; i < nlocal; i++) {
-    if (mask[i] & groupbit && type[i] == Li_type) {
+    if (mask[i] & groupbit && type[i] == BC_bottom_type) {
       // Calculate magnitude of force
       double force_conversion = 1.0e-9;  // LAMMPS force micro nN to N SI
       double fmag = sqrt(f[i][0]*f[i][0] + f[i][1]*f[i][1] + f[i][2]*f[i][2]) * force_conversion;  // N
@@ -706,10 +713,10 @@ double FixBatteryEIS::check_convergence()
       }
       
       // Check electronic potential convergence for Li, SE, and CC particles
-      if (type[i] == Li_type || type[i] == SE_type || type[i] == BC_bottom_type) {
-        double diff_ed = fabs(phi_ed[i] - phi_ed_old[i]);
-        if (diff_ed > local_error) local_error = diff_ed;
-      }
+      // if (type[i] == Li_type || type[i] == SE_type || type[i] == BC_bottom_type) {
+      //   double diff_ed = fabs(phi_ed[i] - phi_ed_old[i]);
+      //   if (diff_ed > local_error) local_error = diff_ed;
+      // }
       count++;
     }
   }
