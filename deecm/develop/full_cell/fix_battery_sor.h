@@ -85,7 +85,7 @@ class FixBatterySOR : public Fix {
   // Conductivity parameters
   double sigma_el;           // Electrolyte conductivity (SE) (S/m)
   double sigma_ed_AM;        // Electronic conductivity for AM (S/m)
-  double sigma_ed_SE;        // Electronic conductivity for CBD/SE (S/m)
+  double sigma_ed_CB;        // Electronic conductivity for CB (S/m)
   double sigma_ed_CC;        // Electronic conductivity for CC (S/m)
   
   double alpha_a;            // Anodic transfer coefficient (0.5)
@@ -133,6 +133,7 @@ class FixBatterySOR : public Fix {
   int groupbit_AM;           // Group bit for AM particles
   int SE_type;               // Atom type for SE particles
   int AM_type;               // Atom type for AM particles
+  int CB_type;               // Atom type for CB particles
   
   // Neighbor list
   class NeighList *list;

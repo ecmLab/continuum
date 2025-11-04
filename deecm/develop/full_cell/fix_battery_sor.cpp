@@ -193,7 +193,7 @@ FixBatterySOR::FixBatterySOR(LAMMPS *lmp, int narg, char **arg) :
   F(96485.0), // C/mol
   sigma_el(0.05), // Electrolyte conductivity (S/m) - for SE
   sigma_ed_AM(100.0), // Electronic conductivity for AM (S/m)
-  sigma_ed_SE(200.0), // Electronic conductivity for CBD/SE (S/m)
+  sigma_ed_CB(200.0), // Electronic conductivity for CB (S/m)
   sigma_ed_CC(300.0), // Electronic conductivity for CC (S/m)
   alpha_a(0.5), //unitless
   alpha_c(0.5),
@@ -224,6 +224,7 @@ FixBatterySOR::FixBatterySOR(LAMMPS *lmp, int narg, char **arg) :
   groupbit_AM(0),
   SE_type(3),
   AM_type(1),
+  CB_type(7),
   list(NULL)
 {
   if (narg < 3)
@@ -269,12 +270,16 @@ FixBatterySOR::FixBatterySOR(LAMMPS *lmp, int narg, char **arg) :
       if (iarg+5 > narg) error->all(FLERR,"Illegal fix battery/sor command");
       sigma_el = force->numeric(FLERR,arg[iarg+1]);      // Electrolyte
       sigma_ed_AM = force->numeric(FLERR,arg[iarg+2]);   // AM electronic
-      sigma_ed_SE = force->numeric(FLERR,arg[iarg+3]);   // CBD/SE electronic
+      sigma_ed_CB = force->numeric(FLERR,arg[iarg+3]);   // CB electronic
       sigma_ed_CC = force->numeric(FLERR,arg[iarg+4]);   // CC electronic
       iarg += 5;
     } else if (strcmp(arg[iarg],"SE_type") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix battery/sor command");
       SE_type = force->inumeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"CB_type") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix battery/sor command");
+      CB_type = force->inumeric(FLERR,arg[iarg+1]);
       iarg += 2;
     } else if (strcmp(arg[iarg],"AM_type") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix battery/sor command");
@@ -339,7 +344,7 @@ void FixBatterySOR::init()
     error->all(FLERR,"Could not find required property/atom fixes");
 
   // Validate particle types
-  if (SE_type < 1 || SE_type > atom->ntypes || AM_type < 1 || AM_type > atom->ntypes)
+  if (SE_type < 1 || SE_type > atom->ntypes || AM_type < 1 || AM_type > atom->ntypes || CB_type < 1 || CB_type > atom->ntypes)
     error->all(FLERR,"Invalid particle types for battery/sor");
     
   if (BC_bottom_type < 1 || BC_bottom_type > atom->ntypes || BC_top_type < 1 || BC_top_type > atom->ntypes)
@@ -389,14 +394,20 @@ void FixBatterySOR::setup(int vflag)
       if (mask[i] & groupbit) {
         // Initialize both potentials based on particle type
         if (type[i] == SE_type) {
-          // SE/CBD particles - have both potentials
+          // SE particles - have electrolyte potentials
           phi_el[i] = 0.0;
           phi_el_old[i] = 0.0;
           phi_ed[i] = 0.0;
           phi_ed_old[i] = 0.0;
         } else if (type[i] == AM_type) {
           // AM particles - have electronic potential
-          phi_el[i] = 0.0;  // Not used in AM
+          phi_el[i] = 0.0;
+          phi_el_old[i] = 0.0;
+          phi_ed[i] = equilibrium_potential[i];
+          phi_ed_old[i] = equilibrium_potential[i];
+        } else if (type[i] == CB_type) {
+          // CB particles - have electronic potential
+          phi_el[i] = 0.0;
           phi_el_old[i] = 0.0;
           phi_ed[i] = 0.0;
           phi_ed_old[i] = 0.0;
@@ -443,9 +454,29 @@ void FixBatterySOR::pre_force(int vflag)
 
 /* ---------------------------------------------------------------------- */
 
+void FixBatterySOR::post_force(int vflag)
+{
+  // Solve using SOR iterations for both potentials
+  current_iteration = 0;
+  convergence_error = 1.0;
+  
+  while (current_iteration < max_iterations && convergence_error > tolerance) {
+    solve_sor_iteration();
+    convergence_error = check_convergence();
+    current_iteration++;
+  }
+  
+  if (current_iteration >= max_iterations && comm->me == 0) {
+    error->warning(FLERR,"Battery SOR did not converge");
+  }
+}
+
 // void FixBatterySOR::post_force(int vflag)
 // {
-//   // Solve using SOR iterations for both potentials
+//   // Phase 1: Solve without AM-SE interface currents
+//   include_AM_SE_current = false;
+//   include_bottom_BC = false; // False does not allow bottom_BC to update phi_el
+  
 //   current_iteration = 0;
 //   convergence_error = 1.0;
   
@@ -455,65 +486,45 @@ void FixBatterySOR::pre_force(int vflag)
 //     current_iteration++;
 //   }
   
-//   if (current_iteration >= max_iterations && comm->me == 0) {
-//     error->warning(FLERR,"Battery SOR did not converge");
+//   if (comm->me == 0) {
+//     if (current_iteration >= max_iterations) {
+//       error->warning(FLERR,"Battery SOR Phase 1 did not converge");
+//     }
 //   }
+  
+//   // Phase 2: Solve with AM-SE interface currents for once iteration
+//   include_AM_SE_current = true;
+//   include_bottom_BC = true; // True allows bottom_BC to update phi_el
+
+//   current_iteration = 0;
+//   convergence_error = 1.0;
+  
+//   while (current_iteration < 1 && convergence_error > tolerance) {
+//     solve_sor_iteration();
+//     convergence_error = check_convergence();
+//     current_iteration++;
+//   }
+  
+//   // Phase 3: Solve after AM-SE interface currents
+//   include_AM_SE_current = false;
+//   include_bottom_BC = true;
+  
+//   current_iteration = 0;
+//   convergence_error = 1.0;
+  
+//   while (current_iteration < max_iterations && convergence_error > tolerance) {
+//     solve_sor_iteration();
+//     convergence_error = check_convergence();
+//     current_iteration++;
+//   }
+  
+//   if (comm->me == 0) {
+//     if (current_iteration >= max_iterations) {
+//       error->warning(FLERR,"Battery SOR Phase 3 did not converge");
+//     }
+//   }
+  
 // }
-
-void FixBatterySOR::post_force(int vflag)
-{
-  // Phase 1: Solve without AM-SE interface currents
-  include_AM_SE_current = false;
-  include_bottom_BC = false; // False does not allow bottom_BC to update phi_el
-  
-  current_iteration = 0;
-  convergence_error = 1.0;
-  
-  while (current_iteration < max_iterations && convergence_error > tolerance) {
-    solve_sor_iteration();
-    convergence_error = check_convergence();
-    current_iteration++;
-  }
-  
-  if (comm->me == 0) {
-    if (current_iteration >= max_iterations) {
-      error->warning(FLERR,"Battery SOR Phase 1 did not converge");
-    }
-  }
-  
-  // Phase 2: Solve with AM-SE interface currents for once iteration
-  include_AM_SE_current = true;
-  include_bottom_BC = true; // True allows bottom_BC to update phi_el
-
-  current_iteration = 0;
-  convergence_error = 1.0;
-  
-  while (current_iteration < 1 && convergence_error > tolerance) {
-    solve_sor_iteration();
-    convergence_error = check_convergence();
-    current_iteration++;
-  }
-  
-  // Phase 3: Solve after AM-SE interface currents
-  include_AM_SE_current = false;
-  include_bottom_BC = true;
-  
-  current_iteration = 0;
-  convergence_error = 1.0;
-  
-  while (current_iteration < max_iterations && convergence_error > tolerance) {
-    solve_sor_iteration();
-    convergence_error = check_convergence();
-    current_iteration++;
-  }
-  
-  if (comm->me == 0) {
-    if (current_iteration >= max_iterations) {
-      error->warning(FLERR,"Battery SOR Phase 3 did not converge");
-    }
-  }
-  
-}
 
 
 /* ---------------------------------------------------------------------- */
@@ -730,8 +741,7 @@ void FixBatterySOR::solve_sor_iteration()
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
     
-    // Skip top boundary (anode) particles as they have fixed potentials
-    // Note: Need to update it so that BC_top_types phi_el can update based on current applied. The phi_ed remains fixed.
+    // Skip top boundary (anode) particles as they have fixed potentials el and ed
     if (type[i] == BC_top_type) continue;
     
     xtmp = x[i][0];
@@ -751,7 +761,7 @@ void FixBatterySOR::solve_sor_iteration()
     // Determine electronic conductivity for particle i
     double sigma_ed_i = 0.0;
     if (type[i] == AM_type) sigma_ed_i = sigma_ed_AM;
-    else if (type[i] == SE_type) sigma_ed_i = sigma_ed_SE;
+    else if (type[i] == CB_type) sigma_ed_i = sigma_ed_CB;
     else if (type[i] == BC_bottom_type) sigma_ed_i = sigma_ed_CC;
     
     for (jj = 0; jj < jnum; jj++) {
@@ -769,48 +779,38 @@ void FixBatterySOR::solve_sor_iteration()
         double contact_area = calculate_contact_area(i, j); // m2
         
         if (contact_area > 0.0) {
-          // Determine electronic conductivity for particle j
+          // Determine conductivity for particle j
           double sigma_ed_j = 0.0;
           if (type[j] == AM_type) sigma_ed_j = sigma_ed_AM;
-          else if (type[j] == SE_type) sigma_ed_j = sigma_ed_SE;
+          else if (type[j] == CB_type) sigma_ed_j = sigma_ed_CB;
+          else if (type[j] == SE_type) sigma_ed_j = 0; // Assuming SE has no electronic conductivity
           else if (type[j] == BC_bottom_type) sigma_ed_j = sigma_ed_CC;
-          else if (type[j] == BC_top_type) sigma_ed_j = sigma_ed_CC;  // Assuming anode is also a CC
+          else if (type[j] == BC_top_type) sigma_ed_j = 0;  // Assuming anode has no electronic conductivity
           
-          // Effective conductivity (harmonic mean)
-          double sigma_ed_eff = 2.0 * sigma_ed_i * sigma_ed_j / (sigma_ed_i + sigma_ed_j);
-          
-          // === Electronic potential update === (SE, AM, CC)
-          if (type[i] == SE_type || type[i] == AM_type || type[i] == BC_bottom_type) {
-            if (type[j] == SE_type || type[j] == AM_type || type[j] == BC_top_type) {
+          // === Electronic potential update === (CB, AM, CC)
+          if (type[i] == CB_type || type[i] == AM_type || type[i] == BC_bottom_type) {
+            if (type[j] == CB_type || type[j] == AM_type || type[j] == BC_bottom_type) {
+              double sigma_ed_eff = 2.0 * sigma_ed_i * sigma_ed_j / (sigma_ed_i + sigma_ed_j); // Effective conductivity (harmonic mean)
               double conductance_ed = sigma_ed_eff * contact_area / r_SI;
               phi_ed_sum += conductance_ed * phi_ed[j];
               coeff_ed_sum += conductance_ed;
 
-              // When updating to carbon change SE to CB
-            } else if (type[i] == SE_type && type[j] == AM_type) {
-              // Only include AM-SE interface current if flag is set
-              if (include_AM_SE_current) {
-                double i_pq = calculate_current_AM_SE(j, i, phi_ed[j], phi_el[i], hydrostatic_stress[j]);
-                cur_ed += -1 * i_pq * contact_area;
-              }
+            } else if (type[i] == AM_type && type[j] == SE_type) {
+              // Only include AM-SE interface current if flag is set. This need to be adressed to make sure it meets conservation of charge law.
+              // if (include_AM_SE_current) {
+                double i_pq = calculate_current_AM_SE(i, j, phi_ed[i], phi_el[j], hydrostatic_stress[i]);
+                cur_ed += 1 * i_pq * contact_area;
+              //}
 
             } else if (type[j] == BC_bottom_type && type[i] != BC_bottom_type) {
-              double conductance_ed = sigma_ed_eff * contact_area / r_SI;
-              phi_ed_sum += conductance_ed * phi_ed[j];
-              coeff_ed_sum += conductance_ed;
-              cur_ed += current_flux_CC * contact_area;
-
-            } else if (type[j] == BC_bottom_type && type[i] == BC_bottom_type) {
-              double conductance_ed = sigma_ed_eff * contact_area / r_SI;
-              phi_ed_sum += conductance_ed * phi_ed[j];
-              coeff_ed_sum += conductance_ed;
+              cur_ed += -1 * current_flux_CC * contact_area;
             }
           }
           
-          // === Electrolyte potential update (SE and Bottom CC particles only) ===
-          // Bottom Type becuase I need to find solve for a stable system first
-          if (type[i] == SE_type || type[i] == BC_bottom_type) {
-            if (type[j] == SE_type || type[j] == BC_bottom_type) {
+          // === Electrolyte potential update (SE particles only) ===
+          if (type[i] == SE_type) {
+            if (type[j] == SE_type) {
+              // SE-SE ionic conduction
               double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
@@ -820,25 +820,25 @@ void FixBatterySOR::solve_sor_iteration()
               double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
-              cur_sum += -1 * current_flux_CC * contact_area;
+              cur_sum += current_flux_CC * contact_area;
 
-            } else if (type[i] == SE_type && type[j] == AM_type) {
+            } else if (type[j] == AM_type) {
               // SE-AM interface: only include current if flag is set
-              if (include_AM_SE_current) {
+              // if (include_AM_SE_current) {
                 double i_pq = calculate_current_AM_SE(j, i, phi_ed[j], phi_el[i], hydrostatic_stress[j]);
-                current_AM_SE[j] += i_pq * contact_area;
+                current_AM_SE[j] += -1 * i_pq * contact_area;
                 
                 // Add current contribution to SE particle
-                cur_sum += i_pq * contact_area;
-              }
+                cur_sum += -1 * i_pq * contact_area;
+              //}
             }
           }
         }
       }
     }
     
-    // Update electronic potential for AM, SE, and CC particles
-    if ((type[i] == AM_type || type[i] == SE_type || type[i] == BC_bottom_type) && coeff_ed_sum > SMALL) {
+    // Update electronic potential for AM, CB, and CC particles
+    if ((type[i] == AM_type || type[i] == CB_type || type[i] == BC_bottom_type) && coeff_ed_sum > SMALL) {
       
       double phi_ed_new = (phi_ed_sum + cur_ed) / coeff_ed_sum;
       
@@ -860,15 +860,15 @@ void FixBatterySOR::solve_sor_iteration()
       }
     }
     // Update electrolyte potential for Bottom CC particles if flag is set to true
-    if ((type[i] == BC_bottom_type && include_bottom_BC) && coeff_el_sum > SMALL) {
-      double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum;
+    // if ((type[i] == BC_bottom_type) && coeff_el_sum > SMALL) {
+    //   double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum;
       
-      if (!std::isnan(phi_el_new) && !std::isinf(phi_el_new)) {
-        phi_el[i] = phi_el_old[i] + omega * (phi_el_new - phi_el_old[i]);
-      } else {
-        phi_el[i] = phi_el_old[i];
-      }
-    }
+    //   if (!std::isnan(phi_el_new) && !std::isinf(phi_el_new)) {
+    //     phi_el[i] = phi_el_old[i] + omega * (phi_el_new - phi_el_old[i]);
+    //   } else {
+    //     phi_el[i] = phi_el_old[i];
+    //   }
+    // }
   }
   
   // Apply boundary conditions after each iteration
@@ -891,8 +891,8 @@ void FixBatterySOR::apply_boundary_conditions()
     if (mask[i] & groupbit) {
       // Top boundary condition particles (Anode) - fixed potentials
       if (type[i] == BC_top_type) {
-        // phi_el[i] = phi_el_BC_top;      // Electrolyte potential not fixed at anode (il · nLi = iapp at z = L + Ls;)
-        // phi_el_old[i] = phi_el_BC_top;
+        phi_el[i] = phi_el_BC_top;      // Electrolyte potential not fixed at anode (il · nLi = iapp at z = L + Ls;)
+        phi_el_old[i] = phi_el_BC_top;
         phi_ed[i] = phi_ed_BC_anode;    // Fixed electronic potential (0V)
         phi_ed_old[i] = phi_ed_BC_anode;
       }
