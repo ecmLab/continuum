@@ -795,13 +795,6 @@ void FixBatterySOR::solve_sor_iteration()
               phi_ed_sum += conductance_ed * phi_ed[j];
               coeff_ed_sum += conductance_ed;
 
-            } else if (type[i] == AM_type && type[j] == SE_type) {
-              // Only include AM-SE interface current if flag is set. This need to be adressed to make sure it meets conservation of charge law.
-              // if (include_AM_SE_current) {
-                double i_pq = calculate_current_AM_SE(i, j, phi_ed[i], phi_el[j], hydrostatic_stress[i]);
-                cur_ed += 1 * i_pq * contact_area;
-              //}
-
             } else if (type[j] == BC_bottom_type && type[i] != BC_bottom_type) {
               cur_ed += -1 * current_flux_CC * contact_area;
             }
