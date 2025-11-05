@@ -36,7 +36,7 @@
     Copyright 2024-     DCS Computing GmbH, Linz
 
     Notes: 
-    - FOR CONTROLED VOLTAGE
+    - FOR CONTROLED CURRENT
     - Solves both electronic and electrolyte potentials
 ------------------------------------------------------------------------- */
 
@@ -370,8 +370,8 @@ void FixBatteryEIS::setup(int vflag)
           phi_ed[i] = 0.0;  
           phi_ed_old[i] = 0.0;
         } else if (type[i] == BC_top_type) {
-          phi_el[i] = phi_el_BC_top;
-          phi_el_old[i] = phi_el_BC_top;
+          phi_el[i] = 0.0; // phi_el_BC_top
+          phi_el_old[i] = 0.0; // phi_el_BC_top
           phi_ed[i] = phi_ed_BC_anode;
           phi_ed_old[i] = phi_ed_BC_anode;
         }
@@ -406,22 +406,14 @@ void FixBatteryEIS::pre_force(int vflag)
 
 void FixBatteryEIS::post_force(int vflag)
 {
-  // Phase 1: Solve with Li-SE interface currents
+  // Just iterate a fixed number of times per timestep (e.g., 10-50 iterations)
+  // to get a good approximation at this timestep
   
-  current_iteration = 0;
-  convergence_error = 1.0;
-  
-  while (current_iteration < max_iterations && convergence_error > tolerance) {
+  for (int iter = 0; iter < max_iterations; iter++) {
     solve_eis_iteration();
-    convergence_error = check_convergence();
-    current_iteration++;
   }
   
-  if (comm->me == 0) {
-    if (current_iteration >= max_iterations) {
-      error->warning(FLERR,"Battery EIS Phase 1 did not converge");
-    }
-  }
+  // No convergence check needed - potentials will drift under constant current
 }
 
 /* ---------------------------------------------------------------------- */
@@ -451,6 +443,12 @@ void FixBatteryEIS::solve_eis_iteration()
   int *type = atom->type;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
+  double ndt = update->ntimestep;
+
+  // Flip sign of applied current every 20 timesteps
+  int period = static_cast<int>(ndt) / 20;
+  double sign = (period % 2 == 0) ? 1.0 : -1.0;
+  double i_app = phi_el_BC_top; // Applied current density in A/m2 (From anode) sign * phi_el_BC_top
   
   inum = list->inum;
   ilist = list->ilist;
@@ -474,8 +472,8 @@ void FixBatteryEIS::solve_eis_iteration()
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
     
-    // Skip top and bottom boundary particles as they have fixed potentials
-    if (type[i] == BC_top_type || type[i] == BC_bottom_type) continue;
+    // Skip bottom boundary particles as they have fixed potentials
+    if (type[i] == BC_bottom_type) continue;
     
     xtmp = x[i][0];
     ytmp = x[i][1];
@@ -490,10 +488,6 @@ void FixBatteryEIS::solve_eis_iteration()
     
     jlist = firstneigh[i];
     jnum = numneigh[i];
-    
-    // Determine electronic conductivity for particle i
-    double sigma_ed_i = sigma_ed_SE;
-    // if (type[i] == SE_type) sigma_ed_i = sigma_ed_SE;
     
     for (jj = 0; jj < jnum; jj++) {
       j = jlist[jj];
@@ -510,36 +504,46 @@ void FixBatteryEIS::solve_eis_iteration()
         double contact_area = calculate_contact_area(i, j); // m2
         
         if (contact_area > 0.0) {
-          // === Electrolyte potential update (SE and Bottom CC particles only) ===
-          if (type[i] == SE_type) {
-            if (type[j] == SE_type) {
+          // === Electrolyte potential update (SE) ===
+          if (type[i] == SE_type || type[i] == BC_top_type) {
+            if (type[j] == SE_type || type[j] == BC_top_type || type[j] == BC_bottom_type) {
               double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
             
             } else if (type[j] == BC_top_type || type[j] == BC_bottom_type) {
-              double conductance = sigma_el * contact_area / r_SI;
-              phi_el_sum += conductance * phi_el[j];
-              coeff_el_sum += conductance;
-              double i_pq = calculate_current_Li_SE(j, i, phi_el[j], phi_el[i], hydrostatic_stress[j]);
-              current_Li_SE[i] += -1 * i_pq * contact_area;
-                
-              // Add current contribution to SE particle
-              cur_sum += i_pq * contact_area;
+              cur_sum += i_app * contact_area;
             }
           }
         }
       }
     }
     
-    // Update electrolyte potential for SE particles only
-    if ((type[i] == SE_type) && coeff_el_sum > SMALL) {
+    // Update electrolyte potential for SE and Anode particles only
+    if ((type[i] == SE_type || type[i] == BC_top_type)) {
       double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum;
       
       if (!std::isnan(phi_el_new) && !std::isinf(phi_el_new)) {
         phi_el[i] = phi_el_old[i] + omega * (phi_el_new - phi_el_old[i]);
       } else {
         phi_el[i] = phi_el_old[i];
+
+        if (comm->me == 0) {
+          char warning_msg[512];
+          snprintf(warning_msg, 512,
+                   "Battery EIS: Invalid phi_el_new detected!\n"
+                   "  Particle ID: %d, Type: %d\n"
+                   "  Timestep: %ld, Iteration: %d\n"
+                   "  phi_el_new: %g (isnan: %d, isinf: %d)\n"
+                   "  phi_el_sum: %g, cur_sum: %g, coeff_el_sum: %g\n"
+                   "  Position: [%g, %g, %g]\n",
+                   atom->tag[i], type[i],
+                   update->ntimestep, current_iteration,
+                   phi_el_new, std::isnan(phi_el_new), std::isinf(phi_el_new),
+                   phi_el_sum, cur_sum, coeff_el_sum,
+                   x[i][0], x[i][1], x[i][2]);
+          error->warning(FLERR, warning_msg);
+        }
       }
     }
   }
@@ -561,19 +565,19 @@ void FixBatteryEIS::apply_boundary_conditions()
   int nlocal = atom->nlocal;
   
   // Get current simulation time in microseconds (since units are "micro")
-  double t = update->dt * update->ntimestep;
-  t = t * 1.0e-6; // Convert to seconds
+  // double t = update->dt * update->ntimestep;
+  // t = t * 1.0e-6; // Convert to seconds
 
   // Calculate sinusoidal boundary condition: 0.005*sin(t*5e10) + 0.005
-  double phi_el_BC_top_sinusoidal = 0.005 * sin(t * 5.0e10) + 0.005;
+  // double phi_el_BC_top_sinusoidal = 0.005 * sin(t * 5.0e10) + 0.005;
   // double phi_el_BC_top_sinusoidal = 0.01; // Keeping constant for debugging
 
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
       // Top boundary condition particles (Anode) - fixed potentials
       if (type[i] == BC_top_type) {
-        phi_el[i] = phi_el_BC_top_sinusoidal;      // Electrolyte potential not fixed at anode
-        phi_el_old[i] = phi_el_BC_top_sinusoidal;
+        // phi_el[i] = phi_el_BC_top_sinusoidal;      // Electrolyte potential not fixed at anode
+        // phi_el_old[i] = phi_el_BC_top_sinusoidal;
         // phi_ed[i] = phi_ed_BC_anode;    // Fixed electronic potential (0V) Ignoring electric for now
         // phi_ed_old[i] = phi_ed_BC_anode;
       }
