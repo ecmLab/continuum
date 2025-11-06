@@ -124,8 +124,8 @@ variable        prs1    equal  -(c_frc1)*2.5e-6
 # Initialize battery physics fixes first to create the fix properties
 
 # SOR solver for electric potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
-fix             battery_eis_sym all battery/eis omega 1.9 tolerance 1e-1 max_iter 10000 &
-                BC_types 2 3 BC_potentials 0.00 1e12 conductivity 0.05 SE_type 1
+fix             battery_eis_sym all battery/eis omega 1.0 tolerance 1e-1 max_iter 1000 &
+                BC_types 2 3 BC_potentials 0.00 10.0 conductivity 0.05 SE_type 1
 
 # --- 10. COMPUTE SETUP FOR MONITORING ---
 
@@ -154,8 +154,8 @@ thermo          1
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 1 1_CC_post_bat_sym_200Mpa/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_battery all custom 1 1_CCD_post_bat_sym_200Mpa/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress
 
 # 4. Run EC for 1 timestep, equivelent to 0.1 real seconds, while particles are frozen
-run             100
+run             240

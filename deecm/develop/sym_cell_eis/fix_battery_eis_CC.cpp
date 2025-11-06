@@ -448,7 +448,10 @@ void FixBatteryEIS::solve_eis_iteration()
   // Flip sign of applied current every 20 timesteps
   int period = static_cast<int>(ndt) / 20;
   double sign = (period % 2 == 0) ? 1.0 : -1.0;
-  double i_app = phi_el_BC_top; // Applied current density in A/m2 (From anode) sign * phi_el_BC_top
+  int num_positive_steps = period / 2;
+  double increase_step = phi_el_BC_top / 4.0;
+  double current_magnitude = phi_el_BC_top + (num_positive_steps * increase_step);
+  double i_app = sign * current_magnitude; // Applied current density in A/m2
   
   inum = list->inum;
   ilist = list->ilist;
@@ -506,13 +509,22 @@ void FixBatteryEIS::solve_eis_iteration()
         if (contact_area > 0.0) {
           // === Electrolyte potential update (SE) ===
           if (type[i] == SE_type || type[i] == BC_top_type) {
-            if (type[j] == SE_type || type[j] == BC_top_type || type[j] == BC_bottom_type) {
+            if (type[j] == SE_type) {
               double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
             
-            } else if (type[j] == BC_top_type || type[j] == BC_bottom_type) {
+            } else if (type[j] == BC_top_type) {
+              double conductance = sigma_el * contact_area / r_SI;
+              phi_el_sum += conductance * phi_el[j];
+              coeff_el_sum += conductance;
               cur_sum += i_app * contact_area;
+
+            } else if (type[j] == BC_bottom_type) {
+              double conductance = sigma_el * contact_area / r_SI;
+              phi_el_sum += conductance * phi_el[j];
+              coeff_el_sum += conductance;
+              cur_sum += -1 * i_app * contact_area;
             }
           }
         }
@@ -522,28 +534,11 @@ void FixBatteryEIS::solve_eis_iteration()
     // Update electrolyte potential for SE and Anode particles only
     if ((type[i] == SE_type || type[i] == BC_top_type)) {
       double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum;
-      
+
       if (!std::isnan(phi_el_new) && !std::isinf(phi_el_new)) {
         phi_el[i] = phi_el_old[i] + omega * (phi_el_new - phi_el_old[i]);
       } else {
         phi_el[i] = phi_el_old[i];
-
-        if (comm->me == 0) {
-          char warning_msg[512];
-          snprintf(warning_msg, 512,
-                   "Battery EIS: Invalid phi_el_new detected!\n"
-                   "  Particle ID: %d, Type: %d\n"
-                   "  Timestep: %ld, Iteration: %d\n"
-                   "  phi_el_new: %g (isnan: %d, isinf: %d)\n"
-                   "  phi_el_sum: %g, cur_sum: %g, coeff_el_sum: %g\n"
-                   "  Position: [%g, %g, %g]\n",
-                   atom->tag[i], type[i],
-                   update->ntimestep, current_iteration,
-                   phi_el_new, std::isnan(phi_el_new), std::isinf(phi_el_new),
-                   phi_el_sum, cur_sum, coeff_el_sum,
-                   x[i][0], x[i][1], x[i][2]);
-          error->warning(FLERR, warning_msg);
-        }
       }
     }
   }
