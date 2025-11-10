@@ -131,8 +131,8 @@ void FixBatteryEIS::post_create()
   }
 
   // Register property/atom for current density Li-SE
-  fix_current_Li_SE = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentLiSE","property/atom","scalar",0,0,style,false));
-  if(!fix_current_Li_SE) {
+  fix_current_SE_Li = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentLiSE","property/atom","scalar",0,0,style,false));
+  if(!fix_current_SE_Li) {
     const char* fixarg[10];
     fixarg[0]="currentLiSE";
     fixarg[1]="all";
@@ -143,7 +143,7 @@ void FixBatteryEIS::post_create()
     fixarg[6]="yes";
     fixarg[7]="no";
     fixarg[8]="0.0";
-    fix_current_Li_SE = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
+    fix_current_SE_Li = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
   }
 
   // Register property/atom for hydrostatic stress
@@ -205,13 +205,13 @@ FixBatteryEIS::FixBatteryEIS(LAMMPS *lmp, int narg, char **arg) :
   phi_el_old(NULL),
   phi_ed(NULL),
   phi_ed_old(NULL),
-  current_Li_SE(NULL),
+  current_SE_Li(NULL),
   hydrostatic_stress(NULL),
   fix_phi_el(NULL),
   fix_phi_el_old(NULL),
   fix_phi_ed(NULL),
   fix_phi_ed_old(NULL),
-  fix_current_Li_SE(NULL),
+  fix_current_SE_Li(NULL),
   fix_hydrostatic_stress(NULL),
   fix_init_flag(NULL),
   groupbit_SE(0),
@@ -302,11 +302,11 @@ void FixBatteryEIS::init()
   fix_phi_el_old = static_cast<FixPropertyAtom*>(modify->find_fix_property("electrolytePotentialOld","property/atom","scalar",0,0,style));
   fix_phi_ed = static_cast<FixPropertyAtom*>(modify->find_fix_property("electronicPotential","property/atom","scalar",0,0,style));
   fix_phi_ed_old = static_cast<FixPropertyAtom*>(modify->find_fix_property("electronicPotentialOld","property/atom","scalar",0,0,style));
-  fix_current_Li_SE = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentLiSE","property/atom","scalar",0,0,style));
+  fix_current_SE_Li = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentLiSE","property/atom","scalar",0,0,style));
   fix_hydrostatic_stress = static_cast<FixPropertyAtom*>(modify->find_fix_property("hydrostaticStress","property/atom","scalar",0,0,style));
   fix_init_flag = static_cast<FixPropertyAtom*>(modify->find_fix_property("batteryInitFlag","property/atom","scalar",0,0,style));
 
-  if(!fix_phi_el || !fix_phi_el_old || !fix_phi_ed || !fix_phi_ed_old || !fix_current_Li_SE || !fix_hydrostatic_stress || !fix_init_flag)
+  if(!fix_phi_el || !fix_phi_el_old || !fix_phi_ed || !fix_phi_ed_old || !fix_current_SE_Li || !fix_hydrostatic_stress || !fix_init_flag)
     error->all(FLERR,"Could not find required property/atom fixes");
 
   // Validate particle types
@@ -424,7 +424,7 @@ void FixBatteryEIS::updatePtrs()
   phi_el_old = fix_phi_el_old->vector_atom;
   phi_ed = fix_phi_ed->vector_atom;
   phi_ed_old = fix_phi_ed_old->vector_atom;
-  current_Li_SE = fix_current_Li_SE->vector_atom;
+  current_SE_Li = fix_current_SE_Li->vector_atom;
   hydrostatic_stress = fix_hydrostatic_stress->vector_atom;
 }
 
@@ -466,9 +466,9 @@ void FixBatteryEIS::solve_eis_iteration()
     }
   }
 
-  // Reset current_Li_SE for all particles
+  // Reset current_SE_Li for all particles
   for (int i = 0; i < nlocal; i++) {
-    current_Li_SE[i] = 0.0;
+    current_SE_Li[i] = 0.0;
   }
 
   // EIS iteration for both potentials
@@ -514,17 +514,25 @@ void FixBatteryEIS::solve_eis_iteration()
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
             
-            } else if (type[j] == BC_top_type) {
+            } else if (type[j] == BC_top_type && type[i] == BC_top_type) {
+              double conductance = sigma_el * contact_area / r_SI;
+              phi_el_sum += conductance * phi_el[j];
+              coeff_el_sum += conductance;
+
+            } else if (type[j] == BC_top_type && type[i] == SE_type) {
               double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
               cur_sum += i_app * contact_area;
+              current_SE_Li[j] += i_app * contact_area;
+            
 
-            } else if (type[j] == BC_bottom_type) {
+            } else if (type[j] == BC_bottom_type && type[i] == SE_type) {
               double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
               cur_sum += -1 * i_app * contact_area;
+              current_SE_Li[j] += -1 * i_app * contact_area;
             }
           }
         }
@@ -656,7 +664,7 @@ double FixBatteryEIS::calculate_contact_area(int i, int j)
 
 /* ---------------------------------------------------------------------- */
 
-double FixBatteryEIS::calculate_current_Li_SE(int i_Li, int j_SE, double phi_ed, double phi_el, double sigma_m)
+double FixBatteryEIS::calculate_current_SE_Li(int i_Li, int j_SE, double phi_ed, double phi_el, double sigma_m)
 {
   // Get equilibrium potential and exchange current density for Li particle
   double U_eq = 0.0;

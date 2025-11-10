@@ -33,7 +33,7 @@ variable        Yww           equal     50.e6    # Wall [kPa]
 variable        particle_poissons_ratio equal 0.4
 
 #---------------------Read Initial Configuration----------------------------------------
-read_data        data/mdl_symmetric.data
+read_data        data/mdl_lisym.data
 
 # Define groups based on particle types (Type 4 is the wall)
 group  li2   type  3   # Lithium 2 (top)
@@ -140,5 +140,5 @@ if "${prs1} < ${tarp1}" then "jump SELF loop2"
 run 100000
 
 # Save compacted state
-write_restart   data/comp200_sym.restart
-write_data      data/comp200_sym.data
+write_restart   data/comp200_sym_overlap.restart
+write_data      data/comp200_sym_overlap.data
