@@ -65,7 +65,7 @@ FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
   max_lithium_content(1.0),       // Default value
   lithium_content(NULL),
   lithium_concentration(NULL),
-  current_Li_SE(NULL),
+  current_SE_Li(NULL),
   diffusion_coefficient(NULL),
   lithium_flux(NULL),
   li_mols(NULL),
@@ -154,6 +154,22 @@ void FixLithiumDiffusion::post_create()
     fixarg[8]="0.0";
     fix_li_mols = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
   }
+
+  // Register property/atom for lithium concentration
+  fix_lithium_concentration = static_cast<FixPropertyAtom*>(modify->find_fix_property("lithiumConcentration","property/atom","scalar",0,0,style,false));
+  if(!fix_lithium_concentration) {
+    const char* fixarg[10];
+    fixarg[0]="lithiumConcentration";
+    fixarg[1]="all";
+    fixarg[2]="property/atom";
+    fixarg[3]="lithiumConcentration";
+    fixarg[4]="scalar";
+    fixarg[5]="no";
+    fixarg[6]="yes";
+    fixarg[7]="no";
+    fixarg[8]="0.0";
+    fix_lithium_concentration = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -185,9 +201,9 @@ void FixLithiumDiffusion::init()
   if(!fix_lithium_concentration)
     error->all(FLERR,"Fix lithium_diffusion requires lithiumConcentration property");
     
-  fix_current_SE_Li = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentAMSE","property/atom","scalar",0,0,style));
+  fix_current_SE_Li = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentSELi","property/atom","scalar",0,0,style));
   if(!fix_current_SE_Li)
-    error->all(FLERR,"Fix lithium_diffusion requires currentAMSE property");
+    error->all(FLERR,"Fix lithium_diffusion requires currentSELi property");
     
   fix_diffusion_coefficient = static_cast<FixPropertyAtom*>(modify->find_fix_property("diffusionCoefficient","property/atom","scalar",0,0,style));
   fix_lithium_flux = static_cast<FixPropertyAtom*>(modify->find_fix_property("lithiumFlux","property/atom","scalar",0,0,style));
@@ -384,7 +400,7 @@ void FixLithiumDiffusion::update_lithium_content()
       // Update Notes: The scalling factor needs to be toned down initially to avoid large jumps in lithium content
       // When Lithium content is at least 0.7 then you can use the max scaling factor of 2e16
       // The scaling factor is based on a timestep of 5e-6 us in main, so it simulates 0.1s of EC in 1 run
-      double s_factor = 1; // 1s / 5e-12s 
+      double s_factor = 3.6e13; // 5s / 5e-12s 
       lithium_content[i] += (lithium_flux[i] * dt * s_factor) / li_mols[i]; // Li Molar Ratio
       li_mols[i] += (lithium_flux[i] * dt * s_factor); // Li Mols in Li Metal
  

@@ -71,7 +71,7 @@ FixRadiusExpansion::FixRadiusExpansion(LAMMPS *lmp, int narg, char **arg) :
   fix_initial_radius(NULL),
   fix_particle_volume(NULL),
   Li_Atype(3), // Anode type 
-  Li_Ctype(2), // Cathode type
+  Li_Ctype(2) // Cathode type
 {
   if (narg < 3)
     error->all(FLERR,"Illegal fix radius_expansion command");
@@ -250,7 +250,7 @@ void FixRadiusExpansion::update_particle_radius()
   
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit && (type[i] == Li_Atype || type[i] == Li_Ctype)) {
-      double x_Li = lithium_content[i];  // Li/Li molar ratio
+      // double x_Li = lithium_content[i];  // Li/Li molar ratio
       double n_Li = li_mols[i];  // Moles of lithium
       // double n_Li = x_Li * n_Li;          // Moles of lithium
 

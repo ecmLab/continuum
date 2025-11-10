@@ -19,8 +19,7 @@ timestep        5.e-6
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
-# read_restart    data/comp200_sym.restart
-read_data     data/comp200_sym.data
+read_data     data/comp200_sym_overlap.data
 
 # --- 3. RE-ESTABLISH GROUPS ---
 # Define groups based on particle types (Type 4 is the wall)
@@ -132,11 +131,10 @@ fix             battery_eis_sym all battery/eis omega 1.0 tolerance 1e-1 max_ite
                 BC_types 2 3 BC_potentials 0.00 10.0 conductivity 0.05 SE_type 1
 
 # Lithium diffusion - only for AM particles
-fix             li_diffusion li lithium_diffusion Liype 1 D_min 1e-15 D_poor 1e-14 D_rich 1e-13 &
-                kappa 20.0 c_li_max 83874.0
+fix             li_diffusion li lithium_diffusion Li_type 3 2 c_li_max 77101.002
 
 # Radius expansion for Si particles (optional)
-fix             radius_expand li radius_expansion AM_type 1 update_every 1 max_updates 1000000
+fix             radius_expand li radius_expansion Li_type 3 2 update_every 1 max_updates 100000
 
 # --- 10. COMPUTE SETUP FOR MONITORING ---
 
@@ -151,7 +149,7 @@ compute         phi_ed_li1_avg li1 reduce ave f_electronicPotential
 compute         phi_ed_li2_avg li2 reduce ave f_electronicPotential
 
 # Current flow at AM-SE interfaces
-compute         current_avg se reduce ave f_currentLiSE
+compute         current_avg se reduce ave f_currentSELi
 
 variable       ts_rayleigh equal f_ts_check[1]
 variable       ts_hertz    equal f_ts_check[2]
@@ -165,8 +163,8 @@ thermo          1
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 1 1_CCD_post_bat_sym_200Mpa/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
-                f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress
+dump            dmp_battery all custom 1 1_CCD_post_bat_sym_200Mpa_exp/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+                f_electrolytePotential f_electronicPotential f_currentSELi f_hydrostaticStress
 
 # 4. Run EC for 1 timestep, equivelent to 0.1 real seconds, while particles are frozen
-run             240
+run             120

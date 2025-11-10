@@ -131,13 +131,13 @@ void FixBatteryEIS::post_create()
   }
 
   // Register property/atom for current density Li-SE
-  fix_current_SE_Li = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentLiSE","property/atom","scalar",0,0,style,false));
+  fix_current_SE_Li = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentSELi","property/atom","scalar",0,0,style,false));
   if(!fix_current_SE_Li) {
     const char* fixarg[10];
-    fixarg[0]="currentLiSE";
+    fixarg[0]="currentSELi";
     fixarg[1]="all";
     fixarg[2]="property/atom";
-    fixarg[3]="currentLiSE";
+    fixarg[3]="currentSELi";
     fixarg[4]="scalar";
     fixarg[5]="no";
     fixarg[6]="yes";
@@ -302,7 +302,7 @@ void FixBatteryEIS::init()
   fix_phi_el_old = static_cast<FixPropertyAtom*>(modify->find_fix_property("electrolytePotentialOld","property/atom","scalar",0,0,style));
   fix_phi_ed = static_cast<FixPropertyAtom*>(modify->find_fix_property("electronicPotential","property/atom","scalar",0,0,style));
   fix_phi_ed_old = static_cast<FixPropertyAtom*>(modify->find_fix_property("electronicPotentialOld","property/atom","scalar",0,0,style));
-  fix_current_SE_Li = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentLiSE","property/atom","scalar",0,0,style));
+  fix_current_SE_Li = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentSELi","property/atom","scalar",0,0,style));
   fix_hydrostatic_stress = static_cast<FixPropertyAtom*>(modify->find_fix_property("hydrostaticStress","property/atom","scalar",0,0,style));
   fix_init_flag = static_cast<FixPropertyAtom*>(modify->find_fix_property("batteryInitFlag","property/atom","scalar",0,0,style));
 
