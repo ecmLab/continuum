@@ -1,5 +1,6 @@
 # Battery simulation using pre-compacted particles from restart file
 # With type-based boundary conditions for SOR solver
+# To Do need to create a SOR that does current from CC to LI Instead
 # SE particles (type 1) - Solid Electrolyte
 # CCC particles (type 2) - Lithium Layer 1 (Bottom)
 # ACC particles (type 3) - Lithium Layer 2 (top)
@@ -173,7 +174,82 @@ thermo          1
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 1 1_CCD_post_bat_sym_200Mpa_exp_pack/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_battery all custom 1 1_CCD_post_bat_sym_200Mpa_exp_pack_stack/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_electrolytePotential f_electronicPotential f_currentSELi f_hydrostaticStress
 
-run 120
+# --- 13. MAIN SIMULATION WITH BATTERY PHYSICS CYCLING ---
+print           "================================================"
+print           "Starting main battery simulation with cycling..."
+print           "================================================"
+
+# Initialize loop counter
+variable        loop_count equal 0
+
+# Main cycling loop
+label           main_loop
+
+# 1. Unfix nve/sphere
+# unfix           integr
+
+# 2. Unfix existing battery physics (if this is the first iteration)
+if              "${loop_count} == 0" then &
+"unfix          li_content" &
+"unfix          battery_eis_sym" &
+"unfix          li_diffusion" &
+"unfix          radius_expand"
+
+fix             li_content li property/atom/lithium_content initial 1.0 target 1.0 max 1.0
+
+fix             battery_eis_sym all battery/eis omega 1.0 tolerance 1e-1 max_iter 4000 &
+                BC_types 2 3 BC_potentials 0.00 10.0 conductivity 0.05 SE_type 1
+
+fix             li_diffusion li lithium_diffusion Li_type 3 2 c_li_max 77101.002
+
+fix             radius_expand li radius_expansion Li_type 3 2 update_every 1 max_updates 100000
+
+# run             1
+
+# 5. Unfix all battery physics
+# unfix           li_content
+# unfix           battery_eis_sym
+# unfix           li_diffusion
+# unfix           radius_expand
+
+# 6. Fix nve/sphere
+# fix             integr all nve/sphere
+
+# 7. Start relax loop - maintain stack pressure at 50
+# label           loop6
+
+# Check pressure and adjust ccc movement accordingly
+# if              "${prs1} > 50" then &
+#                "fix 5 ccc move linear 0 0 -1000.0" &
+#                elif "${prs1} < 50" &
+#                "fix 5 ccc move linear 0 0 1000.0" &
+#                else &
+#                "fix 5 ccc move linear 0 0 0.0"
+
+# Run for 10000 timesteps
+fix 5 ccc move linear 0 0 1.0
+run             120
+
+# Check if pressure is close to target (within tolerance)
+# variable        prs_diff equal abs(${prs1}-10.0)
+# if              "${prs_diff} < 10.0" then "jump SELF loop7"
+# jump            SELF loop6
+
+# Hold so that kinetic energy decrease
+#label           loop7
+#unfix           5
+#fix             5 ccc move linear 0 0 0.0
+
+# Increment loop counter
+# variable        loop_count equal ${loop_count}+1
+
+# Check if we should continue looping
+# if              "${loop_count} <= 40" then "jump SELF main_loop"
+
+# --- 14. FINAL ANALYSIS ---
+#print           "================================================"
+#print           "Simulation complete after ${loop_count} cycles"
+#print           "================================================"
