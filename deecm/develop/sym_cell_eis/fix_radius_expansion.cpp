@@ -248,6 +248,8 @@ void FixRadiusExpansion::update_particle_radius()
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
   
+  double temp_rad = 0.0;
+
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit && (type[i] == Li_Atype || type[i] == Li_Ctype)) {
       // double x_Li = lithium_content[i];  // Li/Li molar ratio
@@ -260,10 +262,12 @@ void FixRadiusExpansion::update_particle_radius()
 
       // The new radius is derived from the new volume
       // V = (4/3) * pi * r^3, so r = cbrt(3V/(4*pi))
-      radius[i] = cbrt((3.0 * particle_volume[i]) / (4.0 * M_PI)); // Units in m
+      temp_rad = cbrt((3.0 * particle_volume[i]) / (4.0 * M_PI)); // Units in m
 
-      // Convert from m to μm (LIGGGHTS units)
-      radius[i] = radius[i] * 1.0e6;
+      if ((temp_rad * 1.0e6 > 0.001) && (temp_rad * 1.0e6 < 1)) { // Cap min radius to 1 nm to avoid numerical issues
+      // radius[i] = cbrt((3.0 * particle_volume[i]) / (4.0 * M_PI)); // Units in m
+      radius[i] = temp_rad * 1.0e6; // Convert to μm
+      }
     }  
   }
   

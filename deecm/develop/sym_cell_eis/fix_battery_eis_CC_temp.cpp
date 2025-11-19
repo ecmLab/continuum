@@ -435,8 +435,7 @@ void FixBatteryEIS::solve_eis_iteration()
   int i,j,ii,jj,inum,jnum;
   int *ilist,*jlist,*numneigh,**firstneigh;
   double xtmp,ytmp,ztmp,delx,dely,delz,rsq,r,r_SI;
-  double phi_el_sum,coeff_el_sum,cur_sum,cur_ed;
-  double phi_ed_sum,coeff_ed_sum;
+  double phi_el_sum,coeff_el_sum,cur_sum;
   
   double **x = atom->x;
   double *radius = atom->radius;
@@ -445,14 +444,13 @@ void FixBatteryEIS::solve_eis_iteration()
   int nlocal = atom->nlocal;
   double ndt = update->ntimestep;
 
-  // Flip sign of applied current every 20 timesteps
-  int period = static_cast<int>(ndt) / 20;
+  // Calculate applied current density
+  int period = static_cast<int>(ndt) / 3600; // Assuming 3600 is 1 hour
   double sign = (period % 2 == 0) ? 1.0 : -1.0;
   int num_positive_steps = period / 2;
   double increase_step = phi_el_BC_top / 4.0;
   double current_magnitude = phi_el_BC_top + (num_positive_steps * increase_step);
-  // double i_app = sign * current_magnitude; // Applied current density in A/m2
-  double i_app = phi_el_BC_top;
+  double i_app = sign * current_magnitude; // Applied current density in A/m2
 
   inum = list->inum;
   ilist = list->ilist;
@@ -472,23 +470,15 @@ void FixBatteryEIS::solve_eis_iteration()
     current_Li_SE[i] = 0.0;
   }
 
-  // EIS iteration for both potentials
+  // First pass: Calculate total contact areas at boundaries
+  double local_area_top = 0.0;
+  double local_area_bottom = 0.0;
+  
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
-    
-    // Skip bottom boundary particles as they have fixed potentials
-    // if (type[i] == BC_bottom_type) continue;
-    
     xtmp = x[i][0];
     ytmp = x[i][1];
     ztmp = x[i][2];
-    
-    phi_el_sum = 0.0;
-    coeff_el_sum = 0.0;
-    cur_sum = 0.0;
-    cur_ed = 0.0;
-    phi_ed_sum = 0.0;
-    coeff_ed_sum = 0.0;
     
     jlist = firstneigh[i];
     jnum = numneigh[i];
@@ -501,51 +491,103 @@ void FixBatteryEIS::solve_eis_iteration()
       dely = ytmp - x[j][1];
       delz = ztmp - x[j][2];
       rsq = delx*delx + dely*dely + delz*delz;
-      r = sqrt(rsq);  // micrometers
-      r_SI = r * 1.0e-6;  // Convert to m
+      r = sqrt(rsq);
+      r_SI = r * 1.0e-6;
       
       if (r < (radius[i] + radius[j])) {
-        double contact_area = calculate_contact_area(i, j); // m2
+        double contact_area = calculate_contact_area(i, j);
         
         if (contact_area > 0.0) {
-          // === Electrolyte potential update (SE) ===
+          // Count contact area at top boundary (anode to SE)
+          if (type[i] == BC_top_type && type[j] == SE_type) {
+            local_area_top += contact_area;
+          }
+          // Count contact area at bottom boundary (SE to cathode)
+          if (type[i] == BC_bottom_type && type[j] == SE_type) {
+            local_area_bottom += contact_area;
+          }
+        }
+      }
+    }
+  }
+  
+  // Get global contact areas
+  double global_area_top, global_area_bottom;
+  MPI_Allreduce(&local_area_top, &global_area_top, 1, MPI_DOUBLE, MPI_SUM, world);
+  MPI_Allreduce(&local_area_bottom, &global_area_bottom, 1, MPI_DOUBLE, MPI_SUM, world);
+  
+  // Calculate current per unit area to ensure conservation
+  // Total current = i_app * average_area
+  double avg_area = (global_area_top + global_area_bottom) / 2.0;
+  double total_target_current = i_app * avg_area;
+  
+  // Adjust current density to match available contact areas
+  double i_top = (global_area_top > 0.0) ? total_target_current / global_area_top : 0.0;
+  double i_bottom = (global_area_bottom > 0.0) ? total_target_current / global_area_bottom : 0.0;
+
+  // Second pass: Solve for potentials with balanced currents
+  for (ii = 0; ii < inum; ii++) {
+    i = ilist[ii];
+    
+    xtmp = x[i][0];
+    ytmp = x[i][1];
+    ztmp = x[i][2];
+    
+    phi_el_sum = 0.0;
+    coeff_el_sum = 0.0;
+    cur_sum = 0.0;
+    
+    jlist = firstneigh[i];
+    jnum = numneigh[i];
+    
+    for (jj = 0; jj < jnum; jj++) {
+      j = jlist[jj];
+      j &= NEIGHMASK;
+      
+      delx = xtmp - x[j][0];
+      dely = ytmp - x[j][1];
+      delz = ztmp - x[j][2];
+      rsq = delx*delx + dely*dely + delz*delz;
+      r = sqrt(rsq);
+      r_SI = r * 1.0e-6;
+      
+      if (r < (radius[i] + radius[j])) {
+        double contact_area = calculate_contact_area(i, j);
+        
+        if (contact_area > 0.0) {
+          // Electrolyte potential update
           if (type[i] == SE_type || type[i] == BC_top_type || type[i] == BC_bottom_type) {
+            double conductance = sigma_el * contact_area / r_SI;
+            
             if (type[i] == BC_top_type && type[j] == SE_type) {
-              double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
-              cur_sum += i_app * contact_area;
-              current_Li_SE[i] += i_app * contact_area;
+              cur_sum += i_top * contact_area;  // Use balanced current
+              current_Li_SE[i] += i_top * contact_area;
             
             } else if (type[i] == BC_top_type && type[j] == BC_top_type) {
-              double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
 
             } else if (type[i] == SE_type && type[j] == SE_type) {
-              double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
             
             } else if (type[i] == SE_type && type[j] == BC_top_type) {
-              double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
 
             } else if (type[i] == SE_type && type[j] == BC_bottom_type) {
-              double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
             
             } else if (type[i] == BC_bottom_type && type[j] == SE_type) {
-              double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
-              cur_sum += -1 * i_app * contact_area;
-              current_Li_SE[i] += -1 * i_app * contact_area;
+              cur_sum += -i_bottom * contact_area;  // Use balanced current (outflow)
+              current_Li_SE[i] += -i_bottom * contact_area;
 
             } else if (type[i] == BC_bottom_type && type[j] == BC_bottom_type) {
-              double conductance = sigma_el * contact_area / r_SI;
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
             }
@@ -554,22 +596,21 @@ void FixBatteryEIS::solve_eis_iteration()
       }
     }
     
-    // Update electrolyte potential for SE and Anode particles only
+    // Update electrolyte potential
     if ((type[i] == SE_type || type[i] == BC_top_type || type[i] == BC_bottom_type)) {
-      double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum;
+      if (coeff_el_sum > SMALL) {
+        double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum;
 
-      if (!std::isnan(phi_el_new) && !std::isinf(phi_el_new)) {
-        phi_el[i] = phi_el_old[i] + omega * (phi_el_new - phi_el_old[i]);
-      } else {
-        phi_el[i] = phi_el_old[i];
+        if (!std::isnan(phi_el_new) && !std::isinf(phi_el_new)) {
+          phi_el[i] = phi_el_old[i] + omega * (phi_el_new - phi_el_old[i]);
+        } else {
+          phi_el[i] = phi_el_old[i];
+        }
       }
     }
   }
   
-  // Apply boundary conditions after each iteration
-  // apply_boundary_conditions();
-  
-  // Forward communication for both potentials
+  // Forward communication
   fix_phi_el->do_forward_comm();
   fix_phi_ed->do_forward_comm();
 }

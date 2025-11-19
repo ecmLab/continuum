@@ -80,7 +80,7 @@ class FixLithiumDiffusion : public Fix {
   // Property pointers
   double *lithium_content;
   double *lithium_concentration;
-  double *current_SE_Li;
+  double *current_Li_SE;
   double *diffusion_coefficient;
   double *lithium_flux;
   double *li_mols;
@@ -88,7 +88,7 @@ class FixLithiumDiffusion : public Fix {
   // Fix pointers
   class FixPropertyAtom *fix_lithium_content;
   class FixPropertyAtom *fix_lithium_concentration;
-  class FixPropertyAtom *fix_current_SE_Li;
+  class FixPropertyAtom *fix_current_Li_SE;
   class FixPropertyAtom *fix_diffusion_coefficient;
   class FixPropertyAtom *fix_lithium_flux;
   class FixPropertyAtom *fix_li_mols;

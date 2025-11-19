@@ -65,13 +65,13 @@ FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
   max_lithium_content(1.0),       // Default value
   lithium_content(NULL),
   lithium_concentration(NULL),
-  current_SE_Li(NULL),
+  current_Li_SE(NULL),
   diffusion_coefficient(NULL),
   lithium_flux(NULL),
   li_mols(NULL),
   fix_lithium_content(NULL),
   fix_lithium_concentration(NULL),
-  fix_current_SE_Li(NULL),
+  fix_current_Li_SE(NULL),
   fix_diffusion_coefficient(NULL),
   fix_lithium_flux(NULL),
   fix_li_mols(NULL),
@@ -201,9 +201,9 @@ void FixLithiumDiffusion::init()
   if(!fix_lithium_concentration)
     error->all(FLERR,"Fix lithium_diffusion requires lithiumConcentration property");
     
-  fix_current_SE_Li = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentSELi","property/atom","scalar",0,0,style));
-  if(!fix_current_SE_Li)
-    error->all(FLERR,"Fix lithium_diffusion requires currentSELi property");
+  fix_current_Li_SE = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentLiSE","property/atom","scalar",0,0,style));
+  if(!fix_current_Li_SE)
+    error->all(FLERR,"Fix lithium_diffusion requires currentLiSE property");
     
   fix_diffusion_coefficient = static_cast<FixPropertyAtom*>(modify->find_fix_property("diffusionCoefficient","property/atom","scalar",0,0,style));
   fix_lithium_flux = static_cast<FixPropertyAtom*>(modify->find_fix_property("lithiumFlux","property/atom","scalar",0,0,style));
@@ -297,7 +297,7 @@ void FixLithiumDiffusion::updatePtrs()
 {
   lithium_content = fix_lithium_content->vector_atom;
   lithium_concentration = fix_lithium_concentration->vector_atom;
-  current_SE_Li = fix_current_SE_Li->vector_atom;
+  current_Li_SE = fix_current_Li_SE->vector_atom;
   diffusion_coefficient = fix_diffusion_coefficient->vector_atom;
   lithium_flux = fix_lithium_flux->vector_atom;
   li_mols = fix_li_mols->vector_atom;
@@ -388,8 +388,8 @@ void FixLithiumDiffusion::update_lithium_content()
     } // 2 end of j
     
     // Add current contribution (Equation 10)
-    // Current from SE to Li contributes to lithium flux
-    lithium_flux[i] -= current_SE_Li[i] / F; // mol/s (current_SE_Li is in A [C/s], F in C/mol)
+    // Current from Li to SE contributes to lithium flux
+    lithium_flux[i] -= current_Li_SE[i] / F; // mol/s (current_Li_SE is in A [C/s], F in C/mol)
   } // 1
   
   // Update lithium content based on flux

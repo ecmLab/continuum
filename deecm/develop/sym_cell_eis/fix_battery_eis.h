@@ -102,7 +102,7 @@ class FixBatteryEIS : public Fix {
   double *phi_ed_old;        // Old electronic potential (for convergence)
   
   // Property pointers - Other
-  double *current_SE_Li;     // Current density from Li to SE
+  double *current_Li_SE;     // Current density from Li to SE
   double *hydrostatic_stress; // Hydrostatic stress on Li particles
   
   // Fix pointers - Electrolyte
@@ -114,7 +114,7 @@ class FixBatteryEIS : public Fix {
   class FixPropertyAtom *fix_phi_ed_old;
   
   // Fix pointers - Other
-  class FixPropertyAtom *fix_current_SE_Li;
+  class FixPropertyAtom *fix_current_Li_SE;
   class FixPropertyAtom *fix_hydrostatic_stress;
   class FixPropertyAtom *fix_init_flag;
   
@@ -132,7 +132,7 @@ class FixBatteryEIS : public Fix {
   void apply_boundary_conditions();
   void calculate_hydrostatic_stress();
   double calculate_contact_area(int, int);
-  double calculate_current_SE_Li(int, int, double, double, double);
+  double calculate_current_Li_SE(int, int, double, double, double);
   double check_convergence();
 };
 

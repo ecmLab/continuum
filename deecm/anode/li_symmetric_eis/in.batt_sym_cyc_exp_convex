@@ -19,7 +19,7 @@ timestep        5.e-6
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
-read_data     data/comp200_sym_convex.data
+read_data     data/comp200_sym_convex_full.data
 
 # --- 3. RE-ESTABLISH GROUPS ---
 # Define groups based on particle types (Type 4 is the wall)
@@ -88,7 +88,7 @@ fix xwalls2 ptc wall/gran model hertz tangential history primitive type 4 xplane
 fix ywalls1 ptc wall/gran model hertz tangential history primitive type 4 yplane -10
 fix ywalls2 ptc wall/gran model hertz tangential history primitive type 4 yplane 10
 fix zwalls1 ptc wall/gran model hertz tangential history primitive type 4 zplane 0
-fix zwalls2 ptc wall/gran model hertz tangential history primitive type 4 zplane 78
+fix zwalls2 ptc wall/gran model hertz tangential history primitive type 4 zplane 83
 
 # --- 7. INTEGRATION ---
 fix             integr all nve/sphere
@@ -127,7 +127,7 @@ variable        prs1    equal  -(c_frc1)*2.5e-6
 fix             li_content li property/atom/lithium_content initial 1.0 target 1.0 max 1.0
 
 # SOR solver for electric potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
-fix             battery_eis_sym all battery/eis omega 1.0 tolerance 1e-1 max_iter 5000 &
+fix             battery_eis_sym all battery/eis omega 1.0 tolerance 1e-1 max_iter 1000 &
                 BC_types 2 3 BC_potentials 0.00 10.0 conductivity 0.05 SE_type 1
 
 # Lithium diffusion - only for AM particles
@@ -163,8 +163,8 @@ thermo          1
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 1 1_CCD_post_bat_sym_200Mpa_convex/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_battery all custom 1 1_CCD_post_bat_sym_200Mpa_convex_full_dep/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_electrolytePotential f_electronicPotential f_currentSELi f_hydrostaticStress
 
 # 4. Run EC for 1 timestep, equivelent to 0.1 real seconds, while particles are frozen
-run             120
+run             240
