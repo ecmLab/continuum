@@ -89,8 +89,8 @@ class FixBatteryEIS : public Fix {
   double alpha_c;            // Cathodic transfer coefficient (0.5)
   
   // Boundary conditions
-  double phi_el_BC_bottom;   // Electrolyte potential at bottom boundary
-  double phi_el_BC_top;      // Electrolyte potential at top boundary
+  double phi_el_BC_Cat;   // Electrolyte potential at bottom boundary
+  double phi_el_BC_An;      // Electrolyte potential at top boundary
   double phi_ed_BC_anode;    // Electronic potential at anode (0V)
   
   // Property pointers - Electrolyte
@@ -119,8 +119,8 @@ class FixBatteryEIS : public Fix {
   class FixPropertyAtom *fix_init_flag;
   
   // Particle type groups
-  int BC_bottom_type;        // Atom type for bottom BC particles (CC)
-  int BC_top_type;           // Atom type for top BC particles (Anode)
+  int Li_Ctype;        // Atom type for bottom BC particles (CC)
+  int Li_Atype;           // Atom type for top BC particles (Anode)
   int groupbit_SE;           // Group bit for SE particles
   int SE_type;               // Atom type for SE particles
   
@@ -162,7 +162,7 @@ SE_type and Li_type must be valid atom types.
 
 E: Invalid boundary condition types for battery/eis
 
-BC_bottom_type and BC_top_type must be valid atom types.
+Li_Ctype and Li_Atype must be valid atom types.
 
 W: Battery EIS did not converge
 

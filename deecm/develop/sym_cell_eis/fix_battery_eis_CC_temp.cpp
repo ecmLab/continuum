@@ -196,10 +196,10 @@ FixBatteryEIS::FixBatteryEIS(LAMMPS *lmp, int narg, char **arg) :
   sigma_ed_CC(300.0), // Electronic conductivity for CC (S/m)
   alpha_a(0.5), //unitless
   alpha_c(0.5),
-  BC_bottom_type(2),      // Default: CC1 Refrence
-  BC_top_type(3),         // Default: CC2 Anode
-  phi_el_BC_bottom(0.0),  // Default: 0V Initially for electrolyte
-  phi_el_BC_top(0.01),     // Default: 10mV Always on Anode for electrolyte
+  Li_Ctype(2),      // Default: CC1 Refrence
+  Li_Atype(3),         // Default: CC2 Anode
+  phi_el_BC_Cat(0.0),  // Default: 0V Initially for electrolyte
+  phi_el_BC_An(0.01),     // Default: 10mV Always on Anode for electrolyte
   phi_ed_BC_anode(0.0),   // Electronic potential at anode = 0V
   phi_el(NULL),
   phi_el_old(NULL),
@@ -244,13 +244,13 @@ FixBatteryEIS::FixBatteryEIS(LAMMPS *lmp, int narg, char **arg) :
       iarg += 2;
     } else if (strcmp(arg[iarg],"BC_types") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal fix battery/eis command");
-      BC_bottom_type = force->inumeric(FLERR,arg[iarg+1]);
-      BC_top_type = force->inumeric(FLERR,arg[iarg+2]);
+      Li_Ctype = force->inumeric(FLERR,arg[iarg+1]);
+      Li_Atype = force->inumeric(FLERR,arg[iarg+2]);
       iarg += 3;
     } else if (strcmp(arg[iarg],"BC_potentials") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal fix battery/eis command");
-      phi_el_BC_bottom = force->numeric(FLERR,arg[iarg+1]);
-      phi_el_BC_top = force->numeric(FLERR,arg[iarg+2]);
+      phi_el_BC_Cat = force->numeric(FLERR,arg[iarg+1]);
+      phi_el_BC_An = force->numeric(FLERR,arg[iarg+2]);
       iarg += 3;
     } else if (strcmp(arg[iarg],"conductivity") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix battery/eis command");
@@ -313,7 +313,7 @@ void FixBatteryEIS::init()
   if (SE_type < 1 || SE_type > atom->ntypes)
     error->all(FLERR,"Invalid particle types for battery/eis");
     
-  if (BC_bottom_type < 1 || BC_bottom_type > atom->ntypes || BC_top_type < 1 || BC_top_type > atom->ntypes)
+  if (Li_Ctype < 1 || Li_Ctype > atom->ntypes || Li_Atype < 1 || Li_Atype > atom->ntypes)
     error->all(FLERR,"Invalid boundary condition types for battery/eis");
 
   // Request neighbor list
@@ -364,14 +364,14 @@ void FixBatteryEIS::setup(int vflag)
           phi_el_old[i] = 0.0;
           phi_ed[i] = 0.0;
           phi_ed_old[i] = 0.0;
-        } else if (type[i] == BC_bottom_type) {
-          phi_el[i] = phi_el_BC_bottom;
-          phi_el_old[i] = phi_el_BC_bottom;
+        } else if (type[i] == Li_Ctype) {
+          phi_el[i] = phi_el_BC_Cat;
+          phi_el_old[i] = phi_el_BC_Cat;
           phi_ed[i] = 0.0;  
           phi_ed_old[i] = 0.0;
-        } else if (type[i] == BC_top_type) {
-          phi_el[i] = 0.0; // phi_el_BC_top
-          phi_el_old[i] = 0.0; // phi_el_BC_top
+        } else if (type[i] == Li_Atype) {
+          phi_el[i] = 0.0; // phi_el_BC_An
+          phi_el_old[i] = 0.0; // phi_el_BC_An
           phi_ed[i] = phi_ed_BC_anode;
           phi_ed_old[i] = phi_ed_BC_anode;
         }
@@ -448,8 +448,8 @@ void FixBatteryEIS::solve_eis_iteration()
   int period = static_cast<int>(ndt) / 3600; // Assuming 3600 is 1 hour
   double sign = (period % 2 == 0) ? 1.0 : -1.0;
   int num_positive_steps = period / 2;
-  double increase_step = phi_el_BC_top / 4.0;
-  double current_magnitude = phi_el_BC_top + (num_positive_steps * increase_step);
+  double increase_step = phi_el_BC_An / 4.0;
+  double current_magnitude = phi_el_BC_An + (num_positive_steps * increase_step);
   double i_app = sign * current_magnitude; // Applied current density in A/m2
 
   inum = list->inum;
@@ -499,11 +499,11 @@ void FixBatteryEIS::solve_eis_iteration()
         
         if (contact_area > 0.0) {
           // Count contact area at top boundary (anode to SE)
-          if (type[i] == BC_top_type && type[j] == SE_type) {
+          if (type[i] == Li_Atype && type[j] == SE_type) {
             local_area_top += contact_area;
           }
           // Count contact area at bottom boundary (SE to cathode)
-          if (type[i] == BC_bottom_type && type[j] == SE_type) {
+          if (type[i] == Li_Ctype && type[j] == SE_type) {
             local_area_bottom += contact_area;
           }
         }
@@ -556,16 +556,16 @@ void FixBatteryEIS::solve_eis_iteration()
         
         if (contact_area > 0.0) {
           // Electrolyte potential update
-          if (type[i] == SE_type || type[i] == BC_top_type || type[i] == BC_bottom_type) {
+          if (type[i] == SE_type || type[i] == Li_Atype || type[i] == Li_Ctype) {
             double conductance = sigma_el * contact_area / r_SI;
             
-            if (type[i] == BC_top_type && type[j] == SE_type) {
+            if (type[i] == Li_Atype && type[j] == SE_type) {
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
               cur_sum += i_top * contact_area;  // Use balanced current
               current_Li_SE[i] += i_top * contact_area;
             
-            } else if (type[i] == BC_top_type && type[j] == BC_top_type) {
+            } else if (type[i] == Li_Atype && type[j] == Li_Atype) {
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
 
@@ -573,21 +573,21 @@ void FixBatteryEIS::solve_eis_iteration()
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
             
-            } else if (type[i] == SE_type && type[j] == BC_top_type) {
+            } else if (type[i] == SE_type && type[j] == Li_Atype) {
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
 
-            } else if (type[i] == SE_type && type[j] == BC_bottom_type) {
+            } else if (type[i] == SE_type && type[j] == Li_Ctype) {
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
             
-            } else if (type[i] == BC_bottom_type && type[j] == SE_type) {
+            } else if (type[i] == Li_Ctype && type[j] == SE_type) {
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
               cur_sum += -i_bottom * contact_area;  // Use balanced current (outflow)
               current_Li_SE[i] += -i_bottom * contact_area;
 
-            } else if (type[i] == BC_bottom_type && type[j] == BC_bottom_type) {
+            } else if (type[i] == Li_Ctype && type[j] == Li_Ctype) {
               phi_el_sum += conductance * phi_el[j];
               coeff_el_sum += conductance;
             }
@@ -597,7 +597,7 @@ void FixBatteryEIS::solve_eis_iteration()
     }
     
     // Update electrolyte potential
-    if ((type[i] == SE_type || type[i] == BC_top_type || type[i] == BC_bottom_type)) {
+    if ((type[i] == SE_type || type[i] == Li_Atype || type[i] == Li_Ctype)) {
       if (coeff_el_sum > SMALL) {
         double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum;
 
@@ -628,22 +628,22 @@ void FixBatteryEIS::apply_boundary_conditions()
   // t = t * 1.0e-6; // Convert to seconds
 
   // Calculate sinusoidal boundary condition: 0.005*sin(t*5e10) + 0.005
-  // double phi_el_BC_top_sinusoidal = 0.005 * sin(t * 5.0e10) + 0.005;
-  // double phi_el_BC_top_sinusoidal = 0.01; // Keeping constant for debugging
+  // double phi_el_BC_An_sinusoidal = 0.005 * sin(t * 5.0e10) + 0.005;
+  // double phi_el_BC_An_sinusoidal = 0.01; // Keeping constant for debugging
 
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
       // Top boundary condition particles (Anode) - fixed potentials
-      if (type[i] == BC_top_type) {
-        // phi_el[i] = phi_el_BC_top_sinusoidal;      // Electrolyte potential not fixed at anode
-        // phi_el_old[i] = phi_el_BC_top_sinusoidal;
+      if (type[i] == Li_Atype) {
+        // phi_el[i] = phi_el_BC_An_sinusoidal;      // Electrolyte potential not fixed at anode
+        // phi_el_old[i] = phi_el_BC_An_sinusoidal;
         // phi_ed[i] = phi_ed_BC_anode;    // Fixed electronic potential (0V) Ignoring electric for now
         // phi_ed_old[i] = phi_ed_BC_anode;
       }
       // Bottom boundary condition particles (CC1) - fixed potentials
-      else if (type[i] == BC_bottom_type) {
-        // phi_el[i] = phi_el_BC_bottom;  // Fixed electrolyte potential (0V)
-        // phi_el_old[i] = phi_el_BC_bottom;
+      else if (type[i] == Li_Ctype) {
+        // phi_el[i] = phi_el_BC_Cat;  // Fixed electrolyte potential (0V)
+        // phi_el_old[i] = phi_el_BC_Cat;
         // phi_ed[i] = 0.0;               // Electronic potential not fixed at CC1
         // phi_ed_old[i] = 0.0;
       }
@@ -662,7 +662,7 @@ void FixBatteryEIS::calculate_hydrostatic_stress()
   int nlocal = atom->nlocal;
   
   for (int i = 0; i < nlocal; i++) {
-    if (mask[i] & groupbit && type[i] == BC_bottom_type) {
+    if (mask[i] & groupbit && type[i] == Li_Ctype) {
       // Calculate magnitude of force
       double force_conversion = 1.0e-9;  // LAMMPS force micro nN to N SI
       double fmag = sqrt(f[i][0]*f[i][0] + f[i][1]*f[i][1] + f[i][2]*f[i][2]) * force_conversion;  // N
@@ -777,7 +777,7 @@ double FixBatteryEIS::check_convergence()
       }
       
       // Check electronic potential convergence for Li, SE, and CC particles
-      // if (type[i] == Li_type || type[i] == SE_type || type[i] == BC_bottom_type) {
+      // if (type[i] == Li_type || type[i] == SE_type || type[i] == Li_Ctype) {
       //   double diff_ed = fabs(phi_ed[i] - phi_ed_old[i]);
       //   if (diff_ed > local_error) local_error = diff_ed;
       // }

@@ -4,6 +4,8 @@
 # CCC particles (type 2) - Lithium Layer 1 (Bottom)
 # ACC particles (type 3) - Lithium Layer 2 (top)
 # Wall particles (type 4) - Walls
+# Run with fix_battery_eis_CC_temp active
+
 
 # --- 1. INITIALIZATION ---
 units           micro  # Using micro units to match the compaction script
@@ -138,14 +140,14 @@ variable        prs1    equal  -(c_frc1)*2.5e-6
 fix             li_content li property/atom/lithium_content initial 1.0 target 1.0 max 1.0
 
 # SOR solver for electric potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
-fix             battery_eis_sym all battery/eis omega 1.0 tolerance 1e-1 max_iter 1000 &
+fix             battery_eis_sym all battery/eis omega 1.0 tolerance 1e-1 max_iter 1 &
                 BC_types 2 3 BC_potentials 0.00 10.0 conductivity 0.05 SE_type 1
 
 # Lithium diffusion - only for AM particles
 fix             li_diffusion li lithium_diffusion Li_type 3 2 c_li_max 77101.002
 
 # Radius expansion for Si particles (optional)
-fix             radius_expand li radius_expansion Li_type 3 2 update_every 1 max_updates 100000
+fix             radius_expand li radius_expansion Li_type 3 2 update_every 1 max_updates 10000000
 
 # --- 10. COMPUTE SETUP FOR MONITORING ---
 # Electric potential by material type - NOW ELECTROLYTE POTENTIAL
@@ -159,7 +161,7 @@ compute         phi_ed_ccc_avg ccc reduce ave f_electronicPotential
 compute         phi_ed_acc_avg acc reduce ave f_electronicPotential
 
 # Current flow at AM-SE interfaces
-compute         current_avg se reduce ave f_currentSELi
+compute         current_avg se reduce ave f_currentLiSE
 
 variable       ts_rayleigh equal f_ts_check[1]
 variable       ts_hertz    equal f_ts_check[2]
@@ -169,11 +171,11 @@ variable       ts_skin     equal f_ts_check[3]
 # Thermo output
 thermo_style    custom step atoms ke c_phi_el_se_avg c_phi_ed_se_avg &
                 c_phi_ed_ccc_avg c_phi_ed_acc_avg c_current_avg v_ts_rayleigh v_ts_hertz v_ts_skin v_prs1
-thermo          1
+thermo          72
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 1 1_CCD_post_bat_sym_200Mpa_exp_pack_dep/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
-                f_electrolytePotential f_electronicPotential f_currentSELi f_hydrostaticStress
+dump            dmp_battery all custom 72 1_CCD_post_bat_sym_200Mpa_exp_pack_dep_long/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+                f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress
 
-run 240
+run 360000

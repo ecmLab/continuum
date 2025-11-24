@@ -351,7 +351,7 @@ void FixLithiumDiffusion::update_lithium_content()
   for (ii = 0; ii < inum; ii++) { // 1
     i = ilist[ii];
     
-    if (type[i] != Li_Atype && type[i] != Li_Ctype) continue; // So if SE type skip
+    if (type[i] != Li_Atype && type[i] != Li_Ctype) continue; // If atom i is NOT Li_Atype AND it is NOT Li_Ctype, then skip it.
     
     xtmp = x[i][0];
     ytmp = x[i][1];
