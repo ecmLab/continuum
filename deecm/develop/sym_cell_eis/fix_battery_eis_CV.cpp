@@ -399,32 +399,25 @@ void FixBatteryEIS::pre_force(int vflag)
 {
   updatePtrs();
   
+  // Set the virial flag to ensure it's calculated this timestep
+  update->vflag_atom = update->ntimestep;
+
   // Calculate hydrostatic stress for Li particles
-  // calculate_hydrostatic_stress();
+  calculate_hydrostatic_stress();
 }
 
 /* ---------------------------------------------------------------------- */
 
 void FixBatteryEIS::post_force(int vflag)
-{
-  // Calculate hydrostatic stress for Li particles
-  calculate_hydrostatic_stress();
-  
-  
+{  
   // Phase 1: Solve with Li-SE interface currents
   current_iteration = 0;
   convergence_error = 1.0;
   
-  while (current_iteration < max_iterations && convergence_error > tolerance) {
+  while (current_iteration < max_iterations) {
     solve_eis_iteration();
-    convergence_error = check_convergence();
+    // convergence_error = check_convergence();
     current_iteration++;
-  }
-  
-  if (comm->me == 0) {
-    if (current_iteration >= max_iterations) {
-      error->warning(FLERR,"Battery EIS Phase 1 did not converge");
-    }
   }
 }
 
@@ -654,7 +647,7 @@ void FixBatteryEIS::calculate_hydrostatic_stress()
   int nlocal = atom->nlocal;
   
   // Conversion from 'micro' Energy units to SI Joules
-  // derived in the previous step: 1 pg*um^2/us^2 = 1e-15 J
+  // derived in the previous step: 1 pg*um^2/us^2 = 1e-15 kg*m^2/s^2
   double stress_conversion = 1.0e-15; 
 
   for (int i = 0; i < nlocal; i++) {
@@ -662,19 +655,20 @@ void FixBatteryEIS::calculate_hydrostatic_stress()
       
       // Calculate Volume in SI (m^3)
       double radius_SI = radius[i] * 1.0e-6;  // um -> m
-      double volume_SI = (4.0 / 3.0) * M_PI * radius_SI * radius_SI * radius_SI;
+      double volume_SI = (4.0 / 3.0) * M_PI * radius_SI * radius_SI * radius_SI; // [m^3]
 
       // Calculate Trace (Virial Energy)
-      // sum of diagonals: sigma_xx + sigma_yy + sigma_zz
+      // sum of diagonals: sigma_xx + sigma_yy + sigma_zz (Pressure * Volume) [pg / (um * us^2)] * (um^3) = pg*um^2/us^2
       double trace_virial_micro = stress[i][0] + stress[i][1] + stress[i][2];
       
       // Convert to SI Joules
       double trace_virial_SI = trace_virial_micro * stress_conversion;
 
       // Hydrostatic stress = Trace / (3 * Volume)
-      // Result is in Pascals (Pa)
+      // Result is in Pascals (Pa) (N / m^2)
       if (volume_SI > 0.0) {
         hydrostatic_stress[i] = trace_virial_SI / (3.0 * volume_SI);
+        // hydrostatic_stress[i] = 0.0; // Setting to zero
       } else {
         hydrostatic_stress[i] = 0.0;
       }

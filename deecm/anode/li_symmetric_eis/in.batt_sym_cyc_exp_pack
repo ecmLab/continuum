@@ -133,6 +133,8 @@ fix 2 acc move linear 0 0 0
 compute         frc1    ccc    reduce sum fz
 variable        prs1    equal  -(c_frc1)*2.5e-6
 
+# Hydrostatic Stress Initializing
+compute      st li stress/atom
 
 # --- 9. BATTERY PHYSICS MODELS ---
 
@@ -141,7 +143,7 @@ fix             li_content li property/atom/lithium_content initial 1.0 target 1
 
 # SOR solver for electric potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
 fix             battery_eis_sym all battery/eis omega 1.0 tolerance 1e-1 max_iter 1 &
-                BC_types 2 3 BC_potentials 0.00 10.0 conductivity 0.05 SE_type 1
+                BC_types 2 3 BC_potentials 0.00 0.05 conductivity 0.05 SE_type 1
 
 # Lithium diffusion - only for AM particles
 fix             li_diffusion li lithium_diffusion Li_type 3 2 c_li_max 77101.002
@@ -171,11 +173,12 @@ variable       ts_skin     equal f_ts_check[3]
 # Thermo output
 thermo_style    custom step atoms ke c_phi_el_se_avg c_phi_ed_se_avg &
                 c_phi_ed_ccc_avg c_phi_ed_acc_avg c_current_avg v_ts_rayleigh v_ts_hertz v_ts_skin v_prs1
-thermo          72
+thermo          20
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 72 1_CCD_post_bat_sym_200Mpa_exp_pack_dep_long/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_battery all custom 20 1_CV_post_bat_sym_200Mpa_exp_pack_1h/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress
 
-run 360000
+# 4. Run EC for 1 timestep, equivelent to 1s real seconds
+run 3600
