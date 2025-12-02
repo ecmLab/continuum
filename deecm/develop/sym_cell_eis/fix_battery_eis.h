@@ -92,6 +92,7 @@ class FixBatteryEIS : public Fix {
   double phi_el_BC_Cat;   // Electrolyte potential at bottom boundary
   double phi_el_BC_An;      // Electrolyte potential at top boundary
   double phi_ed_BC_anode;    // Electronic potential at anode (0V)
+  double cur_app;          // Applied current density (A/m2)
   
   // Property pointers - Electrolyte
   double *phi_el;            // Electrolyte potential
