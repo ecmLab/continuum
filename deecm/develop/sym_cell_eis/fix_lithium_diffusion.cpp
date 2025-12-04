@@ -59,8 +59,8 @@ using namespace FixConst;
 FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg),
   F(96485.0),                // C/mol
-  c_li_max(77101.002),         // mol/m³
-  initial_lithium_content(1.0),  // Default value
+  c_li_max(77101.002),         // mol/m³ (Based on molar volume of Li = 0.00001297 m³/mol)
+  initial_lithium_content(0.0),  // Default value
   target_lithium_content(1.0),    // Default value
   max_lithium_content(1.0),       // Default value
   lithium_content(NULL),
@@ -317,7 +317,7 @@ void FixLithiumDiffusion::calculate_diffusion_coefficient()
       // double x_ratio = x_li / max_lithium_content; // Chi ratio using max_lithium_content
       
       // diffusion_coefficient[i] = D_min + term1 + term2;
-      diffusion_coefficient[i] = 1.6e-14; // Diffusion Coefficient m²/s (based on DOI: https://pubs.acs.org/doi/10.1021/acsenergylett.2c01793)
+      diffusion_coefficient[i] = 1.6e-14; // Li-metal Diffusion Coefficient m²/s (based on DOI: https://pubs.acs.org/doi/10.1021/acsenergylett.2c01793)
     }
   }
 }
@@ -400,13 +400,13 @@ void FixLithiumDiffusion::update_lithium_content()
       // Update Notes: The scalling factor needs to be toned down initially to avoid large jumps in lithium content
       // When Lithium content is at least 0.7 then you can use the max scaling factor of 2e16
       // The scaling factor is based on a timestep of 5e-6 us in main, so it simulates 0.1s of EC in 1 run
-      double s_factor = 2.0e11; // 1.0s / 5e-12s 
+      double s_factor = 2.0e10; // 0.1s / 5e-12s
       lithium_content[i] += (lithium_flux[i] * dt * s_factor) / li_mols[i]; // Li Molar Ratio
       li_mols[i] += (lithium_flux[i] * dt * s_factor); // Li Mols in Li Metal
  
       // Ensure lithium content stays within bounds using values from lithium_content manager
-      if (lithium_content[i] < initial_lithium_content) lithium_content[i] = initial_lithium_content;
-      if (lithium_content[i] > target_lithium_content) lithium_content[i] = target_lithium_content;
+      // if (lithium_content[i] < initial_lithium_content) lithium_content[i] = initial_lithium_content;
+      // if (lithium_content[i] > target_lithium_content) lithium_content[i] = target_lithium_content;
       
       // Update lithium concentration based on new lithium content
       lithium_concentration[i] = lithium_content[i] * c_li_max / max_lithium_content;

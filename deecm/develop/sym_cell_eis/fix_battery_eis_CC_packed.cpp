@@ -532,11 +532,26 @@ void FixBatteryEIS::calculate_interface_currents()
   
   // Calculate cycling direction based on timestep
   double ndt = update->ntimestep;
-  int period = static_cast<int>(ndt) / 3600;
+  int period = static_cast<int>(ndt) / 36000; // Assuming 36000 timesteps for 60 mins (60 min charge/discharge)
   double sign = (period % 2 == 0) ? 1.0 : -1.0;
+
+  // CCD Test Protocol: Increase current magnitude every two periods
+  int num_positive_steps = period / 2;
+  double increase_step = cur_app / 4.0;
+  double current_magnitude = cur_app + (num_positive_steps * increase_step);
+  double i_density = sign * current_magnitude; // Applied current density in A/m2 // sign * current_magnitude
   
+  // // Calculate applied current density
+  // int period = static_cast<int>(ndt) / 3600; // Assuming 3600 is 1 hour
+  // double sign = (period % 2 == 0) ? 1.0 : -1.0;
+  // int num_positive_steps = period / 2;
+  // double increase_step = cur_app / 4.0;
+  // double current_magnitude = cur_app + (num_positive_steps * increase_step);
+  // double i_app = current_magnitude; // Applied current density in A/m2 // sign * current_magnitude
+
+
   // Applied current density at anode (controlled)
-  double i_density = cur_app;  // A/m² sign * cur_app
+  // double i_density = cur_app;  // A/m² sign * cur_app
 
   total_current = i_density * 4e-10; // A Ideal current assuming area is 20 um x 20 um
   
@@ -558,7 +573,7 @@ void FixBatteryEIS::calculate_interface_currents()
   }
   
   // Debug output (optional - can be removed in production)
-  if (update->ntimestep % 100 == 0) {
+  if (update->ntimestep % 720 == 0) {
     if (comm->me == 0) {
       fprintf(screen, "Battery EIS - Step %ld:\n", update->ntimestep);
       fprintf(screen, "  Anode interface:   A = %.6e m², i = %.4f A/m²\n", 
@@ -606,6 +621,9 @@ void FixBatteryEIS::solve_eis_iteration()
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
     
+    // Skip CC_Ctype particles - these are the reference electrode (ground)
+    // if (type[i] == CC_Ctype) continue;
+
     xtmp = x[i][0];
     ytmp = x[i][1];
     ztmp = x[i][2];
@@ -687,30 +705,29 @@ void FixBatteryEIS::solve_eis_iteration()
             current_Li_SE[i] += local_current;
           }
           // SE particle at anode interface (receives current from Li_Atype)
-          else if (type[i] == SE_type && type[j] == Li_Atype) {
-            double local_current = i_density_anode * contact_area;
-            cur_source -= local_current;  // Current flows into SE
-            current_Li_SE[i] -= local_current;
-          }
+          // else if (type[i] == SE_type && type[j] == Li_Atype) {
+          //   double local_current = -1 * i_density_anode * contact_area;
+          //   cur_source += local_current;  // Current flows into SE
+          //   current_Li_SE[i] += local_current;
+          // }
           
           // Cathode interface: Li_Ctype particle contacting SE_type
           else if (type[i] == Li_Ctype && type[j] == SE_type) {
             // Current extraction at cathode (negative = plating Li)
-            double local_current = i_density_cathode * contact_area;
-            cur_source -= local_current;
-            current_Li_SE[i] -= local_current;
-          }
-          // SE particle at cathode interface (releases current to Li_Ctype)
-          else if (type[i] == SE_type && type[j] == Li_Ctype) {
-            double local_current = i_density_cathode * contact_area;
-            cur_source += local_current;  // Current flows out of SE
+            double local_current = -1 * i_density_cathode * contact_area;
+            cur_source += local_current;
             current_Li_SE[i] += local_current;
           }
+          // SE particle at cathode interface (releases current to Li_Ctype)
+          // else if (type[i] == SE_type && type[j] == Li_Ctype) {
+          //   double local_current = i_density_cathode * contact_area;
+          //   cur_source += local_current;  // Current flows out of SE
+          //   current_Li_SE[i] += local_current;
+          // }
         }
       }
     }
     
-    // Update potential using SOR
     if (coeff_sum > SMALL) {
       double phi_new = (phi_sum + cur_source) / coeff_sum;
       
@@ -782,7 +799,7 @@ void FixBatteryEIS::calculate_hydrostatic_stress()
       double trace_virial_SI = trace_virial_micro * stress_conversion;
 
       if (volume_SI > 0.0) {
-        hydrostatic_stress[i] = trace_virial_SI / (3.0 * volume_SI);
+        hydrostatic_stress[i] = trace_virial_SI / (3.0 * volume_SI); // trace_virial_SI / (3.0 * volume_SI)
       } else {
         hydrostatic_stress[i] = 0.0;
       }
