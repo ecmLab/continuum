@@ -99,8 +99,8 @@ fix xwalls1 ptc wall/gran model hertz tangential history primitive type 6 xplane
 fix xwalls2 ptc wall/gran model hertz tangential history primitive type 6 xplane 10
 fix ywalls1 ptc wall/gran model hertz tangential history primitive type 6 yplane -10
 fix ywalls2 ptc wall/gran model hertz tangential history primitive type 6 yplane 10
-fix zwalls1 ptc wall/gran model hertz tangential history primitive type 6 zplane 0
-fix zwalls2 ptc wall/gran model hertz tangential history primitive type 6 zplane 89
+fix zwalls1 ptc wall/gran model hertz tangential history primitive type 6 zplane 50.252
+fix zwalls2 ptc wall/gran model hertz tangential history primitive type 6 zplane 87.75
 
 # --- 7. INTEGRATION ---
 fix             integr all nve/sphere
@@ -192,7 +192,7 @@ thermo          720
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 720 1_CCDpacked_post_bat_sym_200Mpa_exp_pack_1h_1Am2_hydro_fix_refCCfixed/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_battery all custom 720 1_CCDpacked_post_bat_sym_200Mpa_exp_pack_1h_1Am2_hydro_refCCfixed_tightCC_V2/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress v_prs1_atom
 
 # 4. Run EC for 1 timestep, equivelent to 0.1s real seconds
