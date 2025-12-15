@@ -264,7 +264,7 @@ void FixRadiusExpansion::update_particle_radius()
       // V = (4/3) * pi * r^3, so r = cbrt(3V/(4*pi))
       temp_rad = cbrt((3.0 * particle_volume[i]) / (4.0 * M_PI)); // Units in m
 
-      if ((temp_rad * 1.0e6 > 0.01) && (temp_rad * 1.0e6 < 0.5)) { // Cap min radius to 10 nm to avoid numerical issues
+      if ((temp_rad * 1.0e6 > 0.01) && (temp_rad * 1.0e6 < 1.0)) { // Cap min radius to 10 nm to avoid numerical issues
       // radius[i] = cbrt((3.0 * particle_volume[i]) / (4.0 * M_PI)); // Units in m
       radius[i] = temp_rad * 1.0e6; // Convert to μm
       }

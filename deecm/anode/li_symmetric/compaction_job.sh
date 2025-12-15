@@ -3,7 +3,7 @@
 #SBATCH --partition=RM
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=128
-#SBATCH --time=24:00:00
+#SBATCH --time=48:00:00
 #SBATCH --account=mat250014p
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=vazquezm

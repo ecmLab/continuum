@@ -20,7 +20,7 @@ timestep        5.e-6
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
 # read_restart    data/comp200_sym.restart
-read_data     data/comp200_sym.data
+read_data     data/comp200_sym_overlap.data
 
 # --- 3. RE-ESTABLISH GROUPS ---
 # Define groups based on particle types (Type 4 is the wall)

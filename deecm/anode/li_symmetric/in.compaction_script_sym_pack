@@ -34,7 +34,7 @@ variable        Yww           equal     50.e6    # Wall [kPa]
 variable        particle_poissons_ratio equal 0.4
 
 #---------------------Read Initial Configuration----------------------------------------
-read_data        data/mdl_sym_pack_ring_2.data
+read_data        data/mdl_sym_pack_3.data
 
 # Define groups based on particle types (Type 6 is the wall)
 group  acc   type  5   # Current Collector (top)
@@ -121,7 +121,7 @@ thermo          1000
 thermo_modify   lost ignore norm no
 
 # Optional: Dump for visualization
-dump    dmp_final all custom 50000 post_c200_sym_pack_ring_2/compact_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius
+dump    dmp_final all custom 50000 post_c200_sym_pack_3/compact_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius
 
 #------------------------Compaction Process------------------------------------------------------
 fix 1 acc move linear 0 0 0 # Fixing top
@@ -151,5 +151,5 @@ if "${prs1} < ${tarp1}" then "jump SELF loop2"
 run 100000
 
 # Save compacted state
-write_restart   data/comp200_sym_pack_ring_2.restart
-write_data      data/comp200_sym_pack_ring_2.data
+write_restart   data/comp200_sym_pack_3.restart
+write_data      data/comp200_sym_pack_3.data

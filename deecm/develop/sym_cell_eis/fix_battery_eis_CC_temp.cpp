@@ -178,6 +178,38 @@ void FixBatteryEIS::post_create()
     fixarg[8]="0.0";  // 0 = not initialized
     fix_init_flag = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
   }
+
+  // Register property/atom for per-particle contact area at anode interface
+  fix_contact_area_anode = static_cast<FixPropertyAtom*>(modify->find_fix_property("contactAreaAnode","property/atom","scalar",0,0,style,false));
+  if(!fix_contact_area_anode) {
+    const char* fixarg[10];
+    fixarg[0]="contactAreaAnode";
+    fixarg[1]="all";
+    fixarg[2]="property/atom";
+    fixarg[3]="contactAreaAnode";
+    fixarg[4]="scalar";
+    fixarg[5]="no";
+    fixarg[6]="yes";
+    fixarg[7]="no";
+    fixarg[8]="0.0";
+    fix_contact_area_anode = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
+  }
+  
+  // Register property/atom for per-particle contact area at cathode interface
+  fix_contact_area_cathode = static_cast<FixPropertyAtom*>(modify->find_fix_property("contactAreaCathode","property/atom","scalar",0,0,style,false));
+  if(!fix_contact_area_cathode) {
+    const char* fixarg[10];
+    fixarg[0]="contactAreaCathode";
+    fixarg[1]="all";
+    fixarg[2]="property/atom";
+    fixarg[3]="contactAreaCathode";
+    fixarg[4]="scalar";
+    fixarg[5]="no";
+    fixarg[6]="yes";
+    fixarg[7]="no";
+    fixarg[8]="0.0";
+    fix_contact_area_cathode = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -193,16 +225,23 @@ FixBatteryEIS::FixBatteryEIS(LAMMPS *lmp, int narg, char **arg) :
   T(303.0), // K
   F(96485.0), // C/mol
   sigma_el(0.05), // Electrolyte conductivity (S/m) - for SE
+  sigma_Li(1.0e7), // Lithium ion conductivity (S/m)
   sigma_ed_SE(200.0), // Electronic conductivity for CBD/SE (S/m)
   sigma_ed_CC(300.0), // Electronic conductivity for CC (S/m)
   alpha_a(0.5), //unitless
   alpha_c(0.5),
+  SE_type(1),
   Li_Ctype(2),      // Default: CC1 Refrence
   Li_Atype(3),         // Default: CC2 Anode
   phi_el_BC_Cat(0.0),  // Default: 0V Initially for electrolyte
   phi_el_BC_An(0.01),     // Default: 10mV Always on Anode for electrolyte
   phi_ed_BC_anode(0.0),   // Electronic potential at anode = 0V
   cur_app(1.0), // Applied current density (A/m2)
+  total_current(0.0),
+  global_area_anode(0.0),
+  global_area_cathode(0.0),
+  i_density_anode(0.0),
+  i_density_cathode(0.0),
   phi_el(NULL),
   phi_el_old(NULL),
   phi_ed(NULL),
@@ -216,9 +255,10 @@ FixBatteryEIS::FixBatteryEIS(LAMMPS *lmp, int narg, char **arg) :
   fix_current_Li_SE(NULL),
   fix_hydrostatic_stress(NULL),
   fix_init_flag(NULL),
-  groupbit_SE(0),
-  SE_type(1),
-  list(NULL)
+  fix_contact_area_anode(NULL),
+  fix_contact_area_cathode(NULL),
+  list(NULL),
+  first_run(true)
 {
   if (narg < 3)
     error->all(FLERR,"Illegal fix battery/eis command");
@@ -256,9 +296,10 @@ FixBatteryEIS::FixBatteryEIS(LAMMPS *lmp, int narg, char **arg) :
       cur_app = force->numeric(FLERR,arg[iarg+3]);
       iarg += 4;
     } else if (strcmp(arg[iarg],"conductivity") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix battery/eis command");
-      sigma_el = force->numeric(FLERR,arg[iarg+1]);      // Electrolyte
-      iarg += 2;
+      if (iarg+3 > narg) error->all(FLERR,"Illegal fix battery/eis command");
+      sigma_el = force->numeric(FLERR,arg[iarg+1]);
+      sigma_Li = force->numeric(FLERR,arg[iarg+2]);
+      iarg += 3;
     } else if (strcmp(arg[iarg],"SE_type") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix battery/eis command");
       SE_type = force->inumeric(FLERR,arg[iarg+1]);
@@ -271,8 +312,7 @@ FixBatteryEIS::FixBatteryEIS(LAMMPS *lmp, int narg, char **arg) :
   extscalar = 0;
 
   vector_flag = 1;
-  size_vector = 2;
-  global_freq = 1;
+  size_vector = 6;
   extvector = 0;
 }
 
@@ -308,8 +348,12 @@ void FixBatteryEIS::init()
   fix_current_Li_SE = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentLiSE","property/atom","scalar",0,0,style));
   fix_hydrostatic_stress = static_cast<FixPropertyAtom*>(modify->find_fix_property("hydrostaticStress","property/atom","scalar",0,0,style));
   fix_init_flag = static_cast<FixPropertyAtom*>(modify->find_fix_property("batteryInitFlag","property/atom","scalar",0,0,style));
+  fix_contact_area_anode = static_cast<FixPropertyAtom*>(modify->find_fix_property("contactAreaAnode","property/atom","scalar",0,0,style));
+  fix_contact_area_cathode = static_cast<FixPropertyAtom*>(modify->find_fix_property("contactAreaCathode","property/atom","scalar",0,0,style));
 
-  if(!fix_phi_el || !fix_phi_el_old || !fix_phi_ed || !fix_phi_ed_old || !fix_current_Li_SE || !fix_hydrostatic_stress || !fix_init_flag)
+  if(!fix_phi_el || !fix_phi_el_old || !fix_phi_ed || !fix_phi_ed_old || 
+     !fix_current_Li_SE || !fix_hydrostatic_stress || !fix_init_flag ||
+     !fix_contact_area_anode || !fix_contact_area_cathode)
     error->all(FLERR,"Could not find required property/atom fixes");
 
   // Validate particle types
@@ -381,6 +425,7 @@ void FixBatteryEIS::setup(int vflag)
         init_flag[i] = 1.0;
       }
     }
+    first_run = false;
   } else {
     // If already initialized, just update the old values
     for (int i = 0; i < nlocal; i++) {
@@ -412,6 +457,9 @@ void FixBatteryEIS::pre_force(int vflag)
 
 void FixBatteryEIS::post_force(int vflag)
 {
+  // First, calculate interface contact areas and current distribution
+  calculate_interface_currents();
+
   // Just iterate a fixed number of times per timestep (e.g., 10-50 iterations)
   // to get a good approximation at this timestep
   
@@ -432,7 +480,157 @@ void FixBatteryEIS::updatePtrs()
   phi_ed_old = fix_phi_ed_old->vector_atom;
   current_Li_SE = fix_current_Li_SE->vector_atom;
   hydrostatic_stress = fix_hydrostatic_stress->vector_atom;
+  contact_area_anode = fix_contact_area_anode->vector_atom;
+  contact_area_cathode = fix_contact_area_cathode->vector_atom;
 }
+
+/* ---------------------------------------------------------------------- */
+/* NEW FUNCTION: Calculate interface areas and current distribution
+   
+   Key physics:
+   1. Applied current density (cur_app) is specified at anode/SE interface
+   2. Total current I_total = cur_app * A_anode_SE
+   3. This same total current must flow through cathode/SE interface
+   4. Current density at cathode = I_total / A_cathode_SE
+   
+   This ensures current conservation: what goes in must come out
+------------------------------------------------------------------------- */
+
+void FixBatteryEIS::calculate_interface_currents()
+{
+  int i,j,ii,jj,inum,jnum;
+  int *ilist,*jlist,*numneigh,**firstneigh;
+  double xtmp,ytmp,ztmp,delx,dely,delz,rsq,r;
+  
+  double **x = atom->x;
+  double *radius = atom->radius;
+  int *type = atom->type;
+  int *mask = atom->mask;
+  int nlocal = atom->nlocal;
+
+  inum = list->inum;
+  ilist = list->ilist;
+  numneigh = list->numneigh;
+  firstneigh = list->firstneigh;
+
+  // Reset per-particle contact areas
+  for (i = 0; i < nlocal; i++) {
+    contact_area_anode[i] = 0.0;
+    contact_area_cathode[i] = 0.0;
+  }
+
+  // Local accumulators for total interface areas
+  double local_area_anode_SE = 0.0;   // Li_Atype to SE_type interface
+  double local_area_cathode_SE = 0.0; // Li_Ctype to SE_type interface
+  
+  // First pass: Calculate per-particle and total contact areas at each interface
+  for (ii = 0; ii < inum; ii++) {
+    i = ilist[ii];
+    xtmp = x[i][0];
+    ytmp = x[i][1];
+    ztmp = x[i][2];
+    
+    jlist = firstneigh[i];
+    jnum = numneigh[i];
+    
+    for (jj = 0; jj < jnum; jj++) {
+      j = jlist[jj];
+      j &= NEIGHMASK;
+      
+      delx = xtmp - x[j][0];
+      dely = ytmp - x[j][1];
+      delz = ztmp - x[j][2];
+      rsq = delx*delx + dely*dely + delz*delz;
+      r = sqrt(rsq);
+      
+      if (r < (radius[i] + radius[j])) {
+        double contact_area = calculate_contact_area(i, j);
+        
+        if (contact_area > 0.0) {
+          // Anode interface: Li_Atype <-> SE_type
+          if (type[i] == Li_Atype && type[j] == SE_type) {
+            contact_area_anode[i] += contact_area;
+            local_area_anode_SE += contact_area;
+          }
+          else if (type[i] == SE_type && type[j] == Li_Atype) {
+            contact_area_anode[i] += contact_area;
+            // Don't double count in total - only count from Li side
+          }
+          
+          // Cathode interface: Li_Ctype <-> SE_type
+          if (type[i] == Li_Ctype && type[j] == SE_type) {
+            contact_area_cathode[i] += contact_area;
+            local_area_cathode_SE += contact_area;
+          }
+          else if (type[i] == SE_type && type[j] == Li_Ctype) {
+            contact_area_cathode[i] += contact_area;
+            // Don't double count in total - only count from Li side
+          }
+        }
+      }
+    }
+  }
+  
+  // Global reduction for total contact areas
+  MPI_Allreduce(&local_area_anode_SE, &global_area_anode, 1, MPI_DOUBLE, MPI_SUM, world);
+  MPI_Allreduce(&local_area_cathode_SE, &global_area_cathode, 1, MPI_DOUBLE, MPI_SUM, world);
+  
+  // Calculate cycling direction based on timestep
+  double ndt = update->ntimestep;
+  int period = static_cast<int>(ndt) / 7200; // Assuming 3600 timesteps for 60 mins (60 min charge/discharge)
+  double sign = (period % 2 == 0) ? 1.0 : -1.0;
+
+  // CCD Test Protocol: Increase current magnitude every two periods
+  int num_positive_steps = period / 2;
+  double increase_step = cur_app / 4.0;
+  double current_magnitude = cur_app + (num_positive_steps * increase_step);
+  double i_density = current_magnitude; // Applied current density in A/m2 // sign * current_magnitude
+  
+  // // Calculate applied current density
+  // int period = static_cast<int>(ndt) / 3600; // Assuming 3600 is 1 hour
+  // double sign = (period % 2 == 0) ? 1.0 : -1.0;
+  // int num_positive_steps = period / 2;
+  // double increase_step = cur_app / 4.0;
+  // double current_magnitude = cur_app + (num_positive_steps * increase_step);
+  // double i_app = current_magnitude; // Applied current density in A/m2 // sign * current_magnitude
+
+
+  // Applied current density at anode (controlled)
+  // double i_density = cur_app;  // A/m² sign * cur_app
+
+  total_current = i_density * 4e-10; // A Ideal current assuming area is 20 um x 20 um
+  
+  // Calculate total current from anode interface
+  // i_density_anode = I_total / A_anode
+  if (global_area_anode > SMALL) {
+    i_density_anode = total_current / global_area_anode;  // Amperes
+  } else {
+    i_density_anode = 0.0;
+  }
+  
+  // Calculate current density at cathode interface
+  // i_density_cathode = I_total / A_cathode
+  // This ensures current conservation through the cell
+  if (global_area_cathode > SMALL) {
+    i_density_cathode = total_current / global_area_cathode;  // A/m²
+  } else {
+    i_density_cathode = 0.0;
+  }
+  
+  // Debug output (optional - can be removed in production)
+  if (update->ntimestep % 720 == 0) {
+    if (comm->me == 0) {
+      fprintf(screen, "Battery EIS - Step %ld:\n", update->ntimestep);
+      fprintf(screen, "  Anode interface:   A = %.6e m², i = %.4f A/m²\n", 
+              global_area_anode, i_density_anode);
+      fprintf(screen, "  Cathode interface: A = %.6e m², i = %.4f A/m²\n", 
+              global_area_cathode, i_density_cathode);
+      fprintf(screen, "  Total current:     I = %.6e A\n", total_current);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
 
 /* ---------------------------------------------------------------------- */
 
@@ -441,50 +639,45 @@ void FixBatteryEIS::solve_eis_iteration()
   int i,j,ii,jj,inum,jnum;
   int *ilist,*jlist,*numneigh,**firstneigh;
   double xtmp,ytmp,ztmp,delx,dely,delz,rsq,r,r_SI;
-  double phi_el_sum,coeff_el_sum,cur_sum;
+  double phi_sum,coeff_sum,cur_source;
   
   double **x = atom->x;
   double *radius = atom->radius;
   int *type = atom->type;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
-  double ndt = update->ntimestep;
-
-  // Calculate applied current density
-  int period = static_cast<int>(ndt) / 3600; // Assuming 3600 is 1 hour
-  double sign = (period % 2 == 0) ? 1.0 : -1.0;
-  int num_positive_steps = period / 2;
-  double increase_step = cur_app / 4.0;
-  double current_magnitude = cur_app + (num_positive_steps * increase_step);
-  double i_app = current_magnitude; // Applied current density in A/m2 // sign * current_magnitude
 
   inum = list->inum;
   ilist = list->ilist;
   numneigh = list->numneigh;
   firstneigh = list->firstneigh;
   
-  // Store old values for all particles
+  // Store old values for convergence check
   for (i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
       phi_el_old[i] = phi_el[i];
-      phi_ed_old[i] = phi_ed[i];
     }
   }
 
-  // Reset current_Li_SE for all particles
-  for (int i = 0; i < nlocal; i++) {
+  // Reset current tracking
+  for (i = 0; i < nlocal; i++) {
     current_Li_SE[i] = 0.0;
   }
 
-  // First pass: Calculate total contact areas at boundaries
-  double local_area_top = 0.0;
-  double local_area_bottom = 0.0;
-  
+  // Main SOR iteration loop
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
+    
+    // Skip CC_Ctype particles - these are the reference electrode (ground)
+    // if (type[i] == CC_Ctype) continue;
+
     xtmp = x[i][0];
     ytmp = x[i][1];
     ztmp = x[i][2];
+    
+    phi_sum = 0.0;
+    coeff_sum = 0.0;
+    cur_source = 0.0;
     
     jlist = firstneigh[i];
     jnum = numneigh[i];
@@ -504,114 +697,81 @@ void FixBatteryEIS::solve_eis_iteration()
         double contact_area = calculate_contact_area(i, j);
         
         if (contact_area > 0.0) {
-          // Count contact area at top boundary (anode to SE)
+          double sigma_eff = 0.0;
+          
+          // Determine effective conductivity based on interface type
+          if (type[i] == SE_type && type[j] == SE_type) {
+            sigma_eff = sigma_el;
+          }
+          else if ((type[i] == Li_Atype && type[j] == Li_Atype) ||
+                   (type[i] == Li_Ctype && type[j] == Li_Ctype)) {
+            sigma_eff = sigma_Li;
+          }
+          else if ((type[i] == SE_type && (type[j] == Li_Atype || type[j] == Li_Ctype)) ||
+                   ((type[i] == Li_Atype || type[i] == Li_Ctype) && type[j] == SE_type)) {
+            sigma_eff = 2.0 * sigma_el * sigma_Li / (sigma_el + sigma_Li);
+          }
+          
+          if (sigma_eff > SMALL) {
+            double conductance = sigma_eff * contact_area / r_SI;
+            phi_sum += conductance * phi_el[j];
+            coeff_sum += conductance;
+          }
+          
+          /* CORRECTED CURRENT SOURCE TERMS
+           *
+           * At anode interface (Li_Atype <-> SE_type):
+           *   - Apply controlled current density i_density_anode
+           *   - Current enters the electrolyte from lithium (positive source for Li)
+           *
+           * At cathode interface (Li_Ctype <-> SE_type):
+           *   - Apply calculated current density i_density_cathode
+           *   - This ensures total current conservation
+           *   - Current exits the electrolyte to lithium (negative source for Li)
+           *
+           * The key insight: we don't apply the same current DENSITY at both
+           * interfaces. We apply the same total CURRENT, distributed according
+           * to the local contact area.
+           */
+          
+          // Anode interface: Li_Atype particle contacting SE_type
           if (type[i] == Li_Atype && type[j] == SE_type) {
-            local_area_top += contact_area;
+            // Current injection at anode (positive = stripping Li)
+            double local_current = i_density_anode * contact_area;
+            cur_source += local_current;
+            current_Li_SE[i] += local_current;
           }
-          // Count contact area at bottom boundary (SE to cathode)
-          if (type[i] == Li_Ctype && type[j] == SE_type) {
-            local_area_bottom += contact_area;
+          // SE particle at anode interface (receives current from Li_Atype)
+          // else if (type[i] == SE_type && type[j] == Li_Atype) {
+          //   double local_current = -1 * i_density_anode * contact_area;
+          //   cur_source += local_current;  // Current flows into SE
+          //   current_Li_SE[i] += local_current;
+          // }
+          
+          // Cathode interface: Li_Ctype particle contacting SE_type
+          else if (type[i] == Li_Ctype && type[j] == SE_type) {
+            // Current extraction at cathode (negative = plating Li)
+            double local_current = -1 * i_density_cathode * contact_area;
+            cur_source += local_current;
+            current_Li_SE[i] += local_current;
           }
-        }
-      }
-    }
-  }
-  
-  // Get global contact areas
-  double global_area_top, global_area_bottom;
-  MPI_Allreduce(&local_area_top, &global_area_top, 1, MPI_DOUBLE, MPI_SUM, world);
-  MPI_Allreduce(&local_area_bottom, &global_area_bottom, 1, MPI_DOUBLE, MPI_SUM, world);
-  
-  // Calculate current per unit area to ensure conservation
-  // Total current = i_app * average_area
-  double avg_area = (global_area_top + global_area_bottom) / 2.0;
-  double total_target_current = i_app * avg_area;
-  
-  // Adjust current density to match available contact areas
-  double i_top = (global_area_top > 0.0) ? total_target_current / global_area_top : 0.0;
-  double i_bottom = (global_area_bottom > 0.0) ? total_target_current / global_area_bottom : 0.0;
-
-  // Second pass: Solve for potentials with balanced currents
-  for (ii = 0; ii < inum; ii++) {
-    i = ilist[ii];
-    
-    xtmp = x[i][0];
-    ytmp = x[i][1];
-    ztmp = x[i][2];
-    
-    phi_el_sum = 0.0;
-    coeff_el_sum = 0.0;
-    cur_sum = 0.0;
-    
-    jlist = firstneigh[i];
-    jnum = numneigh[i];
-    
-    for (jj = 0; jj < jnum; jj++) {
-      j = jlist[jj];
-      j &= NEIGHMASK;
-      
-      delx = xtmp - x[j][0];
-      dely = ytmp - x[j][1];
-      delz = ztmp - x[j][2];
-      rsq = delx*delx + dely*dely + delz*delz;
-      r = sqrt(rsq);
-      r_SI = r * 1.0e-6;
-      
-      if (r < (radius[i] + radius[j])) {
-        double contact_area = calculate_contact_area(i, j);
-        
-        if (contact_area > 0.0) {
-          // Electrolyte potential update
-          if (type[i] == SE_type || type[i] == Li_Atype || type[i] == Li_Ctype) {
-            double conductance = sigma_el * contact_area / r_SI;
-            
-            if (type[i] == Li_Atype && type[j] == SE_type) {
-              phi_el_sum += conductance * phi_el[j];
-              coeff_el_sum += conductance;
-              cur_sum += i_top * contact_area;  // Use balanced current
-              current_Li_SE[i] += i_top * contact_area;
-            
-            } else if (type[i] == Li_Atype && type[j] == Li_Atype) {
-              phi_el_sum += conductance * phi_el[j];
-              coeff_el_sum += conductance;
-
-            } else if (type[i] == SE_type && type[j] == SE_type) {
-              phi_el_sum += conductance * phi_el[j];
-              coeff_el_sum += conductance;
-            
-            } else if (type[i] == SE_type && type[j] == Li_Atype) {
-              phi_el_sum += conductance * phi_el[j];
-              coeff_el_sum += conductance;
-
-            } else if (type[i] == SE_type && type[j] == Li_Ctype) {
-              phi_el_sum += conductance * phi_el[j];
-              coeff_el_sum += conductance;
-            
-            } else if (type[i] == Li_Ctype && type[j] == SE_type) {
-              phi_el_sum += conductance * phi_el[j];
-              coeff_el_sum += conductance;
-              cur_sum += -i_bottom * contact_area;  // Use balanced current (outflow)
-              current_Li_SE[i] += -i_bottom * contact_area;
-
-            } else if (type[i] == Li_Ctype && type[j] == Li_Ctype) {
-              phi_el_sum += conductance * phi_el[j];
-              coeff_el_sum += conductance;
-            }
-          }
+          // SE particle at cathode interface (releases current to Li_Ctype)
+          // else if (type[i] == SE_type && type[j] == Li_Ctype) {
+          //   double local_current = i_density_cathode * contact_area;
+          //   cur_source += local_current;  // Current flows out of SE
+          //   current_Li_SE[i] += local_current;
+          // }
         }
       }
     }
     
-    // Update electrolyte potential
-    if ((type[i] == SE_type || type[i] == Li_Atype || type[i] == Li_Ctype)) {
-      if (coeff_el_sum > SMALL) {
-        double phi_el_new = (phi_el_sum + cur_sum) / coeff_el_sum;
-
-        if (!std::isnan(phi_el_new) && !std::isinf(phi_el_new)) {
-          phi_el[i] = phi_el_old[i] + omega * (phi_el_new - phi_el_old[i]);
-        } else {
-          phi_el[i] = phi_el_old[i];
-        }
+    if (coeff_sum > SMALL) {
+      double phi_new = (phi_sum + cur_source) / coeff_sum;
+      
+      if (!std::isnan(phi_new) && !std::isinf(phi_new)) {
+        phi_el[i] = phi_el_old[i] + omega * (phi_new - phi_el_old[i]);
+      } else {
+        phi_el[i] = phi_el_old[i];
       }
     }
   }
@@ -647,12 +807,12 @@ void FixBatteryEIS::apply_boundary_conditions()
         // phi_ed_old[i] = phi_ed_BC_anode;
       }
       // Bottom boundary condition particles (CC1) - fixed potentials
-      else if (type[i] == Li_Ctype) {
-        phi_el[i] = phi_el_BC_Cat;
-        phi_el_old[i] = phi_el_BC_Cat;
-        phi_ed[i] = phi_el_BC_Cat;
-        phi_ed_old[i] = phi_el_BC_Cat;
-      }
+      // else if (type[i] == Li_Ctype) {
+      //   phi_el[i] = phi_el_BC_Cat;
+      //   phi_el_old[i] = phi_el_BC_Cat;
+      //   phi_ed[i] = phi_el_BC_Cat;
+      //   phi_ed_old[i] = phi_el_BC_Cat;
+      // }
     }
   }
 }
@@ -814,7 +974,7 @@ double FixBatteryEIS::check_convergence()
       }
       
       // Check electronic potential convergence for Li, SE, and CC particles
-      // if (type[i] == Li_type || type[i] == SE_type || type[i] == Li_Ctype) {
+      // if (type[i] == Li_Atype || type[i] == SE_type || type[i] == Li_Ctype) {
       //   double diff_ed = fabs(phi_ed[i] - phi_ed_old[i]);
       //   if (diff_ed > local_error) local_error = diff_ed;
       // }
@@ -840,7 +1000,12 @@ double FixBatteryEIS::compute_scalar()
 
 double FixBatteryEIS::compute_vector(int n)
 {
+  // Extended output for monitoring
   if (n == 0) return (double)current_iteration;
   else if (n == 1) return convergence_error;
+  else if (n == 2) return global_area_anode;      // Anode interface area
+  else if (n == 3) return global_area_cathode;    // Cathode interface area
+  else if (n == 4) return i_density_anode;        // Current density at anode
+  else if (n == 5) return i_density_cathode;      // Current density at cathode
   return 0.0;
 }
