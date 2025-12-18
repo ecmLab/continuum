@@ -131,9 +131,9 @@ compute      st li stress/atom
 # Initialize lithium content (Li/Si molar ratio) - only for AM particles
 fix             li_content li property/atom/lithium_content initial 1.0 target 1.0 max 1.0
 
-# SOR solver for electric potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
+# SOR solver for electric potential with type-based CV boundary conditions (anode cathode) condutivity (AM, SE, CC)
 fix             battery_eis_sym all battery/eis omega 1.0 tolerance 1e-1 max_iter 1 &
-                BC_types 2 3 BC_potentials 0.00 0.00 1.0 conductivity 0.05 0.1 SE_type 1
+                BC_types 3 2 BC_potentials -0.01 0.01 conductivity 0.05 SE_type 1
 
 # Lithium diffusion - only for AM particles
 fix             li_diffusion li lithium_diffusion Li_type 3 2 c_li_max 77101.002
@@ -164,12 +164,12 @@ variable       ts_skin     equal f_ts_check[3]
 # Thermo output
 thermo_style    custom step atoms ke c_phi_el_se_avg c_phi_ed_se_avg &
                 c_phi_ed_li1_avg c_phi_ed_li2_avg c_current_avg v_ts_rayleigh v_ts_hertz v_ts_skin v_prs1
-thermo          72
+thermo          36
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 72 20251216_CCD_post_bat_sym_200Mpa_exp_0d1mAcm2_30min/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_battery all custom 36 20251216_CV_post_bat_sym_200Mpa_0d01V_2h_nostress/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress v_prs1_atom
 
 # 4. Run EC for 1 timestep, equivelent to 1s real seconds
-run             18000
+run             7200

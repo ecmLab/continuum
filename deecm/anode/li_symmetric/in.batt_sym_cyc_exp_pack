@@ -21,7 +21,7 @@ timestep        5.e-6
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
-read_data     data/comp200_sym_pack.data
+read_data     data/comp200_sym_pack_2.data
 
 # --- 3. RE-ESTABLISH GROUPS ---
 # Define groups based on particle types (Type 6 is the wall)
@@ -99,8 +99,8 @@ fix xwalls1 ptc wall/gran model hertz tangential history primitive type 6 xplane
 fix xwalls2 ptc wall/gran model hertz tangential history primitive type 6 xplane 10
 fix ywalls1 ptc wall/gran model hertz tangential history primitive type 6 yplane -10
 fix ywalls2 ptc wall/gran model hertz tangential history primitive type 6 yplane 10
-fix zwalls1 ptc wall/gran model hertz tangential history primitive type 6 zplane 50.252
-fix zwalls2 ptc wall/gran model hertz tangential history primitive type 6 zplane 87.75
+fix zwalls1 ptc wall/gran model hertz tangential history primitive type 6 zplane 50.0193
+fix zwalls2 ptc wall/gran model hertz tangential history primitive type 6 zplane 87.375
 
 # --- 7. INTEGRATION ---
 fix             integr all nve/sphere
@@ -129,9 +129,9 @@ variable        n_acc equal count(acc)
 fix 1 ccc move linear 0 0 0
 fix 2 acc move linear 0 0 0
 
-# --- 8.5. PRESSURE COMPUTATION ON CC1 ---
-compute         frc1    ccc    reduce sum fz
-variable        prs1    equal  -(c_frc1)*2.5e-6
+# --- 8.5. PRESSURE COMPUTATION ON CCC ---
+compute         frc1    ccc    reduce sum fz        # Force on ccc layer
+variable        prs1    equal  -(c_frc1)*2.5e-6     # Pressure on ccc layer [MPa]
 
 # Create a per-atom variable that holds the value of prs1
 variable        prs1_atom atom v_prs1
@@ -150,12 +150,16 @@ fix             li_content li property/atom/lithium_content initial 1.0 target 1
 #    conductivity 0.05 0.1 &    # sigma_SE sigma_Li (S/m)
 #    SE_type 1
 
-# SOR solver for electric potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
+# CC: SOR solver for electric potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
 fix             battery_eis_sym all battery/eis omega 1.0 tolerance 1e-1 max_iter 1 &
                 BC_types 2 3 4 5 &        
-                BC_potentials 0.0 1.0 &
+                BC_potentials 0.0 10.0 &
                 conductivity 0.05 0.1 & 
                 SE_type 1
+
+# CV: SOR solver for electric potential with type-based boundary conditions (anode cathode) condutivity (AM, SE, CC)
+#fix             battery_eis_sym all battery/eis omega 1.0 tolerance 1e-1 max_iter 1 &
+#                BC_types 3 2 BC_potentials -0.005 0.005 conductivity 0.05 SE_type 1
 
 # Lithium diffusion - only for AM particles
 fix             li_diffusion li lithium_diffusion Li_type 3 2 c_li_max 77101.002
@@ -188,12 +192,12 @@ thermo_style    custom step atoms ke &
                 c_phi_el_ccc_avg c_phi_el_cli_avg c_phi_el_se_avg &
                 c_phi_el_ali_avg c_phi_el_acc_avg v_cell_voltage c_current_avg_ali c_current_avg_cli &
                 v_ts_rayleigh v_ts_hertz v_ts_skin v_prs1
-thermo          720
+thermo          1440
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 720 1_CCDpacked_post_bat_sym_200Mpa_exp_pack_1h_1Am2_hydro_refCCfixed_tightCC_V2/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_battery all custom 14400 20251217_CCD_post_bat_sym_200Mpa_pack_30minCD_1h_10Am2_dt0d001s/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress v_prs1_atom
 
-# 4. Run EC for 1 timestep, equivelent to 0.1s real seconds
-run 360000
+# 4. Run for 1 timestep, equivelent to 0.001s EC seconds
+run 3600000

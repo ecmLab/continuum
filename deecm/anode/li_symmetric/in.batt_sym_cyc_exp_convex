@@ -94,7 +94,7 @@ fix zwalls2 ptc wall/gran model hertz tangential history primitive type 4 zplane
 fix             integr all nve/sphere
 
 # Warn if timestep > 10% of Rayleigh time or 10% of Hertz time
-fix             ts_check all check/timestep/gran 1 0.1 0.1 warn yes
+fix             ts_check all check/timestep/gran 1 0.1 0.1 warn no
 
 # --- 8. ANALYSIS SETUP ---
 # Get current positions of different layers
@@ -120,6 +120,9 @@ fix 2 li2 move linear 0 0 0
 compute         frc1    li1    reduce sum fz
 variable        prs1    equal  -(c_frc1)*2.5e-6
 
+# Create a per-atom variable that holds the value of prs1
+variable        prs1_atom atom v_prs1
+
 # Hydrostatic Stress Initializing
 compute      st li stress/atom
 
@@ -128,9 +131,9 @@ compute      st li stress/atom
 # Initialize lithium content (Li/Si molar ratio) - only for AM particles
 fix             li_content li property/atom/lithium_content initial 1.0 target 1.0 max 1.0
 
-# SOR solver for electric potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
+# SOR solver for electric potential with type-based boundary conditions (anode cathode) condutivity (AM, SE, CC)
 fix             battery_eis_sym all battery/eis omega 1.0 tolerance 1e-1 max_iter 1 &
-                BC_types 2 3 BC_potentials 0.00 0.05 conductivity 0.05 SE_type 1
+                BC_types 3 2 BC_potentials -0.005 0.005 conductivity 0.05 SE_type 1
 
 # Lithium diffusion - only for AM particles
 fix             li_diffusion li lithium_diffusion Li_type 3 2 c_li_max 77101.002
@@ -161,12 +164,12 @@ variable       ts_skin     equal f_ts_check[3]
 # Thermo output
 thermo_style    custom step atoms ke c_phi_el_se_avg c_phi_ed_se_avg &
                 c_phi_ed_li1_avg c_phi_ed_li2_avg c_current_avg v_ts_rayleigh v_ts_hertz v_ts_skin v_prs1
-thermo          20
+thermo          36
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 20 1_CV_dis_post_bat_sym_200Mpa_convex_1h_noPressure/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
-                f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress
+dump            dmp_battery all custom 360 20251217_CV_post_bat_sym_200Mpa_convex_1h_0d01V_dt0d1s_nostress/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+                f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress v_prs1_atom
 
-# 4. Run EC for 1 timestep, equivelent to 1 sec real seconds, while particles are frozen
-run             3600
+# 4. Run EC for 1 timestep, equivelent to 0.1 sec real seconds, while particles are frozen
+run             36000

@@ -532,7 +532,7 @@ void FixBatteryEIS::calculate_interface_currents()
   
   // Calculate cycling direction based on timestep
   double ndt = update->ntimestep;
-  int period = static_cast<int>(ndt) / 36000; // Assuming 36000 timesteps for 60 mins (60 min charge/discharge)
+  int period = static_cast<int>(ndt) / 1800000; // Assuming 3,600,000 timesteps for 60 mins (60 min charge/discharge)
   double sign = (period % 2 == 0) ? 1.0 : -1.0;
 
   // CCD Test Protocol: Increase current magnitude every two periods
@@ -540,7 +540,7 @@ void FixBatteryEIS::calculate_interface_currents()
   double increase_step = cur_app / 4.0;
   double current_magnitude = cur_app + (num_positive_steps * increase_step);
   double i_density = sign * current_magnitude; // Applied current density in A/m2 // sign * current_magnitude
-  
+
   // // Calculate applied current density
   // int period = static_cast<int>(ndt) / 3600; // Assuming 3600 is 1 hour
   // double sign = (period % 2 == 0) ? 1.0 : -1.0;
@@ -549,12 +549,11 @@ void FixBatteryEIS::calculate_interface_currents()
   // double current_magnitude = cur_app + (num_positive_steps * increase_step);
   // double i_app = current_magnitude; // Applied current density in A/m2 // sign * current_magnitude
 
-
   // Applied current density at anode (controlled)
   // double i_density = cur_app;  // A/m² sign * cur_app
 
   total_current = i_density * 4e-10; // A Ideal current assuming area is 20 um x 20 um
-  
+
   // Calculate total current from anode interface
   // i_density_anode = I_total / A_anode
   if (global_area_anode > SMALL) {

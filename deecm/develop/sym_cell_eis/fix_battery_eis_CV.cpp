@@ -245,13 +245,13 @@ FixBatteryEIS::FixBatteryEIS(LAMMPS *lmp, int narg, char **arg) :
       iarg += 2;
     } else if (strcmp(arg[iarg],"BC_types") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal fix battery/eis command");
-      Li_Ctype = force->inumeric(FLERR,arg[iarg+1]);
-      Li_Atype = force->inumeric(FLERR,arg[iarg+2]);
+      Li_Atype = force->inumeric(FLERR,arg[iarg+1]);
+      Li_Ctype = force->inumeric(FLERR,arg[iarg+2]);
       iarg += 3;
     } else if (strcmp(arg[iarg],"BC_potentials") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal fix battery/eis command");
-      phi_el_BC_Cat = force->numeric(FLERR,arg[iarg+1]);
-      phi_el_BC_An = force->numeric(FLERR,arg[iarg+2]);
+      phi_el_BC_An = force->numeric(FLERR,arg[iarg+1]);
+      phi_el_BC_Cat = force->numeric(FLERR,arg[iarg+2]);
       iarg += 3;
     } else if (strcmp(arg[iarg],"conductivity") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix battery/eis command");
@@ -373,8 +373,8 @@ void FixBatteryEIS::setup(int vflag)
         } else if (type[i] == Li_Atype) {
           phi_el[i] = phi_el_BC_An;
           phi_el_old[i] = phi_el_BC_An;
-          phi_ed[i] = phi_ed_BC_anode;
-          phi_ed_old[i] = phi_ed_BC_anode;
+          phi_ed[i] = 0.0;
+          phi_ed_old[i] = 0.0;
         }
         init_flag[i] = 1.0;
       }
@@ -563,23 +563,21 @@ void FixBatteryEIS::apply_boundary_conditions()
 
   // Calculate sinusoidal boundary condition: 0.005*sin(t*5e10) + 0.005
   // double phi_el_BC_An_sinusoidal = 0.005 * sin(t * 5.0e10) + 0.005;
-  double phi_el_BC_An_sinusoidal = phi_el_BC_An; // [V] Keeping constant for debugging
+  // double phi_el_BC_An_sinusoidal = phi_el_BC_An; // [V] Keeping constant for debugging
 
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
       // Anode boundary condition particles (Anode) - fixed potentials
       if (type[i] == Li_Atype) {
-        phi_el[i] = phi_el_BC_An_sinusoidal;      // Electrolyte potential not fixed at anode
-        phi_el_old[i] = phi_el_BC_An_sinusoidal;
-        // phi_ed[i] = phi_ed_BC_anode;    // Fixed electronic potential (0V) Ignoring electric for now
-        // phi_ed_old[i] = phi_ed_BC_anode;
+        // phi_el[i] = phi_el_BC_An_sinusoidal;      // Electrolyte potential not fixed at anode
+        // phi_el_old[i] = phi_el_BC_An_sinusoidal;
+        phi_ed[i] = phi_ed_BC_anode;    // Fixed electronic potential at anode
+        phi_ed_old[i] = phi_ed_BC_anode;
       }
       // Cathode boundary condition particles (CC1) - fixed potentials
       else if (type[i] == Li_Ctype) {
         phi_el[i] = phi_el_BC_Cat;  // Fixed electrolyte potential (0V)
         phi_el_old[i] = phi_el_BC_Cat;
-        // phi_ed[i] = 0.0;               // Electronic potential not fixed at CC1
-        // phi_ed_old[i] = 0.0;
       }
     }
   }
@@ -667,8 +665,8 @@ void FixBatteryEIS::calculate_hydrostatic_stress()
       // Hydrostatic stress = Trace / (3 * Volume)
       // Result is in Pascals (Pa) (N / m^2)
       if (volume_SI > 0.0) {
-        hydrostatic_stress[i] = trace_virial_SI / (3.0 * volume_SI);
-        // hydrostatic_stress[i] = 0.0; // Setting to zero
+        // hydrostatic_stress[i] = trace_virial_SI / (3.0 * volume_SI);
+        hydrostatic_stress[i] = 0.0; // Setting to zero
       } else {
         hydrostatic_stress[i] = 0.0;
       }
@@ -718,7 +716,7 @@ double FixBatteryEIS::calculate_current_Li_SE(int i_Li, int j_SE, double phi_ed,
 {
   // Get equilibrium potential and exchange current density for Li particle
   double U_eq = 0.0;
-  double i_0 = 0.01; // A/m2, placeholder value
+  double i_0 = 50.00; // A/m2, placeholder value
 
   // Calculate overpotential for symetrical Cell
   // η = φ_ed - φ_el - U_eq
