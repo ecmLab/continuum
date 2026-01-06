@@ -49,6 +49,13 @@ FixStyle(equilibrium_potential,FixEquilibriumPotential)
 
 namespace LAMMPS_NS {
 
+// Material type enumeration
+enum MaterialType {
+  MATERIAL_AG = 0,
+  MATERIAL_C = 1,
+  MATERIAL_NMC811 = 2
+};
+
 class FixEquilibriumPotential : public Fix {
  public:
   FixEquilibriumPotential(class LAMMPS *, int, char **);
@@ -56,7 +63,7 @@ class FixEquilibriumPotential : public Fix {
   virtual void post_create();
   int setmask();
   void init();
-  void setup(int);              // ADD THIS LINE
+  void setup(int);
   void pre_force(int vflag);
   void post_force(int vflag);
   double compute_scalar();
@@ -72,6 +79,9 @@ class FixEquilibriumPotential : public Fix {
   double A_param;    // Parameter A (20)
   double B_param;    // Parameter B (-15)
   double x_Li_max;   // Maximum Li/Si ratio (3.75)
+  
+  // Material type selection
+  int material_type;
   
   // Property pointers
   double *lithium_content;
@@ -107,5 +117,9 @@ Internal error.
 E: Could not find fix property/atom lithiumContent
 
 Internal error.
+
+E: Unknown material type for fix equilibrium_potential
+
+Valid material types are: Ag, C, NMC811
 
 */

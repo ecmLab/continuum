@@ -62,6 +62,7 @@ FixEquilibriumPotential::FixEquilibriumPotential(LAMMPS *lmp, int narg, char **a
   A_param(20.0),
   B_param(-15.0),
   x_Li_max(1.00),     // Maximum Li/Si ratio
+  material_type(MATERIAL_AG),  // Default to Ag
   lithium_content(NULL),
   equilibrium_potential(NULL),
   fix_lithium_content(NULL),
@@ -92,6 +93,18 @@ FixEquilibriumPotential::FixEquilibriumPotential(LAMMPS *lmp, int narg, char **a
     } else if (strcmp(arg[iarg],"x_max") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix equilibrium_potential command");
       x_Li_max = force->numeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"material") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix equilibrium_potential command");
+      if (strcmp(arg[iarg+1],"Ag") == 0) {
+        material_type = MATERIAL_AG;
+      } else if (strcmp(arg[iarg+1],"C") == 0) {
+        material_type = MATERIAL_C;
+      } else if (strcmp(arg[iarg+1],"NMC811") == 0) {
+        material_type = MATERIAL_NMC811;
+      } else {
+        error->all(FLERR,"Unknown material type for fix equilibrium_potential. Valid types: Ag, C, NMC811");
+      }
       iarg += 2;
     } else error->all(FLERR,"Illegal fix equilibrium_potential command");
   }
@@ -193,33 +206,53 @@ void FixEquilibriumPotential::calculate_equilibrium_potential()
   int *mask = atom->mask;
   int *type = atom->type;
   
-  // OLD EQUATION - COMMENTED OUT FOR REFERENCE
-  // double RT_over_F = (R * T) / F;
-  
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit && type[i] == 1) {  // Only for AM particles (type 1)
       double x_li = lithium_content[i];
-      
       double x_norm = x_li / x_Li_max;
-      
-      // Silver Potential vs Li Ratio (RATIONAL FUNCTION (R² = 0.996135))
-      // U_eq = (-0.1631924300*x^4 + 0.4016544523*x^3 + -0.3062847559*x^2 + 0.0748140933*x + 0.0000767930)/(x^3 + -1.1531920913*x^2 + 0.3387447153*x + -0.0008769410)
       
       double x_norm2 = x_norm * x_norm;
       double x_norm3 = x_norm2 * x_norm;
       double x_norm4 = x_norm3 * x_norm;
-
-      double numerator1 = -0.1631924300 * x_norm4 + 
-                       0.4016544523 * x_norm3 + 
-                       -0.3062847559 * x_norm2 + 
-                       0.0748140933 * x_norm + 
-                       0.0000767930;
-      double denominator1 = x_norm3 + 
-                         -1.1531920913 * x_norm2 + 
-                         0.3387447153 * x_norm + 
-                         -0.0008769410;
       
-      equilibrium_potential[i] = numerator1 / denominator1;
+      double numerator, denominator;
+      
+      if (material_type == MATERIAL_AG) {
+        // Ag: V = (-0.1631924300*x^4 + 0.4016544523*x^3 + -0.3062847559*x^2 + 0.0748140933*x + 0.0000767930)/(x^3 + -1.1531920913*x^2 + 0.3387447153*x + -0.0008769410)
+        numerator = -0.1631924300 * x_norm4 + 
+                     0.4016544523 * x_norm3 + 
+                    -0.3062847559 * x_norm2 + 
+                     0.0748140933 * x_norm + 
+                     0.0000767930;
+        denominator = x_norm3 + 
+                     -1.1531920913 * x_norm2 + 
+                      0.3387447153 * x_norm + 
+                     -0.0008769410;
+      } else if (material_type == MATERIAL_C) {
+        // C: V = (-574.4685917325*x^4 + 438.1745026465*x^3 + -122.1174477257*x^2 + 271.4976114422*x + 10.8530532232)/(x^3 + 262.5473706486*x^2 + 2710.3782301839*x + -117.7939698484)
+        numerator = -574.4685917325 * x_norm4 + 
+                     438.1745026465 * x_norm3 + 
+                    -122.1174477257 * x_norm2 + 
+                     271.4976114422 * x_norm + 
+                      10.8530532232;
+        denominator = x_norm3 + 
+                      262.5473706486 * x_norm2 + 
+                     2710.3782301839 * x_norm + 
+                     -117.7939698484;
+      } else {  // MATERIAL_NMC811
+        // NMC811: V = (-17709.3425099138*x^4 + 49563.5287557803*x^3 + -84640.8295904228*x^2 + -4980.8894321468*x + 56960.9582619908)/(x^3 + -14391.9820106230*x^2 + 1641.3022786177*x + 12525.8318098236)
+        numerator = -17709.3425099138 * x_norm4 + 
+                     49563.5287557803 * x_norm3 + 
+                    -84640.8295904228 * x_norm2 + 
+                     -4980.8894321468 * x_norm + 
+                     56960.9582619908;
+        denominator = x_norm3 + 
+                     -14391.9820106230 * x_norm2 + 
+                       1641.3022786177 * x_norm + 
+                      12525.8318098236;
+      }
+      
+      equilibrium_potential[i] = numerator / denominator;
     }
   }
 }
