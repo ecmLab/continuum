@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=sym_comp_ring
+#SBATCH --job-name=sym_comp50
 #SBATCH --partition=RM
-#SBATCH --nodes=1
+#SBATCH --nodes=2
 #SBATCH --ntasks-per-node=128
-#SBATCH --time=48:00:00
+#SBATCH --time=3:00:00
 #SBATCH --account=mat250014p
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=vazquezm
@@ -18,5 +18,5 @@ cd $SLURM_SUBMIT_DIR
 module load gcc/10.2.0 openmpi/5.0.3-gcc13.2.1 cuda/11.7.1
 
 # Run LIGGGHTS with MPI
-# Using 128 total MPI tasks (1 nodes * 128 cores/node)
-mpiexec -np 128 /ocean/projects/mat250014p/shared/software/LIGGGHTS-PUBLIC/src/lmp_auto -in in.compaction_script_sym
+# Using 128 total MPI tasks (2 nodes * 128 cores/node)
+mpiexec -np $SLURM_NTASKS /ocean/projects/mat250014p/shared/software/LIGGGHTS-PUBLIC/src/lmp_auto -in in.compaction_script_sym
