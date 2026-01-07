@@ -40,21 +40,21 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(battery/sor,FixBatterySOR)
+FixStyle(battery/eis,FixBatteryEIS)
 
 #else
 
-#ifndef LMP_FIX_BATTERY_SOR_H
-#define LMP_FIX_BATTERY_SOR_H
+#ifndef LMP_FIX_BATTERY_EIS_H
+#define LMP_FIX_BATTERY_EIS_H
 
 #include "fix.h"
 
 namespace LAMMPS_NS {
 
-class FixBatterySOR : public Fix {
+class FixBatteryEIS : public Fix {
  public:
-  FixBatterySOR(class LAMMPS *, int, char **);
-  virtual ~FixBatterySOR();
+  FixBatteryEIS(class LAMMPS *, int, char **);
+  virtual ~FixBatteryEIS();
   virtual void post_create();
   int setmask();
   void init();
@@ -68,14 +68,12 @@ class FixBatterySOR : public Fix {
   virtual void updatePtrs();
   
  protected:
-  // SOR parameters
-  double omega;              // SOR relaxation parameter (1.9)
+  // EIS parameters
+  double omega;              // EIS relaxation parameter (1.9)
   double tolerance;          // Convergence tolerance
-  int max_iterations;        // Maximum SOR iterations
+  int max_iterations;        // Maximum EIS iterations
   int current_iteration;     // Current iteration count
   double convergence_error;  // Current convergence error
-  bool include_AM_SE_current; // Whether to include current from AM to SE
-  bool include_bottom_BC;     // Whether to include bottom BC
   
   // Physical parameters
   double R;                  // Gas constant (8.31 J/mol·K)
@@ -83,21 +81,19 @@ class FixBatterySOR : public Fix {
   double F;                  // Faraday constant (96485 C/mol)
   
   // Conductivity parameters
-  double sigma_el_SE;           // Electrolyte conductivity (SE) (S/m)
-  double sigma_el_CB;           // Electrolyte conductivity (CB) (S/m)
-  double sigma_ed_LI;           // Electronic conductivity for Li (S/m)
-  double sigma_ed_AM;        // Electronic conductivity for AM (S/m)
-  double sigma_ed_CB;        // Electronic conductivity for CB (S/m)
+  double sigma_el;           // Electrolyte conductivity (SE) (S/m)
+  double sigma_Li;  // Li conductivity
+  double sigma_ed_SE;        // Electronic conductivity for CBD/SE (S/m)
   double sigma_ed_CC;        // Electronic conductivity for CC (S/m)
   
   double alpha_a;            // Anodic transfer coefficient (0.5)
   double alpha_c;            // Cathodic transfer coefficient (0.5)
   
   // Boundary conditions
-  double phi_el_BC_bottom;   // Electrolyte potential at bottom boundary
-  double phi_el_BC_top;      // Electrolyte potential at top boundary
+  double phi_el_BC_Cat;   // Electrolyte potential at bottom boundary
+  double phi_el_BC_An;      // Electrolyte potential at top boundary
   double phi_ed_BC_anode;    // Electronic potential at anode (0V)
-  double current_flux_CC;    // Current flux at CC free end (A/m2)
+  double cur_app;          // Applied current density (A/m2)
   
   // Property pointers - Electrolyte
   double *phi_el;            // Electrolyte potential
@@ -108,10 +104,19 @@ class FixBatterySOR : public Fix {
   double *phi_ed_old;        // Old electronic potential (for convergence)
   
   // Property pointers - Other
-  double *equilibrium_potential;
-  double *exchange_current_density;
-  double *current_AM_SE;     // Current density from AM to SE
-  double *hydrostatic_stress; // Hydrostatic stress on AM particles
+  double *current_Li_SE;     // Current density from Li to SE
+  double *hydrostatic_stress; // Hydrostatic stress on Li particles
+
+  // Current distribution variables
+  double total_current;
+  double global_area_anode;
+  double global_area_cathode;
+  double i_density_anode;
+  double i_density_cathode;
+
+  // Per-particle contact area pointers
+  double *contact_area_anode;
+  double *contact_area_cathode;
   
   // Fix pointers - Electrolyte
   class FixPropertyAtom *fix_phi_el;
@@ -122,31 +127,35 @@ class FixBatterySOR : public Fix {
   class FixPropertyAtom *fix_phi_ed_old;
   
   // Fix pointers - Other
-  class FixPropertyAtom *fix_equilibrium_potential;
-  class FixPropertyAtom *fix_exchange_current_density;
-  class FixPropertyAtom *fix_current_AM_SE;
+  class FixPropertyAtom *fix_current_Li_SE;
   class FixPropertyAtom *fix_hydrostatic_stress;
   class FixPropertyAtom *fix_init_flag;
   
+  // Fix pointers for contact areas
+  class FixPropertyAtom *fix_contact_area_anode;
+  class FixPropertyAtom *fix_contact_area_cathode;
+
   // Particle type groups
-  int BC_bottom_type;        // Atom type for bottom BC particles (CC)
-  int BC_top_type;           // Atom type for top BC particles (Anode)
+  int Li_Ctype;        // Atom type for bottom BC particles (CC)
+  int Li_Atype;           // Atom type for top BC particles (Anode)
   int groupbit_SE;           // Group bit for SE particles
-  int groupbit_AM;           // Group bit for AM particles
   int SE_type;               // Atom type for SE particles
-  int AM_type;               // Atom type for AM particles
-  int CB_type;               // Atom type for CB particles
   
+  // State flag
+  bool first_run;
+
   // Neighbor list
   class NeighList *list;
   
   // Methods
-  void solve_sor_iteration();
+  void solve_eis_iteration();
   void apply_boundary_conditions();
   void calculate_hydrostatic_stress();
   double calculate_contact_area(int, int);
-  double calculate_current_AM_SE(int, int, double, double, double);
+  double calculate_current_Li_SE(int, int, double, double, double);
   double check_convergence();
+  // NEW: Calculate interface currents with conservation
+  void calculate_interface_currents();
 };
 
 }
@@ -156,38 +165,30 @@ class FixBatterySOR : public Fix {
 
 /* ERROR/WARNING messages:
 
-E: Illegal fix battery/sor command
+E: Illegal fix battery/eis command
 
 Self-explanatory. Check the input script syntax and compare to the
 documentation for the command.
 
-E: Fix battery/sor requires newton pair off
+E: Fix battery/eis requires newton pair off
 
 This fix requires newton pair off for proper force calculation.
-
-E: Fix battery/sor requires fix equilibrium_potential
-
-Fix equilibrium_potential must be defined before fix battery/sor.
-
-E: Fix battery/sor requires fix exchange_current_density
-
-Fix exchange_current_density must be defined before fix battery/sor.
 
 E: Could not find required property/atom fixes
 
 Internal error - missing required property/atom fixes.
 
-E: Invalid particle types for battery/sor
+E: Invalid particle types for battery/eis
 
-SE_type and AM_type must be valid atom types.
+SE_type and Li_type must be valid atom types.
 
-E: Invalid boundary condition types for battery/sor
+E: Invalid boundary condition types for battery/eis
 
-BC_bottom_type and BC_top_type must be valid atom types.
+Li_Ctype and Li_Atype must be valid atom types.
 
-W: Battery SOR did not converge
+W: Battery EIS did not converge
 
-The SOR solver did not converge within the maximum iterations.
+The EIS solver did not converge within the maximum iterations.
 
 W: Numerical instability detected
 

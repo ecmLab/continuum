@@ -2,7 +2,7 @@
     LIGGGHTS® - LAMMPS Improved for General Granular and Granular Heat
     Transfer Simulations
 
-    Fix for managing lithium content in Si particles for battery simulation
+    Fix for managing lithium content in AM particles for battery simulation
 
     Created: Joseph Vazquez Mercado, RIT 2025
 ------------------------------------------------------------------------- */

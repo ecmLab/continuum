@@ -72,12 +72,9 @@ class FixEquilibriumPotential : public Fix {
   
  protected:
   // Model parameters from the flowchart
-  double U_eq0;      // Standard equilibrium potential (0.35 V)
   double R;          // Gas constant (8.31 J/mol·K)
   double T;          // Temperature (303 K)
   double F;          // Faraday constant (96485 C/mol)
-  double A_param;    // Parameter A (20)
-  double B_param;    // Parameter B (-15)
   double x_Li_max;   // Maximum Li/Si ratio (3.75)
   
   // Material type selection

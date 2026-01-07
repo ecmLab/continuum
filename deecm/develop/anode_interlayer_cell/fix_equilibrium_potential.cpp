@@ -55,12 +55,9 @@ using namespace FixConst;
 
 FixEquilibriumPotential::FixEquilibriumPotential(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg),
-  U_eq0(0.35),        // V
   R(8.31),            // J/mol·K
   T(303.0),           // K
   F(96485.0),         // C/mol
-  A_param(20.0),
-  B_param(-15.0),
   x_Li_max(1.00),     // Maximum Li/Si ratio
   material_type(MATERIAL_AG),  // Default to Ag
   lithium_content(NULL),
@@ -77,18 +74,6 @@ FixEquilibriumPotential::FixEquilibriumPotential(LAMMPS *lmp, int narg, char **a
     if (strcmp(arg[iarg],"temperature") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix equilibrium_potential command");
       T = force->numeric(FLERR,arg[iarg+1]);
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"U_eq0") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix equilibrium_potential command");
-      U_eq0 = force->numeric(FLERR,arg[iarg+1]);
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"A") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix equilibrium_potential command");
-      A_param = force->numeric(FLERR,arg[iarg+1]);
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"B") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix equilibrium_potential command");
-      B_param = force->numeric(FLERR,arg[iarg+1]);
       iarg += 2;
     } else if (strcmp(arg[iarg],"x_max") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix equilibrium_potential command");

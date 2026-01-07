@@ -1,9 +1,10 @@
 # Battery simulation using pre-compacted particles from data file
 # With type-based boundary conditions for SOR solver
-# SE particles (type 1) - Solid Electrolyte
-# LI1 particles (type 2) - Lithium Layer 1 (Bottom)
-# LI2 particles (type 3) - Lithium Layer 2 (top)
-# Wall particles (type 4) - Walls
+# Metal particles (type 1) - Metal Particles
+# Carbon particles (type 2) - Carbon Particles
+# SE Layer (type 3) - SE Particles (Top)
+# Li Source Layer (type 4) - Li Particles (Bottom)
+# Wall particles (type 5) - Walls
 
 # --- 1. INITIALIZATION ---
 units           micro  # Using micro units to match the compaction script
@@ -19,120 +20,121 @@ timestep        5.e-6
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
-read_data     data/comp200_sym_overlap.data
+read_data     data/1C_M2C5_vr1_pack.data
 
 # --- 3. RE-ESTABLISH GROUPS ---
-# Define groups based on particle types (Type 4 is the wall)
-group  li2   type  3   # Lithium 2 (top)
-group  se    type  1   # Solid Electrolyte
-group  li1   type  2   # Lithium 1 (bottom)
+# Define groups based on particle types (Type 5 is the wall)
+group  me    type  1   # Metal
+group  cb    type  2   # Carbon
+group  se    type  3   # SE Layer (top)
+group  li    type  4   # Li Layer (bottom)
 
 # Groups for particles affected by walls
-group  ptc   type  1 # Types affected by walls
-group  li    type  2 3 # Lithium type
+group  ptc   type  1 2 # Types affected by walls
 
 # --- 4. NEIGHBOR SETTINGS ---
 neighbor        0.001 bin
 neigh_modify    every 1 delay 0 check yes
 
 # --- 5. RE-ESTABLISH MATERIAL PROPERTIES ---
-# Young's modulus (from compaction script)
-variable        Yse           equal     23.e6  # SE (Solid Electrolyte) [kPa] (From Paper LPS)
-variable        Yli           equal     10.e6  # Li (Lithium Metal) [kPa] (From Paper LPS)
-variable        Yww           equal     50.e6    # Wall [kPa]
+variable        Eme           equal     76.e6  # Metal (Ag) [kPa] (MatWeb - Silver, Ag)
+variable        vme           equal     0.37    # Metal (Ag) [-] (MatWeb - Silver, Ag)
 
-variable        particle_poissons_ratio equal 0.4
+variable        Ecb           equal     15.e6  # Carbon (AB) [kPa] (https://www.azom.com/properties.aspx?ArticleID=516)
+variable        vcb           equal     0.20    # Carbon (AB) [-] (https://www.azom.com/properties.aspx?ArticleID=516)
+
+variable        Ese           equal     22.1e6  # SE (Li6PS5Cl) [kPa] (http://dx.doi.org/10.1149/2.0061602jes)
+variable        vse           equal     0.37    # SE (Li6PS5Cl) [-] (http://dx.doi.org/10.1149/2.0061602jes)
+
+variable        Eli           equal     7.82e6  # Li (Li-metal) [kPa] (https://doi.org/10.1007/s10853-018-2971-3)
+variable        vli           equal     0.381    # Li (Li-metal) [-] (https://doi.org/10.1007/s10853-018-2971-3)
+
+variable        Eww           equal     100.e6    # Wall [kPa]
+variable        vww           equal     0.4      # Wall [-]
 
 # Material properties
-fix     m1 all property/global youngsModulus peratomtype ${Yse} ${Yli} ${Yli} ${Yww}
-fix     m2 all property/global poissonsRatio peratomtype ${particle_poissons_ratio} ${particle_poissons_ratio} ${particle_poissons_ratio} ${particle_poissons_ratio}
+fix     m1 all property/global youngsModulus peratomtype ${Eme} ${Ecb} ${Ese} ${Eli} ${Eww}
+fix     m2 all property/global poissonsRatio peratomtype ${vme} ${vcb} ${vse} ${vli} ${vww}
 
-# Coefficient of restitution matrix (4x4)
+# Coefficient of restitution matrix (5x5)
 variable        cor_all       equal     0.1     # Same for all pairs
-fix     m3 all property/global coefficientRestitution peratomtypepair 4 &
-        ${cor_all} ${cor_all} ${cor_all} ${cor_all} &
-        ${cor_all} ${cor_all} ${cor_all} ${cor_all} &
-        ${cor_all} ${cor_all} ${cor_all} ${cor_all} &
-        ${cor_all} ${cor_all} ${cor_all} ${cor_all} 
+fix     m3 all property/global coefficientRestitution peratomtypepair 5 &
+        ${cor_all} ${cor_all} ${cor_all} ${cor_all} ${cor_all} &
+        ${cor_all} ${cor_all} ${cor_all} ${cor_all} ${cor_all} &
+        ${cor_all} ${cor_all} ${cor_all} ${cor_all} ${cor_all} &
+        ${cor_all} ${cor_all} ${cor_all} ${cor_all} ${cor_all} &
+        ${cor_all} ${cor_all} ${cor_all} ${cor_all} ${cor_all}
 
-# Coefficient of friction (all 0.1 from compaction)
+# Coefficient of friction (5x5)
 variable        cof_all       equal     0.1     # Same for all pairs
-fix     m4 all property/global coefficientFriction peratomtypepair 4 &
-        ${cof_all} ${cof_all} ${cof_all} ${cof_all} &
-        ${cof_all} ${cof_all} ${cof_all} ${cof_all} &
-        ${cof_all} ${cof_all} ${cof_all} ${cof_all} &
-        ${cof_all} ${cof_all} ${cof_all} ${cof_all}
+fix     m4 all property/global coefficientFriction peratomtypepair 5 &
+        ${cof_all} ${cof_all} ${cof_all} ${cof_all} ${cof_all} &
+        ${cof_all} ${cof_all} ${cof_all} ${cof_all} ${cof_all} &
+        ${cof_all} ${cof_all} ${cof_all} ${cof_all} ${cof_all} &
+        ${cof_all} ${cof_all} ${cof_all} ${cof_all} ${cof_all} &
+        ${cof_all} ${cof_all} ${cof_all} ${cof_all} ${cof_all}
 
-# Coefficient of rolling friction (all 0.1 from compaction)
+# Coefficient of rolling friction (5x5)
 variable        corf_all      equal     0.1     # Same for all pairs
-fix     m5 all property/global coefficientRollingFriction peratomtypepair 4 &
-        ${corf_all} ${corf_all} ${corf_all} ${corf_all} &
-        ${corf_all} ${corf_all} ${corf_all} ${corf_all} &
-        ${corf_all} ${corf_all} ${corf_all} ${corf_all} &
-        ${corf_all} ${corf_all} ${corf_all} ${corf_all}
+fix     m5 all property/global coefficientRollingFriction peratomtypepair 5 &
+        ${corf_all} ${corf_all} ${corf_all} ${corf_all} ${corf_all} &
+        ${corf_all} ${corf_all} ${corf_all} ${corf_all} ${corf_all} &
+        ${corf_all} ${corf_all} ${corf_all} ${corf_all} ${corf_all} &
+        ${corf_all} ${corf_all} ${corf_all} ${corf_all} ${corf_all} &
+        ${corf_all} ${corf_all} ${corf_all} ${corf_all} ${corf_all}
 
-# Cohesion energy density (from compaction script)
-fix     m6 all property/global cohesionEnergyDensity peratomtypepair 4 &
-        50000   100000  100000  0 &
-        100000  0       0       0 &
-        100000  0       0       0 &
-        0       0       0       0
+# Cohesion energy density (5x5) (Randomly Assigned Pairs Based on Average)
+fix     m6 all property/global cohesionEnergyDensity peratomtypepair 5 &
+        50000   70000   60000   100000  0 &
+        70000   90000   80000   110000  0 &
+        60000   80000   70000   100000  0 &
+        100000  110000  100000  120000  0 &
+        0       0       0       0       0
 
 # --- 6. PAIR STYLE AND WALLS ---
 pair_style gran model hertz tangential history cohesion sjkr
 pair_coeff * *
 
 # Re-establish wall boundaries (from compaction script)
-fix xwalls1 ptc wall/gran model hertz tangential history primitive type 4 xplane -10
-fix xwalls2 ptc wall/gran model hertz tangential history primitive type 4 xplane 10
-fix ywalls1 ptc wall/gran model hertz tangential history primitive type 4 yplane -10
-fix ywalls2 ptc wall/gran model hertz tangential history primitive type 4 yplane 10
-fix zwalls1 ptc wall/gran model hertz tangential history primitive type 4 zplane 47.387
-fix zwalls2 ptc wall/gran model hertz tangential history primitive type 4 zplane 77.5
+fix xwalls1 ptc wall/gran model hertz tangential history primitive type 5 xplane 0.0
+fix xwalls2 ptc wall/gran model hertz tangential history primitive type 5 xplane 2.5
+fix ywalls1 ptc wall/gran model hertz tangential history primitive type 5 yplane 0.0
+fix ywalls2 ptc wall/gran model hertz tangential history primitive type 5 yplane 2.5
+fix zwalls1 ptc wall/gran model hertz tangential history primitive type 5 zplane 0.0
+fix zwalls2 ptc wall/gran model hertz tangential history primitive type 5 zplane 2.5
 
 # --- 7. INTEGRATION ---
 fix             integr all nve/sphere
 
 # Warn if timestep > 10% of Rayleigh time or 10% of Hertz time
-fix             ts_check all check/timestep/gran 1 0.1 0.1 warn yes
+fix             ts_check all check/timestep/gran 1 0.1 0.1 warn no
 
 # --- 8. ANALYSIS SETUP ---
-# Get current positions of different layers
-compute         z_li1_avg li1 reduce ave z
-compute         z_se_avg se reduce ave z
-compute         z_li2_avg li2 reduce ave z
-
-# Print layer information
-variable        z_li1 equal c_z_li1_avg
-variable        z_se equal c_z_se_avg
-variable        z_li2 equal c_z_li2_avg
-
-# Count particles
-variable        n_li1 equal count(li1)
-variable        n_se equal count(se)
-variable        n_li2 equal count(li2)
 
 # FIXED Top and Bottom Layer from moving
-fix 1 li1 move linear 0 0 0
-fix 2 li2 move linear 0 0 0
+fix 1 se move linear 0 0 0  # Top Layer
+fix 2 li move linear 0 0 0  # Bottom Layer
 
-# --- 8.5. PRESSURE COMPUTATION ON CC1 ---
-compute         frc1    li1    reduce sum fz
-variable        prs1    equal  -(c_frc1)*2.5e-6
+# --- 8.5. PRESSURE COMPUTATION ON SE ---
+compute         frc    li    reduce sum fz      # Force in [nN]
+variable        prs    equal  -(c_frc)*160.e-6  # Pressure in [MPa] 
 
 # Create a per-atom variable that holds the value of prs1
-variable        prs1_atom atom v_prs1
+variable        prs_atom atom v_prs
 
 # Hydrostatic Stress Initializing
 compute      st li stress/atom
 
-# Initialize battery physics fixes first to create the fix properties
+# --- 9.0. ELECTROCHEMICAL COMPUTATIONS ---
 
-# Initialize lithium content (Li/Si molar ratio) - only for AM particles
-fix             li_content li property/atom/lithium_content initial 1.0 target 1.0 max 1.0
+# Initialize lithium content (Li/Metal molar ratio) - only for AM particles
+fix             li_content me property/atom/lithium_content initial 0.0 target 1.0 max 1.0
 
-# SOR solver for electric potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
-fix             battery_eis_sym all battery/eis omega 1.0 tolerance 1e-1 max_iter 1 &
+# Calculate equilibrium potential - only for AM particles
+fix             eq_pot me equilibrium_potential temperature 303. x_max 1.0 material Ag
+ 
+# SOR solver for potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
+fix             potential_sol all potential/sor omega 1.0 tolerance 1e-1 max_iter 1 &
                 BC_types 2 3 BC_potentials 0.00 0.00 1.0 conductivity 0.05 0.1 SE_type 1
 
 # Lithium diffusion - only for AM particles
@@ -163,13 +165,13 @@ variable       ts_skin     equal f_ts_check[3]
 # --- 11. OUTPUT SETTINGS ---
 # Thermo output
 thermo_style    custom step atoms ke c_phi_el_se_avg c_phi_ed_se_avg &
-                c_phi_ed_li1_avg c_phi_ed_li2_avg c_current_avg v_ts_rayleigh v_ts_hertz v_ts_skin v_prs1
+                c_phi_ed_li1_avg c_phi_ed_li2_avg c_current_avg v_ts_rayleigh v_ts_hertz v_ts_skin v_prs
 thermo          72
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
 dump            dmp_battery all custom 72 20251216_CCD_post_bat_sym_200Mpa_exp_0d1mAcm2_30min/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
-                f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress v_prs1_atom
+                f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress v_prs_atom
 
 # 4. Run EC for 1 timestep, equivelent to 1s real seconds
 run             18000
