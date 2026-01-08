@@ -1,40 +1,8 @@
 /* ----------------------------------------------------------------------
-    This is the
-
-    ██╗     ██╗ ██████╗  ██████╗  ██████╗ ██╗  ██╗████████╗███████╗
-    ██║     ██║██╔════╝ ██╔════╝ ██╔════╝ ██║  ██║╚══██╔══╝██╔════╝
-    ██║     ██║██║  ███╗██║  ███╗██║  ███╗███████║   ██║   ███████╗
-    ██║     ██║██║   ██║██║   ██║██║   ██║██╔══██║   ██║   ╚════██║
-    ███████╗██║╚██████╔╝╚██████╔╝╚██████╔╝██║  ██║   ██║   ███████║
-    ╚══════╝╚═╝ ╚═════╝  ╚═════╝  ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝®
-
-    DEM simulation engine, released by
-    DCS Computing Gmbh, Linz, Austria
-    http://www.dcs-computing.com, office@dcs-computing.com
-
-    LIGGGHTS® is part of CFDEM®project:
-    http://www.liggghts.com | http://www.cfdem.com
-
-    Core developer and main author:
-    Christoph Kloss, christoph.kloss@dcs-computing.com
-
-    LIGGGHTS® is open-source, distributed under the terms of the GNU Public
-    License, version 2 or later. It is distributed in the hope that it will
-    be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. You should have
-    received a copy of the GNU General Public License along with LIGGGHTS®.
-    If not, see http://www.gnu.org/licenses . See also top-level README
-    and LICENSE files.
-
-    LIGGGHTS® and CFDEM® are registered trade marks of DCS Computing GmbH,
-    the producer of the LIGGGHTS® software and the CFDEM®coupling software
-    See http://www.cfdem.com/terms-trademark-policy for details.
-
--------------------------------------------------------------------------
-    Contributing author and copyright for this file:
-    Created: Joseph Vazquez Mercado, RIT 2025
+    LIGGGHTS® - DEM simulation engine
+    Contributing author: Joseph Vazquez Mercado, RIT 2025
     Copyright 2024-     DCS Computing GmbH, Linz
-    Notes: For Symmetrical Cell Li / Li interface diffusion also considering current from SE to Li
+    Notes: Multi-material Li diffusion: AM, CB, and LM (constant source)
 ------------------------------------------------------------------------- */
 
 #include "fix_lithium_diffusion.h"
@@ -58,11 +26,21 @@ using namespace FixConst;
 
 FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg),
-  F(96485.0),                // C/mol
-  c_li_max(77101.002),         // mol/m³
-  initial_lithium_content(1.0),  // Default value
-  target_lithium_content(1.0),    // Default value
-  max_lithium_content(1.0),       // Default value
+  F(96485.0),                    // C/mol
+  c_li_max(77101.002),           // mol/m³ (LM constant concentration)
+  Omega_Li_LM(13.02e-6),         // m³/mol (Li molar volume in LM)
+  Omega_Li_AM(8.91e-6),          // m³/mol (Li molar volume in AM)
+  Omega_Li_CB(8.91e-6),          // m³/mol (Li molar volume in CB)
+  initial_lithium_content(0.0),
+  target_lithium_content(1.0),
+  max_lithium_content(1.0),
+  // Diffusion coefficients (m²/s)
+  D_AM_AM(1.0e-15),
+  D_AM_CB(1.0e-15),
+  D_AM_LM(1.0e-15),
+  D_CB_AM(1.0e-15),
+  D_CB_CB(1.0e-15),
+  D_CB_LM(1.0e-15),
   lithium_content(NULL),
   lithium_concentration(NULL),
   current_SE_Li(NULL),
@@ -76,24 +54,55 @@ FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
   fix_lithium_flux(NULL),
   fix_li_mols(NULL),
   fix_lithium_content_manager(NULL),
-  AM_type(1), // Anode Material type
-  // Li_Atype(3), // Anode type 
-  // Li_Ctype(2), // Cathode type
+  AM_type(1),
+  CB_type(2),
+  LM_type(4),
   list(NULL)
 {
   if (narg < 3)
     error->all(FLERR,"Illegal fix lithium_diffusion command");
 
-  // Parse arguments
   int iarg = 3;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"AM_type") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
       AM_type = force->inumeric(FLERR,arg[iarg+1]);
       iarg += 2;
+    } else if (strcmp(arg[iarg],"CB_type") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
+      CB_type = force->inumeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"LM_type") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
+      LM_type = force->inumeric(FLERR,arg[iarg+1]);
+      iarg += 2;
     } else if (strcmp(arg[iarg],"c_li_max") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
       c_li_max = force->numeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"D_AM_AM") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
+      D_AM_AM = force->numeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"D_AM_CB") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
+      D_AM_CB = force->numeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"D_AM_LM") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
+      D_AM_LM = force->numeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"D_CB_AM") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
+      D_CB_AM = force->numeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"D_CB_CB") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
+      D_CB_CB = force->numeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"D_CB_LM") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
+      D_CB_LM = force->numeric(FLERR,arg[iarg+1]);
       iarg += 2;
     } else error->all(FLERR,"Illegal fix lithium_diffusion command");
   }
@@ -139,7 +148,7 @@ void FixLithiumDiffusion::post_create()
     fix_lithium_flux = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
   }
 
-  // Register property/atom for lithium content
+  // Register property/atom for lithium mols
   fix_li_mols = static_cast<FixPropertyAtom*>(modify->find_fix_property("lithiumMols","property/atom","scalar",0,0,style,false));
   if(!fix_li_mols) {
     const char* fixarg[10];
@@ -148,9 +157,9 @@ void FixLithiumDiffusion::post_create()
     fixarg[2]="property/atom";
     fixarg[3]="lithiumMols";
     fixarg[4]="scalar";
-    fixarg[5]="no";    // no restart
-    fixarg[6]="yes";   // communicate
-    fixarg[7]="no";    // no borders
+    fixarg[5]="no";
+    fixarg[6]="yes";
+    fixarg[7]="no";
     fixarg[8]="0.0";
     fix_li_mols = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
   }
@@ -192,7 +201,6 @@ int FixLithiumDiffusion::setmask()
 
 void FixLithiumDiffusion::init()
 {
-  // Find required fixes
   fix_lithium_content = static_cast<FixPropertyAtom*>(modify->find_fix_property("lithiumContent","property/atom","scalar",0,0,style));
   if(!fix_lithium_content)
     error->all(FLERR,"Fix lithium_diffusion requires lithiumContent property");
@@ -201,9 +209,8 @@ void FixLithiumDiffusion::init()
   if(!fix_lithium_concentration)
     error->all(FLERR,"Fix lithium_diffusion requires lithiumConcentration property");
     
-  fix_current_SE_Li = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentSELi","property/atom","scalar",0,0,style));
-  if(!fix_current_SE_Li)
-    error->all(FLERR,"Fix lithium_diffusion requires currentSELi property");
+  fix_current_SE_Li = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentSELi","property/atom","scalar",0,0,style,false));
+  // current_SE_Li is optional - may not exist for pure diffusion simulations
     
   fix_diffusion_coefficient = static_cast<FixPropertyAtom*>(modify->find_fix_property("diffusionCoefficient","property/atom","scalar",0,0,style));
   fix_lithium_flux = static_cast<FixPropertyAtom*>(modify->find_fix_property("lithiumFlux","property/atom","scalar",0,0,style));
@@ -212,7 +219,6 @@ void FixLithiumDiffusion::init()
   if(!fix_diffusion_coefficient || !fix_lithium_flux || !fix_li_mols)
     error->all(FLERR,"Could not find required property/atom fixes");
 
-  // Find the lithium content manager fix to get initial/target/max values
   fix_lithium_content_manager = NULL;
   for (int i = 0; i < modify->nfix; i++) {
     if (strstr(modify->fix[i]->style,"property/atom/lithium_content")) {
@@ -221,15 +227,12 @@ void FixLithiumDiffusion::init()
     }
   }
   
-  if(!fix_lithium_content_manager)
-    error->all(FLERR,"Fix lithium_diffusion requires fix property/atom/lithium_content to be defined");
-  
-  // Get lithium content parameters from the manager fix
-  initial_lithium_content = fix_lithium_content_manager->compute_vector(0);
-  target_lithium_content = fix_lithium_content_manager->compute_vector(1);
-  max_lithium_content = fix_lithium_content_manager->compute_vector(2);
+  if(fix_lithium_content_manager) {
+    initial_lithium_content = fix_lithium_content_manager->compute_vector(0);
+    target_lithium_content = fix_lithium_content_manager->compute_vector(1);
+    max_lithium_content = fix_lithium_content_manager->compute_vector(2);
+  }
 
-  // Request neighbor list
   int irequest = neighbor->request(this);
   neighbor->requests[irequest]->pair = 0;
   neighbor->requests[irequest]->fix = 1;
@@ -244,24 +247,33 @@ void FixLithiumDiffusion::init()
 void FixLithiumDiffusion::setup(int vflag)
 {
   updatePtrs();
-  // Calculate initial diffusion coefficient
-  calculate_diffusion_coefficient();
   
-  // Store initial radius values (only done once at setup)
   double *radius = atom->radius;
   int nlocal = atom->nlocal;
   int *type = atom->type;
   int *mask = atom->mask;
   
   for (int i = 0; i < nlocal; i++) {
-    if (mask[i] & groupbit && (type[i] == AM_type)) {
-      double Omega_Li = 8.91e-6; // m³/mol (Effective Molar Volume)
-      double radius_m = radius[i] * 1.0e-6;
-      li_mols[i] = ((4.0/3.0) * M_PI * radius_m * radius_m * radius_m) / (Omega_Li); // mols of Li that fit in particle volume
-      
-      // Initialize lithium concentration
+    if (!(mask[i] & groupbit)) continue;
+    
+    double radius_m = radius[i] * 1.0e-6;
+    double volume = (4.0/3.0) * M_PI * radius_m * radius_m * radius_m;
+    
+    if (type[i] == AM_type) {
+      li_mols[i] = volume / Omega_Li_AM;
       double x_li = lithium_content[i];
-      lithium_concentration[i] = x_li * c_li_max / max_lithium_content; // mol/m³
+      lithium_concentration[i] = x_li * c_li_max / max_lithium_content;
+    }
+    else if (type[i] == CB_type) {
+      li_mols[i] = volume / Omega_Li_CB;
+      double x_li = lithium_content[i];
+      lithium_concentration[i] = x_li * c_li_max / max_lithium_content;
+    }
+    else if (type[i] == LM_type) {
+      // LM is constant lithium source
+      li_mols[i] = volume / Omega_Li_LM;
+      lithium_content[i] = max_lithium_content;
+      lithium_concentration[i] = c_li_max;
     }
   }
 }
@@ -278,16 +290,12 @@ void FixLithiumDiffusion::init_list(int id, NeighList *ptr)
 void FixLithiumDiffusion::pre_force(int vflag)
 {
   updatePtrs();
-  
-  // Calculate diffusion coefficient based on lithium content
-  calculate_diffusion_coefficient();
 }
 
 /* ---------------------------------------------------------------------- */
 
 void FixLithiumDiffusion::post_force(int vflag)
 {
-  // Update lithium content based on diffusion and current
   update_lithium_content();
 }
 
@@ -297,7 +305,7 @@ void FixLithiumDiffusion::updatePtrs()
 {
   lithium_content = fix_lithium_content->vector_atom;
   lithium_concentration = fix_lithium_concentration->vector_atom;
-  current_SE_Li = fix_current_SE_Li->vector_atom;
+  if(fix_current_SE_Li) current_SE_Li = fix_current_SE_Li->vector_atom;
   diffusion_coefficient = fix_diffusion_coefficient->vector_atom;
   lithium_flux = fix_lithium_flux->vector_atom;
   li_mols = fix_li_mols->vector_atom;
@@ -305,21 +313,20 @@ void FixLithiumDiffusion::updatePtrs()
 
 /* ---------------------------------------------------------------------- */
 
-void FixLithiumDiffusion::calculate_diffusion_coefficient()
+double FixLithiumDiffusion::get_diffusion_coefficient(int type_i, int type_j)
 {
-  int *type = atom->type;
-  int *mask = atom->mask;
-  int nlocal = atom->nlocal;
-  
-  for (int i = 0; i < nlocal; i++) {
-    if (mask[i] & groupbit && (type[i] == AM_type)) {
-      // double x_li = lithium_content[i];
-      // double x_ratio = x_li / max_lithium_content; // Chi ratio using max_lithium_content
-      
-      // diffusion_coefficient[i] = D_min + term1 + term2;
-      diffusion_coefficient[i] = 1.0e-15; // Diffusion Coefficient m²/s (Approximate value for Ag)
-    }
+  // Returns the appropriate diffusion coefficient for particle pair
+  if (type_i == AM_type) {
+    if (type_j == AM_type) return D_AM_AM;
+    if (type_j == CB_type) return D_AM_CB;
+    if (type_j == LM_type) return D_AM_LM;
   }
+  else if (type_i == CB_type) {
+    if (type_j == AM_type) return D_CB_AM;
+    if (type_j == CB_type) return D_CB_CB;
+    if (type_j == LM_type) return D_CB_LM;
+  }
+  return 0.0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -342,16 +349,18 @@ void FixLithiumDiffusion::update_lithium_content()
   numneigh = list->numneigh;
   firstneigh = list->firstneigh;
   
-  // Reset flux
+  // Reset flux for AM and CB particles only
   for (i = 0; i < nlocal; i++) {
     lithium_flux[i] = 0.0;
   }
   
-  // Calculate diffusion flux between Li particles
-  for (ii = 0; ii < inum; ii++) { // 1
+  // Calculate diffusion flux
+  for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
+    int type_i = type[i];
     
-    if (type[i] != AM_type) continue; // So if not AM type skip
+    // Only process AM and CB particles (LM is constant source)
+    if (type_i != AM_type && type_i != CB_type) continue;
     
     xtmp = x[i][0];
     ytmp = x[i][1];
@@ -360,60 +369,79 @@ void FixLithiumDiffusion::update_lithium_content()
     jlist = firstneigh[i];
     jnum = numneigh[i];
     
-    for (jj = 0; jj < jnum; jj++) { // 2
+    for (jj = 0; jj < jnum; jj++) {
       j = jlist[jj];
       j &= NEIGHMASK;
       
-      if (type[j] == AM_type) {  // 3
-        delx = xtmp - x[j][0];
-        dely = ytmp - x[j][1];
-        delz = ztmp - x[j][2];
-        rsq = delx*delx + dely*dely + delz*delz;
-        r = sqrt(rsq); // um
-        double r_SI = r * 1.0e-6;  // Convert to m (Distance between Li_q-Li_p)
+      int type_j = type[j];
+      
+      // Check if neighbor is AM, CB, or LM
+      if (type_j != AM_type && type_j != CB_type && type_j != LM_type) continue;
+      
+      delx = xtmp - x[j][0];
+      dely = ytmp - x[j][1];
+      delz = ztmp - x[j][2];
+      rsq = delx*delx + dely*dely + delz*delz;
+      r = sqrt(rsq); // um
+      double r_SI = r * 1.0e-6;  // Convert to m
+      
+      if (r < (radius[i] + radius[j])) {
+        double contact_area = calculate_contact_area(i, j);
         
-        if (r < (radius[i] + radius[j])) { // 4
-          // Calculate contact area
-          double contact_area = calculate_contact_area(i, j);
-          
-          // Diffusion flux based on concentration gradient
-          double c_diff = lithium_concentration[j] - lithium_concentration[i]; // mol/m³
-          double D_AM = diffusion_coefficient[i]; // Lithium self diffusion m²/s
-          double flux = contact_area * D_AM * c_diff / r_SI; // mol/s
-          
-          lithium_flux[i] += flux; // mol/s
-
-        } // 4
-      } // 3
-    } // 2 end of j
+        // Get concentration of neighbor (LM always at c_li_max)
+        double c_j = (type_j == LM_type) ? c_li_max : lithium_concentration[j];
+        double c_i = lithium_concentration[i];
+        
+        // Get appropriate diffusion coefficient
+        double D_ij = get_diffusion_coefficient(type_i, type_j);
+        
+        // Diffusion flux: A * D * (c_j - c_i) / |P_j - P_i|
+        double c_diff = c_j - c_i;
+        double flux = contact_area * D_ij * c_diff / r_SI; // mol/s
+        
+        lithium_flux[i] += flux;
+      }
+    }
     
-    // Add current contribution (Equation 10)
-    // Current from SE to Li contributes to lithium flux
-    lithium_flux[i] -= current_SE_Li[i] / F; // mol/s (current_SE_Li is in A [C/s], F in C/mol)
-  } // 1
+    // Subtract current contribution from SE (if present)
+    // -sum(A * i_SE / F)
+    if (current_SE_Li) {
+      lithium_flux[i] -= current_SE_Li[i] / F;
+    }
+  }
   
-  // Update lithium content based on flux
+  // Update Notes: The scalling factor needs to be toned down initially to avoid large jumps in lithium content
+  // When Lithium content is at least 0.7 then you can use the max scaling factor of 2e16
+  // The scaling factor is based on a timestep of 5e-6 us in main, so it simulates 0.1s of EC in 1 run
+  double s_factor = 2.0e10; // For 0.1s / 5e-12s
+  
   for (i = 0; i < nlocal; i++) {
-    if (mask[i] & groupbit && (type[i] == AM_type)) {
-      // dn_Li/dt = flux (Equation 10)
-      
-      // Update Notes: The scalling factor needs to be toned down initially to avoid large jumps in lithium content
-      // When Lithium content is at least 0.7 then you can use the max scaling factor of 2e16
-      // The scaling factor is based on a timestep of 5e-6 us in main, so it simulates 0.1s of EC in 1 run
-      double s_factor = 2.0e11; // 1.0s / 5e-12s 
-      lithium_content[i] += (lithium_flux[i] * dt * s_factor) / li_mols[i]; // Li Molar Ratio
-      li_mols[i] += (lithium_flux[i] * dt * s_factor); // Li Mols in Li Metal
+    if (!(mask[i] & groupbit)) continue;
+    int type_i = type[i];
+    
+    // Skip LM particles - they maintain constant concentration
+    if (type_i == LM_type) {
+      lithium_concentration[i] = c_li_max;
+      lithium_content[i] = max_lithium_content;
+      continue;
+    }
+    
+    if (type_i == AM_type || type_i == CB_type) {
+      // dn_Li/dt = flux
+      lithium_content[i] += (lithium_flux[i] * dt * s_factor) / li_mols[i];
+      li_mols[i] += (lithium_flux[i] * dt * s_factor);
  
-      // Ensure lithium content stays within bounds using values from lithium_content manager
-      if (lithium_content[i] < initial_lithium_content) lithium_content[i] = initial_lithium_content;
-      if (lithium_content[i] > target_lithium_content) lithium_content[i] = target_lithium_content;
+      // Bounds check
+      if (lithium_content[i] < initial_lithium_content) 
+        lithium_content[i] = initial_lithium_content;
+      if (lithium_content[i] > target_lithium_content) 
+        lithium_content[i] = target_lithium_content;
       
-      // Update lithium concentration based on new lithium content
+      // Update concentration
       lithium_concentration[i] = lithium_content[i] * c_li_max / max_lithium_content;
     }
   }
   
-  // Forward communication
   fix_lithium_content->do_forward_comm();
   fix_lithium_concentration->do_forward_comm();
 }
@@ -424,42 +452,41 @@ double FixLithiumDiffusion::calculate_contact_area(int i, int j)
 {
   double *radius = atom->radius;
   double **x = atom->x;
-  double length_conversion = 1.0e-6;  // LAMMPS units to m
+  double length_conversion = 1.0e-6;
   double delx = (x[i][0] - x[j][0]) * length_conversion;
   double dely = (x[i][1] - x[j][1]) * length_conversion;
   double delz = (x[i][2] - x[j][2]) * length_conversion;
-  double r = sqrt(delx*delx + dely*dely + delz*delz); // m
-  double radi = radius[i] * length_conversion; // m
-  double radj = radius[j] * length_conversion; // m
+  double r = sqrt(delx*delx + dely*dely + delz*delz);
+  double radi = radius[i] * length_conversion;
+  double radj = radius[j] * length_conversion;
 
-  double radsum = radi + radj; // m
+  double radsum = radi + radj;
   
   if (r >= radsum) return 0.0;
   
-  // Simple overlap-based contact area
   double delta_n = radsum - r;
   double reff = radi * radj / radsum;
-  return M_PI * delta_n * reff; // returns area in m2
+  return M_PI * delta_n * reff; // m²
 }
 
 /* ---------------------------------------------------------------------- */
 
 double FixLithiumDiffusion::compute_scalar()
 {
-  // Return average lithium flux
   int nlocal = atom->nlocal;
   int *type = atom->type;
   double sum = 0.0;
   int count = 0;
   
   for (int i = 0; i < nlocal; i++) {
-    if (type[i] == AM_type) {
+    if (type[i] == AM_type || type[i] == CB_type) {
       sum += fabs(lithium_flux[i]);
       count++;
     }
   }
   
-  double all_sum, all_count;
+  double all_sum;
+  int all_count;
   MPI_Allreduce(&sum,&all_sum,1,MPI_DOUBLE,MPI_SUM,world);
   MPI_Allreduce(&count,&all_count,1,MPI_INT,MPI_SUM,world);
   

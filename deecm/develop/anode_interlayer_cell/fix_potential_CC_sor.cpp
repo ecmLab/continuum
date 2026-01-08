@@ -40,7 +40,7 @@
     - Solves both electronic and electrolyte potentials
 ------------------------------------------------------------------------- */
 
-#include "fix_battery_eis.h"
+#include "fix_potential_sor.h"
 #include "atom.h"
 #include "update.h"
 #include "compute.h"
@@ -65,7 +65,7 @@ using namespace FixConst;
 
 /* ---------------------------------------------------------------------- */
 
-void FixBatteryEIS::post_create()
+void FixPotentialSOR::post_create()
 {
   // Register property/atom for electrolyte potential
   fix_phi_el = static_cast<FixPropertyAtom*>(modify->find_fix_property("electrolytePotential","property/atom","scalar",0,0,style,false));
@@ -214,11 +214,10 @@ void FixBatteryEIS::post_create()
 
 /* ---------------------------------------------------------------------- */
 
-FixBatteryEIS::FixBatteryEIS(LAMMPS *lmp, int narg, char **arg) :
+FixPotentialSOR::FixPotentialSOR(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg),
   omega(1.9),
-  tolerance(1e-6),
-  max_iterations(10000),
+  max_iterations(10),
   current_iteration(0),
   convergence_error(0.0),
   R(8.31), // J*mol^(-1)*K^(-1)
@@ -261,50 +260,46 @@ FixBatteryEIS::FixBatteryEIS(LAMMPS *lmp, int narg, char **arg) :
   first_run(true)
 {
   if (narg < 3)
-    error->all(FLERR,"Illegal fix battery/eis command");
+    error->all(FLERR,"Illegal fix potential/sor command");
 
   // Parse arguments
   int iarg = 3;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"omega") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix battery/eis command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix potential/sor command");
       omega = force->numeric(FLERR,arg[iarg+1]);
       if (omega <= 0.0 || omega >= 2.0)
         error->all(FLERR,"EIS omega must be between 0 and 2");
       iarg += 2;
-    } else if (strcmp(arg[iarg],"tolerance") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix battery/eis command");
-      tolerance = force->numeric(FLERR,arg[iarg+1]);
-      iarg += 2;
     } else if (strcmp(arg[iarg],"max_iter") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix battery/eis command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix potential/sor command");
       max_iterations = force->inumeric(FLERR,arg[iarg+1]);
       iarg += 2;
     } else if (strcmp(arg[iarg],"temperature") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix battery/eis command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix potential/sor command");
       T = force->numeric(FLERR,arg[iarg+1]);
       iarg += 2;
     } else if (strcmp(arg[iarg],"BC_types") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal fix battery/eis command");
+      if (iarg+3 > narg) error->all(FLERR,"Illegal fix potential/sor command");
       Li_Ctype = force->inumeric(FLERR,arg[iarg+1]);
       Li_Atype = force->inumeric(FLERR,arg[iarg+2]);
       iarg += 3;
     } else if (strcmp(arg[iarg],"BC_potentials") == 0) {
-      if (iarg+4 > narg) error->all(FLERR,"Illegal fix battery/eis command");
+      if (iarg+4 > narg) error->all(FLERR,"Illegal fix potential/sor command");
       phi_el_BC_Cat = force->numeric(FLERR,arg[iarg+1]);
       phi_el_BC_An = force->numeric(FLERR,arg[iarg+2]);
       cur_app = force->numeric(FLERR,arg[iarg+3]);
       iarg += 4;
     } else if (strcmp(arg[iarg],"conductivity") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal fix battery/eis command");
+      if (iarg+3 > narg) error->all(FLERR,"Illegal fix potential/sor command");
       sigma_el = force->numeric(FLERR,arg[iarg+1]);
       sigma_Li = force->numeric(FLERR,arg[iarg+2]);
       iarg += 3;
     } else if (strcmp(arg[iarg],"SE_type") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix battery/eis command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix potential/sor command");
       SE_type = force->inumeric(FLERR,arg[iarg+1]);
       iarg += 2;
-    } else error->all(FLERR,"Illegal fix battery/eis command");
+    } else error->all(FLERR,"Illegal fix potential/sor command");
   }
   
   scalar_flag = 1;
@@ -318,13 +313,13 @@ FixBatteryEIS::FixBatteryEIS(LAMMPS *lmp, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-FixBatteryEIS::~FixBatteryEIS()
+FixPotentialSOR::~FixPotentialSOR()
 {
 }
 
 /* ---------------------------------------------------------------------- */
 
-int FixBatteryEIS::setmask()
+int FixPotentialSOR::setmask()
 {
   int mask = 0;
   mask |= PRE_FORCE;
@@ -334,11 +329,11 @@ int FixBatteryEIS::setmask()
 
 /* ---------------------------------------------------------------------- */
 
-void FixBatteryEIS::init()
+void FixPotentialSOR::init()
 {
   // Check newton pair
   if (force->newton_pair == 1)
-    error->all(FLERR,"Fix battery/eis requires newton pair off");
+    error->all(FLERR,"Fix potential/sor requires newton pair off");
 
   // Get all property fixes
   fix_phi_el = static_cast<FixPropertyAtom*>(modify->find_fix_property("electrolytePotential","property/atom","scalar",0,0,style));
@@ -358,10 +353,10 @@ void FixBatteryEIS::init()
 
   // Validate particle types
   if (SE_type < 1 || SE_type > atom->ntypes)
-    error->all(FLERR,"Invalid particle types for battery/eis");
+    error->all(FLERR,"Invalid particle types for potential/sor");
     
   if (Li_Ctype < 1 || Li_Ctype > atom->ntypes || Li_Atype < 1 || Li_Atype > atom->ntypes)
-    error->all(FLERR,"Invalid boundary condition types for battery/eis");
+    error->all(FLERR,"Invalid boundary condition types for potential/sor");
 
   // Request neighbor list
   int irequest = neighbor->request(this);
@@ -375,14 +370,14 @@ void FixBatteryEIS::init()
 
 /* ---------------------------------------------------------------------- */
 
-void FixBatteryEIS::init_list(int id, NeighList *ptr)
+void FixPotentialSOR::init_list(int id, NeighList *ptr)
 {
   list = ptr;
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FixBatteryEIS::setup(int vflag)
+void FixPotentialSOR::setup(int vflag)
 {
   updatePtrs();
   
@@ -442,7 +437,7 @@ void FixBatteryEIS::setup(int vflag)
 
 /* ---------------------------------------------------------------------- */
 
-void FixBatteryEIS::pre_force(int vflag)
+void FixPotentialSOR::pre_force(int vflag)
 {
   updatePtrs();
 
@@ -455,7 +450,7 @@ void FixBatteryEIS::pre_force(int vflag)
 
 /* ---------------------------------------------------------------------- */
 
-void FixBatteryEIS::post_force(int vflag)
+void FixPotentialSOR::post_force(int vflag)
 {
   // First, calculate interface contact areas and current distribution
   calculate_interface_currents();
@@ -472,7 +467,7 @@ void FixBatteryEIS::post_force(int vflag)
 
 /* ---------------------------------------------------------------------- */
 
-void FixBatteryEIS::updatePtrs()
+void FixPotentialSOR::updatePtrs()
 {
   phi_el = fix_phi_el->vector_atom;
   phi_el_old = fix_phi_el_old->vector_atom;
@@ -496,7 +491,7 @@ void FixBatteryEIS::updatePtrs()
    This ensures current conservation: what goes in must come out
 ------------------------------------------------------------------------- */
 
-void FixBatteryEIS::calculate_interface_currents()
+void FixPotentialSOR::calculate_interface_currents()
 {
   int i,j,ii,jj,inum,jnum;
   int *ilist,*jlist,*numneigh,**firstneigh;
@@ -584,18 +579,10 @@ void FixBatteryEIS::calculate_interface_currents()
   int num_positive_steps = period / 2;
   double increase_step = cur_app / 4.0;
   double current_magnitude = cur_app + (num_positive_steps * increase_step);
-  double i_density = sign * current_magnitude; // Applied current density in A/m2 // sign * current_magnitude
-  
-  // // Calculate applied current density
-  // int period = static_cast<int>(ndt) / 3600; // Assuming 3600 is 1 hour
-  // double sign = (period % 2 == 0) ? 1.0 : -1.0;
-  // int num_positive_steps = period / 2;
-  // double increase_step = cur_app / 4.0;
-  // double current_magnitude = cur_app + (num_positive_steps * increase_step);
-  // double i_app = current_magnitude; // Applied current density in A/m2 // sign * current_magnitude
+  // double i_density = sign * current_magnitude; // Applied current density in A/m2 // sign * current_magnitude
 
   // Applied current density at anode (controlled)
-  // double i_density = cur_app;  // A/m² sign * cur_app
+  double i_density = cur_app;  // A/m² sign * cur_app
 
   total_current = i_density * 4e-10; // A Ideal current assuming area is 20 um x 20 um
   
@@ -633,7 +620,7 @@ void FixBatteryEIS::calculate_interface_currents()
 
 /* ---------------------------------------------------------------------- */
 
-void FixBatteryEIS::solve_eis_iteration()
+void FixPotentialSOR::solve_eis_iteration()
 {
   int i,j,ii,jj,inum,jnum;
   int *ilist,*jlist,*numneigh,**firstneigh;
@@ -782,7 +769,7 @@ void FixBatteryEIS::solve_eis_iteration()
 
 /* ---------------------------------------------------------------------- */
 
-void FixBatteryEIS::apply_boundary_conditions()
+void FixPotentialSOR::apply_boundary_conditions()
 {
   int *mask = atom->mask;
   int *type = atom->type;
@@ -818,7 +805,7 @@ void FixBatteryEIS::apply_boundary_conditions()
 
 /* ---------------------------------------------------------------------- */
 
-void FixBatteryEIS::calculate_hydrostatic_stress()
+void FixPotentialSOR::calculate_hydrostatic_stress()
 {
   // 1. Find the compute defined in the input script
   // We assume the compute ID is "st". If you named it differently, change it here.
@@ -826,7 +813,7 @@ void FixBatteryEIS::calculate_hydrostatic_stress()
   int icompute = modify->find_compute(stress_id);
   
   if (icompute < 0) {
-    error->all(FLERR, "FixBatteryEIS: Could not find compute with ID 'st'. "
+    error->all(FLERR, "FixPotentialSOR: Could not find compute with ID 'st'. "
                       "Please add 'compute st all stress/atom' to your input script.");
   }
   
@@ -880,7 +867,7 @@ void FixBatteryEIS::calculate_hydrostatic_stress()
 
 /* ---------------------------------------------------------------------- */
 
-double FixBatteryEIS::calculate_contact_area(int i, int j)
+double FixPotentialSOR::calculate_contact_area(int i, int j)
 {
   double *radius = atom->radius;
   double **x = atom->x;
@@ -916,7 +903,7 @@ double FixBatteryEIS::calculate_contact_area(int i, int j)
 
 /* ---------------------------------------------------------------------- */
 
-double FixBatteryEIS::calculate_current_Li_SE(int i_Li, int j_SE, double phi_ed, double phi_el, double sigma_m)
+double FixPotentialSOR::calculate_current_Li_SE(int i_Li, int j_SE, double phi_ed, double phi_el, double sigma_m)
 {
   // Get equilibrium potential and exchange current density for Li particle
   double U_eq = 0.0;
@@ -955,7 +942,7 @@ double FixBatteryEIS::calculate_current_Li_SE(int i_Li, int j_SE, double phi_ed,
 
 /* ---------------------------------------------------------------------- */
 
-double FixBatteryEIS::check_convergence()
+double FixPotentialSOR::check_convergence()
 {
   int nlocal = atom->nlocal;
   int *mask = atom->mask;
@@ -989,7 +976,7 @@ double FixBatteryEIS::check_convergence()
 
 /* ---------------------------------------------------------------------- */
 
-double FixBatteryEIS::compute_scalar()
+double FixPotentialSOR::compute_scalar()
 {
   // Return convergence error
   return convergence_error;
@@ -997,7 +984,7 @@ double FixBatteryEIS::compute_scalar()
 
 /* ---------------------------------------------------------------------- */
 
-double FixBatteryEIS::compute_vector(int n)
+double FixPotentialSOR::compute_vector(int n)
 {
   // Extended output for monitoring
   if (n == 0) return (double)current_iteration;

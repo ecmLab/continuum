@@ -40,21 +40,21 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(battery/eis,FixBatteryEIS)
+FixStyle(potential/sor,FixPotentialSOR)
 
 #else
 
-#ifndef LMP_FIX_BATTERY_EIS_H
-#define LMP_FIX_BATTERY_EIS_H
+#ifndef LMP_FIX_POTENTIAL_SOR_H
+#define LMP_FIX_POTENTIAL_SOR_H
 
 #include "fix.h"
 
 namespace LAMMPS_NS {
 
-class FixBatteryEIS : public Fix {
+class FixPotentialSOR : public Fix {
  public:
-  FixBatteryEIS(class LAMMPS *, int, char **);
-  virtual ~FixBatteryEIS();
+  FixPotentialSOR(class LAMMPS *, int, char **);
+  virtual ~FixPotentialSOR();
   virtual void post_create();
   int setmask();
   void init();
@@ -70,7 +70,6 @@ class FixBatteryEIS : public Fix {
  protected:
   // EIS parameters
   double omega;              // EIS relaxation parameter (1.9)
-  double tolerance;          // Convergence tolerance
   int max_iterations;        // Maximum EIS iterations
   int current_iteration;     // Current iteration count
   double convergence_error;  // Current convergence error
@@ -165,12 +164,12 @@ class FixBatteryEIS : public Fix {
 
 /* ERROR/WARNING messages:
 
-E: Illegal fix battery/eis command
+E: Illegal fix potential/sor command
 
 Self-explanatory. Check the input script syntax and compare to the
 documentation for the command.
 
-E: Fix battery/eis requires newton pair off
+E: Fix potential/sor requires newton pair off
 
 This fix requires newton pair off for proper force calculation.
 
@@ -178,11 +177,11 @@ E: Could not find required property/atom fixes
 
 Internal error - missing required property/atom fixes.
 
-E: Invalid particle types for battery/eis
+E: Invalid particle types for potential/sor
 
 SE_type and Li_type must be valid atom types.
 
-E: Invalid boundary condition types for battery/eis
+E: Invalid boundary condition types for potential/sor
 
 Li_Ctype and Li_Atype must be valid atom types.
 

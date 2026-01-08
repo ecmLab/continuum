@@ -20,7 +20,7 @@ timestep        5.e-6
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
-read_data     data/1C_M2C5_vr1_pack.data
+read_data     data/1L_M2C5_vr1_pack.data
 
 # --- 3. RE-ESTABLISH GROUPS ---
 # Define groups based on particle types (Type 5 is the wall)
@@ -131,29 +131,27 @@ compute      st li stress/atom
 fix             li_content me property/atom/lithium_content initial 0.0 target 1.0 max 1.0
 
 # Calculate equilibrium potential - only for AM particles
-fix             eq_pot me equilibrium_potential temperature 303. x_max 1.0 material Ag
+# fix             eq_pot me equilibrium_potential temperature 303. x_max 1.0 material Ag
  
 # SOR solver for potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
-fix             potential_sol all potential/sor omega 1.0 tolerance 1e-1 max_iter 1 &
-                BC_types 2 3 BC_potentials 0.00 0.00 1.0 conductivity 0.05 0.1 SE_type 1
+fix             potential_sol all potential/sor omega 1.0 max_iter 1 &
+                BC_types 3 4 BC_potentials 0.00 0.00 0.0 conductivity 0.05 0.1 SE_type 2
 
 # Lithium diffusion - only for AM particles
-fix             li_diffusion li lithium_diffusion Li_type 3 2 c_li_max 77101.002
+fix             diff all lithium_diffusion AM_type 1 CB_type 2 LM_type 4 &
+                c_li_max 77101.002 D_AM_AM 1.0e-15 D_AM_CB 1.0e-15 D_AM_LM 1.0e-14 &
+                D_CB_AM 1.0e-15 D_CB_CB 1.0e-15 D_CB_LM 1.0e-14
 
-# Radius expansion for Si particles (optional)
-fix             radius_expand li radius_expansion Li_type 3 2 update_every 1 max_updates 1000000
+# Radius expansion for AM particles (optional)
+#fix             radius_expand li radius_expansion Li_type 3 2 update_every 1 max_updates 1000000
 
 # --- 10. COMPUTE SETUP FOR MONITORING ---
 
 # Electric potential by material type - NOW ELECTROLYTE POTENTIAL
-compute         phi_el_se_avg se reduce ave f_electrolytePotential
-compute         phi_el_li1_avg li1 reduce ave f_electrolytePotential
-compute         phi_el_li2_avg li2 reduce ave f_electrolytePotential
+#compute         phi_el_se_avg se reduce ave f_electrolytePotential
 
 # Electronic potential by material type
-compute         phi_ed_se_avg se reduce ave f_electronicPotential
-compute         phi_ed_li1_avg li1 reduce ave f_electronicPotential
-compute         phi_ed_li2_avg li2 reduce ave f_electronicPotential
+#compute         phi_ed_se_avg se reduce ave f_electronicPotential
 
 # Current flow at AM-SE interfaces
 compute         current_avg se reduce ave f_currentLiSE
@@ -164,14 +162,14 @@ variable       ts_skin     equal f_ts_check[3]
 
 # --- 11. OUTPUT SETTINGS ---
 # Thermo output
-thermo_style    custom step atoms ke c_phi_el_se_avg c_phi_ed_se_avg &
-                c_phi_ed_li1_avg c_phi_ed_li2_avg c_current_avg v_ts_rayleigh v_ts_hertz v_ts_skin v_prs
-thermo          72
+thermo_style    custom step atoms ke &
+                v_ts_rayleigh v_ts_hertz v_ts_skin v_prs
+thermo          1
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 72 20251216_CCD_post_bat_sym_200Mpa_exp_0d1mAcm2_30min/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
-                f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress v_prs_atom
+dump            dmp_batt all custom 1 20260108_1C_M2C5_vr1_rest_1min/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+                f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress f_lithiumConcentration f_lithiumMols v_prs_atom
 
-# 4. Run EC for 1 timestep, equivelent to 1s real seconds
-run             18000
+# 4. Run EC for 1 timestep, equivelent to 0.1s real seconds
+run             100

@@ -1,39 +1,8 @@
 /* ----------------------------------------------------------------------
-    This is the
-
-    ██╗     ██╗ ██████╗  ██████╗  ██████╗ ██╗  ██╗████████╗███████╗
-    ██║     ██║██╔════╝ ██╔════╝ ██╔════╝ ██║  ██║╚══██╔══╝██╔════╝
-    ██║     ██║██║  ███╗██║  ███╗██║  ███╗███████║   ██║   ███████╗
-    ██║     ██║██║   ██║██║   ██║██║   ██║██╔══██║   ██║   ╚════██║
-    ███████╗██║╚██████╔╝╚██████╔╝╚██████╔╝██║  ██║   ██║   ███████║
-    ╚══════╝╚═╝ ╚═════╝  ╚═════╝  ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝®
-
-    DEM simulation engine, released by
-    DCS Computing Gmbh, Linz, Austria
-    http://www.dcs-computing.com, office@dcs-computing.com
-
-    LIGGGHTS® is part of CFDEM®project:
-    http://www.liggghts.com | http://www.cfdem.com
-
-    Core developer and main author:
-    Christoph Kloss, christoph.kloss@dcs-computing.com
-
-    LIGGGHTS® is open-source, distributed under the terms of the GNU Public
-    License, version 2 or later. It is distributed in the hope that it will
-    be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. You should have
-    received a copy of the GNU General Public License along with LIGGGHTS®.
-    If not, see http://www.gnu.org/licenses . See also top-level README
-    and LICENSE files.
-
-    LIGGGHTS® and CFDEM® are registered trade marks of DCS Computing GmbH,
-    the producer of the LIGGGHTS® software and the CFDEM®coupling software
-    See http://www.cfdem.com/terms-trademark-policy for details.
-
--------------------------------------------------------------------------
-    Contributing author and copyright for this file:
-    
+    LIGGGHTS® - DEM simulation engine
+    Contributing author: Joseph Vazquez Mercado, RIT 2025
     Copyright 2024-     DCS Computing GmbH, Linz
+    Notes: Multi-material Li diffusion: AM, CB, and LM (constant source)
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
@@ -68,14 +37,27 @@ class FixLithiumDiffusion : public Fix {
   void updatePtrs();
 
  protected:
-  // Diffusion parameters from equations
-  double F;                  // Faraday constant (96485 C/mol)
-  double c_li_max;           // Maximum Li concentration (83874 mol/m³)
+  // Physical constants
+  double F;                      // Faraday constant (96485 C/mol)
+  double c_li_max;               // Maximum/LM Li concentration (77101.002 mol/m³)
+  
+  // Molar volumes (m³/mol)
+  double Omega_Li_LM;            // Li molar volume in LM (13.02e-6)
+  double Omega_Li_AM;            // Li molar volume in AM
+  double Omega_Li_CB;            // Li molar volume in CB
 
-  // Lithium content parameters (retrieved from fix_property_atom_lithium_content)
-  double initial_lithium_content;  // Initial Li/Si ratio
-  double target_lithium_content;   // Target Li/Si ratio for charging
-  double max_lithium_content;      // Maximum Li/Si ratio
+  // Lithium content parameters
+  double initial_lithium_content;
+  double target_lithium_content;
+  double max_lithium_content;
+
+  // Diffusion coefficients (m²/s) for each material pair
+  double D_AM_AM;                // AM to AM diffusion
+  double D_AM_CB;                // AM to CB diffusion
+  double D_AM_LM;                // AM to LM diffusion
+  double D_CB_AM;                // CB to AM diffusion
+  double D_CB_CB;                // CB to CB diffusion
+  double D_CB_LM;                // CB to LM diffusion
 
   // Property pointers
   double *lithium_content;
@@ -94,16 +76,18 @@ class FixLithiumDiffusion : public Fix {
   class FixPropertyAtom *fix_li_mols;
   class FixPropertyAtomLithiumContent *fix_lithium_content_manager;
   
-  // Particle type
-  int AM_type;
+  // Particle types
+  int AM_type;                   // Active Material type (default 1)
+  int CB_type;                   // Carbon Black type (default 2)
+  int LM_type;                   // Lithium Metal type (default 4)
   
   // Neighbor list
   class NeighList *list;
   
   // Methods
-  void calculate_diffusion_coefficient();
   void update_lithium_content();
   double calculate_contact_area(int, int);
+  double get_diffusion_coefficient(int, int);
 };
 
 }
@@ -118,16 +102,17 @@ E: Illegal fix lithium_diffusion command
 Self-explanatory. Check the input script syntax and compare to the
 documentation for the command.
 
-E: Fix lithium_diffusion requires fix property/atom/lithium_content
+E: Fix lithium_diffusion requires lithiumContent property
 
-Fix property/atom/lithium_content must be defined before fix lithium_diffusion.
+The lithiumContent property/atom must be defined before fix lithium_diffusion.
 
-E: Fix lithium_diffusion requires fix exchange_current_density
+E: Fix lithium_diffusion requires lithiumConcentration property
 
-Fix exchange_current_density must be defined before fix lithium_diffusion.
+The lithiumConcentration property/atom must be defined before fix lithium_diffusion.
 
-E: Fix lithium_diffusion requires fix battery/sor
+E: Could not find required property/atom fixes
 
-Fix battery/sor must be defined before fix lithium_diffusion.
+One or more of the required property/atom fixes (diffusionCoefficient,
+lithiumFlux, lithiumMols) could not be found or created.
 
 */
