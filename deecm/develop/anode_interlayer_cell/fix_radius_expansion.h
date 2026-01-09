@@ -1,39 +1,8 @@
 /* ----------------------------------------------------------------------
-    This is the
-
-    ██╗     ██╗ ██████╗  ██████╗  ██████╗ ██╗  ██╗████████╗███████╗
-    ██║     ██║██╔════╝ ██╔════╝ ██╔════╝ ██║  ██║╚══██╔══╝██╔════╝
-    ██║     ██║██║  ███╗██║  ███╗██║  ███╗███████║   ██║   ███████╗
-    ██║     ██║██║   ██║██║   ██║██║   ██║██╔══██║   ██║   ╚════██║
-    ███████╗██║╚██████╔╝╚██████╔╝╚██████╔╝██║  ██║   ██║   ███████║
-    ╚══════╝╚═╝ ╚═════╝  ╚═════╝  ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝®
-
-    DEM simulation engine, released by
-    DCS Computing Gmbh, Linz, Austria
-    http://www.dcs-computing.com, office@dcs-computing.com
-
-    LIGGGHTS® is part of CFDEM®project:
-    http://www.liggghts.com | http://www.cfdem.com
-
-    Core developer and main author:
-    Christoph Kloss, christoph.kloss@dcs-computing.com
-
-    LIGGGHTS® is open-source, distributed under the terms of the GNU Public
-    License, version 2 or later. It is distributed in the hope that it will
-    be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. You should have
-    received a copy of the GNU General Public License along with LIGGGHTS®.
-    If not, see http://www.gnu.org/licenses . See also top-level README
-    and LICENSE files.
-
-    LIGGGHTS® and CFDEM® are registered trade marks of DCS Computing GmbH,
-    the producer of the LIGGGHTS® software and the CFDEM®coupling software
-    See http://www.cfdem.com/terms-trademark-policy for details.
-
--------------------------------------------------------------------------
-    Contributing author and copyright for this file:
-    
+    LIGGGHTS® - DEM simulation engine
+    Contributing author: Joseph Vazquez Mercado, RIT 2025
     Copyright 2024-     DCS Computing GmbH, Linz
+    Notes: Radius expansion for AM and CB particles based on Li content
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
@@ -64,20 +33,20 @@ class FixRadiusExpansion : public Fix {
   void trigger_radius_update();
   
  protected:
-  // Volume parameters from equations
-  double Omega_Li;           // Molar volume of Li (12.97e-6 m³/mol)
-  double Omega_Li_eff;       // Effective molar volume of Li in Li (12.97e-6 m³/mol)
+  // Volume parameters - effective molar volumes (m³/mol)
+  double Omega_Li_AM;        // Effective molar volume of Li in AM
+  double Omega_Li_CB;        // Effective molar volume of Li in CB
   
   // Update control
   int update_frequency;      // Steps between radius updates
-  int max_updates;           // Maximum number of radius updates (10)
+  int max_updates;           // Maximum number of radius updates
   int update_count;          // Current update count
   int next_update_step;      // Next step to update radius
   bool manual_trigger;       // Manual trigger for radius update
   
   // Property pointers
   double *lithium_content;
-  double *li_mols;      // Moles of lithium (from lithium_diffusion)
+  double *li_mols;           // Moles of lithium (from lithium_diffusion)
   double *initial_radius;
   double *particle_volume;
   
@@ -87,8 +56,9 @@ class FixRadiusExpansion : public Fix {
   class FixPropertyAtom *fix_initial_radius;
   class FixPropertyAtom *fix_particle_volume;
   
-  // Particle type
-  int AM_type;
+  // Particle types
+  int AM_type;               // Active Material type (default 1)
+  int CB_type;               // Carbon Black type (default 2)
   
   // Methods
   void update_particle_radius();
@@ -107,12 +77,18 @@ E: Illegal fix radius_expansion command
 Self-explanatory. Check the input script syntax and compare to the
 documentation for the command.
 
-E: Fix radius_expansion requires fix property/atom/lithium_content
+E: Fix radius_expansion requires lithiumContent property
 
-Fix property/atom/lithium_content must be defined before fix radius_expansion.
+The lithiumContent property/atom must be defined before fix radius_expansion.
 
-E: Maximum radius updates reached
+E: Fix radius_expansion requires lithiumMols property
 
-The fix has performed the maximum allowed number of radius updates.
+The lithiumMols property/atom must be created by fix lithium_diffusion
+before fix radius_expansion is defined.
+
+E: Could not find required property/atom fixes
+
+One or more required property/atom fixes (initialRadius, particleVolume)
+could not be found or created.
 
 */
