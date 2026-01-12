@@ -47,14 +47,14 @@ class FixRadiusExpansion : public Fix {
   // Property pointers
   double *lithium_content;
   double *li_mols;           // Moles of lithium (from lithium_diffusion)
-  double *initial_radius;
   double *particle_volume;
+  double *initial_volume;   // Initial particle volume
   
   // Fix pointers
   class FixPropertyAtom *fix_lithium_content;
   class FixPropertyAtom *fix_li_mols;
-  class FixPropertyAtom *fix_initial_radius;
   class FixPropertyAtom *fix_particle_volume;
+  class FixPropertyAtom *fix_initial_volume;
   
   // Particle types
   int AM_type;               // Active Material type (default 1)

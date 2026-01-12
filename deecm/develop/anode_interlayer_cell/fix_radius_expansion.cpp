@@ -24,8 +24,8 @@ using namespace FixConst;
 
 FixRadiusExpansion::FixRadiusExpansion(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg),
-  Omega_Li_AM(8.91e-6),         // m³/mol (effective molar volume in AM)
-  Omega_Li_CB(8.91e-6),         // m³/mol (effective molar volume in CB)
+  Omega_Li_AM(6.0593e-6),         // m³/mol (effective molar volume of AgLi4 - Based on max concentration)
+  Omega_Li_CB(4.9307e-6),         // m³/mol (effective molar volume in CB - Based on max concentration)
   update_frequency(10),
   max_updates(10),
   update_count(0),
@@ -33,11 +33,11 @@ FixRadiusExpansion::FixRadiusExpansion(LAMMPS *lmp, int narg, char **arg) :
   manual_trigger(false),
   lithium_content(NULL),
   li_mols(NULL),
-  initial_radius(NULL),
+  initial_volume(NULL),         // Changed from initial_radius
   particle_volume(NULL),
   fix_lithium_content(NULL),
   fix_li_mols(NULL),
-  fix_initial_radius(NULL),
+  fix_initial_volume(NULL),     // Changed from fix_initial_radius
   fix_particle_volume(NULL),
   AM_type(1),
   CB_type(2)
@@ -87,22 +87,6 @@ FixRadiusExpansion::FixRadiusExpansion(LAMMPS *lmp, int narg, char **arg) :
 
 void FixRadiusExpansion::post_create()
 {
-  // Register property/atom for initial radius
-  fix_initial_radius = static_cast<FixPropertyAtom*>(modify->find_fix_property("initialRadius","property/atom","scalar",0,0,style,false));
-  if(!fix_initial_radius) {
-    const char* fixarg[10];
-    fixarg[0]="initialRadius";
-    fixarg[1]="all";
-    fixarg[2]="property/atom";
-    fixarg[3]="initialRadius";
-    fixarg[4]="scalar";
-    fixarg[5]="no";
-    fixarg[6]="yes";
-    fixarg[7]="no";
-    fixarg[8]="0.0";
-    fix_initial_radius = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
-  }
-
   // Register property/atom for particle volume
   fix_particle_volume = static_cast<FixPropertyAtom*>(modify->find_fix_property("particleVolume","property/atom","scalar",0,0,style,false));
   if(!fix_particle_volume) {
@@ -146,12 +130,15 @@ void FixRadiusExpansion::init()
   fix_li_mols = static_cast<FixPropertyAtom*>(modify->find_fix_property("lithiumMols","property/atom","scalar",0,0,style));
   if(!fix_li_mols)
     error->all(FLERR,"Fix radius_expansion requires lithiumMols property (created by fix lithium_diffusion)");
-    
-  fix_initial_radius = static_cast<FixPropertyAtom*>(modify->find_fix_property("initialRadius","property/atom","scalar",0,0,style));
-  fix_particle_volume = static_cast<FixPropertyAtom*>(modify->find_fix_property("particleVolume","property/atom","scalar",0,0,style));
   
-  if(!fix_initial_radius || !fix_particle_volume)
-    error->all(FLERR,"Could not find required property/atom fixes");
+  // Find initialVolume (managed by fix lithium_diffusion)
+  fix_initial_volume = static_cast<FixPropertyAtom*>(modify->find_fix_property("initialVolume","property/atom","scalar",0,0,style));
+  if(!fix_initial_volume)
+    error->all(FLERR,"Fix radius_expansion requires initialVolume property (created by fix lithium_diffusion)"); 
+    
+  fix_particle_volume = static_cast<FixPropertyAtom*>(modify->find_fix_property("particleVolume","property/atom","scalar",0,0,style));
+  if(!fix_particle_volume)
+    error->all(FLERR,"Could not find particleVolume property/atom fix");
 
   updatePtrs();
   
@@ -164,22 +151,9 @@ void FixRadiusExpansion::setup(int vflag)
 {
   updatePtrs();
   
-  double *radius = atom->radius;
-  int *type = atom->type;
-  int *mask = atom->mask;
-  int nlocal = atom->nlocal;
-  
-  // Store the initial radius for AM and CB particles
-  for (int i = 0; i < nlocal; i++) {
-    if (!(mask[i] & groupbit)) continue;
-    
-    if (type[i] == AM_type || type[i] == CB_type) {
-      initial_radius[i] = radius[i]; // Units in μm
-      // Calculate initial particle volume (in μm³)
-      double r_um = initial_radius[i];
-      particle_volume[i] = (4.0/3.0) * M_PI * r_um * r_um * r_um;
-    }
-  }
+  // Calculate the initial state based on initialVolume and whatever 
+  // lithium mols exist at step 0 (from fix lithium_diffusion)
+  update_particle_radius();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -206,7 +180,7 @@ void FixRadiusExpansion::updatePtrs()
 {
   lithium_content = fix_lithium_content->vector_atom;
   li_mols = fix_li_mols->vector_atom;
-  initial_radius = fix_initial_radius->vector_atom;
+  initial_volume = fix_initial_volume->vector_atom; // Pointer to initialVolume
   particle_volume = fix_particle_volume->vector_atom;
 }
 
@@ -238,8 +212,8 @@ void FixRadiusExpansion::update_particle_radius()
     }
     
     // Calculate new volume based on lithium content
-    // V = Omega_Li_eff * n_Li (in m³)
-    particle_volume[i] = Omega_eff * n_Li;
+    // V = initial_volume[i] + Omega_Li_eff * n_Li (in m³)
+    particle_volume[i] = initial_volume[i] + Omega_eff * n_Li;
     
     // Calculate new radius from volume
     // V = (4/3) * pi * r³  =>  r = cbrt(3V / (4*pi))

@@ -39,12 +39,17 @@ class FixLithiumDiffusion : public Fix {
  protected:
   // Physical constants
   double F;                      // Faraday constant (96485 C/mol)
-  double c_li_max;               // Maximum/LM Li concentration (77101.002 mol/m³)
+  // Material-specific maximum concentrations (mol/m^3)
+  double c_li_max_LM;
+  double c_li_max_AM;
+  double c_li_max_CB;
+
+  double V_exp_max_AM;          // Max volume expansion for AM
+  double V_exp_max_CB;          // Max volume expansion for CB
+  double V_exp_max_LM;          // Max volume expansion for LM
   
   // Molar volumes (m³/mol)
-  double Omega_Li_LM;            // Li molar volume in LM (13.02e-6)
-  double Omega_Li_AM;            // Li molar volume in AM
-  double Omega_Li_CB;            // Li molar volume in CB
+  double Omega_Li_LM;            // Li molar volume in LM (12.97e-6 m³/mol)
 
   // Lithium content parameters
   double initial_lithium_content;
@@ -66,6 +71,7 @@ class FixLithiumDiffusion : public Fix {
   double *diffusion_coefficient;
   double *lithium_flux;
   double *li_mols;
+  double *initial_volume;              // Store initial particle volumes
   
   // Fix pointers
   class FixPropertyAtom *fix_lithium_content;
@@ -75,6 +81,7 @@ class FixLithiumDiffusion : public Fix {
   class FixPropertyAtom *fix_lithium_flux;
   class FixPropertyAtom *fix_li_mols;
   class FixPropertyAtomLithiumContent *fix_lithium_content_manager;
+  class FixPropertyAtom *fix_initial_volume; // Fix pointer for the property
   
   // Particle types
   int AM_type;                   // Active Material type (default 1)
@@ -88,6 +95,8 @@ class FixLithiumDiffusion : public Fix {
   void update_lithium_content();
   double calculate_contact_area(int, int);
   double get_diffusion_coefficient(int, int);
+  double get_c_li_max(int); // New helper function
+  double get_V_exp_max(int); // New helper function
 };
 
 }

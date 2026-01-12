@@ -3,6 +3,9 @@
     Contributing author: Joseph Vazquez Mercado, RIT 2025
     Copyright 2024-     DCS Computing GmbH, Linz
     Notes: Multi-material Li diffusion: AM, CB, and LM (constant source)
+    Changes Needed:
+    - Modify diffustion equation to be Concentration + Potential Driven
+      - This will be done by considering the equalibrium potential (see slides)
 ------------------------------------------------------------------------- */
 
 #include "fix_lithium_diffusion.h"
@@ -27,10 +30,13 @@ using namespace FixConst;
 FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg),
   F(96485.0),                    // C/mol
-  c_li_max(77101.002),           // mol/m³ (LM constant concentration)
-  Omega_Li_LM(13.02e-6),         // m³/mol (Li molar volume in LM)
-  Omega_Li_AM(8.91e-6),          // m³/mol (Li molar volume in AM)
-  Omega_Li_CB(8.91e-6),          // m³/mol (Li molar volume in CB)
+  c_li_max_LM(77101.002),         // Lithium Metal (Pure Li density) (mol/m^3)
+  c_li_max_AM(115917.8),           // Active Material (Silver Alloy OCV AgLi4 - 236% VE) (mol/m^3)
+  c_li_max_CB(23332.2),           // Carbon Black (Graphite OCV Li_(0.14)C - 13% VE) (mol/m^3)
+  V_exp_max_AM(3.36),            // Max volume expansion for AM (3.36 for Ag)
+  V_exp_max_CB(1.13),             // Max volume expansion for CB (1.0 for Graphite)
+  V_exp_max_LM(0.0),             // Max volume expansion for LM (1.0 for Li)
+  Omega_Li_LM(12.97e-6),         // m³/mol (Li molar volume)
   initial_lithium_content(0.0),
   target_lithium_content(1.0),
   max_lithium_content(1.0),
@@ -47,6 +53,8 @@ FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
   diffusion_coefficient(NULL),
   lithium_flux(NULL),
   li_mols(NULL),
+  initial_volume(NULL),
+  fix_initial_volume(NULL),
   fix_lithium_content(NULL),
   fix_lithium_concentration(NULL),
   fix_current_SE_Li(NULL),
@@ -76,9 +84,17 @@ FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
       LM_type = force->inumeric(FLERR,arg[iarg+1]);
       iarg += 2;
-    } else if (strcmp(arg[iarg],"c_li_max") == 0) {
+    } else if (strcmp(arg[iarg],"c_li_max_LM") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
-      c_li_max = force->numeric(FLERR,arg[iarg+1]);
+      c_li_max_LM = force->numeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"c_li_max_AM") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
+      c_li_max_AM = force->numeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"c_li_max_CB") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
+      c_li_max_CB = force->numeric(FLERR,arg[iarg+1]);
       iarg += 2;
     } else if (strcmp(arg[iarg],"D_AM_AM") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
@@ -179,6 +195,22 @@ void FixLithiumDiffusion::post_create()
     fixarg[8]="0.0";
     fix_lithium_concentration = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
   }
+
+  // Register property/atom for initial volume
+  fix_initial_volume = static_cast<FixPropertyAtom*>(modify->find_fix_property("initialVolume","property/atom","scalar",0,0,style,false));
+  if(!fix_initial_volume) {
+  const char* fixarg[10];
+  fixarg[0]="initialVolume";
+  fixarg[1]="all";
+  fixarg[2]="property/atom";
+  fixarg[3]="initialVolume";
+  fixarg[4]="scalar";
+  fixarg[5]="no";
+  fixarg[6]="yes";
+  fixarg[7]="no";
+  fixarg[8]="0.0";
+  fix_initial_volume = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -208,7 +240,12 @@ void FixLithiumDiffusion::init()
   fix_lithium_concentration = static_cast<FixPropertyAtom*>(modify->find_fix_property("lithiumConcentration","property/atom","scalar",0,0,style));
   if(!fix_lithium_concentration)
     error->all(FLERR,"Fix lithium_diffusion requires lithiumConcentration property");
-    
+  
+  fix_initial_volume = static_cast<FixPropertyAtom*>(
+    modify->find_fix_property("initialVolume","property/atom","scalar",0,0,style));
+  if(!fix_initial_volume)
+    error->all(FLERR,"Could not find initialVolume property/atom fix");
+  
   fix_current_SE_Li = static_cast<FixPropertyAtom*>(modify->find_fix_property("currentSELi","property/atom","scalar",0,0,style,false));
   // current_SE_Li is optional - may not exist for pure diffusion simulations
     
@@ -258,22 +295,25 @@ void FixLithiumDiffusion::setup(int vflag)
     
     double radius_m = radius[i] * 1.0e-6;
     double volume = (4.0/3.0) * M_PI * radius_m * radius_m * radius_m;
+    double c_max_i = get_c_li_max(type[i]);
     
+    initial_volume[i] = volume;
+
     if (type[i] == AM_type) {
-      li_mols[i] = volume / Omega_Li_AM;
       double x_li = lithium_content[i];
-      lithium_concentration[i] = x_li * c_li_max / max_lithium_content;
+      li_mols[i] = x_li * c_max_i * volume / max_lithium_content; // Mols of Li in AM Type initially
+      lithium_concentration[i] = x_li * c_max_i / max_lithium_content;
     }
     else if (type[i] == CB_type) {
-      li_mols[i] = volume / Omega_Li_CB;
       double x_li = lithium_content[i];
-      lithium_concentration[i] = x_li * c_li_max / max_lithium_content;
+      li_mols[i] = x_li * c_max_i * volume / max_lithium_content; // Mols of Li in CB Type initially
+      lithium_concentration[i] = x_li * c_max_i / max_lithium_content;
     }
     else if (type[i] == LM_type) {
       // LM is constant lithium source
       li_mols[i] = volume / Omega_Li_LM;
       lithium_content[i] = max_lithium_content;
-      lithium_concentration[i] = c_li_max;
+      lithium_concentration[i] = c_max_i;
     }
   }
 }
@@ -309,6 +349,7 @@ void FixLithiumDiffusion::updatePtrs()
   diffusion_coefficient = fix_diffusion_coefficient->vector_atom;
   lithium_flux = fix_lithium_flux->vector_atom;
   li_mols = fix_li_mols->vector_atom;
+  initial_volume = fix_initial_volume->vector_atom;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -326,6 +367,28 @@ double FixLithiumDiffusion::get_diffusion_coefficient(int type_i, int type_j)
     if (type_j == CB_type) return D_CB_CB;
     if (type_j == LM_type) return D_CB_LM;
   }
+  return 0.0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+// Helper to retrieve the correct c_max for a particle type
+double FixLithiumDiffusion::get_c_li_max(int type)
+{
+  if (type == AM_type) return c_li_max_AM;
+  if (type == CB_type) return c_li_max_CB;
+  if (type == LM_type) return c_li_max_LM;
+  return 0.0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+// Helper to retrieve the correct c_max for a particle type
+double FixLithiumDiffusion::get_V_exp_max(int type)
+{
+  if (type == AM_type) return V_exp_max_AM;
+  if (type == CB_type) return V_exp_max_CB;
+  if (type == LM_type) return V_exp_max_LM;
   return 0.0;
 }
 
@@ -387,9 +450,9 @@ void FixLithiumDiffusion::update_lithium_content()
       
       if (r < (radius[i] + radius[j])) {
         double contact_area = calculate_contact_area(i, j);
-        
-        // Get concentration of neighbor (LM always at c_li_max)
-        double c_j = (type_j == LM_type) ? c_li_max : lithium_concentration[j];
+
+        // Get concentration of neighbor (LM always at c_li_max_LM)
+        double c_j = (type_j == LM_type) ? c_li_max_LM : lithium_concentration[j];
         double c_i = lithium_concentration[i];
         
         // Get appropriate diffusion coefficient
@@ -421,24 +484,31 @@ void FixLithiumDiffusion::update_lithium_content()
     
     // Skip LM particles - they maintain constant concentration
     if (type_i == LM_type) {
-      lithium_concentration[i] = c_li_max;
-      lithium_content[i] = max_lithium_content;
+      lithium_concentration[i] = c_li_max_LM;
+      lithium_content[i] = max_lithium_content; // From 0 - 1 [unitless]
       continue;
     }
     
     if (type_i == AM_type || type_i == CB_type) {
       // dn_Li/dt = flux
-      lithium_content[i] += (lithium_flux[i] * dt * s_factor) / li_mols[i];
-      li_mols[i] += (lithium_flux[i] * dt * s_factor);
+      // li_mols[i] += (lithium_flux[i] * dt * s_factor);
+
+      // Lithium content = li_mols * max_lithium_content / (c_max_i * volume_initial)
+      double c_max_current = get_c_li_max(type_i);
+      double V_exp_max_current = get_V_exp_max(type_i);
+      lithium_content[i] += (lithium_flux[i] * dt * s_factor) * max_lithium_content / (c_max_current * initial_volume[i] * V_exp_max_current);
  
       // Bounds check
-      if (lithium_content[i] < initial_lithium_content) 
+      if (lithium_content[i] < initial_lithium_content)
         lithium_content[i] = initial_lithium_content;
-      if (lithium_content[i] > target_lithium_content) 
+      if (lithium_content[i] > target_lithium_content)
         lithium_content[i] = target_lithium_content;
       
+      // Update Number of Moles in Particle
+      li_mols[i] = lithium_content[i] * c_max_current * initial_volume[i] * V_exp_max_current / max_lithium_content;
+      
       // Update concentration
-      lithium_concentration[i] = lithium_content[i] * c_li_max / max_lithium_content;
+      lithium_concentration[i] = lithium_content[i] * c_max_current / max_lithium_content;
     }
   }
   
