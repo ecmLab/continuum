@@ -165,6 +165,7 @@ void FixEquilibriumPotential::setup(int vflag)
 {
   updatePtrs();
   calculate_equilibrium_potential();
+  fix_equilibrium_potential->do_forward_comm();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -179,6 +180,7 @@ void FixEquilibriumPotential::pre_force(int vflag)
 void FixEquilibriumPotential::post_force(int vflag)
 {
   calculate_equilibrium_potential();
+  fix_equilibrium_potential->do_forward_comm();
 }
 
 /* ---------------------------------------------------------------------- */

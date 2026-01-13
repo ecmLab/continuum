@@ -361,6 +361,11 @@ void FixLithiumDiffusion::pre_force(int vflag)
 
 void FixLithiumDiffusion::post_force(int vflag)
 {
+  // CRITICAL: Ensure ghost atoms have current values BEFORE calculating fluxes
+  fix_lithium_content->do_forward_comm();
+  fix_lithium_concentration->do_forward_comm();
+  fix_equilibrium_potential->do_forward_comm();
+
   update_lithium_content();
 }
 
@@ -568,6 +573,7 @@ void FixLithiumDiffusion::update_lithium_content()
   
   fix_lithium_content->do_forward_comm();
   fix_lithium_concentration->do_forward_comm();
+  fix_li_mols->do_forward_comm();  // ADD THIS - needed by radius_expansion
 }
 
 /* ---------------------------------------------------------------------- */

@@ -455,6 +455,10 @@ void FixPotentialSOR::post_force(int vflag)
   // First, calculate interface contact areas and current distribution
   calculate_interface_currents();
 
+  // CRITICAL: Ensure ghost atoms have current potential values before iterating
+  fix_phi_el->do_forward_comm();
+  fix_phi_ed->do_forward_comm();
+
   // Just iterate a fixed number of times per timestep (e.g., 10-50 iterations)
   // to get a good approximation at this timestep
   

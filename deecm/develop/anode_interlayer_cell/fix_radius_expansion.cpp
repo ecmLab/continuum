@@ -192,6 +192,9 @@ void FixRadiusExpansion::update_particle_radius()
   int *type = atom->type;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
+
+  // CRITICAL: Ensure ghost atoms have current li_mols values
+  fix_li_mols->do_forward_comm();
   
   for (int i = 0; i < nlocal; i++) {
     if (!(mask[i] & groupbit)) continue;
