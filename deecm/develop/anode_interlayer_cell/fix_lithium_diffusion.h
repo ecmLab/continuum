@@ -60,6 +60,8 @@ class FixLithiumDiffusion : public Fix {
   // Molar volume
   double Omega_Li_LM;
   
+  double s_factor;
+
   // Lithium content parameters
   double initial_lithium_content;
   double target_lithium_content;

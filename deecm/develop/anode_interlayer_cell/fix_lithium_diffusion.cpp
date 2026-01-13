@@ -51,6 +51,7 @@ FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
   D_AM_LM(1.0e-15),
   D_CB_AM(1.0e-15),
   D_CB_LM(1.0e-15),
+  s_factor(2.0e10),
   lithium_content(NULL),
   lithium_concentration(NULL),
   equilibrium_potential(NULL),
@@ -129,6 +130,10 @@ FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"D_CB_LM") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
       D_CB_LM = force->numeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"s_factor") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
+      s_factor = force->numeric(FLERR,arg[iarg+1]);
       iarg += 2;
     } else error->all(FLERR,"Illegal fix lithium_diffusion command");
   }
@@ -535,7 +540,7 @@ void FixLithiumDiffusion::update_lithium_content()
   }
   
   // Scaling factor for time acceleration
-  double s_factor = 2.0e10;
+  // double s_factor = 2.0e10;
   
   for (i = 0; i < nlocal; i++) {
     if (!(mask[i] & groupbit)) continue;

@@ -576,7 +576,7 @@ void FixPotentialSOR::calculate_interface_currents()
   
   // Calculate cycling direction based on timestep
   double ndt = update->ntimestep;
-  int period = static_cast<int>(ndt) / 18000; // Assuming 36000 timesteps for 60 mins (60 min charge/discharge)
+  int period = static_cast<int>(ndt) / 36000; // Assuming 36000 timesteps for 60 mins (60 min charge/discharge)
   double sign = (period % 2 == 0) ? 1.0 : -1.0;
 
   // CCD Test Protocol: Increase current magnitude every two periods

@@ -20,7 +20,7 @@ timestep        5.e-6
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
-read_data     data/1L_M2C5_vr1_pack.data
+read_data     data/1LM_M2C5_vr1_pack.data
 
 # --- 3. RE-ESTABLISH GROUPS ---
 # Define groups based on particle types (Type 5 is the wall)
@@ -142,7 +142,7 @@ fix             potential_sol all potential/sor omega 1.0 max_iter 1 &
 fix             diff all lithium_diffusion AM_type 1 CB_type 2 LM_type 4 &
                 c_li_max_LM 77101.002 c_li_max_AM 115917.8 c_li_max_CB 23332.2 &
                 D_AM_AM 4.0e-15 D_AM_CB 4.0e-15 D_AM_LM 4.0e-15 &
-                D_CB_AM 4.0e-15 D_CB_CB 1.0e-14 D_CB_LM 1.0e-14
+                D_CB_AM 4.0e-15 D_CB_CB 1.0e-14 D_CB_LM 1.0e-14 s_factor 2.0e09
 
 # Radius expansion for AM & CB particles (optional - Omega_Li_CB is smaller b/c saying volume doesnt change much with Li content )
 fix             radexp all radius_expansion AM_type 1 CB_type 2 update_every 1 max_updates 1000000 &
@@ -167,12 +167,12 @@ variable       ts_skin     equal f_ts_check[3]
 # Thermo output
 thermo_style    custom step atoms ke &
                 v_ts_rayleigh v_ts_hertz v_ts_skin v_prs
-thermo          180
+thermo          10
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_batt all custom 180 post/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_batt all custom 10 post_0d01s_rest_10sec/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress f_lithiumContent f_lithiumConcentration f_lithiumMols f_equilibriumPotential v_prs_atom
 
-# 4. Run EC for 1 timestep, equivelent to 0.1s real seconds
-run             18000  # 30min
+# 4. Run EC for 1 timestep, equivelent to 0.01s real seconds
+run             1000  # 10s
