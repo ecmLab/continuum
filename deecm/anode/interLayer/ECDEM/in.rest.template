@@ -20,7 +20,7 @@ timestep        5.e-6
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
-read_data     1LM_M2C5_vr9_pack.data
+read_data     DATA_FILE_PLACEHOLDER
 
 # --- 3. RE-ESTABLISH GROUPS ---
 # Define groups based on particle types (Type 5 is the wall)
