@@ -20,7 +20,7 @@ timestep        5.e-6
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
-read_data     1LM_M2C5_vr9_pack.data
+read_data     data/1LM_M2C5_vr3_pack.data
 
 # --- 3. RE-ESTABLISH GROUPS ---
 # Define groups based on particle types (Type 5 is the wall)
@@ -83,13 +83,13 @@ fix     m5 all property/global coefficientRollingFriction peratomtypepair 5 &
         ${corf_all} ${corf_all} ${corf_all} ${corf_all} ${corf_all} &
         ${corf_all} ${corf_all} ${corf_all} ${corf_all} ${corf_all}
 
-# Cohesion energy density (5x5) (Randomly Assigned Pairs Based on Average)
+# Cohesion energy density (5x5) Units (KPa) 50000 is 50,000 kPa (adopted from Davids Peel Test)
 fix     m6 all property/global cohesionEnergyDensity peratomtypepair 5 &
-        50000   70000   60000   100000  0 &
-        70000   90000   80000   110000  0 &
-        60000   80000   70000   100000  0 &
-        100000  110000  100000  120000  0 &
-        0       0       0       0       0
+        100000   100000  10000   100000  0 &
+        100000   100000  10000   100000  0 &
+        10000    10000   0       0       0 &
+        100000   100000  0       0       0 &
+        0        0       0       0       0
 
 # --- 6. PAIR STYLE AND WALLS ---
 pair_style gran model hertz tangential history cohesion sjkr
@@ -140,13 +140,13 @@ fix             potential_sol all potential/sor omega 1.0 max_iter 1 &
 
 # Lithium diffusion - AM & CB particles
 fix             diff all lithium_diffusion AM_type 1 CB_type 2 LM_type 4 &
-                c_li_max_LM 77101.002 c_li_max_AM 115917.8 c_li_max_CB 23332.2 &
-                D_AM_AM 4.0e-15 D_AM_CB 4.0e-15 D_AM_LM 4.0e-15 &
-                D_CB_AM 4.0e-15 D_CB_CB 1.0e-14 D_CB_LM 1.0e-14 s_factor 2.0e08
+                c_li_max_LM 77101.002 c_li_max_AM 80940.14 c_li_max_CB 27776.39 V_exp_max_AM 4.812 &
+                D_AM_AM 5.0e-10 D_AM_CB 5.0e-14 D_AM_LM 5.0e-14 &
+                D_CB_AM 5.0e-14 D_CB_CB 5.0e-14 D_CB_LM 5.0e-14 s_factor 2.0e09
 
 # Radius expansion for AM & CB particles (optional - Omega_Li_CB is smaller b/c saying volume doesnt change much with Li content )
 fix             radexp all radius_expansion AM_type 1 CB_type 2 update_every 1 max_updates 10000000 &
-                Omega_Li_AM 6.0593e-6 Omega_Li_CB 4.9307e-6
+                Omega_Li_AM 9.7873e-6 Omega_Li_CB 4.1418e-6
 
 # --- 10. COMPUTE SETUP FOR MONITORING ---
 
@@ -167,12 +167,12 @@ variable       ts_skin     equal f_ts_check[3]
 # Thermo output
 thermo_style    custom step atoms ke &
                 v_ts_rayleigh v_ts_hertz v_ts_skin v_prs
-thermo          1000
+thermo          60
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_batt all custom 1000 post/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_batt all custom 60 post/20260121_M2C5vr3_OCV_rest_1min_dt0d01_newcohesion/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress f_lithiumContent f_lithiumConcentration f_lithiumMols f_equilibriumPotential v_prs_atom
 
-# 4. Run EC for 1 timestep, equivelent to 0.001s real seconds
-run             300000  # 5min
+# 4. Run EC for 1 timestep, equivelent to 0.01s real seconds
+run             6000  # 1min

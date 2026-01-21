@@ -8,7 +8,7 @@ units           micro
 neighbor        0.001 bin
 neigh_modify    every 3 delay 0 check yes
 echo            both
-timestep        0.000005
+timestep        5.e-6
 
 variable        tarp        equal     40
 variable        tarp1       equal     100

@@ -36,7 +36,7 @@ FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
   c_li_max_LM(77101.002),        // Lithium Metal (mol/m³)
   c_li_max_AM(115917.8),         // Active Material (mol/m³)
   c_li_max_CB(23332.2),          // Carbon Black (mol/m³)
-  V_exp_max_AM(3.36),
+  V_exp_max_AM(1.01),
   V_exp_max_CB(1.13),
   V_exp_max_LM(0.0),
   Omega_Li_LM(12.97e-6),         // m³/mol
@@ -134,6 +134,18 @@ FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"s_factor") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
       s_factor = force->numeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"V_exp_max_AM") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
+      V_exp_max_AM = force->numeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"V_exp_max_CB") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
+      V_exp_max_CB = force->numeric(FLERR,arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"V_exp_max_LM") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
+      V_exp_max_LM = force->numeric(FLERR,arg[iarg+1]);
       iarg += 2;
     } else error->all(FLERR,"Illegal fix lithium_diffusion command");
   }
