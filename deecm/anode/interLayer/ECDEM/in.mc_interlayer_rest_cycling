@@ -138,15 +138,22 @@ fix             eq_pot all equilibrium_potential temperature 303.0 AM_material A
 fix             potential_sol all potential/sor omega 1.0 max_iter 1 &
                 BC_types 3 4 BC_potentials 0.00 0.00 0.0 conductivity 0.05 0.1 SE_type 2
 
-# Lithium diffusion - AM & CB particles
+# Lithium diffusion - AM & CB particles (s_factor 2.0e08 for 0.001s)
 fix             diff all lithium_diffusion AM_type 1 CB_type 2 LM_type 4 &
                 c_li_max_LM 77101.002 c_li_max_AM 80940.14 c_li_max_CB 27776.39 V_exp_max_AM 4.812 &
                 D_AM_AM 5.0e-10 D_AM_CB 5.0e-14 D_AM_LM 5.0e-14 &
-                D_CB_AM 5.0e-14 D_CB_CB 5.0e-14 D_CB_LM 5.0e-14 s_factor 2.0e09
+                D_CB_AM 5.0e-14 D_CB_CB 5.0e-14 D_CB_LM 5.0e-14 s_factor 2.0e08
 
 # Radius expansion for AM & CB particles (optional - Omega_Li_CB is smaller b/c saying volume doesnt change much with Li content )
 fix             radexp all radius_expansion AM_type 1 CB_type 2 update_every 1 max_updates 10000000 &
                 Omega_Li_AM 9.7873e-6 Omega_Li_CB 4.1418e-6
+
+fix     elec_res all electrical_resistance &
+        temperature 303.0 &
+        AM_type 1 CB_type 2 SE_type 3 LM_type 4 wall_type 5 &
+        ntypes 5 &
+        conductivity 1 6.29e7 2 131 3 1.0e-4 4 1.08e7 5 1.0e7 &
+        min_overlap 1.0e-8
 
 # --- 10. COMPUTE SETUP FOR MONITORING ---
 
@@ -166,13 +173,14 @@ variable       ts_skin     equal f_ts_check[3]
 # --- 11. OUTPUT SETTINGS ---
 # Thermo output
 thermo_style    custom step atoms ke &
-                v_ts_rayleigh v_ts_hertz v_ts_skin v_prs
-thermo          60
+                v_ts_rayleigh v_ts_hertz v_ts_skin v_prs f_elec_res[1] f_elec_res[3]
+thermo          1
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_batt all custom 60 post/20260121_M2C5vr3_OCV_rest_1min_dt0d01_newcohesion/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
-                f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress f_lithiumContent f_lithiumConcentration f_lithiumMols f_equilibriumPotential v_prs_atom
+dump            dmp_batt all custom 2 post/20260126_M2C5vr3_OCV_rest_1sec_dt0d001_newres/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+                f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress f_lithiumContent f_lithiumConcentration f_lithiumMols f_equilibriumPotential v_prs_atom &
+                f_totalConductance f_totalResistance f_resistanceContactCount f_avgContactResistance
 
-# 4. Run EC for 1 timestep, equivelent to 0.01s real seconds
-run             6000  # 1min
+# 4. Run EC for 1 timestep, equivelent to 0.001s real seconds
+run             100  # 0.1s
