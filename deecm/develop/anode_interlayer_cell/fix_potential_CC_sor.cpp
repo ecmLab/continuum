@@ -446,6 +446,9 @@ void FixPotentialSOR::pre_force(int vflag)
   
   // Calculate hydrostatic stress for Li particles
   calculate_hydrostatic_stress();
+
+  // This ensures neighboring processors have correct stress values
+  fix_hydrostatic_stress->do_forward_comm();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -453,7 +456,7 @@ void FixPotentialSOR::pre_force(int vflag)
 void FixPotentialSOR::post_force(int vflag)
 {
   // First, calculate interface contact areas and current distribution
-  calculate_interface_currents();
+  // calculate_interface_currents();
 
   // CRITICAL: Ensure ghost atoms have current potential values before iterating
   fix_phi_el->do_forward_comm();
@@ -463,6 +466,7 @@ void FixPotentialSOR::post_force(int vflag)
   // to get a good approximation at this timestep
   
   for (int iter = 0; iter < max_iterations; iter++) {
+    calculate_interface_currents();
     solve_eis_iteration();
   }
   
@@ -607,17 +611,20 @@ void FixPotentialSOR::calculate_interface_currents()
     i_density_cathode = 0.0;
   }
   
+  // fix_contact_area_anode->do_forward_comm();
+  // fix_contact_area_cathode->do_forward_comm();
+
   // Debug output (optional - can be removed in production)
-  if (update->ntimestep % 1800 == 0) {
-    if (comm->me == 0) {
-      fprintf(screen, "Battery EIS - Step %ld:\n", update->ntimestep);
-      fprintf(screen, "  Anode interface:   A = %.6e m², i = %.4f A/m²\n", 
-              global_area_anode, i_density_anode);
-      fprintf(screen, "  Cathode interface: A = %.6e m², i = %.4f A/m²\n", 
-              global_area_cathode, i_density_cathode);
-      fprintf(screen, "  Total current:     I = %.6e A\n", total_current);
-    }
-  }
+  // if (update->ntimestep % 1800 == 0) {
+  //   if (comm->me == 0) {
+  //     fprintf(screen, "Battery EIS - Step %ld:\n", update->ntimestep);
+  //     fprintf(screen, "  Anode interface:   A = %.6e m², i = %.4f A/m²\n", 
+  //             global_area_anode, i_density_anode);
+  //     fprintf(screen, "  Cathode interface: A = %.6e m², i = %.4f A/m²\n", 
+  //             global_area_cathode, i_density_cathode);
+  //     fprintf(screen, "  Total current:     I = %.6e A\n", total_current);
+  //   }
+  // }
 }
 
 /* ---------------------------------------------------------------------- */

@@ -10,7 +10,7 @@
 units           micro  # Using micro units to match the compaction script
 atom_style      granular
 atom_modify     map array
-boundary        f f f  # Fixed boundaries as in compaction script
+boundary        f f s  # Fixed boundaries as in compaction script
 newton          off
 
 communicate     single vel yes
@@ -101,7 +101,7 @@ fix xwalls2 ptc wall/gran model hertz tangential history primitive type 5 xplane
 fix ywalls1 ptc wall/gran model hertz tangential history primitive type 5 yplane 0.0
 fix ywalls2 ptc wall/gran model hertz tangential history primitive type 5 yplane 2.5
 fix zwalls1 ptc wall/gran model hertz tangential history primitive type 5 zplane 0.0
-fix zwalls2 ptc wall/gran model hertz tangential history primitive type 5 zplane 2.5
+# fix zwalls2 ptc wall/gran model hertz tangential history primitive type 5 zplane 1.0
 
 # --- 7. INTEGRATION ---
 fix             integr all nve/sphere
@@ -135,10 +135,10 @@ fix             eq_pot all equilibrium_potential temperature 303.0 AM_material A
                 x_max_AM 1.0 x_max_CB 1.0 AM_type 1 CB_type 2 LM_type 4
 
 # SOR solver for potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
-fix             potential_sol all potential/sor omega 1.0 max_iter 1 &
+fix             potential_sol all potential/sor omega 1.0 max_iter 0 &
                 BC_types 3 4 BC_potentials 0.00 0.00 0.0 conductivity 0.05 0.1 SE_type 2
 
-# Lithium diffusion - AM & CB particles (s_factor 2.0e08 for 0.001s)
+# Lithium diffusion - AM & CB particles (s_factor 2.0e07 for 0.0001s)
 fix             diff all lithium_diffusion AM_type 1 CB_type 2 LM_type 4 &
                 c_li_max_LM 77101.002 c_li_max_AM 85155.85 c_li_max_CB 27776.39 V_exp_max_AM 10.291 &
                 D_AM_AM 1.0e-10 D_AM_CB 1.0e-14 D_AM_LM 1.0e-14 &
@@ -164,15 +164,26 @@ variable       ts_hertz    equal f_ts_check[2]
 variable       ts_skin     equal f_ts_check[3]
 
 # --- 11. OUTPUT SETTINGS ---
+
+# Simulation timing variables
+variable        rest_time      equal 180.0           # Rest time in seconds
+variable        scaling_factor equal 2.0e07        # Scaling factor (matches s_factor in lithium_diffusion)
+variable        dem_timestep   equal 5.e-12        # DEM timestep in seconds (5.e-6 microseconds)
+
+# Calculate run time and output frequencies
+variable        run_steps      equal ${rest_time}/(${scaling_factor}*${dem_timestep})
+variable        dump_freq      equal ${run_steps}/100
+variable        thermo_freq    equal ${run_steps}/200
+
 # Thermo output
 thermo_style    custom step atoms ke &
                 v_ts_rayleigh v_ts_hertz v_ts_skin v_prs
-thermo          10
+thermo          ${thermo_freq}
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_batt all custom 10 post/20260130_1LM_M2C5_vr9_OCV_rest_1sec_dt0d0001_stress/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_batt all custom ${dump_freq} post/20260130_1LM_M2C5_vr9_rest_180sec_sf2e7/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_hydrostaticStress f_lithiumContent f_lithiumConcentration f_lithiumMols f_equilibriumPotential v_prs_atom
 
-# 4. Run EC for 1 timestep, equivelent to 0.001s real seconds
-run             1000  # 0.1s
+# 4. Run EC for 1 timestep, equivelent to 0.0001s real seconds
+run             ${run_steps}

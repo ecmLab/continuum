@@ -4,6 +4,7 @@ atom_modify     map array
 boundary        f f f   #periodic in z
 newton          off
 communicate     single vel yes
+processors      * * 1  # Needed to avoid partitioning in the Z axis
 units           micro
 neighbor        0.001 bin
 neigh_modify    every 3 delay 0 check yes
