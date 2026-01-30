@@ -15,7 +15,11 @@ newton          off
 communicate     single vel yes
 
 # Set timestep
+<<<<<<< HEAD
 timestep        5.e-3
+=======
+timestep        5.e-6
+>>>>>>> 49642a2f36540b63a53097a4cd92377866b2e8ab
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
@@ -44,11 +48,19 @@ neigh_modify    every 1 delay 0 check yes
 
 # --- 5. RE-ESTABLISH MATERIAL PROPERTIES ---
 # Young's modulus (from compaction script)
+<<<<<<< HEAD
 variable        Yam           equal     48.5e5    # AM (Active Material) [kPA]
 variable        Ycc           equal     50.e5   # CC1 and CC2 (Current Collectors) [kPA]
 variable        Yse           equal     23.e5    # SE (Solid Electrolyte) [kPA]
 variable        Yww           equal     50.e9   # Wall [kPA]
 variable        Yghost        equal     50.e9   # Ghost particles [kPA]
+=======
+variable        Yam           equal     48.5e6    # AM (Active Material) [kPA]
+variable        Ycc           equal     50.e6   # CC1 and CC2 (Current Collectors) [kPA]
+variable        Yse           equal     23.e6    # SE (Solid Electrolyte) [kPA]
+variable        Yww           equal     50.e6   # Wall [kPA]
+variable        Yghost        equal     50.e6   # Ghost particles [kPA]
+>>>>>>> 49642a2f36540b63a53097a4cd92377866b2e8ab
 variable        particle_poissons_ratio equal 0.4
 
 # Material properties

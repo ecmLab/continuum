@@ -1,0 +1,187 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\title{Analytical Transient Solution for 1D ECRAM System}
+\author{TECM-no-EN Framework}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Governing System}
+
+\subsection{Time-dependent equations}
+\begin{align}
+\frac{\partial c_{\text{Li}}}{\partial t} &= D_{\text{Li}} \nabla^2 c_{\text{Li}} + \frac{D_{\text{Li}} F}{RT} \nabla \cdot (c_{\text{Li}} \nabla \Psi) \\
+\frac{\partial c_a}{\partial t} &= D_a \nabla^2 c_a - \frac{D_a F}{RT} \nabla \cdot (c_a \nabla \Psi) \\
+\nabla^2 \Psi &= -\frac{F}{\varepsilon}(c_{\text{Li}} - c_a)
+\end{align}
+
+\subsection{Boundary conditions}
+\begin{align}
+\Psi(0,t) &= V_{\text{gate}}, \quad \Psi(L,t) = 0 \\
+\left.\frac{\partial c_{\text{Li}}}{\partial x}\right|_{x=0,L} &= 0, \quad \left.\frac{\partial c_a}{\partial x}\right|_{x=0,L} = 0
+\end{align}
+
+\subsection{Initial conditions}
+\begin{align}
+c_{\text{Li}}(x,0) &= c_{\text{Li}}^{\text{initial}} \\
+c_a(x,0) &= c_a^{\text{initial}}
+\end{align}
+
+\section{Analytical Transient Solution}
+
+\subsection{General form (separation of variables)}
+
+\begin{align}
+c_{\text{Li}}(x,t) &= c_{\text{Li}}^{\text{ss}}(x) + \sum_{n=1}^{\infty} A_n^{\text{Li}} \varphi_n(x) \exp(-\lambda_n t) \\
+c_a(x,t) &= c_a^{\text{ss}}(x) + \sum_{n=1}^{\infty} A_n^a \varphi_n(x) \exp(-\lambda_n t) \\
+\Psi(x,t) &= \Psi^{\text{ss}}(x) + \sum_{n=1}^{\infty} B_n \psi_n(x) \exp(-\lambda_n t)
+\end{align}
+
+Where:
+\begin{itemize}
+\item $c_i^{\text{ss}}(x)$: Steady-state Boltzmann distributions
+\item $\Psi^{\text{ss}}(x)$: Steady-state potential (nonlinear solution)
+\item $\varphi_n(x), \psi_n(x)$: Eigenfunctions of the linearized system
+\item $\lambda_n$: Eigenvalues (decay rates)
+\item $A_n, B_n$: Coefficients from initial conditions
+\end{itemize}
+
+\section{Steady-State Solution}
+
+\subsection{Boltzmann distributions}
+\begin{align}
+c_{\text{Li}}^{\text{ss}}(x) &= c_{\text{Li}}^0 \exp\left(-\frac{F\Psi^{\text{ss}}(x)}{RT}\right) \\
+c_a^{\text{ss}}(x) &= c_a^0 \exp\left(+\frac{F\Psi^{\text{ss}}(x)}{RT}\right)
+\end{align}
+
+\subsection{Zero flux conditions}
+\begin{align}
+J_{\text{Li}} &= -D_{\text{Li}}\frac{dc_{\text{Li}}}{dx} - \frac{D_{\text{Li}} F}{RT} c_{\text{Li}} \frac{d\Psi}{dx} = 0 \\
+J_a &= -D_a\frac{dc_a}{dx} + \frac{D_a F}{RT} c_a \frac{d\Psi}{dx} = 0
+\end{align}
+
+\section{Eigenvalue Problem}
+
+The decay rates $\lambda_n$ satisfy:
+\begin{align}
+&\left[D_{\text{Li}} \frac{\partial^2}{\partial x^2} + \frac{D_{\text{Li}} F}{RT}\left(\frac{\partial \Psi^{\text{ss}}}{\partial x} \frac{\partial}{\partial x} + \frac{\partial^2 \Psi^{\text{ss}}}{\partial x^2} \cdot\right)\right]\varphi_n^{\text{Li}} = \lambda_n \varphi_n^{\text{Li}} \\
+&\left[D_a \frac{\partial^2}{\partial x^2} - \frac{D_a F}{RT}\left(\frac{\partial \Psi^{\text{ss}}}{\partial x} \frac{\partial}{\partial x} + \frac{\partial^2 \Psi^{\text{ss}}}{\partial x^2} \cdot\right)\right]\varphi_n^a = \lambda_n \varphi_n^a
+\end{align}
+
+With the Poisson coupling:
+\begin{equation}
+\frac{\partial^2 \psi_n}{\partial x^2} = -\frac{F}{\varepsilon}(\varphi_n^{\text{Li}} - \varphi_n^a)
+\end{equation}
+
+\section{Current Transient}
+
+\subsection{Total current}
+\begin{equation}
+I(t) = I_0 \sum_{n=1}^{\infty} C_n \exp(-\lambda_n t)
+\end{equation}
+
+Where:
+\begin{itemize}
+\item $I_0$: Initial current magnitude
+\item $C_n$: Modal amplitudes
+\item $\lambda_1 < \lambda_2 < \lambda_3 < \ldots$: Ordered eigenvalues
+\end{itemize}
+
+\subsection{Current density}
+\begin{equation}
+j(x,t) = F\left[z_{\text{Li}} J_{\text{Li}}(x,t) + z_a J_a(x,t)\right]
+\end{equation}
+
+\section{Time Scale Analysis}
+
+The system exhibits \textbf{multiple competing time scales}:
+
+\subsection{Diffusion time scale}
+\begin{equation}
+\tau_{\text{diff}} = \frac{L^2}{D_{\text{eff}}}
+\end{equation}
+
+\subsection{Electrostatic relaxation time (Maxwell time)}
+\begin{equation}
+\tau_{\text{Maxwell}} = \frac{\varepsilon}{\sigma} = \frac{\varepsilon RT}{F^2 c D_{\text{eff}}}
+\end{equation}
+
+where $\sigma = \frac{F^2 c D_{\text{eff}}}{RT}$ is the ionic conductivity.
+
+\subsection{Physical meaning of permittivity}
+\begin{itemize}
+\item \textbf{Large $\varepsilon$}: Stronger screening of electric fields $\rightarrow$ slower electrostatic adjustment $\rightarrow$ longer equilibration time
+\item \textbf{Small $\varepsilon$}: Weaker screening $\rightarrow$ faster electrostatic response $\rightarrow$ shorter equilibration time  
+\end{itemize}
+
+\section{Approximate Solution (Small Perturbation)}
+
+For small voltages, linearization around uniform state gives:
+\begin{equation}
+\lambda_n \approx \left(\frac{n\pi}{L}\right)^2 \left[D_{\text{eff}} + \frac{DF^2V_{\text{gate}}^2}{R^2T^2} \cdot \text{correction terms}\right]
+\end{equation}
+
+Where $D_{\text{eff}}$ is an effective diffusivity combining Li$^+$ and anion transport.
+
+\subsection{Corrected dominant time scale}
+The characteristic time for current decay is controlled by the \textbf{slower} of the two processes:
+\begin{equation}
+\tau_1 \approx \text{max}\left(\frac{L^2}{\pi^2 D_{\text{eff}}}, \frac{\varepsilon RT}{F^2 c D_{\text{eff}}}\right) \times [1 + \text{coupling corrections}]
+\end{equation}
+
+\subsection{Regime classification}
+\begin{itemize}
+\item \textbf{Diffusion-limited}: $\tau_{\text{diff}} > \tau_{\text{Maxwell}}$ $\rightarrow$ transport limited by ion mobility
+\item \textbf{Electrostatic-limited}: $\tau_{\text{Maxwell}} > \tau_{\text{diff}}$ $\rightarrow$ transport limited by field relaxation
+\end{itemize}
+
+\section{Key Features}
+
+\begin{enumerate}
+\item \textbf{Multi-exponential decay} with different time constants $\tau_n = 1/\lambda_n$
+\item \textbf{Fastest mode} ($\lambda_1$) dominates long-term behavior  
+\item \textbf{Coupling} between concentration and potential evolution
+\item \textbf{Current decay} follows the same exponential modes
+\item \textbf{Steady state}: Current approaches zero as $t \to \infty$
+\end{enumerate}
+
+\section{Parameter Dependencies}
+
+\subsection{Current parameters}
+\begin{align}
+V_{\text{gate}} &= 0.01 \text{ V} \\
+L &= 1 \times 10^{-7} \text{ m} \\
+D_{\text{Li}} &= 2.4 \times 10^{-12} \text{ m}^2\text{/s} \\
+D_a &= 2.0 \times 10^{-12} \text{ m}^2\text{/s} \\
+\frac{F}{RT} &= 38.7 \text{ V}^{-1}
+\end{align}
+
+\subsection{Expected concentration variations}
+At steady state:
+\begin{align}
+c_{\text{Li}}(0) &= c_{\text{Li}}^0 \exp(-0.387) = 0.679 \times c_{\text{Li}}^0 \quad \text{(32\% depletion)} \\
+c_a(0) &= c_a^0 \exp(+0.387) = 1.472 \times c_a^0 \quad \text{(47\% accumulation)}
+\end{align}
+
+\subsection{Numerical time scale calculation}
+With current parameters:
+\begin{align}
+\tau_{\text{diff}} &= \frac{L^2}{D_{\text{eff}}} = \frac{(10^{-8})^2}{2.2 \times 10^{-12}} \approx 4.5 \times 10^{-5} \text{ s} \\
+\tau_{\text{Maxwell}} &= \frac{\varepsilon RT}{F^2 c D_{\text{eff}}} = \frac{(30 \times 8.85 \times 10^{-12}) \times 8.314 \times 300}{(96485)^2 \times 110 \times 2.2 \times 10^{-12}} \\
+&\approx 2.7 \times 10^{-6} \text{ s}
+\end{align}
+
+Since $\tau_{\text{diff}} > \tau_{\text{Maxwell}}$, the system is in the \textbf{diffusion-limited regime}. The characteristic time for current decay is:
+\begin{equation}
+\tau_1 \approx \tau_{\text{diff}} \approx 4.5 \times 10^{-5} \text{ s} = 0.045 \text{ ms}
+\end{equation}
+
+This explains why the current reaches a plateau quickly and requires very small time steps to resolve the transient behavior accurately.
+
+\end{document}
