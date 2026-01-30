@@ -1,0 +1,374 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{amsmath,amssymb,bm}
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+% Keep dependencies minimal for portability
+
+\title{Electric Double Layer Simulation for a Binary Electrolyte\\Governing Equations, MOOSE Weak Forms, and Implementation}
+\author{TECM / CEWLAB}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\section{Overview}
+This technical note documents the implementation process for simulating an electric double layer (EDL) in a binary electrolyte using the MOOSE framework. We begin with the governing equations, derive weak forms suitable for finite elements in MOOSE, and finish with practical coding guidance and input file structure.
+
+For roadmap alignment and acceptance criteria, this work traces to the EDL/binary transport scope described in \texttt{doc/codex/TECM\_Project\_Plan.md}.
+
+\section{Governing Equations}
+We consider a binary electrolyte with cation and anion concentrations \(c_+(\mathbf{x},t)\) and \(c_-(\mathbf{x},t)\), electric potential \(\phi(\mathbf{x},t)\), absolute temperature \(T\) (assumed constant for isothermal EDL), dielectric permittivity \(\epsilon\), and valences \(z_+>0\), \(z_-<0\). The elementary charge is \(e\), Faraday's constant is \(F = N_A e\), and \(R\) is the gas constant.
+
+\subsection{Poisson--Nernst--Planck (PNP)}
+The standard isothermal PNP system (no homogeneous reactions, \(R_i=0\)) reads on a domain \(\Omega\)
+\begin{align}
+ -\nabla\!\cdot\big(\epsilon\, \nabla \phi\big) &= F\big(z_+ c_+ + z_- c_-\big) && \text{(Poisson; here \(\rho_f=0\))}\label{eq:poisson}\,,\\
+ \frac{\partial c_i}{\partial t} + \nabla\!\cdot\mathbf{J}_i &= 0 && i \in \{+, -\}\,,\label{eq:species}\\
+\end{align}
+We assume no fixed immobile background charge, i.e., \(\rho_f=0\). The Nernst--Planck flux (with no convection) is
+\begin{equation}
+ \mathbf{J}_i = - D_i\, \nabla c_i - \mu_i\, z_i F\, c_i\, \nabla \phi\,,\qquad \mu_i = \frac{D_i}{R T}\,.
+ \label{eq:npflux}
+\end{equation}
+
+\subsection{Initial and Boundary Conditions}
+We adopt the COMSOL diffuse double layer setup (\(\rho_f=0\)):
+\begin{itemize}
+  \item Domain: electrolyte from OHP at the electrode (left, \(x=0\)) to bulk (right, \(x=L\approx 10\,\lambda_D\)).
+  \item Potential at electrode (left): Robin (Stern) BC with outward normal \(\mathbf{n}\) pointing out of the electrolyte toward the electrode:
+  \(-\,\mathbf{n}\!\cdot(\epsilon\nabla\phi) = \sigma\_{\!\text{surf}} = \epsilon_0\,\epsilon_S\,(\phi_M-\phi)/x_S\). Equivalently, 
+  \(C_S\,\phi + \epsilon\,\partial\_n\phi = C_S\,\phi_M\) with \(\partial\_n\phi=\mathbf{n}\!\cdot\nabla\phi\) and \(C_S=\epsilon_0\epsilon_S/x_S\). In MOOSE Robin form \(a\,u + b\,\partial\_n u = g\): set \(a=C_S\), \(b=\epsilon\), \(g=C_S\,\phi_M\).
+  \item Potential at bulk (right): Dirichlet reference \(\phi(L)=0\,\mathrm{V}\).
+  \item Species at electrode (left): blocking, \(\mathbf{n}\!\cdot\!\mathbf{J}_\pm=0\).
+  \item Species at bulk (right): Dirichlet \(c_\pm(L)=c_{\infty}\).
+  \item Initial: \(c_\pm(\mathbf{x},0)=c_{\infty}\), \(\phi(\mathbf{x},0)=0\).
+\end{itemize}
+
+\section{MOOSE Weak Form Derivation}
+MOOSE assembles residuals by multiplying the strong forms with test functions and integrating by parts.
+
+\subsection{Electrostatics (Poisson)}
+Let the trial function be \(\phi\) and the test function be \(w_\phi\). Starting from \eqref{eq:poisson} and integrating by parts,
+\begin{align}
+ \mathcal{R}^{(\phi)} &= \int_{\Omega} \epsilon\, \nabla \phi \cdot \nabla w_\phi\, \mathrm{d}V 
+ - \int_{\Omega} F\big(z_+ c_+ + z_- c_-\big)\, w_\phi\, \mathrm{d}V \\
+ &\quad - \int_{\partial\Omega} \big(\mathbf{n}\!\cdot\!(\epsilon\nabla\phi)\big)\, w_\phi\, \mathrm{d}A = 0\,.
+ \label{eq:weak-poisson}
+\end{align}
+The boundary terms are provided by boundary condition objects (the volumetric Poisson kernel does not assemble boundary integrals). In MOOSE, \texttt{ADRobinBC} adds, on a boundary \(\Gamma\), the weak contribution
+\[\int_{\Gamma} \big(a\,\phi + b\,\partial\_n\phi - g\big)\, w\_\phi\,\mathrm{d}A\,,\]
+which enforces the Robin law \(a\,\phi + b\,\partial\_n\phi = g\) in weak form. Parameter names in the stock MOOSE Robin BC vary by version (and some builds may not ship a general Robin BC). Regardless of names, the required integrand for the Stern condition (normal from electrolyte to electrode)
+is
+\[\big(C\_S\,\phi + \epsilon\,\partial\_n\phi - C\_S\,\phi\_M\big)\,w\_\phi\,.
+\]
+Implementation options:
+\begin{itemize}
+  \item Built-in Robin BC (if present in your MOOSE version): use the coefficients so that the weak form equals \(C\_S\,\phi + \epsilon\,\partial\_n\phi - C\_S\,\phi\_M\). Consult your version’s parameter names; conceptually these are the coefficients on \(\phi\), \(\partial\_n\phi\), and the right-hand side.
+  \item Custom BC (portable): implement a minimal integrated BC, e.g., \texttt{SternRobinBC}, returning the boundary residual
+  \(\int\_{\Gamma\_L} (C\_S\,\phi + \epsilon\,\partial\_n\phi - C\_S\,\phi\_M)\, w\, dA\). This avoids ambiguity about parameter naming and is robust across MOOSE versions.
+\end{itemize}
+
+\paragraph{Notes for MOOSE assembly (Poisson BCs).}
+\begin{itemize}
+  \item Kernel: assemble only the volumetric terms \(\int_\Omega \epsilon\,\nabla\phi\!\cdot\!\nabla w\,dV - \int_\Omega F(z_+c_+ + z_-c_-)\,w\,dV\). Do not add boundary integrals here.
+  \item Left boundary (Stern): either configure your version’s Robin BC with coefficients matching \(C\_S\,\phi + \epsilon\,\partial\_n\phi = C\_S\,\phi\_M\), or use a small custom \texttt{SternRobinBC}. Ensure the boundary normal points out of the electrolyte toward the electrode to match the sign convention.
+  \item Right boundary: \texttt{DirichletBC} with value 0 V.
+  \item If the Stern layer is omitted, replace \texttt{ADRobinBC} by \texttt{DirichletBC} \(\phi=\phi_M\) at the left boundary.
+\end{itemize}
+
+\subsection{Species Transport (Nernst--Planck)}
+Let the trial function be \(c_i\) and the test function be \(w_i\). Using \eqref{eq:species} and the flux \eqref{eq:npflux}, we write
+\begin{align}
+ \mathcal{R}^{(c_i)} &= \int_{\Omega} \frac{\partial c_i}{\partial t}\, w_i\, \mathrm{d}V + \int_{\Omega} \mathbf{J}_i \cdot \nabla w_i\, \mathrm{d}V \\
+ &\quad - \int_{\partial\Omega} (\mathbf{n}\!\cdot\!\mathbf{J}_i)\, w_i\, \mathrm{d}A = 0\,.
+ \label{eq:weak-np}
+\end{align}
+Substituting \(\mathbf{J}_i\) splits the volumetric terms into a diffusion part and an electromigration part:
+\begin{align}
+ \int_{\Omega} D_i\, \nabla c_i \cdot \nabla w_i\, \mathrm{d}V
+ \; + \; \int_{\Omega} (\mu_i z_i F)\, c_i\, (\nabla\phi \cdot \nabla w_i)\, \mathrm{d}V\,.
+ \label{eq:weak-np-split}
+\end{align}
+
+\paragraph{Notes for MOOSE assembly.}
+\begin{itemize}
+  \item Time term \(\int \dot c_i\, w_i\) is handled by \texttt{TimeDerivative} or an equivalent custom kernel.
+  \item Diffusion term \(\int D_i \nabla c_i\!\cdot\!\nabla w_i\) is handled by \texttt{Diffusion} with a material-supplied \(D_i\).
+  \item Electromigration term \(\int (\mu_i z_i F) c_i (\nabla\phi\!\cdot\!\nabla w_i)\) is implemented as a custom kernel because of the \(c_i\,\nabla\phi\) coupling.
+  \item No homogeneous source: set \(R_i=0\) for the diffuse double layer case without reactions.
+\end{itemize}
+
+\section{Coding in MOOSE}
+This section outlines the objects needed and their responsibilities. Variable names and class names below are suggested; adapt to the codebase conventions.
+
+\subsection{Primary Variables}
+\begin{itemize}
+  \item \texttt{phi} \(\equiv \phi\): electric potential.
+  \item \texttt{c\_plus} \(\equiv c_+\), \texttt{c\_minus} \(\equiv c_-\): ionic concentrations.
+\end{itemize}
+
+\subsection{Materials}
+Provide transport and dielectric properties as material properties to keep kernels generic:
+\begin{itemize}
+  \item \texttt{ElectrolyteProperties}: returns \(D_+, D_-, z_+, z_-, \epsilon, T\) and constants \(F, R\).
+  \item Optional: concentration-dependent \(D_i(c_i)\), permittivity \(\epsilon(c_\pm)\), or activity factors if using a more advanced closure.
+\end{itemize}
+
+\subsection{Kernels}
+\begin{itemize}
+  \item \textbf{Poisson for \(\phi\)}: either use an existing Poisson kernel or implement \texttt{PoissonEDL} with residual
+  \begin{equation*}
+    R\_{\phi} = \int \epsilon\, \nabla \phi \cdot \nabla w\, dV\; - \; \int \big(\rho\_f + F(z\_+ c\_+ + z\_- c\_-)\big)\, w\, dV\,.
+  \end{equation*}
+  Split the source into (i) fixed charge via a \texttt{BodyForce} or \texttt{MaterialSource} (set to zero here with \(\rho_f=0\)), and (ii) ionic space-charge via a dedicated coupled kernel \texttt{ChargeSourceFromIons}.
+
+  \item \textbf{TimeDerivative for \(c_i\)}: standard \texttt{TimeDerivative} on \texttt{c\_plus}, \texttt{c\_minus}.
+
+  \item \textbf{Diffusion for \(c_i\)}: standard \texttt{Diffusion} using material \(D_i\).
+
+  \item \textbf{Electromigration for \(c_i\)}: custom kernel \texttt{NernstPlanckElectromigration} contributing
+  \begin{equation*}
+    \int (\mu_i z_i F)\, c_i\, (\nabla\phi \cdot \nabla w\_i)\, dV\,.
+  \end{equation*}
+  This kernel couples to \texttt{phi} and the active concentration variable \(c_i\).
+
+  \item \textbf{Optional reactions} \(R_i\): use \texttt{MaterialSource} for homogeneous terms or interface BCs for Faradaic reactions.
+\end{itemize}
+
+\subsection{Boundary Conditions}
+Consistent with the COMSOL diffuse double layer model in \texttt{examples/phase2\_EDL/ref/comsol\_diffuse\_double\_layer}, the electrolyte domain spans from the outer Helmholtz plane (OHP) at the electrode surface (left boundary, \(x=0\)) to a bulk reservoir (right boundary, \(x=L\)). We assume \(\rho_f=0\).
+\begin{itemize}
+  \item \textbf{Potential at the electrode (left, OHP):} Mixed (Robin) BC representing a Stern layer capacitor between the metal at potential \(\phi_M\) and the OHP potential \(\phi(0)\):
+  \[
+    \epsilon\, \partial\_n \phi \;=\; -\,\sigma\_{\mathrm{surf}} \;=\; -\,\epsilon\_0\,\epsilon\_S\,\frac{\phi\_M - \phi(0)}{x\_S}\,.
+  \]
+  Equivalently, \(C\_S\,\phi(0) + \epsilon\,\partial\_n\phi = C\_S\,\phi\_M\) with \(C\_S = \epsilon\_0\,\epsilon\_S/x\_S\). In MOOSE, use a Robin-type integrated BC. If the Stern layer is neglected, set Dirichlet \(\phi(0)=\phi\_M\).
+
+  \item \textbf{Potential at the bulk (right):} Dirichlet reference \(\phi(L)=0\,\mathrm{V}\) to fix the gauge and match the COMSOL setup where the potential decays to zero over \(\sim 10\,\lambda\_D\).
+
+  \item \textbf{Species at the electrode (left):} Blocking electrode, no Faradaic reactions: \(\mathbf{n}\!\cdot\!\mathbf{J}\_\pm = 0\).
+
+  \item \textbf{Species at the bulk (right):} Dirichlet to bulk values: \(c\_\pm(L) = c\_{\infty}\). This anchors the concentrations and reproduces the COMSOL curves approaching \(c\_{\infty}\) in the far field.
+\end{itemize}
+
+\paragraph{Confirmed IBCs from the COMSOL reference.}
+From the supplied reference files:
+\begin{itemize}
+  \item \texttt{diffuse\_double\_layer\_parameters.txt} defines the Stern capacitance relationship via
+  \(\texttt{rho\_surf} = \epsilon\_0\,\epsilon\_S (\phi\_M - \phi)/x\_S\).
+  Together with Gauss's law, this gives the Robin condition \(-\mathbf{n}\!\cdot(\epsilon\nabla\phi)=\sigma\_{\mathrm{surf}}\) at the electrode.
+  \item \texttt{diffuse\_double\_layer\_variables.txt} sets \(\Delta\phi = \phi\_M - \phi\), reinforcing that \(\phi\) at the OHP is not fixed to \(\phi\_M\) (i.e., not Dirichlet), but determined by the Stern drop.
+  \item The plots (\texttt{figure1.png}, \texttt{figure2.png}) show \(\phi\to 0\) and \(c\_\pm\to c\_\infty\) at the far boundary, consistent with Dirichlet conditions at \(x=L\).
+\end{itemize}
+
+\subsection{Initial Conditions}
+Set uniform initial concentrations and a reference potential, e.g., \(c_i(\mathbf{x},0)=c\_{i,\infty}\), \(\phi(\mathbf{x},0)=0\).
+
+\subsection{Example Input Skeleton}
+Below is a minimal, portable skeleton. Adjust relative paths per repository layout and always run from the input directory (see \texttt{AGENTS.md}).
+
+\begin{verbatim}
+[Mesh]
+  type = GeneratedMesh
+  dim = 1
+  nx = 200
+[]
+
+[Variables]
+  [./phi]
+  [../]
+  [./c_plus]
+  [../]
+  [./c_minus]
+  [../]
+[]
+
+[Kernels]
+  # Poisson
+  [./poisson]
+    type = PoissonEDL            # custom or existing Poisson kernel
+    variable = phi
+    epsilon = epsilon            # material property name
+  [../]
+  [./charge_src]
+    type = ChargeSourceFromIons  # adds F(z_+ c_+ + z_- c_-)
+    variable = phi
+    c_plus = c_plus
+    c_minus = c_minus
+    z_plus = 1
+    z_minus = -1
+  [../]
+
+  # cation
+  [./cplus_dt]
+    type = TimeDerivative
+    variable = c_plus
+  [../]
+  [./cplus_diff]
+    type = Diffusion
+    variable = c_plus
+    D = D_plus                   # material property
+  [../]
+  [./cplus_em]
+    type = NernstPlanckElectromigration
+    variable = c_plus
+    coupling_var = phi
+    z = 1
+    mobility = mu_plus           # or provide D_plus and T
+  [../]
+
+  # anion
+  [./cminus_dt]
+    type = TimeDerivative
+    variable = c_minus
+  [../]
+  [./cminus_diff]
+    type = Diffusion
+    variable = c_minus
+    D = D_minus
+  [../]
+  [./cminus_em]
+    type = NernstPlanckElectromigration
+    variable = c_minus
+    coupling_var = phi
+    z = -1
+    mobility = mu_minus
+  [../]
+[]
+
+[Materials]
+  [./electrolyte]
+    type = ElectrolyteProperties
+    epsilon = 7.08e-10           # F/m (example)
+    D_plus = 1.3e-9              # m^2/s
+    D_minus = 2.0e-9
+    T = 298.15
+  [../]
+[]
+
+[BCs]
+  # Electrode/OHP (left): Stern-layer Robin BC for potential
+  [./phi_left]
+    type = SternRobinBC          # custom BC in this repo
+    variable = phi
+    boundary = left
+    epsilon0 = 8.854187817e-12   # F/m
+    stern_relative_permittivity = 10
+    stern_thickness = 2e-10      # 0.2 nm
+    metal_potential = 0.1        # V
+  [../]
+  [./phi_right]
+    type = DirichletBC           # far field reference
+    variable = phi
+    boundary = right
+    value = 0.0
+  [../]
+  # Right boundary: fix bulk concentrations (COMSOL-style anchoring)
+  [./cplus_right]
+    type = DirichletBC
+    variable = c_plus
+    boundary = right
+    value = 1000                 # c_infty, example
+  [../]
+  [./cminus_right]
+    type = DirichletBC
+    variable = c_minus
+    boundary = right
+    value = 1000
+  [../]
+[]
+
+[ICs]
+  [./c0_plus]
+    type = ConstantIC
+    variable = c_plus
+    value = 1000                 # mol/m^3 (example)
+  [../]
+  [./c0_minus]
+    type = ConstantIC
+    variable = c_minus
+    value = 1000
+  [../]
+[]
+
+[Executioner]
+  type = Transient
+  dt = 1e-4
+  end_time = 1e-1
+[]
+
+[Outputs]
+  exodus = true
+[]
+\end{verbatim}
+
+\section{Reference Setup (COMSOL-inspired)}
+The repository includes COMSOL reference files under \texttt{examples/phase2\_EDL/ref/comsol\_diffuse\_double\_layer/} that illustrate a dilute, symmetric 1:1 electrolyte near a blocking electrode. The following parameterization and guidelines are consistent with that setup:
+\begin{itemize}
+  \item Temperature: \(T_0=25\,^{\circ}\mathrm{C}\); thermal voltage \(V_\mathrm{therm}=RT_0/F\).
+  \item Diffusion: \(D_+ = 1.0\times10^{-9}\,\mathrm{m^2/s}\), \(D_- = D_+\).
+  \item Bulk concentrations: \(c_{+,\infty}=c_{-,\infty}=c_\mathrm{bulk}=10\,\mathrm{mol/m^3}\).
+  \item Valences: \(z_+=+1\), \(z_-=-1\); bulk ionic strength \(I=\tfrac{1}{2}\,(z_+^2+z_-^2)\,c_\mathrm{bulk}\).
+  \item Permittivity: water \(\epsilon=\epsilon_0\,\epsilon_\mathrm{H2O}\) with \(\epsilon_\mathrm{H2O}=78.5\).
+  \item Debye length: \(\lambda_D=\sqrt{\epsilon_0\,\epsilon_\mathrm{H2O}\,V_\mathrm{therm}/\big(2 F I\big)}\).
+  \item Domain length: choose \(L\_\mathrm{cell}\approx 10\,\lambda_D\) to represent a semi-infinite bulk.
+  \item Mesh: coarse limit \(h\_{\max}\approx L\_\mathrm{cell}/20\); near electrode refine to \(h\_{\max,\mathrm{surf}}\approx \lambda_D/100\).
+  \item Electrode potential: \(\phi_M=1\,\mathrm{mV}\) vs. potential of zero charge (PZC) in the reference.
+  \item Optional Stern layer: thickness \(x_S=0.2\,\mathrm{nm}\) and relative permittivity \(\epsilon_S=10\). A capacitive surface charge density follows
+  \(\sigma\_\mathrm{surf} = \epsilon_0\,\epsilon_S\,\Delta\phi/x_S\), where \(\Delta\phi=\phi_M - \phi\_{\mathrm{OHP}}\). As a Neumann BC this becomes
+  \(-\mathbf{n}\!\cdot(\epsilon\nabla\phi)=\sigma\_\mathrm{surf}\). In practice, a Dirichlet potential at the electrode suffices if the Stern layer is not explicitly modeled.
+\end{itemize}
+
+\paragraph{Recommended BCs/ICs (COMSOL-consistent).}
+\begin{itemize}
+  \item Electrode/OHP (left): Robin BC for \(\phi\) representing a Stern layer:
+  \(C\_S\,\phi(0) + \epsilon\,\partial\_n\phi = C\_S\,\phi\_M\), with \(C\_S=\epsilon\_0\,\epsilon\_S/x\_S\). If Stern neglected, Dirichlet \(\phi(0)=\phi\_M\).
+  \item Bulk side (right): Dirichlet \(\phi(L)=0\) and Dirichlet \(c\_\pm(L)=c\_\infty\).
+  \item Species at the electrode (left): no-flux \(\mathbf{n}\!\cdot\mathbf{J}\_\pm=0\) for a blocking electrode.
+  \item Initial conditions: \(c_\pm(\mathbf{x},0)=c\_\infty\), \(\phi(\mathbf{x},0)=0\).
+\end{itemize}
+
+\paragraph{Analytical check (equilibrium).}
+At steady state with no net current and no reactions, \(\mathbf{J}_i=\mathbf{0}\) implies the Boltzmann distributions
+\(c_\pm = c_\infty\,\exp\big(\mp F\,\phi/(RT)\big)\), giving the Poisson--Boltzmann equation for a symmetric 1:1 electrolyte:
+\[\frac{\mathrm{d}^2\phi}{\mathrm{d}x^2} = \frac{2 F c_\infty}{\epsilon}\, \sinh\!\Big(\frac{F\,\phi}{RT}\Big).\]
+The Grahame relation linking surface charge and surface potential is
+\[\sigma = \sqrt{8\,\epsilon\,R T\,c_\infty}\,\sinh\!\Big(\frac{F\,\phi\_s}{2 R T}\Big).\]
+These formulas serve as sanity checks for numerical solutions in the dilute limit.
+
+\subsection{Class Skeletons (C++)}
+Below are minimal residual statements for custom kernels; place files under \texttt{src/kernels} and headers under \texttt{include/kernels} following repository conventions.
+
+\paragraph{PoissonEDL (for \(\phi\)).}
+Residual contribution (schematic):
+\begin{equation*}
+  R = \int \epsilon\, \nabla \phi \cdot \nabla w\, dV\,; \quad
+  R\_{\text{ions}} = -\int F(z\_+ c\_+ + z\_- c\_-)\, w\, dV\,.
+\end{equation*}
+
+\paragraph{NernstPlanckElectromigration (for \(c_i\)).}
+Residual contribution (schematic):
+\begin{equation*}
+  R\_{\text{em}} = \int (\mu_i z_i F)\, c_i\, (\nabla\phi \cdot \nabla w\_i)\, dV\,.
+\end{equation*}
+
+\section{Verification Notes}
+\begin{itemize}
+  \item Compile the application with the \texttt{moose} conda environment active (see \texttt{AGENTS.md}).
+  \item Run inputs from the directory containing the \texttt{.i} file and reference the executable via a correct relative path (see \texttt{AGENTS.md}).
+  \item For a 1D EDL near a charged electrode, compare the steady solution against the Poisson--Boltzmann profile in the dilute limit as a sanity check.
+\end{itemize}
+
+\section{Extensions}
+\begin{itemize}
+  \item Steric effects or activity coefficients (modified PNP) via nonlinear \(\mu_i(c_+,c_-)\).
+  \item Coupling to mechanics (electrostriction) via \(\epsilon(\mathbf{F})\) and stress contributions.
+  \item Faradaic reactions at electrodes through interface materials and flux boundary conditions.
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,275 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Case 1: Formation of EDL}
+\lhead{TECM\_TEST Framework}
+\cfoot{\thepage}
+
+\title{Case 1: Formation of Electric Double Layer (EDL) \\
+in Binary Ion System}
+\author{TECM\_TEST Documentation}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+This document outlines the theoretical framework and implementation strategy for modeling the formation of an Electric Double Layer (EDL) in a binary ion system using the TECM\_TEST framework. The system consists of two ionic species: cation "c" and anion "a".
+
+\section{Physical System Description}
+
+\subsection{System Definition}
+The binary electrolyte system contains:
+\begin{itemize}
+    \item \textbf{Cation (c)}: Positively charged ion with valence $z_c = +1$
+    \item \textbf{Anion (a)}: Negatively charged ion with valence $z_a = -1$
+    \item \textbf{Solvent}: Dielectric medium with permittivity $\varepsilon$
+\end{itemize}
+
+\subsection{EDL Formation Mechanism}
+When a charged surface is introduced into the electrolyte:
+\begin{enumerate}
+    \item Surface charge creates local electric field
+    \item Counter-ions accumulate near the surface
+    \item Co-ions are repelled from the surface
+    \item Concentration gradients develop
+    \item Steady-state EDL structure forms
+\end{enumerate}
+
+\section{Governing Equations}
+
+The EDL formation in the binary ion system is governed by three coupled partial differential equations:
+
+\subsection{Species Transport - Nernst-Planck Equations}
+
+For cation transport:
+\begin{equation}
+    \frac{\partial c_c}{\partial t} + \nabla \cdot \mathbf{J}_c = 0
+\end{equation}
+
+For anion transport:
+\begin{equation}
+    \frac{\partial c_a}{\partial t} + \nabla \cdot \mathbf{J}_a = 0
+\end{equation}
+
+Where the ionic flux is given by:
+\begin{equation}
+    \mathbf{J}_i = -D_i \nabla c_i - \frac{z_i F D_i}{RT} c_i \nabla \Phi
+\end{equation}
+
+The flux consists of:
+\begin{itemize}
+    \item \textbf{Diffusion term}: $-D_i \nabla c_i$
+    \item \textbf{Migration term}: $-\frac{z_i F D_i}{RT} c_i \nabla \Phi$
+\end{itemize}
+
+\subsection{Electrostatic Potential - Poisson Equation}
+
+The electric potential is governed by Poisson's equation:
+\begin{equation}
+    -\nabla \cdot (\varepsilon \nabla \Phi) = F(z_c c_c + z_a c_a)
+\end{equation}
+
+This couples the electric field to the local charge density.
+
+\subsection{Electroneutrality Condition}
+
+In the bulk electrolyte (initial condition):
+\begin{equation}
+    z_c c_c + z_a c_a = 0
+\end{equation}
+
+For the binary system: $c_c^0 = c_a^0 = c_0$ (bulk concentration)
+
+\section{Analytical Solution of GCS Theory under Low Voltage}
+
+\subsection{EDL Structure}
+The electric double layer consists of two distinct regions:
+\begin{itemize}
+    \item \textbf{Stern Layer (Compact Layer)}: Thickness $x_S$, permittivity $\varepsilon_{r,S}$
+    \item \textbf{Diffuse Layer}: Characteristic thickness $x_D$ (Debye length), permittivity $\varepsilon_{r,D}$
+\end{itemize}
+
+\subsection{Low Potential Analytical Solution}
+For low applied potential ($\phi \ll RT/F \approx 25$ mV), the Poisson-Boltzmann equation can be linearized.
+
+\subsubsection{Gouy-Chapman Equation for Diffuse Layer}
+Starting with Poisson's equation:
+\begin{equation}
+    -\varepsilon_{r,D}\varepsilon_0 \frac{d^2\phi}{dx^2} = F(c_+ - c_-)
+\end{equation}
+
+For low potential, the Boltzmann distribution linearizes:
+\begin{equation}
+    c_{\pm} \approx c_0\left(1 \mp \frac{F\phi}{RT}\right)
+\end{equation}
+
+Therefore:
+\begin{equation}
+    c_+ - c_- \approx -2c_0\frac{F\phi}{RT}
+\end{equation}
+
+Substituting into Poisson's equation:
+\begin{equation}
+    -\varepsilon_{r,D}\varepsilon_0 \frac{d^2\phi}{dx^2} = -2c_0\frac{F^2\phi}{RT}
+\end{equation}
+
+This simplifies to:
+\begin{equation}
+    \frac{d^2\phi}{dx^2} = \frac{2c_0F^2}{RT\varepsilon_{r,D}\varepsilon_0}\phi = \frac{\phi}{x_D^2}
+\end{equation}
+
+where we use the Debye length definition from Equation (1).
+
+The analytical solution is:
+\begin{equation}
+    \phi(x) = \phi_0 e^{-x/x_D}
+\end{equation}
+
+showing exponential potential decay from the electrode surface.
+
+\subsection{Capacitance Derivation}
+
+\subsubsection{Diffuse Layer Capacitance}
+The surface charge density at the electrode is:
+\begin{equation}
+    \sigma = -\varepsilon_{r,D}\varepsilon_0\left.\frac{d\phi}{dx}\right|_{x=0} = \varepsilon_{r,D}\varepsilon_0\frac{\phi_0}{x_D}
+\end{equation}
+
+Therefore, the diffuse layer capacitance is:
+\begin{equation}
+    C_{diffuse} = \frac{\sigma}{\phi_0} = \frac{\varepsilon_{r,D}\varepsilon_0}{x_D}
+\end{equation}
+
+\subsubsection{Stern Layer Capacitance}
+For a parallel plate capacitor with thickness $x_S$:
+\begin{equation}
+    C_{Stern} = \frac{\varepsilon_{r,S}\varepsilon_0}{x_S}
+\end{equation}
+
+\subsubsection{Total EDL Capacitance}
+The total EDL capacitance is the series combination:
+\begin{equation}
+    \frac{1}{C_{dl}} = \frac{1}{C_{Stern}} + \frac{1}{C_{diffuse}} = \frac{x_S}{\varepsilon_{r,S}\varepsilon_0} + \frac{x_D}{\varepsilon_{r,D}\varepsilon_0}
+\end{equation}
+
+This yields the Gouy-Chapman-Stern capacitance formula:
+\begin{equation}
+    C_{dl} = \left(\frac{x_D}{\varepsilon_{r,D}\varepsilon_0} + \frac{x_S}{\varepsilon_{r,S}\varepsilon_0}\right)^{-1}
+\end{equation}
+
+\subsection{Physical Interpretation}
+\begin{itemize}
+    \item The Stern layer contributes capacitive resistance: $\frac{x_S}{\varepsilon_{r,S}\varepsilon_0}$
+    \item The diffuse layer contributes capacitive resistance: $\frac{x_D}{\varepsilon_{r,D}\varepsilon_0}$
+    \item Lower permittivity in Stern layer ($\varepsilon_{r,S} = 10$) vs diffuse layer ($\varepsilon_{r,D} = 78.5$)
+    \item Series combination because charge must pass through both layers
+\end{itemize}
+
+\subsection{Validity of Low Potential Approximation}
+This analytical solution is valid when:
+\begin{itemize}
+    \item Applied potential $\phi \ll RT/F \approx 25$ mV at room temperature
+    \item Ion concentrations remain close to bulk values
+    \item No specific adsorption or finite ion size effects
+    \item Linear response regime
+\end{itemize}
+
+At higher potentials, nonlinear effects become important and numerical solutions are required.
+
+\section{Material Properties Required}
+
+\subsection{Transport Properties}
+\begin{align}
+    D_c &: \text{Cation diffusivity} \quad [\text{m}^2/\text{s}] \\
+    D_a &: \text{Anion diffusivity} \quad [\text{m}^2/\text{s}] \\
+    z_c &= +1 : \text{Cation valence} \\
+    z_a &= -1 : \text{Anion valence}
+\end{align}
+
+\subsection{Physical Constants}
+\begin{align}
+    F &= 96485 \quad [\text{C/mol}] \quad \text{Faraday constant} \\
+    R &= 8.314 \quad [\text{J/(mol·K)}] \quad \text{Gas constant} \\
+    T &: \text{Temperature} \quad [\text{K}] \\
+    \varepsilon &= \varepsilon_r \varepsilon_0 \quad [\text{F/m}] \quad \text{Permittivity}
+\end{align}
+
+\section{Current TECM\_TEST Implementation Status}
+
+\subsection{Available Components}
+\begin{itemize}
+    \item \texttt{PoissonEquation} - Implements Poisson equation with charge density coupling
+    \item \texttt{ADNernstPlanckConvection} - Implements migration term in Nernst-Planck
+    \item \texttt{ChargeDensity} - Computes multi-species charge density
+    \item \texttt{BulkChargeTransport} \& \texttt{Migration} - Electrical conductivity materials
+\end{itemize}
+
+\subsection{Missing Components for EDL Modeling}
+\begin{enumerate}
+    \item \textbf{Diffusion Kernel}: Pure diffusion equation $\frac{\partial c}{\partial t} - D\nabla^2 c = 0$
+    \item \textbf{Time Derivative Kernels}: Transient terms $\frac{\partial c}{\partial t}$
+    \item \textbf{Species-Specific Properties}: Individual diffusivities $D_c$, $D_a$
+    \item \textbf{EDL Boundary Conditions}: Surface charge/potential boundary conditions
+    \item \textbf{Example Input File}: Complete setup for binary EDL problem
+\end{enumerate}
+
+\section{Implementation Strategy}
+
+\subsection{Phase 1: Core Physics Implementation}
+\begin{enumerate}
+    \item Create diffusion kernel for species transport
+    \item Implement time derivative kernels
+    \item Develop species-specific material properties
+    \item Set up boundary conditions for charged surfaces
+\end{enumerate}
+
+\subsection{Phase 2: Validation and Testing}
+\begin{enumerate}
+    \item Create benchmark EDL problem
+    \item Compare with analytical solutions (Gouy-Chapman theory)
+    \item Validate concentration profiles and potential distribution
+    \item Test different ionic strengths and surface charges
+\end{enumerate}
+
+\subsection{Phase 3: Advanced Features}
+\begin{enumerate}
+    \item Non-linear EDL effects (finite ion size)
+    \item Multiple ion species
+    \item Dynamic EDL formation kinetics
+    \item Coupling with mechanical deformation
+\end{enumerate}
+
+
+\section{Expected Outcomes}
+
+Upon successful implementation, the TECM\_TEST framework will be capable of:
+\begin{itemize}
+    \item Modeling EDL formation in binary electrolytes
+    \item Predicting ion concentration profiles near charged interfaces
+    \item Calculating electric potential distribution in EDL
+    \item Studying transient EDL dynamics
+    \item Validating against analytical GCS theory for low potentials
+    \item Providing foundation for more complex electrochemical systems
+\end{itemize}
+
+\section{References}
+
+\begin{enumerate}
+    \item Bard, A. J., \& Faulkner, L. R. (2001). \textit{Electrochemical Methods: Fundamentals and Applications}. Wiley.
+    \item Newman, J., \& Thomas-Alyea, K. E. (2004). \textit{Electrochemical Systems}. Wiley.
+    \item Bazant, M. Z., Thornton, K., \& Ajdari, A. (2004). Diffuse-charge dynamics in electrochemical systems. \textit{Physical Review E}, 70(2), 021506.
+\end{enumerate}
+
+\end{document}
