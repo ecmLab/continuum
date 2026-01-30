@@ -24,7 +24,7 @@ using namespace FixConst;
 
 FixRadiusExpansion::FixRadiusExpansion(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg),
-  Omega_Li_AM(6.0593e-6),         // m³/mol (effective molar volume of AgLi4 - Based on max concentration)
+  Omega_Li_AM(1.0602e-05),         // m³/mol (effective molar volume of AgLi9 - Based on max concentration)
   Omega_Li_CB(4.9307e-6),         // m³/mol (effective molar volume in CB - Based on max concentration)
   update_frequency(10),
   max_updates(10),

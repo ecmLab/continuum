@@ -844,7 +844,7 @@ void FixPotentialSOR::calculate_hydrostatic_stress()
   double stress_conversion = 1.0e-15; 
 
   for (int i = 0; i < nlocal; i++) {
-    if (mask[i] & groupbit && (type[i] == Li_Atype || type[i] == Li_Ctype)) {
+    if (mask[i] & groupbit) { // && (type[i] == Li_Atype || type[i] == Li_Ctype)
       
       // Calculate Volume in SI (m^3)
       double radius_SI = radius[i] * 1.0e-6;  // um -> m

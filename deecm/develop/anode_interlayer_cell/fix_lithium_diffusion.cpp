@@ -34,7 +34,7 @@ FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
   T(303.0),                      // K (default, can be overridden)
   F(96485.0),                    // C/mol
   c_li_max_LM(77101.002),        // Lithium Metal (mol/m³)
-  c_li_max_AM(115917.8),         // Active Material (mol/m³)
+  c_li_max_AM(85155.85),         // Active Material (mol/m³)
   c_li_max_CB(23332.2),          // Carbon Black (mol/m³)
   V_exp_max_AM(1.01),
   V_exp_max_CB(1.13),
