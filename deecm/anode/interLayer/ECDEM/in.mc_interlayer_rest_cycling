@@ -10,7 +10,7 @@
 units           micro  # Using micro units to match the compaction script
 atom_style      granular
 atom_modify     map array
-boundary        f f s  # Fixed boundaries as in compaction script
+boundary        f f s  # Fixed(f) boundaries as in compaction script shrink(s)
 newton          off
 
 communicate     single vel yes
@@ -107,7 +107,7 @@ fix zwalls1 ptc wall/gran model hertz tangential history primitive type 5 zplane
 fix             integr all nve/sphere
 
 # Warn if timestep > 10% of Rayleigh time or 10% of Hertz time
-fix             ts_check all check/timestep/gran 1 0.1 0.1 warn no
+# fix             ts_check all check/timestep/gran 1 0.1 0.1 warn no
 
 # --- 8. ANALYSIS SETUP ---
 
@@ -150,39 +150,26 @@ fix             radexp all radius_expansion AM_type 1 CB_type 2 update_every 1 m
 
 # --- 10. COMPUTE SETUP FOR MONITORING ---
 
-# Electric potential by material type - NOW ELECTROLYTE POTENTIAL
-#compute         phi_el_se_avg se reduce ave f_electrolytePotential
-
-# Electronic potential by material type
-#compute         phi_ed_se_avg se reduce ave f_electronicPotential
-
-# Current flow at AM-SE interfaces
-compute         current_avg se reduce ave f_currentLiSE
-
-variable       ts_rayleigh equal f_ts_check[1]
-variable       ts_hertz    equal f_ts_check[2]
-variable       ts_skin     equal f_ts_check[3]
 
 # --- 11. OUTPUT SETTINGS ---
 
 # Simulation timing variables
-variable        rest_time      equal 180.0           # Rest time in seconds
+variable        rest_time      equal 0.1          # Rest time in seconds
 variable        scaling_factor equal 2.0e07        # Scaling factor (matches s_factor in lithium_diffusion)
 variable        dem_timestep   equal 5.e-12        # DEM timestep in seconds (5.e-6 microseconds)
 
 # Calculate run time and output frequencies
-variable        run_steps      equal ${rest_time}/(${scaling_factor}*${dem_timestep})
-variable        dump_freq      equal ${run_steps}/100
-variable        thermo_freq    equal ${run_steps}/200
+variable        run_steps      equal round(${rest_time}/(${scaling_factor}*${dem_timestep}))
+variable        dump_freq      equal round(${run_steps}/100)
+variable        thermo_freq    equal round(${run_steps}/200)
 
 # Thermo output
-thermo_style    custom step atoms ke &
-                v_ts_rayleigh v_ts_hertz v_ts_skin v_prs
+thermo_style    custom step atoms ke
 thermo          ${thermo_freq}
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_batt all custom ${dump_freq} post/20260130_1LM_M2C5_vr9_rest_180sec_sf2e7/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_batt all custom ${dump_freq} post/20260202_1LM_M2C5_vr9_rest_0d1sec_sf2e7/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_hydrostaticStress f_lithiumContent f_lithiumConcentration f_lithiumMols f_equilibriumPotential v_prs_atom
 
 # 4. Run EC for 1 timestep, equivelent to 0.0001s real seconds

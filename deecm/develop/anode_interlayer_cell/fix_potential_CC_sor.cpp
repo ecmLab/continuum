@@ -445,16 +445,17 @@ void FixPotentialSOR::pre_force(int vflag)
   update->vflag_atom = update->ntimestep;
   
   // Calculate hydrostatic stress for Li particles
-  calculate_hydrostatic_stress();
-
-  // This ensures neighboring processors have correct stress values
-  fix_hydrostatic_stress->do_forward_comm();
+  // calculate_hydrostatic_stress();
+  // fix_hydrostatic_stress->do_forward_comm();
 }
 
 /* ---------------------------------------------------------------------- */
 
 void FixPotentialSOR::post_force(int vflag)
 {
+  calculate_hydrostatic_stress();
+  fix_hydrostatic_stress->do_forward_comm();
+  
   // First, calculate interface contact areas and current distribution
   // calculate_interface_currents();
 
