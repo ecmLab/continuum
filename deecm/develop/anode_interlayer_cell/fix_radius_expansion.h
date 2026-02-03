@@ -39,8 +39,6 @@ class FixRadiusExpansion : public Fix {
   
   // Update control
   int update_frequency;      // Steps between radius updates
-  int max_updates;           // Maximum number of radius updates
-  int update_count;          // Current update count
   int next_update_step;      // Next step to update radius
   bool manual_trigger;       // Manual trigger for radius update
   

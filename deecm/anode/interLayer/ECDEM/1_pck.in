@@ -11,8 +11,8 @@ neigh_modify    every 1 delay 0 check yes
 echo            both
 timestep        1.e-6
 
-variable        tarp        equal     90   # 10% way to tarp1
-variable        tarp1       equal     100  # Fabrication Pressure (MPa)
+variable        tarp        equal     225   # 10% way to tarp1
+variable        tarp1       equal     250  # Fabrication Pressure (MPa)
 variable        tarsp       equal     14   # Stack Pressure (MPa)
 #--------------------------Material Information---------------------------------------------------------
 variable        Eme           equal     76.e6  # Metal (Ag) [kPa] (MatWeb - Silver, Ag)
@@ -30,7 +30,7 @@ variable        vli           equal     0.381    # Li (Li-metal) [-] (https://do
 variable        Eww           equal     100.e6    # Wall [kPa]
 variable        vww           equal     0.4      # Wall [-]
 #---------------------Generate Box----------------------------------------
-read_data        data/Ag_M1C5_vr1.data
+read_data        dataAg/Ag_M1C5_vr15.data
 
 group  ag   type  1
 group  ac   type  2
@@ -110,13 +110,13 @@ thermo          100000
 thermo_modify   lost ignore norm no
 
 # Output to file
-dump    dmp all custom 500000 post/postc/Ag_M1C5_vr1_fp100_sp14.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
+dump    dmp all custom 500000 post/postc/Ag_M1C5_vr15_fp250_sp14.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 
 #------------------------Compaction Process------------------------------------------------------
 fix 1 li1 move linear 0 0 0 # Fixing bottom
 fix 2 se1 move linear 0 0 -0.2 # Moving bottom li up
 
-### Run calculation
+# Run Initial Compaction (Approx. 5M dt's)
 label loop1
   run   50000
   if "${prs} > ${tarp}" then "jump SELF loop2"
@@ -149,4 +149,4 @@ label loop6
 run 500000
 
 # Save compacted state
-write_data      data/Ag_M1C5_vr1_fp100_sp14.data
+write_data      dataAg/Ag_M1C5_vr15_fp250_sp14.data

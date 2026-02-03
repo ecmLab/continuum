@@ -26,9 +26,7 @@ FixRadiusExpansion::FixRadiusExpansion(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg),
   Omega_Li_AM(1.0602e-05),         // m³/mol (effective molar volume of AgLi9 - Based on max concentration)
   Omega_Li_CB(4.9307e-6),         // m³/mol (effective molar volume in CB - Based on max concentration)
-  update_frequency(10),
-  max_updates(10),
-  update_count(0),
+  update_frequency(1),
   next_update_step(0),
   manual_trigger(false),
   lithium_content(NULL),
@@ -58,10 +56,6 @@ FixRadiusExpansion::FixRadiusExpansion(LAMMPS *lmp, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"update_every") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix radius_expansion command");
       update_frequency = force->inumeric(FLERR,arg[iarg+1]);
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"max_updates") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix radius_expansion command");
-      max_updates = force->inumeric(FLERR,arg[iarg+1]);
       iarg += 2;
     } else if (strcmp(arg[iarg],"Omega_Li_AM") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix radius_expansion command");
@@ -160,11 +154,8 @@ void FixRadiusExpansion::setup(int vflag)
 
 void FixRadiusExpansion::end_of_step()
 {
-  if (update_count >= max_updates) return;
-  
   if (manual_trigger || update->ntimestep >= next_update_step) {
     update_particle_radius();
-    update_count++;
     next_update_step = update->ntimestep + update_frequency;
     manual_trigger = false;
     
@@ -246,14 +237,12 @@ void FixRadiusExpansion::trigger_radius_update()
 
 double FixRadiusExpansion::compute_scalar()
 {
-  return (double)update_count;
+  return 0.0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 double FixRadiusExpansion::compute_vector(int n)
 {
-  if (n == 0) return (double)update_count;
-  else if (n == 1) return (double)(max_updates - update_count);
   return 0.0;
 }
