@@ -4,15 +4,17 @@ atom_modify     map array
 boundary        f f s
 newton          off
 communicate     single vel yes
+processors      * * 1
 units           micro
 neighbor        0.003 bin
 neigh_modify    every 1 delay 0 check yes
 echo            both
 timestep        1.e-6
 
-variable        tarp        equal     225   # 10% way to tarp1
+variable        tarp        equal     200  # 20% way to tarp1
 variable        tarp1       equal     250  # Fabrication Pressure (MPa)
-variable        tarsp       equal     14   # Stack Pressure (MPa)
+variable        tarsp       equal     21   # Stack Pressure (MPa) (50% way)
+variable        tarsp1      equal     14   # Stack Pressre Final (MPa)
 #--------------------------Material Information---------------------------------------------------------
 variable        Eme           equal     76.e6  # Metal (Ag) [kPa] (MatWeb - Silver, Ag)
 variable        vme           equal     0.37    # Metal (Ag) [-] (MatWeb - Silver, Ag)
@@ -84,7 +86,6 @@ fix xwalls1 ptc wall/gran model hertz tangential history primitive type 5 xplane
 fix xwalls2 ptc wall/gran model hertz tangential history primitive type 5 xplane 2.5
 fix ywalls1 ptc wall/gran model hertz tangential history primitive type 5 yplane 0
 fix ywalls2 ptc wall/gran model hertz tangential history primitive type 5 yplane 2.5
-fix zwalls1 ptc wall/gran model hertz tangential history primitive type 5 zplane 0
 
 #apply nve integration to all particles
 fix             integr ptc nve/sphere 
@@ -105,47 +106,58 @@ variable       prs  equal  (c_frc)*1.6e-4           # Pressure in unit of MPa on
 # variable       ts_skin     equal f_ts_check[3]
 
 thermo_style    custom step atoms ke c_ker vol v_prs c_posw
-thermo          100000
+thermo          250
 thermo_modify   lost ignore norm no
 
 # Output to file
-dump    dmp all custom 500000 post/postc/Ag_M1C5_vr15_fp250_sp14.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
+dump    dmp all custom 2500 post/postc/Ag_M1C5_vr15_fp250_sp14.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 
 #------------------------Compaction Process------------------------------------------------------
 fix 1 li1 move linear 0 0 0 # Fixing bottom
-fix 2 se1 move linear 0 0 -0.2 # Moving bottom li up
+fix 2 se1 move linear 0 0 -10.0 # Moving bottom li up
 
-# Run Initial Compaction (Approx. 5M dt's)
+# Run Initial Compaction
 label loop1
-  run   50000
+  run   2000
   if "${prs} > ${tarp}" then "jump SELF loop2"
 jump SELF loop1
 
 label loop2
-# Run period: decrease pressing velocity so that pressure value converge more accurate to designed value
-fix 2 se1 move linear 0 0 -0.05
+# Run period: decrease pressing velocity so that pressure value converge more accurate to designed value (10% of original)
+fix 2 se1 move linear 0 0 -1.0
 
 label loop3
-  run 50000
+  run 1000
   if "${prs} > ${tarp1}" then "jump SELF loop4"
 jump SELF loop3
 
 # Run period: hold for relax
 label loop4
   fix 2 se1 move linear 0 0 0.
-  run 50000
+  run 10000
 if "${prs} < ${tarp1}" then "jump SELF loop2"
 
-# Run period: Release to Stack Pressure
-fix 2 se1 move linear 0 0 0.1
+# Run period: Release to Almost Stack Pressure (50% speed)
+fix 2 se1 move linear 0 0 5.0
 label loop5
-  run 50000
+  run 1000
   if "${prs} < ${tarsp}" then "jump SELF loop6"
 jump SELF loop5
 
-# Run period: hold for relax
+# Run period: Release to Stack Pressure (10% speed of stack speed)
 label loop6
-run 500000
+fix 2 se1 move linear 0 0 0.5
+
+label loop7
+  run 1000
+  if "${prs} < ${tarsp1}" then "jump SELF loop8"
+jump SELF loop7
+
+# Run period: hold for relax
+label loop8
+fix 2 se1 move linear 0 0 0
+
+run 10000
 
 # Save compacted state
 write_data      dataAg/Ag_M1C5_vr15_fp250_sp14.data

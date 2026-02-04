@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name="COM_Ag_M1C5_vr15_fp250_sp14"
+#SBATCH --job-name="REST_Ag_M1C5_vr15_fp250_sp14"
 #SBATCH --account=interlayer
-#SBATCH --time=12:30:00
+#SBATCH --time=4:00:00
 #SBATCH --ntasks-per-node=94
 #SBATCH --nodes=1
 #SBATCH --mail-user=jmv8431@rit.edu
@@ -14,4 +14,4 @@ export PATH=/kfs3/scratch/jmv8431/LIGGGHTS-PUBLIC/src:$PATH
 # The simulations will run in the order listed below.
 
 # This first step must complete and write a restart file before others can run.
-srun lmp_auto -in pck.in
+srun lmp_auto -in rest.in
