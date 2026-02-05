@@ -1,13 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
-# Submit LAMMPS jobs for all morphologies and mass ratios to SLURM
+# Submit LIGGGHTS jobs for all morphologies and mass ratios to SLURM
 # Usage: ./run_all.sh
+# Dry Run: DRY_RUN=1 ./run_all.sh
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 PROJECT_ROOT=$(cd -- "${SCRIPT_DIR}/.." && pwd)
 RESULT_ROOT="${SCRIPT_DIR}/results"
-PRESS_TGT=${PRESS_TGT:-2}
 DRY_RUN=${DRY_RUN:-0}
 
 MORPH_DIRS=(mesh_superp mesh_cnt mesh_graphene mesh_homo)
@@ -15,10 +15,9 @@ MORPH_DIRS=(mesh_superp mesh_cnt mesh_graphene mesh_homo)
 mkdir -p "$RESULT_ROOT"
 
 echo "============================================"
-echo "Submitting LAMMPS jobs to Bridges-2"
+echo "Submitting LIGGGHTS jobs to Bridges-2"
 echo "  Project root: $PROJECT_ROOT"
 echo "  Results:      $RESULT_ROOT"
-echo "  Target press: $PRESS_TGT MPa"
 echo "============================================"
 
 job_count=0
@@ -46,11 +45,11 @@ for morph in "${MORPH_DIRS[@]}"; do
       --account=mat250014p
       --partition=RM-shared
       --nodes=1
-      --ntasks-per-node=32
+      --ntasks-per-node=48
       --time=03:30:00
       --output="${outdir}/%x_%j.out"
       --error="${outdir}/%x_%j.err"
-      --export="DATAFILE=${datafile},OUTDIR=${outdir},LABEL=${label},PRESS_TGT=${PRESS_TGT}"
+      --export="DATAFILE=${datafile},OUTDIR=${outdir},LABEL=${label}"
       "${SCRIPT_DIR}/myjob.sh"
     )
     
