@@ -42,7 +42,7 @@ function cluster = buildCNTCluster(base_dia, length_um)
     if length_um <= 0
         length_um = base_dia;
     end
-    spacing = base_dia * 0.6;
+    spacing = base_dia * 0.95; % Was 0.6
     nSeg = max(2, ceil(length_um / spacing));
     z_positions = linspace(-length_um/2, length_um/2, nSeg)';
     offsets = [zeros(nSeg,2), z_positions];

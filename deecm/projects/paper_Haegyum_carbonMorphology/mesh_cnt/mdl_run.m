@@ -4,7 +4,7 @@
 clc; clear;
 % "Unit = micro" unit system is used to be consistent with the LAMMPS input file
 % Mass: picograms, Distance: micrometers, time:microseconds, density:picograms/micrometer^3
-nWt    = 11;  
+nWt    = 11; %11  
 
 for iwt = 1:nWt
 
