@@ -64,21 +64,18 @@ class FixRadiusExpansion : public Fix {
   void trigger_radius_update();
   
  protected:
-  // User-configurable material parameters
-  double Omega_Li;           // Molar volume of Li (m³/mol)
-  double Omega_Li_eff;       // Effective molar volume of Li (m³/mol)
+  // Volume parameters from equations
+  double Omega_Li;           // Molar volume of Li (12.97e-6 m³/mol)
+  double Omega_Li_eff;       // Effective molar volume of Li in Li (12.97e-6 m³/mol)
   
-  // User-configurable simulation parameters
+  // Update control
   int update_frequency;      // Steps between radius updates
   int next_update_step;      // Next step to update radius
   bool manual_trigger;       // Manual trigger for radius update
-  double min_radius;         // Minimum allowed radius (simulation units, μm)
-  double max_radius;         // Maximum allowed radius (simulation units, μm)
-  double length_to_m;        // Length unit conversion to meters
   
   // Property pointers
   double *lithium_content;
-  double *li_mols;
+  double *li_mols;      // Moles of lithium (from lithium_diffusion)
   double *initial_radius;
   double *particle_volume;
   
@@ -109,36 +106,12 @@ E: Illegal fix radius_expansion command
 Self-explanatory. Check the input script syntax and compare to the
 documentation for the command.
 
-E: Illegal fix radius_expansion command: unknown keyword
-
-An unrecognized keyword was used.
-
-E: update_every must be >= 1
-
-The update frequency must be at least 1 step.
-
-E: Omega_Li must be positive
-
-The molar volume must be a positive number.
-
-E: min_radius must be >= 0
-
-The minimum radius cannot be negative.
-
-E: max_radius must be positive
-
-The maximum radius must be positive.
-
-E: min_radius must be less than max_radius
-
-The radius bounds are inconsistent.
-
-E: length_to_m must be positive
-
-The length conversion factor must be positive.
-
-E: Fix radius_expansion requires lithiumContent property
+E: Fix radius_expansion requires fix property/atom/lithium_content
 
 Fix property/atom/lithium_content must be defined before fix radius_expansion.
+
+E: Maximum radius updates reached
+
+The fix has performed the maximum allowed number of radius updates.
 
 */

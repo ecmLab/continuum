@@ -34,18 +34,6 @@
     Contributing author and copyright for this file:
     Created: Joseph Vazquez Mercado, RIT 2025
     Copyright 2024-     DCS Computing GmbH, Linz
-
-    Input script syntax:
-      fix ID group-ID radius_expansion keyword value ...
-
-    Keywords:
-      Li_type atype ctype       - atom types for anode and cathode Li (default 3 2)
-      update_every N            - steps between radius updates (default 10)
-      Omega_Li value            - molar volume of Li in m³/mol (default 12.97e-6)
-      Omega_Li_eff value        - effective molar volume of Li in m³/mol (default 12.97e-6)
-      min_radius value          - minimum allowed radius in μm (default 0.01)
-      max_radius value          - maximum allowed radius in μm (default 1.0)
-      length_to_m value         - length unit conversion to meters (default 1.0e-6, i.e. μm)
 ------------------------------------------------------------------------- */
 
 #include "fix_radius_expansion.h"
@@ -72,9 +60,6 @@ FixRadiusExpansion::FixRadiusExpansion(LAMMPS *lmp, int narg, char **arg) :
   update_frequency(10),
   next_update_step(0),
   manual_trigger(false),
-  min_radius(0.01),           // μm  (10 nm floor to avoid numerical issues)
-  max_radius(1.0),            // μm  (upper cap)
-  length_to_m(1.0e-6),        // μm -> m
   lithium_content(NULL),
   li_mols(NULL),
   initial_radius(NULL),
@@ -83,8 +68,8 @@ FixRadiusExpansion::FixRadiusExpansion(LAMMPS *lmp, int narg, char **arg) :
   fix_li_mols(NULL),
   fix_initial_radius(NULL),
   fix_particle_volume(NULL),
-  Li_Atype(3),
-  Li_Ctype(2)
+  Li_Atype(3), // Anode type 
+  Li_Ctype(2) // Cathode type
 {
   if (narg < 3)
     error->all(FLERR,"Illegal fix radius_expansion command");
@@ -93,52 +78,16 @@ FixRadiusExpansion::FixRadiusExpansion(LAMMPS *lmp, int narg, char **arg) :
   int iarg = 3;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"Li_type") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal fix radius_expansion command: Li_type requires 2 values");
+      if (iarg+3 > narg) error->all(FLERR,"Illegal fix radius_expansion command");
       Li_Atype = force->inumeric(FLERR,arg[iarg+1]);
       Li_Ctype = force->inumeric(FLERR,arg[iarg+2]);
       iarg += 3;
     } else if (strcmp(arg[iarg],"update_every") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix radius_expansion command: update_every requires 1 value");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix radius_expansion command");
       update_frequency = force->inumeric(FLERR,arg[iarg+1]);
-      if (update_frequency < 1)
-        error->all(FLERR,"update_every must be >= 1");
       iarg += 2;
-    } else if (strcmp(arg[iarg],"Omega_Li") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix radius_expansion command: Omega_Li requires 1 value");
-      Omega_Li = force->numeric(FLERR,arg[iarg+1]);
-      if (Omega_Li <= 0.0)
-        error->all(FLERR,"Omega_Li must be positive");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"Omega_Li_eff") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix radius_expansion command: Omega_Li_eff requires 1 value");
-      Omega_Li_eff = force->numeric(FLERR,arg[iarg+1]);
-      if (Omega_Li_eff <= 0.0)
-        error->all(FLERR,"Omega_Li_eff must be positive");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"min_radius") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix radius_expansion command: min_radius requires 1 value");
-      min_radius = force->numeric(FLERR,arg[iarg+1]);
-      if (min_radius < 0.0)
-        error->all(FLERR,"min_radius must be >= 0");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"max_radius") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix radius_expansion command: max_radius requires 1 value");
-      max_radius = force->numeric(FLERR,arg[iarg+1]);
-      if (max_radius <= 0.0)
-        error->all(FLERR,"max_radius must be positive");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"length_to_m") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix radius_expansion command: length_to_m requires 1 value");
-      length_to_m = force->numeric(FLERR,arg[iarg+1]);
-      if (length_to_m <= 0.0)
-        error->all(FLERR,"length_to_m must be positive");
-      iarg += 2;
-    } else error->all(FLERR,"Illegal fix radius_expansion command: unknown keyword");
+    } else error->all(FLERR,"Illegal fix radius_expansion command");
   }
-
-  // Validate radius bounds
-  if (min_radius >= max_radius)
-    error->all(FLERR,"min_radius must be less than max_radius");
 
   scalar_flag = 1;
   global_freq = 1;
@@ -154,7 +103,7 @@ FixRadiusExpansion::FixRadiusExpansion(LAMMPS *lmp, int narg, char **arg) :
 
 void FixRadiusExpansion::post_create()
 {
-  // Register property/atom for initial radius
+  // Register property/atom for initial radius (to be compatible with lithium_diffusion)
   fix_initial_radius = static_cast<FixPropertyAtom*>(modify->find_fix_property("initialRadius","property/atom","scalar",0,0,style,false));
   if(!fix_initial_radius) {
     const char* fixarg[10];
@@ -211,6 +160,7 @@ void FixRadiusExpansion::init()
   if(!fix_lithium_content)
     error->all(FLERR,"Fix radius_expansion requires lithiumContent property");
   
+  // Find lithium content property (created by lithium_diffusion)
   fix_li_mols = static_cast<FixPropertyAtom*>(modify->find_fix_property("lithiumMols","property/atom","scalar",0,0,style));
   if(!fix_li_mols)
     error->all(FLERR,"Fix radius_expansion requires lithiumMols property (should be created by fix lithium_diffusion)");
@@ -233,13 +183,20 @@ void FixRadiusExpansion::setup(int vflag)
 {
   updatePtrs();
   
+  // Store initial radius values that were set by lithium_diffusion
+  // lithium_diffusion should have already run its setup() and populated li_mols
   double *radius = atom->radius;
   int *type = atom->type;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
   
+  // Store the initial radius (this is the radius at simulation start)
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit && (type[i] == Li_Atype || type[i] == Li_Ctype)) {
+      // Only set initial_radius if it hasn't been set yet (value is 0.0)
+      // if (initial_radius[i] == 0.0) {
+      //   initial_radius[i] = radius[i]; // Units in μm
+      // }
       initial_radius[i] = radius[i]; // Units in μm
       // Calculate initial particle volume
       double V_initial = (4.0/3.0) * M_PI * initial_radius[i] * initial_radius[i] * initial_radius[i];
@@ -252,6 +209,7 @@ void FixRadiusExpansion::setup(int vflag)
 
 void FixRadiusExpansion::end_of_step()
 {
+  
   if (manual_trigger || update->ntimestep >= next_update_step) {
     update_particle_radius();
     next_update_step = update->ntimestep + update_frequency;
@@ -286,18 +244,21 @@ void FixRadiusExpansion::update_particle_radius()
 
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit && (type[i] == Li_Atype || type[i] == Li_Ctype)) {
+      // double x_Li = lithium_content[i];  // Li/Li molar ratio
       double n_Li = li_mols[i];  // Moles of lithium
+      // double n_Li = x_Li * n_Li;          // Moles of lithium
 
-      // Volume from molar volume: V = Omega_Li * n_Li
-      particle_volume[i] = Omega_Li * n_Li; // m³
+      // Final volume of the particle: V = Omega_Li * n_Li + Omega_Li * n_Li
+      particle_volume[i] = Omega_Li * n_Li; // Original for Li Anode m3
+      // particle_volume[i] = (initial_radius[i] * initial_radius[i] * initial_radius[i] * (4.0/3.0) * M_PI) * (0.2314*pow(x_Li,3) - 0.4919*pow(x_Li,2) + 0.3548*x_Li + 1); // For NMC811 if x_Li is in range 0-1
 
-      // New radius from volume: V = (4/3)*pi*r³  =>  r = cbrt(3V/(4*pi))
-      temp_rad = cbrt((3.0 * particle_volume[i]) / (4.0 * M_PI)); // m
+      // The new radius is derived from the new volume
+      // V = (4/3) * pi * r^3, so r = cbrt(3V/(4*pi))
+      temp_rad = cbrt((3.0 * particle_volume[i]) / (4.0 * M_PI)); // Units in m
 
-      // Convert to simulation units and apply user-specified radius bounds
-      double temp_rad_sim = temp_rad / length_to_m; // Convert m -> simulation units (μm)
-      if (temp_rad_sim > min_radius && temp_rad_sim < max_radius) {
-        radius[i] = temp_rad_sim;
+      if ((temp_rad * 1.0e6 > 0.01) && (temp_rad * 1.0e6 < 1.0)) { // Cap min radius to 10 nm to avoid numerical issues
+      // radius[i] = cbrt((3.0 * particle_volume[i]) / (4.0 * M_PI)); // Units in m
+      radius[i] = temp_rad * 1.0e6; // Convert to μm
       }
     }  
   }

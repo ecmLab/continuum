@@ -100,13 +100,15 @@ compute        posw   se1  reduce ave z              # Z position of se1 layer (
 variable       prs  equal  (c_frc)*1.6e-4           # Pressure in unit of MPa on se1 (2.5 x 2.5 um area)
 
 # Warn if timestep > 10% of Rayleigh time or 10% of Hertz time
-fix             ts_check all check/timestep/gran 1000 0.1 0.1 warn yes
+# fix             ts_check all check/timestep/gran 1000 0.1 0.1 warn yes
 
-variable       ts_rayleigh equal f_ts_check[1]
-variable       ts_hertz    equal f_ts_check[2]
-variable       ts_skin     equal f_ts_check[3]
+# variable       ts_rayleigh equal f_ts_check[1]
+# variable       ts_hertz    equal f_ts_check[2]
+# variable       ts_skin     equal f_ts_check[3]
 
-thermo_style    custom step atoms ke c_ker vol v_prs c_posw v_ts_rayleigh v_ts_hertz v_ts_skin
+# v_ts_rayleigh v_ts_hertz v_ts_skin
+
+thermo_style    custom step atoms ke c_ker vol v_prs c_posw
 thermo          4000
 thermo_modify   lost ignore norm no
 
@@ -117,7 +119,7 @@ dump    dmp all custom 20000 post/postc/Ag_M1C5_vr15_fp250_sp14.dump id type x y
 fix 1 li1 move linear 0 0 0 # Fixing bottom
 fix 2 se1 move linear 0 0 -5.0 # Moving bottom li up
 
-# Run Initial Compaction (Check every 0.01 um)
+# Run Initial Compaction (Check every 0.01 um ~85 loops)
 label loop1
   run   8000
   if "${prs} > ${tarp}" then "jump SELF loop2"

@@ -35,18 +35,6 @@
     Created: Joseph Vazquez Mercado, RIT 2025
     Copyright 2024-     DCS Computing GmbH, Linz
     Notes: For Symmetrical Cell Li / Li interface diffusion also considering current from SE to Li
-
-    Input script syntax:
-      fix ID group-ID lithium_diffusion keyword value ...
-
-    Keywords:
-      Li_type atype ctype       - atom types for anode and cathode Li (default 3 2)
-      c_li_max value            - max Li concentration in mol/m³ (default 77101.002)
-      D_Li value                - Li self-diffusion coefficient in m²/s (default 1.6e-14)
-      Omega_Li value            - molar volume of Li in m³/mol (default 12.97e-6)
-      s_factor value            - electrochemical time scaling factor (default 2.0e10)
-      time_conv value           - time unit conversion factor to seconds (default 1.0e-6, i.e. microseconds)
-      clamp_content value value - min/max bounds for lithium content (default: no clamping)
 ------------------------------------------------------------------------- */
 
 #include "fix_lithium_diffusion.h"
@@ -70,18 +58,11 @@ using namespace FixConst;
 
 FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg),
-  F(96485.0),                    // C/mol  (Faraday constant)
-  c_li_max(77101.002),           // mol/m³ (Based on molar volume of Li = 0.00001297 m³/mol)
-  D_Li(1.6e-14),                 // m²/s   (Li-metal self-diffusion coefficient)
-  Omega_Li(12.97e-6),            // m³/mol (Molar volume of lithium)
-  s_factor(2.0e10),              // Electrochemical time scaling factor (0.1s / 5e-12s)
-  time_conv(1.0e-6),             // Time unit conversion to seconds (us -> s)
-  clamp_content(false),          // Whether to clamp lithium content
-  clamp_min(0.0),                // Min lithium content (if clamping)
-  clamp_max(1.0),                // Max lithium content (if clamping)
-  initial_lithium_content(0.0),
-  target_lithium_content(1.0),
-  max_lithium_content(1.0),
+  F(96485.0),                // C/mol
+  c_li_max(77101.002),         // mol/m³ (Based on molar volume of Li = 0.00001297 m³/mol)
+  initial_lithium_content(0.0),  // Default value
+  target_lithium_content(1.0),    // Default value
+  max_lithium_content(1.0),       // Default value
   lithium_content(NULL),
   lithium_concentration(NULL),
   current_Li_SE(NULL),
@@ -95,8 +76,8 @@ FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
   fix_lithium_flux(NULL),
   fix_li_mols(NULL),
   fix_lithium_content_manager(NULL),
-  Li_Atype(3),
-  Li_Ctype(2),
+  Li_Atype(3), // Anode type 
+  Li_Ctype(2), // Cathode type
   list(NULL)
 {
   if (narg < 3)
@@ -106,45 +87,15 @@ FixLithiumDiffusion::FixLithiumDiffusion(LAMMPS *lmp, int narg, char **arg) :
   int iarg = 3;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"Li_type") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command: Li_type requires 2 values");
+      if (iarg+3 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
       Li_Atype = force->inumeric(FLERR,arg[iarg+1]);
       Li_Ctype = force->inumeric(FLERR,arg[iarg+2]);
       iarg += 3;
     } else if (strcmp(arg[iarg],"c_li_max") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command: c_li_max requires 1 value");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command");
       c_li_max = force->numeric(FLERR,arg[iarg+1]);
       iarg += 2;
-    } else if (strcmp(arg[iarg],"D_Li") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command: D_Li requires 1 value");
-      D_Li = force->numeric(FLERR,arg[iarg+1]);
-      if (D_Li <= 0.0)
-        error->all(FLERR,"D_Li must be positive");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"Omega_Li") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command: Omega_Li requires 1 value");
-      Omega_Li = force->numeric(FLERR,arg[iarg+1]);
-      if (Omega_Li <= 0.0)
-        error->all(FLERR,"Omega_Li must be positive");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"s_factor") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command: s_factor requires 1 value");
-      s_factor = force->numeric(FLERR,arg[iarg+1]);
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"time_conv") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command: time_conv requires 1 value");
-      time_conv = force->numeric(FLERR,arg[iarg+1]);
-      if (time_conv <= 0.0)
-        error->all(FLERR,"time_conv must be positive");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"clamp_content") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal fix lithium_diffusion command: clamp_content requires 2 values (min max)");
-      clamp_content = true;
-      clamp_min = force->numeric(FLERR,arg[iarg+1]);
-      clamp_max = force->numeric(FLERR,arg[iarg+2]);
-      if (clamp_min >= clamp_max)
-        error->all(FLERR,"clamp_content min must be less than max");
-      iarg += 3;
-    } else error->all(FLERR,"Illegal fix lithium_diffusion command: unknown keyword");
+    } else error->all(FLERR,"Illegal fix lithium_diffusion command");
   }
 
   scalar_flag = 1;
@@ -188,7 +139,7 @@ void FixLithiumDiffusion::post_create()
     fix_lithium_flux = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
   }
 
-  // Register property/atom for lithium mols
+  // Register property/atom for lithium content
   fix_li_mols = static_cast<FixPropertyAtom*>(modify->find_fix_property("lithiumMols","property/atom","scalar",0,0,style,false));
   if(!fix_li_mols) {
     const char* fixarg[10];
@@ -197,9 +148,9 @@ void FixLithiumDiffusion::post_create()
     fixarg[2]="property/atom";
     fixarg[3]="lithiumMols";
     fixarg[4]="scalar";
-    fixarg[5]="no";
-    fixarg[6]="yes";
-    fixarg[7]="no";
+    fixarg[5]="no";    // no restart
+    fixarg[6]="yes";   // communicate
+    fixarg[7]="no";    // no borders
     fixarg[8]="0.0";
     fix_li_mols = modify->add_fix_property_atom(9,const_cast<char**>(fixarg),style);
   }
@@ -304,8 +255,9 @@ void FixLithiumDiffusion::setup(int vflag)
   
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit && (type[i] == Li_Atype || type[i] == Li_Ctype)) {
-      double radius_m = radius[i] * time_conv; // Convert radius using length scale (same as time_conv for micro units)
-      li_mols[i] = ((4.0/3.0) * M_PI * radius_m * radius_m * radius_m) / Omega_Li; // mols of Li that fit in particle volume
+      double Omega_Li = 12.97e-6; // m³/mol (Molar Volume of Lithium 12.97e-6)
+      double radius_m = radius[i] * 1.0e-6;
+      li_mols[i] = ((4.0/3.0) * M_PI * radius_m * radius_m * radius_m) / (Omega_Li); // mols of Li that fit in particle volume
       
       // Initialize lithium concentration
       double x_li = lithium_content[i];
@@ -361,9 +313,11 @@ void FixLithiumDiffusion::calculate_diffusion_coefficient()
   
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit && (type[i] == Li_Atype || type[i] == Li_Ctype)) {
-      // Use the user-specified diffusion coefficient
-      // Can be extended to composition-dependent models in the future
-      diffusion_coefficient[i] = D_Li; // m²/s
+      // double x_li = lithium_content[i];
+      // double x_ratio = x_li / max_lithium_content; // Chi ratio using max_lithium_content
+      
+      // diffusion_coefficient[i] = D_min + term1 + term2;
+      diffusion_coefficient[i] = 1.6e-14; // Li-metal Diffusion Coefficient m²/s (based on DOI: https://pubs.acs.org/doi/10.1021/acsenergylett.2c01793)
     }
   }
 }
@@ -381,7 +335,7 @@ void FixLithiumDiffusion::update_lithium_content()
   int *type = atom->type;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
-  double dt = update->dt * time_conv; // Convert timestep to seconds using user-specified conversion
+  double dt = update->dt * 1.0e-6; // us to s  
 
   inum = list->inum;
   ilist = list->ilist;
@@ -394,10 +348,10 @@ void FixLithiumDiffusion::update_lithium_content()
   }
   
   // Calculate diffusion flux between Li particles
-  for (ii = 0; ii < inum; ii++) {
+  for (ii = 0; ii < inum; ii++) { // 1
     i = ilist[ii];
     
-    if (type[i] != Li_Atype && type[i] != Li_Ctype) continue;
+    if (type[i] != Li_Atype && type[i] != Li_Ctype) continue; // If atom i is NOT Li_Atype AND it is NOT Li_Ctype, then skip it.
     
     xtmp = x[i][0];
     ytmp = x[i][1];
@@ -406,50 +360,53 @@ void FixLithiumDiffusion::update_lithium_content()
     jlist = firstneigh[i];
     jnum = numneigh[i];
     
-    for (jj = 0; jj < jnum; jj++) {
+    for (jj = 0; jj < jnum; jj++) { // 2
       j = jlist[jj];
       j &= NEIGHMASK;
       
-      if (type[j] == Li_Atype || type[j] == Li_Ctype) {
+      if (type[j] == Li_Atype || type[j] == Li_Ctype) {  // 3
         delx = xtmp - x[j][0];
         dely = ytmp - x[j][1];
         delz = ztmp - x[j][2];
         rsq = delx*delx + dely*dely + delz*delz;
-        r = sqrt(rsq); // simulation units (um)
-        double r_SI = r * time_conv;  // Convert to m (reusing time_conv as length scale for micro units)
+        r = sqrt(rsq); // um
+        double r_SI = r * 1.0e-6;  // Convert to m (Distance between Li_q-Li_p)
         
-        if (r < (radius[i] + radius[j])) {
+        if (r < (radius[i] + radius[j])) { // 4
           // Calculate contact area
           double contact_area = calculate_contact_area(i, j);
           
           // Diffusion flux based on concentration gradient
           double c_diff = lithium_concentration[j] - lithium_concentration[i]; // mol/m³
-          double D_eff = diffusion_coefficient[i]; // m²/s
-          double flux = contact_area * D_eff * c_diff / r_SI; // mol/s
+          double D_Li_Li = diffusion_coefficient[i]; // Lithium self diffusion m²/s
+          double flux = contact_area * D_Li_Li * c_diff / r_SI; // mol/s
           
           lithium_flux[i] += flux; // mol/s
-        }
-      }
-    }
+
+        } // 4
+      } // 3
+    } // 2 end of j
     
     // Add current contribution (Equation 10)
     // Current from Li to SE contributes to lithium flux
     lithium_flux[i] -= current_Li_SE[i] / F; // mol/s (current_Li_SE is in A [C/s], F in C/mol)
-  }
+  } // 1
   
   // Update lithium content based on flux
   for (i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit && (type[i] == Li_Atype || type[i] == Li_Ctype)) {
       // dn_Li/dt = flux (Equation 10)
-      // s_factor scales the electrochemical time relative to the DEM timestep
+      
+      // Update Notes: The scalling factor needs to be toned down initially to avoid large jumps in lithium content
+      // When Lithium content is at least 0.7 then you can use the max scaling factor of 2e16
+      // The scaling factor is based on a timestep of 5e-6 us in main, so it simulates 0.1s of EC in 1 run
+      double s_factor = 2.0e10; // 0.1s / 5e-12s
       lithium_content[i] += (lithium_flux[i] * dt * s_factor) / li_mols[i]; // Li Molar Ratio
       li_mols[i] += (lithium_flux[i] * dt * s_factor); // Li Mols in Li Metal
  
-      // Clamp lithium content if user requested
-      if (clamp_content) {
-        if (lithium_content[i] < clamp_min) lithium_content[i] = clamp_min;
-        if (lithium_content[i] > clamp_max) lithium_content[i] = clamp_max;
-      }
+      // Ensure lithium content stays within bounds using values from lithium_content manager
+      // if (lithium_content[i] < initial_lithium_content) lithium_content[i] = initial_lithium_content;
+      // if (lithium_content[i] > target_lithium_content) lithium_content[i] = target_lithium_content;
       
       // Update lithium concentration based on new lithium content
       lithium_concentration[i] = lithium_content[i] * c_li_max / max_lithium_content;
@@ -467,7 +424,7 @@ double FixLithiumDiffusion::calculate_contact_area(int i, int j)
 {
   double *radius = atom->radius;
   double **x = atom->x;
-  double length_conversion = time_conv;  // Reuse time_conv as length scale for micro units
+  double length_conversion = 1.0e-6;  // LAMMPS units to m
   double delx = (x[i][0] - x[j][0]) * length_conversion;
   double dely = (x[i][1] - x[j][1]) * length_conversion;
   double delz = (x[i][2] - x[j][2]) * length_conversion;

@@ -68,27 +68,14 @@ class FixLithiumDiffusion : public Fix {
   void updatePtrs();
 
  protected:
-  // Physical constants
+  // Diffusion parameters from equations
   double F;                  // Faraday constant (96485 C/mol)
-
-  // User-configurable material parameters
-  double c_li_max;           // Maximum Li concentration (mol/m³)
-  double D_Li;               // Li self-diffusion coefficient (m²/s)
-  double Omega_Li;           // Molar volume of lithium (m³/mol)
-
-  // User-configurable simulation parameters
-  double s_factor;           // Electrochemical time scaling factor
-  double time_conv;          // Time unit conversion factor to seconds
-
-  // Content clamping (optional)
-  bool clamp_content;        // Whether to clamp lithium content
-  double clamp_min;          // Minimum lithium content bound
-  double clamp_max;          // Maximum lithium content bound
+  double c_li_max;           // Maximum Li concentration (83874 mol/m³)
 
   // Lithium content parameters (retrieved from fix_property_atom_lithium_content)
-  double initial_lithium_content;
-  double target_lithium_content;
-  double max_lithium_content;
+  double initial_lithium_content;  // Initial Li/Si ratio
+  double target_lithium_content;   // Target Li/Si ratio for charging
+  double max_lithium_content;      // Maximum Li/Si ratio
 
   // Property pointers
   double *lithium_content;
@@ -132,36 +119,16 @@ E: Illegal fix lithium_diffusion command
 Self-explanatory. Check the input script syntax and compare to the
 documentation for the command.
 
-E: Illegal fix lithium_diffusion command: Li_type requires 2 values
-
-The Li_type keyword requires anode_type and cathode_type.
-
-E: Illegal fix lithium_diffusion command: unknown keyword
-
-An unrecognized keyword was used.
-
-E: D_Li must be positive
-
-The diffusion coefficient must be a positive number.
-
-E: Omega_Li must be positive
-
-The molar volume must be a positive number.
-
-E: time_conv must be positive
-
-The time conversion factor must be a positive number.
-
-E: clamp_content min must be less than max
-
-The minimum clamp value must be strictly less than the maximum.
-
-E: Fix lithium_diffusion requires lithiumContent property
-
-Fix property/atom/lithium_content must be defined before fix lithium_diffusion.
-
 E: Fix lithium_diffusion requires fix property/atom/lithium_content
 
 Fix property/atom/lithium_content must be defined before fix lithium_diffusion.
+
+E: Fix lithium_diffusion requires fix exchange_current_density
+
+Fix exchange_current_density must be defined before fix lithium_diffusion.
+
+E: Fix lithium_diffusion requires fix battery/sor
+
+Fix battery/sor must be defined before fix lithium_diffusion.
 
 */

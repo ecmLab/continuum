@@ -38,63 +38,40 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(radius_expansion,FixRadiusExpansion)
+FixStyle(property/atom/lithium_content,FixPropertyAtomLithiumContent)
 
 #else
 
-#ifndef LMP_FIX_RADIUS_EXPANSION_H
-#define LMP_FIX_RADIUS_EXPANSION_H
+#ifndef LMP_FIX_PROPERTY_ATOM_LITHIUM_CONTENT_H
+#define LMP_FIX_PROPERTY_ATOM_LITHIUM_CONTENT_H
 
 #include "fix.h"
 
 namespace LAMMPS_NS {
 
-class FixRadiusExpansion : public Fix {
+class FixPropertyAtomLithiumContent : public Fix {
  public:
-  FixRadiusExpansion(class LAMMPS *, int, char **);
-  virtual ~FixRadiusExpansion();
-  virtual int setmask();
-  virtual void init();
-  virtual void setup(int);
+  FixPropertyAtomLithiumContent(class LAMMPS *, int, char **);
+  virtual ~FixPropertyAtomLithiumContent();
   virtual void post_create();
-  virtual void end_of_step();  
-  
+  int setmask();
+  void init();
+  void setup(int);
+  void min_setup(int);
   double compute_scalar();
   double compute_vector(int);
-  void trigger_radius_update();
+
+  virtual void updatePtrs();
+  double* get_lithium_content() { return lithium_content; }
+  double get_max_lithium_content() { return max_lithium_content; }
   
- protected:
-  // User-configurable material parameters
-  double Omega_Li;           // Molar volume of Li (m³/mol)
-  double Omega_Li_eff;       // Effective molar volume of Li (m³/mol)
+ private:
+  double initial_lithium_content;   // Starting Li/Si ratio (0.075)
+  double target_lithium_content;    // End Li/Si ratio (3.3)
+  double max_lithium_content;       // Maximum Li/Si ratio (3.75)
   
-  // User-configurable simulation parameters
-  int update_frequency;      // Steps between radius updates
-  int next_update_step;      // Next step to update radius
-  bool manual_trigger;       // Manual trigger for radius update
-  double min_radius;         // Minimum allowed radius (simulation units, μm)
-  double max_radius;         // Maximum allowed radius (simulation units, μm)
-  double length_to_m;        // Length unit conversion to meters
-  
-  // Property pointers
-  double *lithium_content;
-  double *li_mols;
-  double *initial_radius;
-  double *particle_volume;
-  
-  // Fix pointers
+  double *lithium_content;          // Per-atom Li/Si molar ratio
   class FixPropertyAtom *fix_lithium_content;
-  class FixPropertyAtom *fix_li_mols;
-  class FixPropertyAtom *fix_initial_radius;
-  class FixPropertyAtom *fix_particle_volume;
-  
-  // Particle type
-  int Li_Atype;
-  int Li_Ctype;
-  
-  // Methods
-  void update_particle_radius();
-  void updatePtrs();
 };
 
 }
@@ -104,41 +81,25 @@ class FixRadiusExpansion : public Fix {
 
 /* ERROR/WARNING messages:
 
-E: Illegal fix radius_expansion command
+E: Illegal fix property/atom/lithium_content command
 
 Self-explanatory. Check the input script syntax and compare to the
 documentation for the command.
 
-E: Illegal fix radius_expansion command: unknown keyword
+E: Invalid initial lithium content
 
-An unrecognized keyword was used.
+Initial lithium content must be between 0 and maximum lithium content.
 
-E: update_every must be >= 1
+E: Invalid target lithium content
 
-The update frequency must be at least 1 step.
+Target lithium content must be between 0 and maximum lithium content.
 
-E: Omega_Li must be positive
+E: Invalid maximum lithium content
 
-The molar volume must be a positive number.
+Maximum lithium content must be greater than 0.
 
-E: min_radius must be >= 0
+E: Could not find fix property/atom lithiumContent
 
-The minimum radius cannot be negative.
-
-E: max_radius must be positive
-
-The maximum radius must be positive.
-
-E: min_radius must be less than max_radius
-
-The radius bounds are inconsistent.
-
-E: length_to_m must be positive
-
-The length conversion factor must be positive.
-
-E: Fix radius_expansion requires lithiumContent property
-
-Fix property/atom/lithium_content must be defined before fix radius_expansion.
+Internal error.
 
 */

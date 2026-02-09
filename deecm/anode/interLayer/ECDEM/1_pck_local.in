@@ -106,19 +106,19 @@ variable       ts_hertz    equal f_ts_check[2]
 variable       ts_skin     equal f_ts_check[3]
 
 thermo_style    custom step atoms ke c_ker vol v_prs c_posw v_ts_rayleigh v_ts_hertz v_ts_skin
-thermo          400
+thermo          800
 thermo_modify   lost ignore norm no
 
 # Output to file
-dump    dmp all custom 2000 post/postc/Ag_M1C5_vr15_fp250_sp14.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
+dump    dmp all custom 4000 post/postc/Ag_M1C5_vr15_fp250_sp14.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 
 #------------------------Compaction Process------------------------------------------------------
 fix 1 li1 move linear 0 0 0 # Fixing bottom
-fix 2 se1 move linear 0 0 -50.0 # Moving bottom li up
+fix 2 se1 move linear 0 0 -25.0 # Moving bottom li up
 
 # Run Initial Compaction (Check every 0.01 um)
 label loop1
-  run   800
+  run   1600
   if "${prs} > ${tarp}" then "jump SELF loop2"
 jump SELF loop1
 
@@ -126,37 +126,37 @@ label loop2
 
 # Quick Rest (5X loop time)
 fix 2 se1 move linear 0 0 0.0
-run 4000
+run 8000
 
 # Run period: decrease pressing velocity so that pressure value converge more accurate to designed value (10% of original)
-fix 2 se1 move linear 0 0 -5.0
+fix 2 se1 move linear 0 0 -2.5
 
 # Final Fab. Pressure (Check every 0.001 um)
 label loop3
-  run 800
+  run 1600
   if "${prs} > ${tarp1}" then "jump SELF loop4"
 jump SELF loop3
 
 # Run period: hold for relax (x5 Loop time)
 label loop4
   fix 2 se1 move linear 0 0 0.
-  run 4000
+  run 8000
 if "${prs} < ${tarp1}" then "jump SELF loop2"
 
 # Run period: Release to Almost Stack Pressure (20% speed)
 # Check every 0.002 um
-fix 2 se1 move linear 0 0 10.0
+fix 2 se1 move linear 0 0 5.0
 label loop5
-  run 800
+  run 1600
   if "${prs} < ${tarsp}" then "jump SELF loop6"
 jump SELF loop5
 
 # Run period: Release to Stack Pressure (10% speed of stack speed)
 label loop6
-fix 2 se1 move linear 0 0 1.0
+fix 2 se1 move linear 0 0 0.5
 
 label loop7
-  run 800
+  run 1600
   if "${prs} < ${tarsp1}" then "jump SELF loop8"
 jump SELF loop7
 
@@ -164,7 +164,7 @@ jump SELF loop7
 label loop8
 fix 2 se1 move linear 0 0 0
 
-run 8000
+run 16000
 
 # Save compacted state
 write_data      dataAg/Ag_M1C5_vr15_fp250_sp14.data
