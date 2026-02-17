@@ -14,27 +14,28 @@ newton          off
 communicate     single vel yes
 processors      * * 1
 units           micro
-neighbor        0.3 bin
+neighbor        0.1 bin
 neigh_modify    every 1 delay 0 check yes
 echo            both
-timestep        1.e-6
+timestep        5.e-6
 
-variable        tarp        equal     75   # 25% way to tarp1
-variable        tarp1       equal     100  # Fabrication Pressure (MPa)
+# Scaled Down 1/10
+variable        tarp        equal     35   # 25% way to tarp1
+variable        tarp1       equal     50  # Fabrication Pressure (MPa)
 #--------------------------Material Information---------------------------------------------------------
-variable        Eam           equal     195.e6  # Metal (NMC) [kPa] (https://doi.org/10.1016/j.jeurceramsoc.2017.03.048)
+# Using 1/10th for E
+variable        Eam           equal     195.e5  # Metal (NMC) [kPa] (https://doi.org/10.1016/j.jeurceramsoc.2017.03.048)
 variable        vam           equal     0.25    # Metal (NMC) [-] (https://doi.org/10.1016/j.jeurceramsoc.2017.03.048)
 
-variable        Ecb           equal     15.e6  # Carbon (AB) [kPa] (https://www.azom.com/properties.aspx?ArticleID=516)
+variable        Ecb           equal     15.e5  # Carbon (AB) [kPa] (https://www.azom.com/properties.aspx?ArticleID=516)
 variable        vcb           equal     0.20    # Carbon (AB) [-] (https://www.azom.com/properties.aspx?ArticleID=516)
 
-variable        Eww           equal     200.e6    # Wall [kPa]
+variable        Eww           equal     200.e5    # Wall [kPa]
 variable        vww           equal     0.4      # Wall [-]
 #---------------------Generate Box----------------------------------------
 shell mkdir -p ${outputdir}
 log ${outputdir}/log_${label}.lammps
 
-# read_data        ../mesh_cnt/massratio/mr1/mdl.data
 read_data   ${datafile}
 
 group  ag   type  1
@@ -70,7 +71,7 @@ fix     m5 all property/global coefficientRollingFriction peratomtypepair 3 &
 # Cohesion energy density (3x3) Units (KPa) 50000 is 50,000 kPa
 fix     m6 all property/global cohesionEnergyDensity peratomtypepair 3 &
         50000   50000    0 &
-        50000   2e6      0 &
+        50000   2e5      0 &
         0       0        0
 
 #Define pair style
@@ -95,52 +96,28 @@ compute        posw   ww   reduce ave z              # Z position of ww layer (u
 
 variable       prs  equal  (c_frc)*4.4444e-6          # Pressure in unit of MPa on ww (15 x 15 um area)
 
-# Warn if timestep > 10% of Rayleigh time or 10% of Hertz time
-# fix             ts_check all check/timestep/gran 10000 0.1 0.1 warn no
-
-# variable       ts_rayleigh equal f_ts_check[1]
-# variable       ts_hertz    equal f_ts_check[2]
-# variable       ts_skin     equal f_ts_check[3]
-
 thermo_style    custom step atoms ke c_ker vol v_prs c_posw
-thermo          2500
+thermo          10000
 thermo_modify   lost ignore norm no
 
 # Output to file
-# dump    dmp all custom 2500 post/cnt_mr1_pck100.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
+dump    dmp all custom 60000 ${outputdir}/post/rst_${label}.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 
-dump    dmp all custom 15000 ${outputdir}/post/rst_${label}_*.lmp id type x y z radius fx fy fz
+# dump    dmp all custom 60000 ${outputdir}/post/rst_${label}_*.lmp id type x y z radius fx fy fz
 # dump_modify dmp format line "%7d %5d %17.12f %17.12f %17.12f %17.12f %20.12e %20.12e %20.12e"
 
 #------------------------Stabalize Partciles After Read------------------------------------------------------
-# run 20000
-# quit
-
-#------------------------Compaction Process------------------------------------------------------
-fix 1 ww move linear 0 0 -60.0 # Moving bottom li up
-
-# Run Initial Compaction
-label loop1
-  run   5000
-  if "${prs} > ${tarp}" then "jump SELF loop2"
-jump SELF loop1
-
-label loop2
-# Run period: decrease pressing velocity so that pressure value converge more accurate to designed value (10% of original)
-fix 1 ww move linear 0 0 -6.0
-
-label loop3
-  run 5000
-  if "${prs} > ${tarp1}" then "jump SELF loop4"
-jump SELF loop3
-
-# Run period: hold for relax
-label loop4
-  fix 1 ww move linear 0 0 0.
-  run 10000
-if "${prs} < ${tarp1}" then "jump SELF loop2"
-
 run 10000
 
-# Save compacted state
-write_data      ${outputdir}/mdl_pck100.data
+#------------------------Compaction Process------------------------------------------------------
+fix 1 ww move linear 0 0 -1.0 # Moving Plunger Down (1st Phase 75% of 3.6 - Down to 4.5)
+run 5108021
+
+fix 1 ww move linear 0 0 -0.1 # Move plunger down slow (2nd Phase Down to 3.6)
+run 1800000
+
+fix 1 ww move linear 0 0 0.0 # Hold for 60K
+run 60000
+
+# Save compacted state (Aprox. 2.5-hrs to run with 64 procs)
+write_data      ${outputdir}/mdl_pck3d6.data

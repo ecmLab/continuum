@@ -26,7 +26,7 @@ carbon.den     = 2.2;           % Carbon density, pg/μm^3 (equivalent to g/cm^3
 carbon.typ     = 2;             % Label carbon particles as Type 2 particles
 carbon.dia     = 0.1;           % Building block diameter, μm
 carbon.ave     = carbon.dia;
-carbon.cluster = buildCNTCluster(carbon.dia, 1.0); % 1 μm CNT length
+carbon.cluster = buildCNTCluster(carbon.dia, 3.0); % 2.6 μm CNT length
 
 %% 3.Define ghost particles at the top of the system to apply pressure
 gst         = struct;
@@ -42,7 +42,7 @@ function cluster = buildCNTCluster(base_dia, length_um)
     if length_um <= 0
         length_um = base_dia;
     end
-    spacing = base_dia * 0.95; % Was 0.6
+    spacing = base_dia * 0.8; % Was 0.6
     nSeg = max(2, ceil(length_um / spacing));
     z_positions = linspace(-length_um/2, length_um/2, nSeg)';
     offsets = [zeros(nSeg,2), z_positions];

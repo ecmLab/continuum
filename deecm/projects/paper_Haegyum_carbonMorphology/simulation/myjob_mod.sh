@@ -2,8 +2,8 @@
 #SBATCH --job-name=DRX_C
 #SBATCH --partition=RM-shared
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=48
-#SBATCH --time=03:30:00
+#SBATCH --ntasks-per-node=64
+#SBATCH --time=04:00:00
 #SBATCH --account=mat250014p
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=vazquezm

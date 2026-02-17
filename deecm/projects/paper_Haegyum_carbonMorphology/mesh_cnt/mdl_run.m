@@ -15,7 +15,7 @@ for iwt = 1:nWt
 sys.cord = [];
 
 % 0. Generate folder of different files
-    fid = strcat('massratio/mr',num2str(iwt),'/');
+    fid = strcat('mesh_cnt30/massratio/mr',num2str(iwt),'/');
     stmp = ['mkdir ' fid];
     eval(stmp);
 
