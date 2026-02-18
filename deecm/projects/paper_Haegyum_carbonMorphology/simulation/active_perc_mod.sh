@@ -3,7 +3,7 @@
 #SBATCH --partition=RM-shared
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=64
-#SBATCH --time=02:00:00
+#SBATCH --time=06:00:00
 #SBATCH --account=mat250014p
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=vazquezm

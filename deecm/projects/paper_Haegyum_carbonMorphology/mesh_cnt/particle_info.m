@@ -26,7 +26,7 @@ carbon.den     = 2.2;           % Carbon density, pg/μm^3 (equivalent to g/cm^3
 carbon.typ     = 2;             % Label carbon particles as Type 2 particles
 carbon.dia     = 0.1;           % Building block diameter, μm
 carbon.ave     = carbon.dia;
-carbon.cluster = buildCNTCluster(carbon.dia, 3.0); % 2.6 μm CNT length
+carbon.cluster = buildCNTCluster(carbon.dia, 1.0); % 2.6 μm CNT length
 
 %% 3.Define ghost particles at the top of the system to apply pressure
 gst         = struct;
