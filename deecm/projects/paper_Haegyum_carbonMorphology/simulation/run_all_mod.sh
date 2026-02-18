@@ -10,7 +10,8 @@ PROJECT_ROOT=$(cd -- "${SCRIPT_DIR}/.." && pwd)
 RESULT_ROOT="${SCRIPT_DIR}/results"
 DRY_RUN=${DRY_RUN:-0}
 
-MORPH_DIRS=(mesh_cnt10 mesh_cnt14 mesh_cnt16 mesh_cnt18 mesh_cnt22 mesh_cnt26 mesh_cnt30)
+MORPH_DIRS=(mesh_cnt10 mesh_cnt30)
+# MORPH_DIRS=(mesh_cnt10 mesh_cnt14 mesh_cnt16 mesh_cnt18 mesh_cnt22 mesh_cnt26 mesh_cnt30)
 # MORPH_DIRS=(mesh_superp mesh_cnt mesh_graphene mesh_homo)
 
 mkdir -p "$RESULT_ROOT"

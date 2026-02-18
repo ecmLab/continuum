@@ -3,19 +3,18 @@
 #SBATCH --partition=RM-shared
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=64
-#SBATCH --time=04:00:00
+#SBATCH --time=02:00:00
 #SBATCH --account=mat250014p
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=vazquezm
 
 set -euo pipefail
 
-module load python/3.8.6
-module load numpy/1.19.4
-# If scipy is not in the default module, pip install it to a venv or use:
-# pip install --user scipy
+module load anaconda3/2024.10-1
 
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+# Run with sbatch active_perc_mod.sh
+
+SCRIPT_DIR="${SLURM_SUBMIT_DIR:-.}"
 RESULT_ROOT="${SCRIPT_DIR}/results"
 SUMMARY="${SCRIPT_DIR}/active_summary.txt"
 

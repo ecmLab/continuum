@@ -7,7 +7,7 @@ newton          off
 communicate     single vel yes
 processors      * * 1
 units           micro
-neighbor        0.003 bin
+neighbor        0.01 bin
 neigh_modify    every 1 delay 0 check yes
 echo            both
 timestep        2.5e-7
@@ -87,6 +87,7 @@ fix xwalls1 ptc wall/gran model hertz tangential history primitive type 5 xplane
 fix xwalls2 ptc wall/gran model hertz tangential history primitive type 5 xplane 2.5
 fix ywalls1 ptc wall/gran model hertz tangential history primitive type 5 yplane 0
 fix ywalls2 ptc wall/gran model hertz tangential history primitive type 5 yplane 2.5
+fix zwalls1 ptc wall/gran model hertz tangential history primitive type 5 zplane 0
 
 #apply nve integration to all particles
 fix             integr ptc nve/sphere 
@@ -117,11 +118,11 @@ dump    dmp all custom 20000 post/postc/Ag_M1C5_vr15_fp250_sp14.dump id type x y
 
 #------------------------Compaction Process------------------------------------------------------
 fix 1 li1 move linear 0 0 0 # Fixing bottom
-fix 2 se1 move linear 0 0 -5.0 # Moving bottom li up
+fix 2 se1 move linear 0 0 -1.0 # Moving bottom li up
 
-# Run Initial Compaction (Check every 0.01 um ~85 loops)
+# Run Initial Compaction (Check every 0.005 um ~170 loops)
 label loop1
-  run   8000
+  run   20000
   if "${prs} > ${tarp}" then "jump SELF loop2"
 jump SELF loop1
 
@@ -145,6 +146,9 @@ label loop4
   fix 2 se1 move linear 0 0 0.
   run 40000
 if "${prs} < ${tarp1}" then "jump SELF loop2"
+
+# Save compacted state
+write_data      dataAg/Ag_M1C5_vr15_fp250.data
 
 # Run period: Release to Almost Stack Pressure (20% speed)
 # Check every 0.002 um

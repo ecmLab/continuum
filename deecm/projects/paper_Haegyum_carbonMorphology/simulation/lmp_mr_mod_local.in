@@ -13,22 +13,20 @@ neigh_modify    every 1 delay 0 check yes
 echo            both
 timestep        1.e-5
 
-# Scalled Down 1/10
-variable        tarp        equal     35   # 30% way to tarp1
-variable        tarp1       equal     50  # Fabrication Pressure (MPa)
+variable        tarp        equal     350   # 30% way to tarp1
+variable        tarp1       equal     500  # Fabrication Pressure (MPa)
 #--------------------------Material Information---------------------------------------------------------
-# Using 1/10th for E
-variable        Eam           equal     195.e5  # Metal (NMC) [kPa] (https://doi.org/10.1016/j.jeurceramsoc.2017.03.048)
+variable        Eam           equal     195.e6  # Metal (NMC) [kPa] (https://doi.org/10.1016/j.jeurceramsoc.2017.03.048)
 variable        vam           equal     0.25    # Metal (NMC) [-] (https://doi.org/10.1016/j.jeurceramsoc.2017.03.048)
 
-variable        Ecb           equal     15.e5  # Carbon (AB) [kPa] (https://www.azom.com/properties.aspx?ArticleID=516)
+variable        Ecb           equal     15.e6  # Carbon (AB) [kPa] (https://www.azom.com/properties.aspx?ArticleID=516)
 variable        vcb           equal     0.20    # Carbon (AB) [-] (https://www.azom.com/properties.aspx?ArticleID=516)
 
-variable        Eww           equal     200.e5    # Wall [kPa]
+variable        Eww           equal     200.e6    # Wall [kPa]
 variable        vww           equal     0.4      # Wall [-]
 #---------------------Generate Box----------------------------------------
 
-read_data        ../mesh_cnt10/massratio/mr1/mdl.data
+read_data        ../mesh_cnt30/massratio/mr11/mdl.data
 # read_data        ../mesh_graphene/massratio/mr1/mdl.data
 # read_data        ../mesh_homo/massratio/mr1/mdl.data
 # read_data        ../mesh_superp/massratio/mr1/mdl.data
@@ -66,7 +64,7 @@ fix     m5 all property/global coefficientRollingFriction peratomtypepair 3 &
 # Cohesion energy density (3x3) Units (KPa) 50000 is 50,000 kPa
 fix     m6 all property/global cohesionEnergyDensity peratomtypepair 3 &
         50000   50000    0 &
-        50000   2e5      0 &
+        50000   1.5e6      0 &
         0       0        0
 
 #Define pair style
@@ -92,18 +90,18 @@ compute        posw   ww   reduce ave z              # Z position of ww layer (u
 variable       prs  equal  (c_frc)*4.4444e-6          # Pressure in unit of MPa on ww (15 x 15 um area)
 
 # Warn if timestep > 10% of Rayleigh time or 10% of Hertz time
-# fix             ts_check all check/timestep/gran 200 0.1 0.1 warn no
+fix             ts_check all check/timestep/gran 100 0.1 0.1 warn no
 
-# variable       ts_rayleigh equal f_ts_check[1]
-# variable       ts_hertz    equal f_ts_check[2]
-# variable       ts_skin     equal f_ts_check[3]
+variable       ts_rayleigh equal f_ts_check[1]
+variable       ts_hertz    equal f_ts_check[2]
+variable       ts_skin     equal f_ts_check[3]
 
-thermo_style    custom step atoms ke vol v_prs c_posw
-thermo          400
+thermo_style    custom step atoms ke vol v_prs c_posw v_ts_rayleigh v_ts_hertz v_ts_skin
+thermo          1000
 thermo_modify   lost ignore norm no
 
 # Output to file
-dump    dmp all custom 10000 post/cnt10_mr1_pck3d6.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
+dump    dmp all custom 20000 post/cnt30_mr11_pck3d6.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 # dump    dmp all custom 5000 post/graphene_mr1_pck200.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 # dump    dmp all custom 5000 post/homo_mr1_pck200.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 # dump    dmp all custom 5000 post/superp_mr1_pck200.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
@@ -113,14 +111,46 @@ run 10000
 # quit
 
 #------------------------Compaction Process------------------------------------------------------
-fix 1 ww move linear 0 0 -5.0 # Moving bottom li up
-run 529691  # Move down to z = 3.555 555
+fix 1 ww move linear 0 0 -10.0
 
-fix 1 ww move linear 0 0 0.
-run 10000
+# Start (z=30.0), End (z = 5.5), dt = 1e-5 
+run 245000
+
+# Update Time-Step & Speed
+timestep        2.5e-7
+fix 1 ww move linear 0 0 -10.0
+
+# Run Initial Compaction (Check every 0.05 um)
+label loop1
+  run   20000
+  if "${prs} > ${tarp}" then "jump SELF loop2"
+jump SELF loop1
+
+label loop2
+
+# Quick Rest (2X loop time)
+fix 1 ww move linear 0 0 0.0
+run 20000
+
+# Run period: decrease pressing velocity so that pressure value converge more accurate to designed value (10% of original)
+fix 1 ww move linear 0 0 -1.0
+
+# Final Fab. Pressure (Check every 0.005 um)
+label loop3
+  run 20000
+  if "${prs} > ${tarp1}" then "jump SELF loop4"
+jump SELF loop3
+
+# Run period: hold for relax (x2 Loop time)
+label loop4
+  fix 1 ww move linear 0 0 0.
+  run 20000
+if "${prs} < ${tarp1}" then "jump SELF loop2"
+
+run 60000
 
 # Save compacted state
-write_data      ../mesh_cnt10/massratio/mr1/mdl_pck3d6.data
+write_data      ../mesh_cnt30/massratio/mr11/mdl_pck3d6.data
 # write_data      ../mesh_graphene/massratio/mr1/mdl_pck200.data
 # write_data      ../mesh_homo/massratio/mr1/mdl_pck200.data
 # write_data      ../mesh_superp/massratio/mr1/mdl_pck200.data
