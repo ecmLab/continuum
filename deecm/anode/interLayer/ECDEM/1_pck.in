@@ -1,38 +1,58 @@
 # Run Time ~ 3H for 64CPU
-#------------------General Settings for Granular Systems--------------------------------------------
+# ============================================================
+# Parameterised LIGGGHTS compaction script
+# Required command-line variables (-var):
+#   mn    – metal name          (Ag, Mg, Si, Al, Sn)
+#   mnum  – M number            (1-10)
+#   vrnum – volume ratio number (1-10, 15)
+#   fp    – fabrication pressure / tarp1 (100, 250, 400)
+#   eme   – Young's modulus for the metal [kPa]
+# ============================================================
+
+#------------------General Settings--------------------------------------------
 atom_style      granular
 atom_modify     map array
-boundary        f f s
+boundary        p p s
 newton          off
 communicate     single vel yes
 processors      * * 1
 units           micro
-neighbor        0.01 bin
+neighbor        0.005 bin
 neigh_modify    every 1 delay 0 check yes
 echo            both
-timestep        2.5e-7
+timestep        5.0e-7
 
-variable        tarp        equal     175  # 30% way to tarp1
-variable        tarp1       equal     250  # Fabrication Pressure (MPa)
-variable        tarsp       equal     21   # Stack Pressure (MPa) (50% way)
-variable        tarsp1      equal     14   # Stack Pressre Final (MPa)
-#--------------------------Material Information---------------------------------------------------------
-variable        Eme           equal     76.e6  # Metal (Ag) [kPa] (MatWeb - Silver, Ag)
-variable        vme           equal     0.37    # Metal (Ag) [-] (MatWeb - Silver, Ag)
+# ---------- Derived labels / pressures ---------------------------------------
+variable        tarp1       equal     ${fp}             # Fabrication Pressure (MPa)
+variable        tarp        equal     ${tarp1}*0.7      # 70% of tarp1
 
-variable        Ecb           equal     15.e6  # Carbon (AB) [kPa] (https://www.azom.com/properties.aspx?ArticleID=516)
-variable        vcb           equal     0.20    # Carbon (AB) [-] (https://www.azom.com/properties.aspx?ArticleID=516)
+variable        tarsp       equal     21                # Stack Pressure (MPa) (50% way)
+variable        tarsp1      equal     14                # Stack Pressure Final (MPa)
 
-variable        Ese           equal     22.1e6  # SE (Li6PS5Cl) [kPa] (http://dx.doi.org/10.1149/2.0061602jes)
-variable        vse           equal     0.37    # SE (Li6PS5Cl) [-] (http://dx.doi.org/10.1149/2.0061602jes)
+# Convenience strings for file names
+variable        base_name   string    ${mn}_M${mnum}C5_vr${vrnum}
+variable        fab_name    string    ${mn}_M${mnum}C5_vr${vrnum}_fp${fp}
+variable        full_name   string    ${mn}_M${mnum}C5_vr${vrnum}_fp${fp}_sp${tarsp1}
 
-variable        Eli           equal     7.82e6  # Li (Li-metal) [kPa] (https://doi.org/10.1007/s10853-018-2971-3)
-variable        vli           equal     0.381    # Li (Li-metal) [-] (https://doi.org/10.1007/s10853-018-2971-3)
+#--------------------------Material Information---------------------------------
+# Metal Young's modulus is passed in via -var eme
+variable        Eme           equal     ${eme}     # Metal [kPa]
+variable        vme           equal     0.37       # Metal Poisson's ratio
 
-variable        Eww           equal     100.e6    # Wall [kPa]
-variable        vww           equal     0.4      # Wall [-]
-#---------------------Generate Box----------------------------------------
-read_data        dataAg/Ag_M1C5_vr15.data
+variable        Ecb           equal     15.e6      # Carbon (AB) [kPa]
+variable        vcb           equal     0.20       # Carbon (AB) [-]
+
+variable        Ese           equal     22.1e6     # SE (Li6PS5Cl) [kPa]
+variable        vse           equal     0.37       # SE (Li6PS5Cl) [-]
+
+variable        Eli           equal     7.82e6     # Li (Li-metal) [kPa]
+variable        vli           equal     0.381      # Li (Li-metal) [-]
+
+variable        Eww           equal     100.e6     # Wall [kPa]
+variable        vww           equal     0.4        # Wall [-]
+
+#---------------------Generate Box---------------------------------------------
+read_data        data${mn}/${base_name}.data
 
 group  ag   type  1
 group  ac   type  2
@@ -40,12 +60,12 @@ group  ptc  type  1 2
 group  li1  type  3
 group  se1  type  4
 
-#---------------------Assign Material Properties to particle and wall----------------------------------------
+#---------------------Assign Material Properties-------------------------------
 fix     m1 all property/global youngsModulus peratomtype ${Eme} ${Ecb} ${Eli} ${Ese} ${Eww}
 fix     m2 all property/global poissonsRatio peratomtype ${vme} ${vcb} ${vli} ${vse} ${vww}
 
 # Coefficient of restitution matrix (5x5)
-variable        cor_all       equal     0.1     # Same for all pairs
+variable        cor_all       equal     0.1
 fix     m3 all property/global coefficientRestitution peratomtypepair 5 &
         ${cor_all} ${cor_all} ${cor_all} ${cor_all} ${cor_all} &
         ${cor_all} ${cor_all} ${cor_all} ${cor_all} ${cor_all} &
@@ -54,7 +74,7 @@ fix     m3 all property/global coefficientRestitution peratomtypepair 5 &
         ${cor_all} ${cor_all} ${cor_all} ${cor_all} ${cor_all}
 
 # Coefficient of friction (5x5)
-variable        cof_all       equal     0.1     # Same for all pairs
+variable        cof_all       equal     0.1
 fix     m4 all property/global coefficientFriction peratomtypepair 5 &
         ${cof_all} ${cof_all} ${cof_all} ${cof_all} ${cof_all} &
         ${cof_all} ${cof_all} ${cof_all} ${cof_all} ${cof_all} &
@@ -63,7 +83,7 @@ fix     m4 all property/global coefficientFriction peratomtypepair 5 &
         ${cof_all} ${cof_all} ${cof_all} ${cof_all} ${cof_all}
 
 # Coefficient of rolling friction (5x5)
-variable        corf_all      equal     0.1     # Same for all pairs
+variable        corf_all      equal     0.1
 fix     m5 all property/global coefficientRollingFriction peratomtypepair 5 &
         ${corf_all} ${corf_all} ${corf_all} ${corf_all} ${corf_all} &
         ${corf_all} ${corf_all} ${corf_all} ${corf_all} ${corf_all} &
@@ -71,7 +91,7 @@ fix     m5 all property/global coefficientRollingFriction peratomtypepair 5 &
         ${corf_all} ${corf_all} ${corf_all} ${corf_all} ${corf_all} &
         ${corf_all} ${corf_all} ${corf_all} ${corf_all} ${corf_all}
 
-# Cohesion energy density (5x5) Units (KPa) 50000 is 50,000 kPa (adopted from Davids Peel Test)
+# Cohesion energy density (5x5) Units (kPa)
 fix     m6 all property/global cohesionEnergyDensity peratomtypepair 5 &
         100000   100000  100000   10000  0 &
         100000   100000  100000   10000  0 &
@@ -79,7 +99,7 @@ fix     m6 all property/global cohesionEnergyDensity peratomtypepair 5 &
         10000    10000   0        0      0 &
         0        0       0        0      0
 
-#Define pair style
+# Define pair style
 pair_style gran model hertz tangential history cohesion sjkr
 pair_coeff      * *
 
@@ -89,89 +109,84 @@ fix ywalls1 ptc wall/gran model hertz tangential history primitive type 5 yplane
 fix ywalls2 ptc wall/gran model hertz tangential history primitive type 5 yplane 2.5
 fix zwalls1 ptc wall/gran model hertz tangential history primitive type 5 zplane 0
 
-#apply nve integration to all particles
-fix             integr ptc nve/sphere 
+# Apply nve integration to all particles
+fix             integr ptc nve/sphere
 
-#------------------------Output Settings------------------------------------------------------
-# Output to screen
-compute        ker    all  erotate/sphere            # Compute the rotational kinetic energy of all particles
-compute        frc    se1  reduce sum fz             # Total Force on se1 (top layer) in nN
-compute        posw   se1  reduce ave z              # Z position of se1 layer (um)
+#------------------------Output Settings---------------------------------------
+compute        ker    all  erotate/sphere
+compute        frc    se1  reduce sum fz
+compute        posw   se1  reduce ave z
 
-variable       prs  equal  (c_frc)*1.6e-4           # Pressure in unit of MPa on se1 (2.5 x 2.5 um area)
-
-# Warn if timestep > 10% of Rayleigh time or 10% of Hertz time
-# fix             ts_check all check/timestep/gran 1000 0.1 0.1 warn yes
-
-# variable       ts_rayleigh equal f_ts_check[1]
-# variable       ts_hertz    equal f_ts_check[2]
-# variable       ts_skin     equal f_ts_check[3]
-
-# v_ts_rayleigh v_ts_hertz v_ts_skin
+variable       prs  equal  (c_frc)*1.6e-4   # Pressure (MPa) on 2.5 x 2.5 um area
 
 thermo_style    custom step atoms ke c_ker vol v_prs c_posw
-thermo          4000
+thermo          1000
 thermo_modify   lost ignore norm no
 
-# Output to file
-dump    dmp all custom 20000 post/postc/Ag_M1C5_vr15_fp250_sp14.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
+# Dump – uses full_name for output path
+dump    dmp all custom 4000 post/postc/${full_name}.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 
-#------------------------Compaction Process------------------------------------------------------
-fix 1 li1 move linear 0 0 0 # Fixing bottom
-fix 2 se1 move linear 0 0 -1.0 # Moving bottom li up
+#------------------------Compaction Process-------------------------------------
+fix 1 li1 move linear 0 0 0       # Fix bottom
+fix 2 se1 move linear 0 0 -25.0   # Move top plunger down
 
-# Run Initial Compaction (Check every 0.005 um ~170 loops)
+# Bring Down to z = 0.6 um  dt = 5e-7
+run 58200
+
+# Update Time-Step
+timestep        1.0e-7
+fix 2 se1 move linear 0 0 -25.0
+
+# Run Initial Compaction (check every 0.01 um ~85 loops)
 label loop1
-  run   20000
+  run   4000
   if "${prs} > ${tarp}" then "jump SELF loop2"
 jump SELF loop1
 
 label loop2
-
 # Quick Rest (5X loop time)
 fix 2 se1 move linear 0 0 0.0
-run 40000
+run 8000
 
-# Run period: decrease pressing velocity so that pressure value converge more accurate to designed value (10% of original)
-fix 2 se1 move linear 0 0 -0.5
+# Decrease pressing velocity (10% of original)
+fix 2 se1 move linear 0 0 -2.5
 
-# Final Fab. Pressure (Check every 0.001 um)
+# Final Fab. Pressure (check every 0.001 um)
 label loop3
-  run 8000
+  run 4000
   if "${prs} > ${tarp1}" then "jump SELF loop4"
 jump SELF loop3
 
-# Run period: hold for relax (x5 Loop time)
+# Hold for relax (x5 Loop time)
 label loop4
   fix 2 se1 move linear 0 0 0.
-  run 40000
+  run 8000
 if "${prs} < ${tarp1}" then "jump SELF loop2"
 
-# Save compacted state
-write_data      dataAg/Ag_M1C5_vr15_fp250.data
+# Save compacted state  (e.g. Ag_M1C5_vr15_fp250.data)
+write_data      data${mn}/${fab_name}.data
 
-# Run period: Release to Almost Stack Pressure (20% speed)
-# Check every 0.002 um
-fix 2 se1 move linear 0 0 1.0
+# Release to Almost Stack Pressure (20% speed, check every 0.002 um)
+fix 2 se1 move linear 0 0 5.0
 label loop5
-  run 8000
+  run 4000
   if "${prs} < ${tarsp}" then "jump SELF loop6"
 jump SELF loop5
 
-# Run period: Release to Stack Pressure (10% speed of stack speed)
+# Release to Stack Pressure (10% speed)
 label loop6
-fix 2 se1 move linear 0 0 0.1
+fix 2 se1 move linear 0 0 0.5
 
 label loop7
-  run 8000
+  run 4000
   if "${prs} < ${tarsp1}" then "jump SELF loop8"
 jump SELF loop7
 
-# Run period: hold for relax (x10)
+# Hold for relax (x10)
 label loop8
 fix 2 se1 move linear 0 0 0
 
-run 80000
+run 16000
 
-# Save compacted state
-write_data      dataAg/Ag_M1C5_vr15_fp250_sp14.data
+# Save final state (e.g. Ag_M1C5_vr15_fp250_sp14.data)
+write_data      data${mn}/${full_name}.data
