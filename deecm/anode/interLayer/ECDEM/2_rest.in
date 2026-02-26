@@ -16,24 +16,26 @@ newton          off
 communicate     single vel yes
 
 # Set timestep (Do not change radius update optimized for this value)
-timestep        5.e-6
+# timestep        5.e-6
+timestep        1.e-7
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration
-read_data     data/1LM_M2C5_vr9_pack.data
+read_data     dataAg/Ag_M1C5_vr9_fp400.data
 
 # --- 3. RE-ESTABLISH GROUPS ---
 # Define groups based on particle types (Type 5 is the wall)
 group  me    type  1   # Metal
 group  cb    type  2   # Carbon
-group  se    type  3   # SE Layer (top)
-group  li    type  4   # Li Layer (bottom)
+group  li    type  3   # Li Layer (bottom)
+group  se    type  4   # SE Layer (top)
+
 
 # Groups for particles affected by walls
 group  ptc   type  1 2 # Types affected by walls
 
 # --- 4. NEIGHBOR SETTINGS ---
-neighbor        0.001 bin
+neighbor        0.005 bin
 neigh_modify    every 1 delay 0 check yes
 
 # --- 5. RE-ESTABLISH MATERIAL PROPERTIES ---
@@ -53,8 +55,8 @@ variable        Eww           equal     100.e6    # Wall [kPa]
 variable        vww           equal     0.4      # Wall [-]
 
 # Material properties
-fix     m1 all property/global youngsModulus peratomtype ${Eme} ${Ecb} ${Ese} ${Eli} ${Eww}
-fix     m2 all property/global poissonsRatio peratomtype ${vme} ${vcb} ${vse} ${vli} ${vww}
+fix     m1 all property/global youngsModulus peratomtype ${Eme} ${Ecb} ${Eli} ${Ese} ${Eww}
+fix     m2 all property/global poissonsRatio peratomtype ${vme} ${vcb} ${vli} ${vse} ${vww}
 
 # Coefficient of restitution matrix (5x5)
 variable        cor_all       equal     0.1     # Same for all pairs
@@ -85,11 +87,11 @@ fix     m5 all property/global coefficientRollingFriction peratomtypepair 5 &
 
 # Cohesion energy density (5x5) Units (KPa) 50000 is 50,000 kPa (adopted from Davids Peel Test)
 fix     m6 all property/global cohesionEnergyDensity peratomtypepair 5 &
-        100000   100000  10000   100000  0 &
-        100000   100000  10000   100000  0 &
-        10000    10000   0       0       0 &
-        100000   100000  0       0       0 &
-        0        0       0       0       0
+        100000   100000  100000   10000  0 &
+        100000   100000  100000   10000  0 &
+        100000   100000  0        0      0 &
+        10000    10000   0        0      0 &
+        0        0       0        0      0
 
 # --- 6. PAIR STYLE AND WALLS ---
 pair_style gran model hertz tangential history cohesion sjkr
@@ -101,10 +103,22 @@ fix xwalls2 ptc wall/gran model hertz tangential history primitive type 5 xplane
 fix ywalls1 ptc wall/gran model hertz tangential history primitive type 5 yplane 0.0
 fix ywalls2 ptc wall/gran model hertz tangential history primitive type 5 yplane 2.5
 fix zwalls1 ptc wall/gran model hertz tangential history primitive type 5 zplane 0.0
-# fix zwalls2 ptc wall/gran model hertz tangential history primitive type 5 zplane 1.0
 
 # --- 7. INTEGRATION ---
-fix             integr all nve/sphere
+fix             integr ptc nve/sphere
+
+#------------------------Output Settings---------------------------------------
+compute        ker    all  erotate/sphere
+compute        frc    se  reduce sum fz # Force in [nN]
+compute        posw   se  reduce ave z
+
+variable       prs  equal  (c_frc)*1.6e-4   # Pressure (MPa) on 2.5 x 2.5 um area
+
+# Create a per-atom variable that holds the value of prs1
+variable        prs_atom atom v_prs
+
+# Hydrostatic Stress Initializing
+compute      st all stress/atom
 
 # Warn if timestep > 10% of Rayleigh time or 10% of Hertz time
 # fix             ts_check all check/timestep/gran 1 0.1 0.1 warn no
@@ -115,16 +129,6 @@ fix             integr all nve/sphere
 fix 1 se move linear 0 0 0  # Top Layer
 fix 2 li move linear 0 0 0  # Bottom Layer
 
-# --- 8.5. PRESSURE COMPUTATION ON SE ---
-compute         frc    li    reduce sum fz      # Force in [nN]
-variable        prs    equal  -(c_frc)*160.e-6  # Pressure in [MPa] 
-
-# Create a per-atom variable that holds the value of prs1
-variable        prs_atom atom v_prs
-
-# Hydrostatic Stress Initializing
-compute      st all stress/atom
-
 # --- 9.0. ELECTROCHEMICAL COMPUTATIONS ---
 
 # Initialize lithium content (Li/Metal molar ratio) - for AM & CB particles
@@ -132,31 +136,28 @@ fix             li_content ptc property/atom/lithium_content initial 0.0 target 
 
 # Calculate equilibrium potential - for AM and CB particles
 fix             eq_pot all equilibrium_potential temperature 303.0 AM_material Ag CB_material C &
-                x_max_AM 1.0 x_max_CB 1.0 AM_type 1 CB_type 2 LM_type 4
+                x_max_AM 1.0 x_max_CB 1.0 AM_type 1 CB_type 2 LM_type 3
 
 # SOR solver for potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
 fix             potential_sol all potential/sor omega 1.0 max_iter 0 &
                 BC_types 3 4 BC_potentials 0.00 0.00 0.0 conductivity 0.05 0.1 SE_type 2
 
 # Lithium diffusion - AM & CB particles (s_factor 2.0e07 for 0.0001s)
-fix             diff all lithium_diffusion AM_type 1 CB_type 2 LM_type 4 &
+fix             diff all lithium_diffusion AM_type 1 CB_type 2 LM_type 3 &
                 c_li_max_LM 77101.002 c_li_max_AM 85155.85 c_li_max_CB 27776.39 V_exp_max_AM 10.291 &
                 D_AM_AM 1.0e-10 D_AM_CB 1.0e-14 D_AM_LM 1.0e-14 &
-                D_CB_AM 1.0e-14 D_CB_CB 1.0e-14 D_CB_LM 1.0e-14 s_factor 2.0e07
+                D_CB_AM 1.0e-14 D_CB_CB 1.0e-14 D_CB_LM 1.0e-14 s_factor 1.0e07
 
 # Radius expansion for AM & CB particles (optional - Omega_Li_CB is smaller b/c saying volume doesnt change much with Li content )
 fix             radexp all radius_expansion AM_type 1 CB_type 2 update_every 1 &
                 Omega_Li_AM 1.0602e-05 Omega_Li_CB 4.1418e-6
 
-# --- 10. COMPUTE SETUP FOR MONITORING ---
-
-
 # --- 11. OUTPUT SETTINGS ---
 
 # Simulation timing variables
-variable        rest_time      equal 1.0          # Rest time in seconds
-variable        scaling_factor equal 2.0e07        # Scaling factor (matches s_factor in lithium_diffusion)
-variable        dem_timestep   equal 5.e-12        # DEM timestep in seconds (5.e-6 microseconds)
+variable        rest_time      equal 900.0          # Rest time in seconds
+variable        scaling_factor equal 1.0e07        # Scaling factor (matches s_factor in lithium_diffusion)
+variable        dem_timestep   equal 1.e-13        # DEM timestep in seconds (5.e-6 microseconds)
 
 # Calculate run time and output frequencies
 variable        run_steps      equal round(${rest_time}/(${scaling_factor}*${dem_timestep}))
@@ -169,7 +170,7 @@ thermo          ${thermo_freq}
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_batt all custom ${dump_freq} post/20260204_1LM_M2C5_vr9_rest_1d0sec_sf2e7/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_batt all custom ${dump_freq} post/20260225_Ag_M1C5_vr9_fp400_rest/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_hydrostaticStress f_lithiumContent f_lithiumConcentration f_lithiumMols f_equilibriumPotential v_prs_atom
 
 # 4. Run EC for 1 timestep, equivelent to 0.0001s real seconds

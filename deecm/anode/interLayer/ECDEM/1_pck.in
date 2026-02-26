@@ -12,7 +12,7 @@
 #------------------General Settings--------------------------------------------
 atom_style      granular
 atom_modify     map array
-boundary        p p s
+boundary        f f s
 newton          off
 communicate     single vel yes
 processors      * * 1

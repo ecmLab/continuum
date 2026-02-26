@@ -1,5 +1,5 @@
-# Battery simulation using pre-compacted particles from data file - For Testing Resistance
-# With type-based boundary conditions
+# Battery simulation using pre-compacted particles from data file
+# With type-based boundary conditions for SOR solver
 # Metal particles (type 1) - Metal Particles
 # Carbon particles (type 2) - Carbon Particles
 # SE Layer (type 3) - SE Particles (Top)
@@ -10,30 +10,33 @@
 units           micro  # Using micro units to match the compaction script
 atom_style      granular
 atom_modify     map array
-boundary        f f f  # Fixed boundaries as in compaction script
+boundary        f f s  # Fixed(f) boundaries as in compaction script shrink(s)
 newton          off
 
 communicate     single vel yes
 
 # Set timestep (Do not change radius update optimized for this value)
-timestep        5.e-6
+# timestep        5.e-6
+timestep        1.e-7
 
 # --- 2. READ RESTART FILE ---
-# Read the compacted configuration
-read_data     data/1LM_M2C5_vr3_pack.data
+# Read the compacted configuration (Top --> Bottom) (SE single Particle Z-plane layer / Metal-Carbon Mixture / Li single paerticle z-plane layer)
+read_data     dataAg/Ag_M1C5_vr15_fp400.data
 
 # --- 3. RE-ESTABLISH GROUPS ---
 # Define groups based on particle types (Type 5 is the wall)
 group  me    type  1   # Metal
 group  cb    type  2   # Carbon
-group  se    type  3   # SE Layer (top)
-group  li    type  4   # Li Layer (bottom)
+group  li    type  3   # Li Layer (bottom)
+group  se    type  4   # SE Layer (top)
+
 
 # Groups for particles affected by walls
 group  ptc   type  1 2 # Types affected by walls
+group  mobile type 1 2 4     # All particles that undergo integration (AM, CB, SE)
 
 # --- 4. NEIGHBOR SETTINGS ---
-neighbor        0.001 bin
+neighbor        0.005 bin
 neigh_modify    every 1 delay 0 check yes
 
 # --- 5. RE-ESTABLISH MATERIAL PROPERTIES ---
@@ -53,8 +56,8 @@ variable        Eww           equal     100.e6    # Wall [kPa]
 variable        vww           equal     0.4      # Wall [-]
 
 # Material properties
-fix     m1 all property/global youngsModulus peratomtype ${Eme} ${Ecb} ${Ese} ${Eli} ${Eww}
-fix     m2 all property/global poissonsRatio peratomtype ${vme} ${vcb} ${vse} ${vli} ${vww}
+fix     m1 all property/global youngsModulus peratomtype ${Eme} ${Ecb} ${Eli} ${Ese} ${Eww}
+fix     m2 all property/global poissonsRatio peratomtype ${vme} ${vcb} ${vli} ${vse} ${vww}
 
 # Coefficient of restitution matrix (5x5)
 variable        cor_all       equal     0.1     # Same for all pairs
@@ -85,11 +88,11 @@ fix     m5 all property/global coefficientRollingFriction peratomtypepair 5 &
 
 # Cohesion energy density (5x5) Units (KPa) 50000 is 50,000 kPa (adopted from Davids Peel Test)
 fix     m6 all property/global cohesionEnergyDensity peratomtypepair 5 &
-        100000   100000  10000   100000  0 &
-        100000   100000  10000   100000  0 &
-        10000    10000   0       0       0 &
-        100000   100000  0       0       0 &
-        0        0       0       0       0
+        100000   100000  100000   10000  0 &
+        100000   100000  100000   10000  0 &
+        100000   100000  0        0      0 &
+        10000    10000   0        0      0 &
+        0        0       0        0      0
 
 # --- 6. PAIR STYLE AND WALLS ---
 pair_style gran model hertz tangential history cohesion sjkr
@@ -101,86 +104,89 @@ fix xwalls2 ptc wall/gran model hertz tangential history primitive type 5 xplane
 fix ywalls1 ptc wall/gran model hertz tangential history primitive type 5 yplane 0.0
 fix ywalls2 ptc wall/gran model hertz tangential history primitive type 5 yplane 2.5
 fix zwalls1 ptc wall/gran model hertz tangential history primitive type 5 zplane 0.0
-fix zwalls2 ptc wall/gran model hertz tangential history primitive type 5 zplane 2.5
 
 # --- 7. INTEGRATION ---
-fix             integr all nve/sphere
+fix             integr mobile nve/sphere
 
-# Warn if timestep > 10% of Rayleigh time or 10% of Hertz time
-fix             ts_check all check/timestep/gran 1 0.1 0.1 warn no
-
+#------------------------Output Settings---------------------------------------
 # --- 8. ANALYSIS SETUP ---
+variable        tarp     equal  400                      # Fabrication pressure (MPa)
+variable        F_total  equal  v_tarp/(1.6e-4)          # Total downward force (nN)
+variable        N_se     equal  count(se)                # Number of SE particles
+variable        fz_se    equal  -v_F_total/v_N_se        # Per-particle target z-force (nN)
 
-# FIXED Top and Bottom Layer from moving
-fix 1 se move linear 0 0 0  # Top Layer
-fix 2 li move linear 0 0 0  # Bottom Layer
+# Lock SE in x,y — only vertical (z) motion allowed
+fix  se_lock_xy  se  setforce  0.0  0.0  NULL
 
-# --- 8.5. PRESSURE COMPUTATION ON SE ---
-compute         frc    li    reduce sum fz      # Force in [nN]
-variable        prs    equal  -(c_frc)*160.e-6  # Pressure in [MPa] 
+# Maintain constant average z-force = target compressive pressure
+# aveforce adjusts: fz_i → fz_i - <fz> + fz_target, preserving relative differences
+fix  se_press_z  se  aveforce  NULL  NULL  v_fz_se
+
+compute        ker    all  erotate/sphere
+compute        frc    se  reduce sum fz # Force in [nN]
+compute        posw   se  reduce ave z
+
+variable       prs      equal  (f_se_press_z[3])*1.6e-4
+variable       prs_res  equal  (c_frc)*1.6e-4   # Pressure (MPa) on 2.5 x 2.5 um area
 
 # Create a per-atom variable that holds the value of prs1
 variable        prs_atom atom v_prs
 
 # Hydrostatic Stress Initializing
-compute      st li stress/atom
+compute      st all stress/atom
+
+# Bottom Li layer remains frozen (Dirichlet source)
+fix  li_freeze   li  move linear 0 0 0
+
+# FIXED Top and Bottom Layer from moving
+# fix 1 se move linear 0 0 0  # Top Layer
+# fix 2 li move linear 0 0 0  # Bottom Layer
 
 # --- 9.0. ELECTROCHEMICAL COMPUTATIONS ---
 
 # Initialize lithium content (Li/Metal molar ratio) - for AM & CB particles
-fix             li_content ptc property/atom/lithium_content initial 0.15 target 1.0 max 1.0
+fix             li_content ptc property/atom/lithium_content initial 0.0 target 1.0 max 1.0
 
 # Calculate equilibrium potential - for AM and CB particles
 fix             eq_pot all equilibrium_potential temperature 303.0 AM_material Ag CB_material C &
-                x_max_AM 1.0 x_max_CB 1.0 AM_type 1 CB_type 2 LM_type 4
+                x_max_AM 1.0 x_max_CB 1.0 AM_type 1 CB_type 2 LM_type 3
 
 # SOR solver for potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
-fix             potential_sol all potential/sor omega 1.0 max_iter 1 &
+fix             potential_sol all potential/sor omega 1.0 max_iter 0 &
                 BC_types 3 4 BC_potentials 0.00 0.00 0.0 conductivity 0.05 0.1 SE_type 2
 
-# Lithium diffusion - AM & CB particles (s_factor 2.0e08 for 0.001s)
-fix             diff all lithium_diffusion AM_type 1 CB_type 2 LM_type 4 &
-                c_li_max_LM 77101.002 c_li_max_AM 80940.14 c_li_max_CB 27776.39 V_exp_max_AM 4.812 &
-                D_AM_AM 5.0e-10 D_AM_CB 5.0e-14 D_AM_LM 5.0e-14 &
-                D_CB_AM 5.0e-14 D_CB_CB 5.0e-14 D_CB_LM 5.0e-14 s_factor 2.0e08
+# IMPLICIT diffusion
+fix  diff all lithium_diffusion_implicit AM_type 1 CB_type 2 LM_type 3 &
+     diffusion_dt 0.001 update_every 50 max_iter 500 tolerance 2.5e-1 &
+     c_li_max_LM 77101.002 c_li_max_AM 85155.85 c_li_max_CB 27776.39 V_exp_max_AM 10.291 &
+     D_AM_AM 1.0e-10 D_AM_CB 1.0e-14 D_AM_LM 1.0e-14 &
+     D_CB_AM 1.0e-14 D_CB_CB 1.0e-14 D_CB_LM 1.0e-14
 
 # Radius expansion for AM & CB particles (optional - Omega_Li_CB is smaller b/c saying volume doesnt change much with Li content )
-fix             radexp all radius_expansion AM_type 1 CB_type 2 update_every 1 max_updates 10000000 &
-                Omega_Li_AM 9.7873e-6 Omega_Li_CB 4.1418e-6
+fix             radexp all radius_expansion AM_type 1 CB_type 2 update_every 1 &
+                Omega_Li_AM 1.0602e-05 Omega_Li_CB 4.1418e-6
 
-fix     elec_res all electrical_resistance &
-        temperature 303.0 &
-        AM_type 1 CB_type 2 SE_type 3 LM_type 4 wall_type 5 &
-        ntypes 5 &
-        conductivity 1 6.29e7 2 131 3 1.0e-4 4 1.08e7 5 1.0e7 &
-        min_overlap 1.0e-8
+# --- 11. TIMING ---
+# 900 s real time / 0.001 s per solve = 900,000 solves
+# 900,000 solves * 10 DEM steps per solve = 9.000,000 total DEM steps
+variable  rest_time      equal 1.0            # Rest time in seconds
+variable  diff_dt        equal 0.001
+variable  dem_steps_per  equal 50
+variable  run_steps      equal round(${rest_time}/${diff_dt})*${dem_steps_per}
+variable  dump_freq      equal round(${run_steps}/100)
+variable  thermo_freq    equal round(${run_steps}/1000)
 
-# --- 10. COMPUTE SETUP FOR MONITORING ---
-
-# Electric potential by material type - NOW ELECTROLYTE POTENTIAL
-#compute         phi_el_se_avg se reduce ave f_electrolytePotential
-
-# Electronic potential by material type
-#compute         phi_ed_se_avg se reduce ave f_electronicPotential
-
-# Current flow at AM-SE interfaces
-compute         current_avg se reduce ave f_currentLiSE
-
-variable       ts_rayleigh equal f_ts_check[1]
-variable       ts_hertz    equal f_ts_check[2]
-variable       ts_skin     equal f_ts_check[3]
-
-# --- 11. OUTPUT SETTINGS ---
 # Thermo output
-thermo_style    custom step atoms ke &
-                v_ts_rayleigh v_ts_hertz v_ts_skin v_prs f_elec_res[1] f_elec_res[3]
-thermo          1
+thermo_style custom step atoms ke v_prs v_prs_res c_posw f_diff[1] f_diff[2] f_diff[3]
+# f_diff[1] = last Jacobi iteration count
+# f_diff[2] = last residual
+# f_diff[3] = total diffusion time (s)
+thermo          ${thermo_freq}
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_batt all custom 2 post/20260126_M2C5vr3_OCV_rest_1sec_dt0d001_newres/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
-                f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress f_lithiumContent f_lithiumConcentration f_lithiumMols f_equilibriumPotential v_prs_atom &
-                f_totalConductance f_totalResistance f_resistanceContactCount f_avgContactResistance
+dump            dmp_batt all custom ${dump_freq} post/20260226_Ag_M1C5_vr15_fp400_rest_1/battery.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+                f_hydrostaticStress f_lithiumContent f_lithiumConcentration f_lithiumMols f_equilibriumPotential v_prs_atom
 
-# 4. Run EC for 1 timestep, equivelent to 0.001s real seconds
-run             100  # 0.1s
+# 4. Run EC
+run             ${run_steps}
