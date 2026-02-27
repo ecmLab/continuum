@@ -8,14 +8,13 @@
     Replaces explicit Euler + scaling factor with an unconditionally stable
     implicit solver using Jacobi iteration.
     
-    - Same-type pairs (AM-AM, CB-CB): IMPLICIT concentration-driven (Fick)
+    - Same-type pairs (AM-AM, CB-CB): IMPLICIT concentration-driven
     - Cross-type pairs (AM-CB, AM-LM, CB-AM, CB-LM): SEMI-IMPLICIT
-      chemo-mechanical driving force:
-        Φ_eff = U_OCV - (σ_h * Ω_Li) / F
-      where σ_h is hydrostatic stress and Ω_Li is the partial molar volume
+      (explicit in equilibrium potential, implicit coupling via source term)
     - LM particles: Dirichlet BC (constant concentration)
     
     The implicit system is diagonally dominant → Jacobi convergence guaranteed.
+    Typical convergence in 10-50 iterations.
     
     Usage in input script:
       fix ID group lithium_diffusion_implicit AM_type 1 CB_type 2 LM_type 3 \
@@ -23,8 +22,7 @@
           c_li_max_LM 77101.002 c_li_max_AM 85155.85 c_li_max_CB 27776.39 \
           V_exp_max_AM 10.291 \
           D_AM_AM 1.0e-10 D_AM_CB 1.0e-14 D_AM_LM 1.0e-14 \
-          D_CB_AM 1.0e-14 D_CB_CB 1.0e-14 D_CB_LM 1.0e-14 \
-          Omega_Li_AM 1.0602e-05 Omega_Li_CB 4.1418e-06 Omega_Li_LM 12.97e-06
+          D_CB_AM 1.0e-14 D_CB_CB 1.0e-14 D_CB_LM 1.0e-14
 ------------------------------------------------------------------------- */
 
 #include "fix_lithium_diffusion_implicit.h"
@@ -60,9 +58,7 @@ FixLithiumDiffusionImplicit::FixLithiumDiffusionImplicit(LAMMPS *lmp, int narg, 
   V_exp_max_AM(1.01),
   V_exp_max_CB(1.13),
   V_exp_max_LM(0.0),
-  Omega_Li_AM(1.0602e-05),       // m³/mol - partial molar volume Li in AM
-  Omega_Li_CB(4.1418e-06),       // m³/mol - partial molar volume Li in CB
-  Omega_Li_LM(12.97e-06),        // m³/mol - partial molar volume Li in LM
+  Omega_Li_LM(12.97e-6),
   initial_lithium_content(0.0),
   target_lithium_content(1.0),
   max_lithium_content(1.0),
@@ -72,11 +68,11 @@ FixLithiumDiffusionImplicit::FixLithiumDiffusionImplicit(LAMMPS *lmp, int narg, 
   D_AM_LM(1.0e-15),
   D_CB_AM(1.0e-15),
   D_CB_LM(1.0e-15),
-  diffusion_dt(0.1),
-  update_every(100),
-  max_iter(200),
-  tol(1.0e-10),
-  num_substeps(1),
+  diffusion_dt(0.1),           // Real seconds per implicit solve
+  update_every(100),           // DEM steps between solves
+  max_iter(200),               // Max Jacobi iterations
+  tol(1.0e-10),               // Convergence tolerance (mol/m³)
+  num_substeps(1),             // Sub-steps per call (default 1)
   nmax_alloc(0),
   c_old(NULL),
   c_new(NULL),
@@ -84,7 +80,6 @@ FixLithiumDiffusionImplicit::FixLithiumDiffusionImplicit(LAMMPS *lmp, int narg, 
   lithium_content(NULL),
   lithium_concentration(NULL),
   equilibrium_potential(NULL),
-  hydrostatic_stress(NULL),
   current_SE_Li(NULL),
   diffusion_coefficient(NULL),
   lithium_flux(NULL),
@@ -94,7 +89,6 @@ FixLithiumDiffusionImplicit::FixLithiumDiffusionImplicit(LAMMPS *lmp, int narg, 
   fix_lithium_content(NULL),
   fix_lithium_concentration(NULL),
   fix_equilibrium_potential(NULL),
-  fix_hydrostatic_stress(NULL),
   fix_current_SE_Li(NULL),
   fix_diffusion_coefficient(NULL),
   fix_lithium_flux(NULL),
@@ -108,6 +102,7 @@ FixLithiumDiffusionImplicit::FixLithiumDiffusionImplicit(LAMMPS *lmp, int narg, 
   if (narg < 3)
     error->all(FLERR,"Illegal fix lithium_diffusion_implicit command");
 
+  // Parse arguments
   int iarg = 3;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"AM_type") == 0) {
@@ -194,19 +189,6 @@ FixLithiumDiffusionImplicit::FixLithiumDiffusionImplicit(LAMMPS *lmp, int narg, 
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion_implicit command");
       V_exp_max_LM = force->numeric(FLERR,arg[iarg+1]);
       iarg += 2;
-    // --- Partial molar volume parameters ---
-    } else if (strcmp(arg[iarg],"Omega_Li_AM") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion_implicit command");
-      Omega_Li_AM = force->numeric(FLERR,arg[iarg+1]);
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"Omega_Li_CB") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion_implicit command");
-      Omega_Li_CB = force->numeric(FLERR,arg[iarg+1]);
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"Omega_Li_LM") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix lithium_diffusion_implicit command");
-      Omega_Li_LM = force->numeric(FLERR,arg[iarg+1]);
-      iarg += 2;
     } else error->all(FLERR,"Illegal fix lithium_diffusion_implicit command");
   }
 
@@ -227,7 +209,7 @@ FixLithiumDiffusionImplicit::FixLithiumDiffusionImplicit(LAMMPS *lmp, int narg, 
 
 void FixLithiumDiffusionImplicit::post_create()
 {
-  // Register all property/atom fixes
+  // Register all the same property/atom fixes as the original
   fix_diffusion_coefficient = static_cast<FixPropertyAtom*>(
     modify->find_fix_property("diffusionCoefficient","property/atom","scalar",0,0,style,false));
   if(!fix_diffusion_coefficient) {
@@ -321,13 +303,6 @@ void FixLithiumDiffusionImplicit::init()
   if(!fix_equilibrium_potential)
     error->all(FLERR,"Fix lithium_diffusion_implicit requires equilibriumPotential property");
 
-  // Hydrostatic stress from fix potential/sor (required for stress-driven diffusion)
-  fix_hydrostatic_stress = static_cast<FixPropertyAtom*>(
-    modify->find_fix_property("hydrostaticStress","property/atom","scalar",0,0,style));
-  if(!fix_hydrostatic_stress)
-    error->all(FLERR,"Fix lithium_diffusion_implicit requires hydrostaticStress property "
-               "(created by fix potential/sor)");
-
   fix_current_SE_Li = static_cast<FixPropertyAtom*>(
     modify->find_fix_property("currentSELi","property/atom","scalar",0,0,style,false));
 
@@ -376,6 +351,7 @@ void FixLithiumDiffusionImplicit::setup(int vflag)
   int *type = atom->type;
   int *mask = atom->mask;
 
+  // Initialize concentrations and volumes (same as original)
   for (int i = 0; i < nlocal; i++) {
     if (!(mask[i] & groupbit)) continue;
 
@@ -416,6 +392,7 @@ void FixLithiumDiffusionImplicit::init_list(int id, NeighList *ptr)
 
 void FixLithiumDiffusionImplicit::end_of_step()
 {
+  // Only run every update_every steps
   if (update->ntimestep % update_every != 0) return;
 
   updatePtrs();
@@ -425,9 +402,10 @@ void FixLithiumDiffusionImplicit::end_of_step()
   fix_lithium_content->do_forward_comm();
   fix_lithium_concentration->do_forward_comm();
   fix_equilibrium_potential->do_forward_comm();
-  fix_hydrostatic_stress->do_forward_comm();
   if(fix_current_SE_Li) fix_current_SE_Li->do_forward_comm();
 
+  // Perform the implicit diffusion solve
+  // (optionally multiple sub-steps for very large diffusion_dt)
   double sub_dt = diffusion_dt / num_substeps;
 
   for (int ss = 0; ss < num_substeps; ss++) {
@@ -440,33 +418,6 @@ void FixLithiumDiffusionImplicit::end_of_step()
   fix_lithium_content->do_forward_comm();
   fix_lithium_concentration->do_forward_comm();
   fix_li_mols->do_forward_comm();
-}
-
-/* ---------------------------------------------------------------------- */
-/*  Compute the chemo-mechanical effective potential for particle i:
- *
- *    Φ_eff,i = U_OCV,i  +  (σ_h,i * Ω_Li,i) / F
- *
- *  σ_h is the hydrostatic stress (Pa, from fix potential/sor)
- *  Ω_Li is the partial molar volume of Li in the host (m³/mol)
- *  F    is Faraday's constant (C/mol)
- *
- *  Compressive stress (σ_h < 0) → Lowers Φ_eff → pushes Li away
- *  Tensile stress    (σ_h > 0) → Raises Φ_eff → attracts Li
- * ---------------------------------------------------------------------- */
-
-double FixLithiumDiffusionImplicit::compute_effective_potential(int i)
-{
-  double U_ocv = equilibrium_potential[i];
-  double sigma_h = hydrostatic_stress[i];   // Pa (from SOR fix)
-  double Omega = get_Omega_Li(atom->type[i]);
-
-  double effective_potential = U_ocv + (sigma_h * Omega) / F;
-  
-  if (effective_potential < 0.0) {
-    return 0.0;
-  }
-  return effective_potential;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -496,15 +447,8 @@ void FixLithiumDiffusionImplicit::implicit_diffusion_step(double dt_diff)
   }
 
   // ------------------------------------------------------------------
-  // STEP 2: Compute cross-type flux (EXPLICIT in chemo-mechanical potential)
-  //
-  //   For particle p (AM) with neighbor q (CB or LM):
-  //
-  //   flux_pq = A_pq * M_pq * (Φ_eff,p - Φ_eff,q) / |r_q - r_p|
-  //
-  //   where Φ_eff,i = U_OCV,i - σ_h,i * Ω_Li,i / F
-  //
-  //   This is the stress-augmented driving force from the governing eqn.
+  // STEP 2: Compute cross-type flux (EXPLICIT in potential)
+  //         These are source terms for the implicit system
   // ------------------------------------------------------------------
   for (i = 0; i < nlocal; i++) {
     cross_flux_arr[i] = 0.0;
@@ -522,7 +466,7 @@ void FixLithiumDiffusionImplicit::implicit_diffusion_step(double dt_diff)
     ztmp = x[i][2];
 
     double c_i = lithium_concentration[i];
-    double Phi_eff_i = compute_effective_potential(i);
+    double U_i = equilibrium_potential[i];
 
     jlist = firstneigh[i];
     jnum = numneigh[i];
@@ -534,7 +478,7 @@ void FixLithiumDiffusionImplicit::implicit_diffusion_step(double dt_diff)
       int type_j = type[j];
       if (type_j != AM_type && type_j != CB_type && type_j != LM_type) continue;
 
-      // Only cross-type pairs here
+      // Only cross-type pairs here (different material types)
       if (type_j == type_i) continue;
 
       delx = xtmp - x[j][0];
@@ -548,15 +492,12 @@ void FixLithiumDiffusionImplicit::implicit_diffusion_step(double dt_diff)
         double r_SI = r * 1.0e-6;
 
         double c_j = (type_j == LM_type) ? c_li_max_LM : lithium_concentration[j];
+        double U_j = equilibrium_potential[j];
         double D_ij = get_diffusion_coefficient(type_i, type_j);
 
-        // Chemo-mechanical effective potential for neighbor
-        double Phi_eff_j = compute_effective_potential(j);
-
-        // Potential-driven flux with stress coupling:
-        //   flux = A * M * (Φ_eff,i - Φ_eff,j) / |r|
+        // Potential-driven: flux = A * M * (U_i - U_j) / |r|
         double M_ij = compute_mobility(c_i, c_j, D_ij);
-        double flux = A * M_ij * (Phi_eff_i - Phi_eff_j) / r_SI;
+        double flux = A * M_ij * (U_i - U_j) / r_SI;
 
         cross_flux_arr[i] += flux;
       }
@@ -571,13 +512,15 @@ void FixLithiumDiffusionImplicit::implicit_diffusion_step(double dt_diff)
   // ------------------------------------------------------------------
   // STEP 3: Jacobi iteration for implicit same-type diffusion
   //
-  //   Same-type pairs remain purely concentration-driven (Fick's law).
-  //   Cross-type chemo-mechanical flux enters as an explicit source.
+  //   Solve: c^{n+1} = c^n + dt * [L_same * c^{n+1}] / V_eff + dt * f_cross / V_eff
   //
-  //   (1 + Σ_j α_ij) * c_i^{n+1} = c_i^n + dt*f_cross_i/V_eff_i
-  //                                  + Σ_j α_ij * c_j^{k}
+  //   Rearranged per-particle:
+  //   (1 + Σ_j α_ij) * c_i^{n+1} = c_i^n + dt*f_cross_i/V_eff_i + Σ_j α_ij * c_j^{k}
   //
   //   where α_ij = dt * A_ij * D_ij / (r_ij * V_eff_i)
+  //   and V_eff_i = initial_volume[i] * V_exp_max(type_i)
+  //
+  //   System is diagonally dominant → convergence guaranteed.
   // ------------------------------------------------------------------
 
   int iter;
@@ -593,8 +536,9 @@ void FixLithiumDiffusionImplicit::implicit_diffusion_step(double dt_diff)
       if (type_i != AM_type && type_i != CB_type) continue;
 
       double V_eff = initial_volume[i] * get_V_exp_max(type_i);
-      if (V_eff <= 0.0) continue;
+      if (V_eff <= 0.0) continue;  // Safety check
 
+      // Diagonal coefficient and RHS initialization
       double diag = 1.0;
       double rhs = c_old[i] + dt_diff * cross_flux_arr[i] / V_eff;
 
@@ -628,17 +572,20 @@ void FixLithiumDiffusionImplicit::implicit_diffusion_step(double dt_diff)
           double alpha = dt_diff * A * D_same / (r_SI * V_eff);
 
           diag += alpha;
+          // Jacobi: use lithium_concentration[j] from previous iteration
           rhs += alpha * lithium_concentration[j];
         }
       }
 
+      // Solve for new concentration
       c_new[i] = rhs / diag;
 
+      // Track convergence
       double change = fabs(c_new[i] - lithium_concentration[i]);
       if (change > local_max_change) local_max_change = change;
     }
 
-    // Update local concentrations
+    // Update local atom concentrations with new values
     for (ii = 0; ii < inum; ii++) {
       i = ilist[ii];
       if (type[i] == AM_type || type[i] == CB_type) {
@@ -646,13 +593,15 @@ void FixLithiumDiffusionImplicit::implicit_diffusion_step(double dt_diff)
       }
     }
 
+    // Forward comm to update ghost atom concentrations for next iteration
     fix_lithium_concentration->do_forward_comm();
 
+    // Check global convergence
     MPI_Allreduce(&local_max_change, &global_max_change, 1,
                   MPI_DOUBLE, MPI_MAX, world);
 
     if (global_max_change < tol) {
-      iter++;
+      iter++;  // Count the final iteration
       break;
     }
   }
@@ -667,6 +616,7 @@ void FixLithiumDiffusionImplicit::implicit_diffusion_step(double dt_diff)
     if (!(mask[i] & groupbit)) continue;
     int type_i = type[i];
 
+    // LM particles: maintain constant concentration
     if (type_i == LM_type) {
       lithium_concentration[i] = c_li_max_LM;
       lithium_content[i] = max_lithium_content;
@@ -677,18 +627,24 @@ void FixLithiumDiffusionImplicit::implicit_diffusion_step(double dt_diff)
       double c_max = get_c_li_max(type_i);
       double V_exp_max_cur = get_V_exp_max(type_i);
 
+      // Convert concentration back to lithium content
+      // c = x * c_max / x_max  =>  x = c * x_max / c_max
       lithium_content[i] = lithium_concentration[i] * max_lithium_content / c_max;
 
+      // Enforce bounds
       if (lithium_content[i] < initial_lithium_content)
         lithium_content[i] = initial_lithium_content;
       if (lithium_content[i] > target_lithium_content)
         lithium_content[i] = target_lithium_content;
 
+      // Recompute concentration from clamped content (for consistency)
       lithium_concentration[i] = lithium_content[i] * c_max / max_lithium_content;
 
+      // Update moles of lithium in particle
       li_mols[i] = lithium_content[i] * c_max * initial_volume[i] *
                    V_exp_max_cur / max_lithium_content;
 
+      // Store the total flux for diagnostics (cross + implicit same-type net)
       double V_eff = initial_volume[i] * V_exp_max_cur;
       lithium_flux[i] = (lithium_concentration[i] - c_old[i]) * V_eff / dt_diff;
     }
@@ -715,7 +671,6 @@ void FixLithiumDiffusionImplicit::updatePtrs()
   lithium_content = fix_lithium_content->vector_atom;
   lithium_concentration = fix_lithium_concentration->vector_atom;
   equilibrium_potential = fix_equilibrium_potential->vector_atom;
-  hydrostatic_stress = fix_hydrostatic_stress->vector_atom;
   if(fix_current_SE_Li) current_SE_Li = fix_current_SE_Li->vector_atom;
   diffusion_coefficient = fix_diffusion_coefficient->vector_atom;
   lithium_flux = fix_lithium_flux->vector_atom;
@@ -762,16 +717,6 @@ double FixLithiumDiffusionImplicit::get_V_exp_max(int t)
 
 /* ---------------------------------------------------------------------- */
 
-double FixLithiumDiffusionImplicit::get_Omega_Li(int t)
-{
-  if (t == AM_type) return Omega_Li_AM;
-  if (t == CB_type) return Omega_Li_CB;
-  if (t == LM_type) return Omega_Li_LM;
-  return 0.0;
-}
-
-/* ---------------------------------------------------------------------- */
-
 double FixLithiumDiffusionImplicit::compute_mobility(double c_i, double c_j, double D_ij)
 {
   double c_avg = 0.5 * (c_i + c_j);
@@ -784,7 +729,7 @@ double FixLithiumDiffusionImplicit::calculate_contact_area(int i, int j)
 {
   double *radius = atom->radius;
   double **x = atom->x;
-  double L = 1.0e-6;
+  double L = 1.0e-6;  // μm → m
   double dx = (x[i][0] - x[j][0]) * L;
   double dy = (x[i][1] - x[j][1]) * L;
   double dz = (x[i][2] - x[j][2]) * L;
@@ -797,13 +742,14 @@ double FixLithiumDiffusionImplicit::calculate_contact_area(int i, int j)
 
   double delta = rsum - r;
   double reff = ri * rj / rsum;
-  return M_PI * delta * reff;
+  return M_PI * delta * reff;  // m²
 }
 
 /* ---------------------------------------------------------------------- */
 
 double FixLithiumDiffusionImplicit::compute_scalar()
 {
+  // Return total simulated diffusion time (seconds)
   return total_diffusion_time;
 }
 

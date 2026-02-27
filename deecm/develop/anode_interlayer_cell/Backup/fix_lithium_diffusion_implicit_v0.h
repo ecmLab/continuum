@@ -3,7 +3,7 @@
     Contributing author: Joseph Vazquez Mercado, RIT 2025
     Copyright 2024-     DCS Computing GmbH, Linz
     
-    Implicit (Backward Euler) Lithium Diffusion with Chemo-Mechanical Coupling
+    Implicit (Backward Euler) Lithium Diffusion on Particle Contact Network
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
@@ -43,9 +43,7 @@ class FixLithiumDiffusionImplicit : public Fix {
   double get_diffusion_coefficient(int, int);
   double get_c_li_max(int);
   double get_V_exp_max(int);
-  double get_Omega_Li(int);
   double compute_mobility(double, double, double);
-  double compute_effective_potential(int);
 
   // Physical constants
   double R, T, F;
@@ -55,11 +53,7 @@ class FixLithiumDiffusionImplicit : public Fix {
 
   // Volume expansion
   double V_exp_max_AM, V_exp_max_CB, V_exp_max_LM;
-
-  // Partial molar volumes of Li in each phase (m³/mol)
-  double Omega_Li_AM;          // Active material
-  double Omega_Li_CB;          // Carbon black
-  double Omega_Li_LM;          // Lithium metal
+  double Omega_Li_LM;
 
   // Lithium content bounds
   double initial_lithium_content, target_lithium_content, max_lithium_content;
@@ -69,11 +63,11 @@ class FixLithiumDiffusionImplicit : public Fix {
   double D_AM_CB, D_AM_LM, D_CB_AM, D_CB_LM;
 
   // Implicit solver parameters
-  double diffusion_dt;
-  int    update_every;
-  int    max_iter;
-  double tol;
-  int    num_substeps;
+  double diffusion_dt;       // Real seconds per solve
+  int    update_every;       // DEM steps between solves
+  int    max_iter;           // Max Jacobi iterations
+  double tol;                // Convergence tolerance (mol/m³)
+  int    num_substeps;       // Sub-steps per call
 
   // Diagnostics
   int    last_iter_count;
@@ -82,20 +76,18 @@ class FixLithiumDiffusionImplicit : public Fix {
 
   // Temporary arrays for Jacobi iteration
   int    nmax_alloc;
-  double *c_old;
-  double *c_new;
-  double *cross_flux_arr;
+  double *c_old;             // Concentration at start of step
+  double *c_new;             // New concentration (iteration buffer)
+  double *cross_flux_arr;    // Cross-type flux (explicit source term)
 
   // Per-atom property pointers
   double *lithium_content, *lithium_concentration, *equilibrium_potential;
-  double *hydrostatic_stress;
   double *current_SE_Li, *diffusion_coefficient, *lithium_flux;
   double *li_mols, *initial_volume;
 
   // Fix pointers
   FixPropertyAtom *fix_initial_volume, *fix_lithium_content;
   FixPropertyAtom *fix_lithium_concentration, *fix_equilibrium_potential;
-  FixPropertyAtom *fix_hydrostatic_stress;
   FixPropertyAtom *fix_current_SE_Li, *fix_diffusion_coefficient;
   FixPropertyAtom *fix_lithium_flux, *fix_li_mols;
   FixPropertyAtomLithiumContent *fix_lithium_content_manager;

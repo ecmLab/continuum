@@ -21,7 +21,7 @@ timestep        1.e-7
 
 # --- 2. READ RESTART FILE ---
 # Read the compacted configuration (Top --> Bottom) (SE single Particle Z-plane layer / Metal-Carbon Mixture / Li single paerticle z-plane layer)
-read_data     dataAg/Ag_M1C5_vr15_fp400.data
+read_data     dataAg/Ag_M1C5_vr15_fp100.data
 
 # --- 3. RE-ESTABLISH GROUPS ---
 # Define groups based on particle types (Type 5 is the wall)
@@ -110,7 +110,7 @@ fix             integr mobile nve/sphere
 
 #------------------------Output Settings---------------------------------------
 # --- 8. ANALYSIS SETUP ---
-variable        tarp     equal  400                      # Fabrication pressure (MPa)
+variable        tarp     equal  100                      # Fabrication pressure (MPa)
 variable        F_total  equal  v_tarp/(1.6e-4)          # Total downward force (nN)
 variable        N_se     equal  count(se)                # Number of SE particles
 variable        fz_se    equal  -v_F_total/v_N_se        # Per-particle target z-force (nN)
@@ -157,10 +157,11 @@ fix             potential_sol all potential/sor omega 1.0 max_iter 0 &
 
 # IMPLICIT diffusion
 fix  diff all lithium_diffusion_implicit AM_type 1 CB_type 2 LM_type 3 &
-     diffusion_dt 0.001 update_every 50 max_iter 500 tolerance 2.5e-1 &
+     diffusion_dt 0.0001 update_every 1 max_iter 500 tolerance 1.0e-2 &
      c_li_max_LM 77101.002 c_li_max_AM 85155.85 c_li_max_CB 27776.39 V_exp_max_AM 10.291 &
      D_AM_AM 1.0e-10 D_AM_CB 1.0e-14 D_AM_LM 1.0e-14 &
-     D_CB_AM 1.0e-14 D_CB_CB 1.0e-14 D_CB_LM 1.0e-14
+     D_CB_AM 1.0e-14 D_CB_CB 1.0e-14 D_CB_LM 1.0e-14 &
+     Omega_Li_AM 1.0602e-05 Omega_Li_CB 4.1418e-06 Omega_Li_LM 12.97e-06
 
 # Radius expansion for AM & CB particles (optional - Omega_Li_CB is smaller b/c saying volume doesnt change much with Li content )
 fix             radexp all radius_expansion AM_type 1 CB_type 2 update_every 1 &
@@ -169,12 +170,12 @@ fix             radexp all radius_expansion AM_type 1 CB_type 2 update_every 1 &
 # --- 11. TIMING ---
 # 900 s real time / 0.001 s per solve = 900,000 solves
 # 900,000 solves * 10 DEM steps per solve = 9.000,000 total DEM steps
-variable  rest_time      equal 1.0            # Rest time in seconds
-variable  diff_dt        equal 0.001
-variable  dem_steps_per  equal 50
+variable  rest_time      equal 0.01            # Rest time in seconds
+variable  diff_dt        equal 0.0001
+variable  dem_steps_per  equal 1
 variable  run_steps      equal round(${rest_time}/${diff_dt})*${dem_steps_per}
 variable  dump_freq      equal round(${run_steps}/100)
-variable  thermo_freq    equal round(${run_steps}/1000)
+variable  thermo_freq    equal round(${run_steps}/100)
 
 # Thermo output
 thermo_style custom step atoms ke v_prs v_prs_res c_posw f_diff[1] f_diff[2] f_diff[3]
@@ -185,7 +186,7 @@ thermo          ${thermo_freq}
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_batt all custom ${dump_freq} post/20260226_Ag_M1C5_vr15_fp400_rest_1/battery.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_batt all custom ${dump_freq} post/20260226_Ag_M1C5_vr15_fp100_rest_rt0d01_ddt0d0001_dsp1_STRESS/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_hydrostaticStress f_lithiumContent f_lithiumConcentration f_lithiumMols f_equilibriumPotential v_prs_atom
 
 # 4. Run EC
