@@ -16,7 +16,7 @@ RESULT_ROOT="${SCRIPT_DIR}/results_rest"
 DRY_RUN=${DRY_RUN:-0}
 
 # ---------- Fixed simulation parameters ------------------------------------
-REST_TIME=30        # Rest duration [s]
+REST_TIME=3.75        # Rest duration [s] (3.75 seconds is about 1 min real)
 DIFF_DT=0.0001      # Diffusion sub-timestep [s]
 
 # ---------- Metal-specific lookup tables -----------------------------------
@@ -87,10 +87,15 @@ declare -A OMEGA_LI_AM_MAP=(
 
 # ---------- Sweep arrays ---------------------------------------------------
 
-METALS=(Ag Mg Si Al Sn)
-MNUMS=(1 2 3 4 5 6 7 8 9 10)
-VRNUMS=(1 2 3 4 5 6 7 8 9 10 15)
-FPS=(100 250 400)
+# METALS=(Ag Mg Si Al Sn)
+# MNUMS=(1 2 3 4 5 6 7 8 9 10)
+# VRNUMS=(1 2 3 4 5 6 7 8 9 10 15)
+# FPS=(100 250 400)
+
+METALS=(Ag)
+MNUMS=(1 10)
+VRNUMS=(1 15)
+FPS=(100 400)
 
 # ---------- Pre-flight checks ----------------------------------------------
 
@@ -141,7 +146,7 @@ for mn in "${METALS[@]}"; do
           sbatch
           --job-name="${label}"
           --account=interlayer
-          --time=8:00:00
+          --time=2:00:00
           --ntasks-per-node=94
           --nodes=1
           --mail-user=jmv8431@rit.edu
