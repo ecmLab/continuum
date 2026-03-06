@@ -171,7 +171,7 @@ fix            radexp all radius_expansion AM_type 1 CB_type 2 update_every 1 &
 # --- 11. TIMING ---
 variable  dem_steps_per  equal 1
 variable  run_steps      equal round(${rest_time}/${diff_dt})*${dem_steps_per}
-variable  dump_freq      equal round(v_run_steps/100)
+variable  dump_freq      equal round(v_run_steps/20)
 variable  thermo_freq    equal round(v_run_steps/100)
 
 # --- 12. OUTPUT ---
