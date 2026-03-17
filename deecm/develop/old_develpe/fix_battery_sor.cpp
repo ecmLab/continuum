@@ -269,7 +269,7 @@ FixBatterySOR::FixBatterySOR(LAMMPS *lmp, int narg, char **arg) :
       if (iarg+5 > narg) error->all(FLERR,"Illegal fix battery/sor command");
       sigma_el = force->numeric(FLERR,arg[iarg+1]);      // Electrolyte
       sigma_ed_AM = force->numeric(FLERR,arg[iarg+2]);   // AM electronic
-      sigma_ed_SE = force->numeric(FLERR,arg[iarg+3]);   // CBD/SE electronic
+      sigma_ed_SE = force->numeric(FLERR,arg[iarg+3]);   // SE electronic
       sigma_ed_CC = force->numeric(FLERR,arg[iarg+4]);   // CC electronic
       iarg += 5;
     } else if (strcmp(arg[iarg],"SE_type") == 0) {
@@ -389,7 +389,7 @@ void FixBatterySOR::setup(int vflag)
       if (mask[i] & groupbit) {
         // Initialize both potentials based on particle type
         if (type[i] == SE_type) {
-          // SE/CBD particles - have both potentials
+          // SE particles - have both potentials
           phi_el[i] = 0.0;
           phi_el_old[i] = 0.0;
           phi_ed[i] = 0.0;

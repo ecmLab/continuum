@@ -152,20 +152,20 @@ fix             li_content li property/atom/lithium_content initial 1.0 target 1
 
 # CC: SOR solver for electric potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
 fix             battery_eis_sym all battery/eis omega 1.0 tolerance 1e-1 max_iter 1 &
-                BC_types 2 3 4 5 &        
-                BC_potentials 0.0 10.0 &
-                conductivity 0.05 0.1 & 
-                SE_type 1
+                BC_types 2 3 4 5 &
+                BC_potentials 0.0 2.0 &
+                conductivity 0.05 0.1 SE_type 1 &
+                protocol 2 period 10000 increase_step 0.5 area 4e-10 debug_freq 300 i_0 0.01
 
 # CV: SOR solver for electric potential with type-based boundary conditions (anode cathode) condutivity (AM, SE, CC)
 #fix             battery_eis_sym all battery/eis omega 1.0 tolerance 1e-1 max_iter 1 &
 #                BC_types 3 2 BC_potentials -0.005 0.005 conductivity 0.05 SE_type 1
 
 # Lithium diffusion - only for AM particles
-fix             li_diffusion li lithium_diffusion Li_type 3 2 c_li_max 77101.002
+fix             li_diffusion li lithium_diffusion Li_type 3 2 c_li_max 77101.002 s_factor 2e8
 
 # Radius expansion for Si particles (optional)
-fix             radius_expand li radius_expansion Li_type 3 2 update_every 1 max_updates 10000000
+fix             radius_expand li radius_expansion Li_type 3 2 update_every 1
 
 # --- 10. COMPUTE SETUP FOR MONITORING ---
 # Electrolyte potential by material type
@@ -192,12 +192,12 @@ thermo_style    custom step atoms ke &
                 c_phi_el_ccc_avg c_phi_el_cli_avg c_phi_el_se_avg &
                 c_phi_el_ali_avg c_phi_el_acc_avg v_cell_voltage c_current_avg_ali c_current_avg_cli &
                 v_ts_rayleigh v_ts_hertz v_ts_skin v_prs1
-thermo          1440
+thermo          300
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_battery all custom 14400 20251217_CCD_post_bat_sym_200Mpa_pack_30minCD_1h_10Am2_dt0d001s/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_battery all custom 600 20260317_CCC_post_bat_sym_200Mpa_pack_60s_2Am2_dt0d001s/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
                 f_electrolytePotential f_electronicPotential f_currentLiSE f_hydrostaticStress v_prs1_atom
 
 # 4. Run for 1 timestep, equivelent to 0.001s EC seconds
-run 3600000
+run 60000 # 60 Seconds
