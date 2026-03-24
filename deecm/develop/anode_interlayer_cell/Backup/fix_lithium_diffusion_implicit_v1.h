@@ -46,9 +46,6 @@ class FixLithiumDiffusionImplicit : public Fix {
   double get_Omega_Li(int);
   double compute_mobility(double, double, double);
   double compute_effective_potential(int);
-  double compute_D_CB(double x_norm);
-  double compute_D_particle(int i);
-  void   update_per_atom_D();
 
   // Physical constants
   double R, T, F;
@@ -67,12 +64,9 @@ class FixLithiumDiffusionImplicit : public Fix {
   // Lithium content bounds
   double initial_lithium_content, target_lithium_content, max_lithium_content;
 
-  // Diffusion coefficients
-  //   AM, LM: constant (user-specified)
-  //   CB:     SOC-dependent from GITT rational fit
-  double D_AM;              // m²/s — constant for active material
-  double D_LM;              // m²/s — constant for lithium metal
-  double D_CB_floor;        // m²/s — safety floor for CB rational fit
+  // Diffusion coefficients (m²/s)
+  double D_AM_AM, D_CB_CB;
+  double D_AM_CB, D_AM_LM, D_CB_AM, D_CB_LM;
 
   // Implicit solver parameters
   double diffusion_dt;
