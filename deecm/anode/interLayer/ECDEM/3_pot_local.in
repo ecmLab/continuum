@@ -160,7 +160,7 @@ fix pot all potential/sor omega 1.0 max_iter 10 temperature 303.0 &
     BC_SE_ed current    10.0 &
     BC_SE_el current   -10.0
 
-# IMPLICIT diffusion
+# IMPLICIT diffusion (D_LM = 1.0e-14 for Anode, 0 for anode free)
 fix  diff all lithium_diffusion_implicit AM_type 1 CB_type 2 LM_type 3 &
      diffusion_dt 0.0005 update_every 1 max_iter 500 tolerance 1.0e-2 &
      c_li_max_LM 77101.002 c_li_max_AM 85155.85 c_li_max_CB 27776.39 V_exp_max_AM 10.291 &
