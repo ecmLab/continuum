@@ -108,7 +108,7 @@ fix             integr mobile nve/sphere
 
 #------------------------Output Settings---------------------------------------
 # --- 8. ANALYSIS SETUP ---
-variable        tarp1     equal  100                      # Fabrication pressure (MPa)
+variable        tarp1    equal  250                      # Fabrication pressure (MPa)
 variable        F_total  equal  v_tarp1/(1.6e-4)          # Total downward force (nN)
 variable        N_se     equal  count(se)                # Number of SE particles
 variable        fz_se    equal  -v_F_total/v_N_se        # Per-particle target z-force (nN)
@@ -149,9 +149,16 @@ fix             li_content ptc property/atom/lithium_content initial 0.0 target 
 fix             eq_pot all equilibrium_potential temperature 303.0 AM_material Ag CB_material C &
                 x_max_AM 1.0 x_max_CB 1.0 AM_type 1 CB_type 2 LM_type 3
 
-# SOR solver for potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC)
-fix             potential_sol all potential/sor omega 1.0 max_iter 0 &
-                BC_types 3 4 BC_potentials 0.00 0.00 0.0 conductivity 0.05 0.1 SE_type 2
+# SOR solver for potential with type-based boundary conditions (cathode anode) condutivity (AM, SE, CC) (1 A/m2 = 0.1 mA/cm2)
+fix pot all potential/sor omega 1.0 max_iter 10 temperature 303.0 &
+    AM_type 1 CB_type 2 LM_type 3 SE_type 4 &
+    area 6.25e-12 i_app 1.0 &
+    sigma_el 6.29e7 131.0 0.0 1.08e7 &
+    sigma_ed 6.29e7 131.0 1.08e7 0.0 &
+    BC_LM_el potential  0.0 &
+    BC_LM_ed potential  0.0 &
+    BC_SE_ed current    10.0 &
+    BC_SE_el current   -10.0
 
 # IMPLICIT diffusion
 fix  diff all lithium_diffusion_implicit AM_type 1 CB_type 2 LM_type 3 &
@@ -184,7 +191,8 @@ thermo          ${thermo_freq}
 thermo_modify   lost ignore norm no
 
 # Dump for visualization
-dump            dmp_batt all custom ${dump_freq} post/20260226_Ag_M1C5_vr15_fp100_rest_rt0d01_ddt0d0001_dsp1_STRESS/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+dump            dmp_batt all custom ${dump_freq} post/20260323_Ag_C5_fp250_charge_test6/battery_*.txt id type x y z vx vy vz fx fy fz omegax omegay omegaz radius &
+                f_electrolytePotential f_electronicPotential f_currentElectrolyte f_currentElectronic &
                 f_hydrostaticStress f_lithiumContent f_lithiumConcentration f_lithiumMols f_equilibriumPotential v_prs_atom
 
 # 4. Run EC

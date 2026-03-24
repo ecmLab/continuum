@@ -17,6 +17,11 @@
     
     The implicit system is diagonally dominant → Jacobi convergence guaranteed.
     
+    Current coupling:
+      The electrolyte current (current_el) computed by fix potential/sor
+      ("currentElectrolyte" property/atom) is consumed here as an explicit
+      source term in the cross-flux accumulation.
+      
     Usage in input script:
       fix ID group lithium_diffusion_implicit AM_type 1 CB_type 2 LM_type 3 \
           diffusion_dt 0.5 update_every 100 max_iter 200 tolerance 1e-10 \
@@ -85,7 +90,7 @@ FixLithiumDiffusionImplicit::FixLithiumDiffusionImplicit(LAMMPS *lmp, int narg, 
   lithium_concentration(NULL),
   equilibrium_potential(NULL),
   hydrostatic_stress(NULL),
-  current_SE_Li(NULL),
+  current_el(NULL),
   diffusion_coefficient(NULL),
   lithium_flux(NULL),
   li_mols(NULL),
@@ -95,7 +100,7 @@ FixLithiumDiffusionImplicit::FixLithiumDiffusionImplicit(LAMMPS *lmp, int narg, 
   fix_lithium_concentration(NULL),
   fix_equilibrium_potential(NULL),
   fix_hydrostatic_stress(NULL),
-  fix_current_SE_Li(NULL),
+  fix_current_el(NULL),
   fix_diffusion_coefficient(NULL),
   fix_lithium_flux(NULL),
   fix_li_mols(NULL),
@@ -328,8 +333,12 @@ void FixLithiumDiffusionImplicit::init()
     error->all(FLERR,"Fix lithium_diffusion_implicit requires hydrostaticStress property "
                "(created by fix potential/sor)");
 
-  fix_current_SE_Li = static_cast<FixPropertyAtom*>(
-    modify->find_fix_property("currentSELi","property/atom","scalar",0,0,style,false));
+  // Electrolyte current from fix potential/sor (required for current-driven Li flux)
+  fix_current_el = static_cast<FixPropertyAtom*>(
+    modify->find_fix_property("currentElectrolyte","property/atom","scalar",0,0,style));
+  if(!fix_current_el)
+    error->all(FLERR,"Fix lithium_diffusion_implicit requires currentElectrolyte property "
+               "(created by fix potential/sor)");
 
   fix_diffusion_coefficient = static_cast<FixPropertyAtom*>(
     modify->find_fix_property("diffusionCoefficient","property/atom","scalar",0,0,style));
@@ -426,7 +435,7 @@ void FixLithiumDiffusionImplicit::end_of_step()
   fix_lithium_concentration->do_forward_comm();
   fix_equilibrium_potential->do_forward_comm();
   fix_hydrostatic_stress->do_forward_comm();
-  if(fix_current_SE_Li) fix_current_SE_Li->do_forward_comm();
+  fix_current_el->do_forward_comm();
 
   double sub_dt = diffusion_dt / num_substeps;
 
@@ -505,6 +514,11 @@ void FixLithiumDiffusionImplicit::implicit_diffusion_step(double dt_diff)
   //   where Φ_eff,i = U_OCV,i - σ_h,i * Ω_Li,i / F
   //
   //   This is the stress-augmented driving force from the governing eqn.
+  //
+  //   The electrolyte current (current_el) from the SOR potential solver
+  //   is subtracted as an explicit source: positive current_el[i] means
+  //   ionic current flowing into particle i, which removes Li from the
+  //   host lattice (current flow = Li-ion transport away from the AM).
   // ------------------------------------------------------------------
   for (i = 0; i < nlocal; i++) {
     cross_flux_arr[i] = 0.0;
@@ -562,10 +576,10 @@ void FixLithiumDiffusionImplicit::implicit_diffusion_step(double dt_diff)
       }
     }
 
-    // Subtract SE current contribution (if present)
-    if (current_SE_Li) {
-      cross_flux_arr[i] -= current_SE_Li[i] / F;
-    }
+    // Subtract electrolyte current contribution (from SOR potential solver).
+    // current_el[i] is in [A]; dividing by Faraday's constant converts to
+    // mol/s of Li removed from the host lattice.
+    cross_flux_arr[i] -= current_el[i] / F;
   }
 
   // ------------------------------------------------------------------
@@ -716,7 +730,7 @@ void FixLithiumDiffusionImplicit::updatePtrs()
   lithium_concentration = fix_lithium_concentration->vector_atom;
   equilibrium_potential = fix_equilibrium_potential->vector_atom;
   hydrostatic_stress = fix_hydrostatic_stress->vector_atom;
-  if(fix_current_SE_Li) current_SE_Li = fix_current_SE_Li->vector_atom;
+  current_el = fix_current_el->vector_atom;
   diffusion_coefficient = fix_diffusion_coefficient->vector_atom;
   lithium_flux = fix_lithium_flux->vector_atom;
   li_mols = fix_li_mols->vector_atom;

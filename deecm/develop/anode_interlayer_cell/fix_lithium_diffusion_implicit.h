@@ -89,14 +89,14 @@ class FixLithiumDiffusionImplicit : public Fix {
   // Per-atom property pointers
   double *lithium_content, *lithium_concentration, *equilibrium_potential;
   double *hydrostatic_stress;
-  double *current_SE_Li, *diffusion_coefficient, *lithium_flux;
+  double *current_el, *diffusion_coefficient, *lithium_flux;
   double *li_mols, *initial_volume;
 
   // Fix pointers
   FixPropertyAtom *fix_initial_volume, *fix_lithium_content;
   FixPropertyAtom *fix_lithium_concentration, *fix_equilibrium_potential;
   FixPropertyAtom *fix_hydrostatic_stress;
-  FixPropertyAtom *fix_current_SE_Li, *fix_diffusion_coefficient;
+  FixPropertyAtom *fix_current_el, *fix_diffusion_coefficient;
   FixPropertyAtom *fix_lithium_flux, *fix_li_mols;
   FixPropertyAtomLithiumContent *fix_lithium_content_manager;
 

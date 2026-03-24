@@ -547,12 +547,9 @@ void FixLithiumDiffusion::update_lithium_content()
     // Subtract current contribution from SE (if present)
     // -sum(A * i_SE / F)
     if (current_SE_Li) {
-      lithium_flux[i] -= current_SE_Li[i] / F;
+      lithium_flux[i] -= current_SE_Li[i] / F; // If current_SE_LI is positive flow from AM to SE, so subtract from AM flux
     }
   }
-  
-  // Scaling factor for time acceleration
-  // double s_factor = 2.0e10;
   
   for (i = 0; i < nlocal; i++) {
     if (!(mask[i] & groupbit)) continue;
@@ -590,7 +587,7 @@ void FixLithiumDiffusion::update_lithium_content()
   
   fix_lithium_content->do_forward_comm();
   fix_lithium_concentration->do_forward_comm();
-  fix_li_mols->do_forward_comm();  // ADD THIS - needed by radius_expansion
+  fix_li_mols->do_forward_comm();
 }
 
 /* ---------------------------------------------------------------------- */
