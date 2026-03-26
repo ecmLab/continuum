@@ -3,7 +3,7 @@
 #SBATCH --partition=RM-shared
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=64
-#SBATCH --time=06:00:00
+#SBATCH --time=02:00:00
 #SBATCH --account=mat250014p
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=vazquezm
@@ -13,12 +13,15 @@ set -euo pipefail
 module load anaconda3/2024.10-1
 
 # Run with sbatch active_perc_mod.sh
+# This script processes dump files for different morphologies and mass ratios, computes the number of active Ag atoms, and summarizes the results in a text file.
+# For (mesh_cnt10 mesh_cnt14 mesh_cnt18 mesh_cnt22 mesh_cnt26 mesh_cnt30) is time=06:00:00
 
 SCRIPT_DIR="${SLURM_SUBMIT_DIR:-.}"
 RESULT_ROOT="${SCRIPT_DIR}/results"
 SUMMARY="${SCRIPT_DIR}/active_summary.txt"
 
-MORPH_DIRS=(mesh_cnt10 mesh_cnt14 mesh_cnt18 mesh_cnt22 mesh_cnt26 mesh_cnt30)
+MORPH_DIRS=(mesh_cnt_surface)
+# MORPH_DIRS=(mesh_cnt10 mesh_cnt14 mesh_cnt18 mesh_cnt22 mesh_cnt26 mesh_cnt30)
 
 # Header for summary file
 printf "%-25s %-8s  %8s  %8s  %10s\n" "label" "mr" "num_Ag" "active" "frac" > "$SUMMARY"

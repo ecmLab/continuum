@@ -22,14 +22,14 @@ timestep        1.e-5
 variable        tarp        equal     350   # 30% way to tarp1
 variable        tarp1       equal     500  # Fabrication Pressure (MPa)
 #--------------------------Material Information---------------------------------------------------------
-variable        Eam           equal     160e6   # Metal (Mn-DRX) [kPa] (https://doi.org/10.1007/s10832-016-0057-7)
-variable        vam           equal     0.3     # Metal (Mn-DRX) [-]   (https://doi.org/10.1007/s10832-016-0057-7)
+variable        Eam           equal     195.e6  # Metal (NMC) [kPa] (https://doi.org/10.1016/j.jeurceramsoc.2017.03.048)
+variable        vam           equal     0.25    # Metal (NMC) [-] (https://doi.org/10.1016/j.jeurceramsoc.2017.03.048)
 
-variable        Ecb           equal     35.e6   # MWCNT [kPa] (https://www.nature.com/articles/s41598-017-10279-0)
-variable        vcb           equal     0.27    # MWCNT [-]   (https://www.nature.com/articles/s41598-017-10279-0)
+variable        Ecb           equal     15.e6  # Carbon (AB) [kPa] (https://www.azom.com/properties.aspx?ArticleID=516)
+variable        vcb           equal     0.20    # Carbon (AB) [-] (https://www.azom.com/properties.aspx?ArticleID=516)
 
-variable        Eww           equal     105.e6  # Grade 4 Titanium [kPa] (https://asm.matweb.com/search/specificmaterial.asp?bassnum=mtu040)
-variable        vww           equal     0.37    # Grade 4 Titanium [-]   (https://asm.matweb.com/search/specificmaterial.asp?bassnum=mtu040)
+variable        Eww           equal     200.e6    # Wall [kPa]
+variable        vww           equal     0.4      # Wall [-]
 #---------------------Generate Box----------------------------------------
 shell mkdir -p ${outputdir}
 log ${outputdir}/log_${label}.lammps
@@ -68,8 +68,8 @@ fix     m5 all property/global coefficientRollingFriction peratomtypepair 3 &
 
 # Cohesion energy density (3x3) Units (KPa) 50000 is 50,000 kPa
 fix     m6 all property/global cohesionEnergyDensity peratomtypepair 3 &
-        50000   3.5e6    0 &
-        3.5e6   3.5e6    0 &
+        50000   50000    0 &
+        50000   1.5e6    0 &
         0       0        0
 
 #Define pair style

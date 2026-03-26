@@ -1,3 +1,51 @@
+# =============================================================================
+# active_number.py  —  Active-particle analysis for LIGGGHTS DEM electrodes
+# =============================================================================
+#
+# PURPOSE
+#   Reads a LIGGGHTS dump file and identifies which type-1 "DRX" particles
+#   (e.g. active-material grains) are electrochemically accessible — i.e.
+#   connected to the bottom current-collector via a percolating type-2
+#   conductive network (e.g. carbon black / binder).
+#
+# INPUTS
+#   <input.dump>   LIGGGHTS dump file (single or multi-timestep; last used).
+#                  Required columns: id  type  x  y  z  radius  mass
+#                  Particle types:
+#                    1 = DRX  (active material)
+#                    2 = C    (conductive network)
+#                    3 = Wall (one particle; defines system thickness)
+#
+# OUTPUTS
+#   <output.json>          Summary: total / active DRX count, active volume
+#                          fraction, system thickness, and per-particle
+#                          details (z, radius) for every active DRX particle.
+#   <output.data>          LAMMPS-format data file containing ONLY the active
+#                          type-1 and type-2 particles (diameter + density
+#                          derived from radius and mass), ready for re-import
+#                          into a follow-up simulation.
+#
+# ALGORITHM
+#   1. Parse  — extract particle positions, radii, and masses from the last
+#               timestep; record simulation box bounds.
+#   2. Contact — build a cKDTree over all particle centres; connect any two
+#               particles whose centre-to-centre distance ≤ r_i + r_j.
+#   3. Seed    — mark every type-2 particle touching the bottom wall (z ≤ r)
+#               as a network seed.
+#   4. BFS     — breadth-first search propagates through the type-2 contact
+#               network from the seeds, flagging all reachable (percolating)
+#               conductive particles as "visited".
+#   5. Active  — a type-1 (DRX) particle is active if it sits on the bottom
+#               wall OR touches at least one visited type-2 particle.
+#   6. Export  — write the JSON summary and a filtered LAMMPS .data file
+#               containing only the active particles.
+#
+# USAGE
+#   python active_number.py [input.dump] [output.json]
+#   (defaults to post/rst_mesh_cnt10_mr6.dump / post/active_cnt10_mr6.json)
+# =============================================================================
+
+
 import numpy as np
 import json
 import sys

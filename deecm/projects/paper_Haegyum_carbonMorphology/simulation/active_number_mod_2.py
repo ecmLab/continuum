@@ -13,6 +13,9 @@ output_file = sys.argv[2]
 # ── Parse LIGGGHTS dump (last timestep) ──────────────────────────────
 # Dump may contain multiple timesteps; we use the last one.
 # Column names are read from the ITEM: ATOMS header line.
+# This script analyzes a LIGGGHTS DEM (Discrete Element Method) simulation dump file to determine which type-1 particles (DRX) are "active"
+# — meaning they are in electrical or mechanical contact with a conductive network anchored to the bottom of the simulation domain.
+# Writes a JSON file containing counts, system thickness, active fraction, and per-particle details (z-position, radius) for every active DRX particle.
 
 with open(input_file, 'r') as fh:
     all_lines = fh.readlines()
