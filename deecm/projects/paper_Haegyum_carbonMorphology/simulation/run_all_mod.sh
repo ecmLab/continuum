@@ -4,11 +4,15 @@ set -euo pipefail
 # Submit LIGGGHTS jobs for all morphologies and mass ratios to SLURM
 # Usage: ./run_all.sh
 # Dry Run: DRY_RUN=1 ./run_all.sh
+# Specific MR: MR_FILTER=mr1 ./run_all.sh
+# Multiple MRs: MR_FILTER="mr1 mr2" ./run_all.sh
+# Dry Run with Filter: DRY_RUN=1 MR_FILTER=mr1 ./run_all.sh
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 PROJECT_ROOT=$(cd -- "${SCRIPT_DIR}/.." && pwd)
 RESULT_ROOT="${SCRIPT_DIR}/results"
 DRY_RUN=${DRY_RUN:-0}
+MR_FILTER=${MR_FILTER:-}
 
 MORPH_DIRS=(mesh_cnt_surface)
 # MORPH_DIRS=(mesh_cnt14 mesh_cnt16 mesh_cnt18 mesh_cnt22 mesh_cnt26 mesh_cnt30)
@@ -36,6 +40,12 @@ for morph in "${MORPH_DIRS[@]}"; do
     [[ -e "$datafile" ]] || continue
     
     mr_dir=$(basename "$(dirname "$datafile")")
+
+    # If MR_FILTER is set, skip directories that don't match
+    if [[ -n "$MR_FILTER" && "$mr_dir" != "$MR_FILTER" ]]; then
+      continue
+    fi
+
     outdir="${RESULT_ROOT}/${morph}/${mr_dir}"
     label="${morph}_${mr_dir}"
     
@@ -47,8 +57,8 @@ for morph in "${MORPH_DIRS[@]}"; do
       --account=mat250014p
       --partition=RM-shared
       --nodes=1
-      --ntasks-per-node=48
-      --time=03:30:00
+      --ntasks-per-node=64
+      --time=04:00:00
       --output="${outdir}/%x_%j.out"
       --error="${outdir}/%x_%j.err"
       --export="DATAFILE=${datafile},OUTDIR=${outdir},LABEL=${label}"
