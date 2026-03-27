@@ -112,14 +112,15 @@ thermo          5000
 thermo_modify   lost ignore norm no
 
 # Output to file
-dump    dmp all custom 20000 ${outputdir}/post/rst_${label}.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass v_prs_atom v_poro_atom
+dump    dmp all custom 50000 ${outputdir}/post/rst_${label}.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass v_prs_atom v_poro_atom
 
 #------------------------Compaction Process------------------------------------------------------
 # Start (z=30.0), End (z = 5.5), dt = 1.e-5 
 fix 1 ww move linear 0 0 -20.0
 run 122500
 
-# Start Checking For Porosity 0.40 (Check every 0.2 um)
+fix 1 ww move linear 0 0 -10.0
+# Start Checking For Porosity 0.40 (Check every 0.1 um)
 label loop1
   if "${poro} <= ${tarp}" then "jump SELF loop2a"
 
@@ -128,9 +129,9 @@ jump SELF loop1
 
 label loop2a
 timestep 1.e-6
-fix 1 ww move linear 0 0 -10
+fix 1 ww move linear 0 0 -5.0
 
-# Start Checking For Porosity 0.35 (Check every 0.1 um)
+# Start Checking For Porosity 0.35 (Check every 0.05 um)
 label loop2
   if "${poro} <= ${tarp1}" then "jump SELF loop3a"
 
@@ -138,19 +139,19 @@ label loop2
 jump SELF loop2
 
 label loop3a
-timestep 1.e-7
-fix 1 ww move linear 0 0 -10
+timestep 5.e-8
+fix 1 ww move linear 0 0 -1.0
 
-# Start Checking For Porosity 0.30 (Check every 0.05 um)
+# Start Checking For Porosity 0.30 (Check every 0.01 um)
 label loop3
   if "${poro} <= ${tarp2}" then "jump SELF loop4"
 
-  run 50000
+  run 200000
 jump SELF loop3
 
 label loop4
 fix 1 ww move linear 0 0 0
-run 40000
+run 50000
 
 # Save compacted state
 write_data      ${outputdir}/mdl_por30.data
