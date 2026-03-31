@@ -1,0 +1,166 @@
+# Run with "mpirun -np 12 lmp -in comp.in"
+
+##################################### SIMULATION SETTINGS ###################################################
+
+atom_style      sphere 1
+atom_modify     map array
+boundary        f f s
+comm_modify     vel yes
+units           si
+newton          off
+neighbor        0.1e-6 bin
+neigh_modify    every 1 delay 0 check yes
+timestep        5.e-11
+processors      * * 1
+
+############################## SIMULATION BOUNDING BOX AND INSERT PARTICLES #################################
+
+read_data data/mdl.data
+
+#################################### ADD DIE AND ATOM PARAMETERIZATION ######################################
+
+compute     rad         all     property/atom radius    # Particle Radius [m]
+compute     avgRad      all     reduce ave c_rad        # Average Particle Radius [m]
+variable    avgRadv     equal   c_avgRad
+variable    dieR        equal   20.0e-6                 # Die Radius [m]
+variable    dieH        equal   20.0e-6                 # Die Initial Height [m]
+variable    den         equal   5000                    # Density of SE [kg/m3]
+variable    velc        equal   1.0                     # Plunger Velcity [m/s]
+variable    tarp        equal   50e6                    # Plunger Pressure [Pa]
+
+############################## PARTICLE MATERIAL PROPERTIES AND FORCE MODEL ##################################
+run 0
+pair_style granular
+
+variable Ese      equal 22.1e9                                          # Elastic Modulus [Pa] (LPSCl 22.1 GPa: http://dx.doi.org/10.1149/2.0061602jes )
+variable vse      equal 0.37                                            # Poissons Ratio (LPSCl 0.37: http://dx.doi.org/10.1149/2.0061602jes)
+variable Yse      equal 1.0e6                                           # Yield Strength [Pa] (LPSCl: https://advanced.onlinelibrary.wiley.com/doi/10.1002/adfm.202512635)
+variable SEse     equal 900                                             # Effective surface energy SE [J/m2]
+variable SEww     equal 0                                               # Effective surface energy Wall [J/m2]
+variable psi_b    equal 0.125                                           # Critical confinement ratio [-]
+variable damp     equal 1.0e4*${den}*${avgRadv}*${avgRadv}*${velc}      # Normal direction damping coefficent [kg/s]
+
+variable kt         equal 2/7*${Ese}*${avgRadv}                         # Tangential stiffness coefficient [N/m]
+variable kt_wall    equal 2/7*${Ese}*${avgRadv}                         # Tangential stiffness coefficient [N/m]
+variable xgammat    equal 1.0                                           # Dimensionless multiplier for the normal damping
+variable mu_t       equal 0.3                                           # Tangential (or sliding) friction coefficient SE
+variable mu_t_ww    equal 0.1                                           # Tangential (or sliding) friction coefficient Wall
+
+variable mu_roll     equal 1.0                                              # Rolling friction coefficent SE/wall
+variable k_roll      equal 2.25*${mu_roll}*${mu_roll}*${Ese}*${avgRadv}     # Rolling stiffness coefficient [N/m]
+variable gamma_roll  equal ${damp}                                          # Rolling direction damping coefficent [kg/s]
+
+pair_coeff * * mdr ${Ese} ${vse} ${Yse} ${SEse} ${psi_b} ${damp} &
+    damping mdr 1 &
+    tangential linear_history ${kt} ${xgammat} ${mu_t} &
+    rolling sds ${k_roll} ${gamma_roll} ${mu_roll}
+
+######################################### ADD DIE AND PUNCH WALLS ############################################
+
+# Initial punch displacements (zero during settling, redefined for compression/release)
+variable disp_upper      equal 0.0
+variable disp_lower      equal 0.0
+
+variable wall_mdr string "granular mdr ${Ese} ${vse} ${Yse} ${SEww} ${psi_b} ${damp} &
+    damping mdr 1 &
+    tangential linear_history ${kt_wall} ${xgammat} ${mu_t_ww} &
+    rolling sds ${k_roll} ${gamma_roll} ${mu_roll}"
+
+variable dieHeight2 equal 2*${dieH}
+
+region lowerPunch plane 0 0 0 0 0 1 side in units box move NULL NULL v_disp_lower units box
+region upperPunch plane 0 0 ${dieH} 0 0 -1 side in move NULL NULL v_disp_upper units box
+region die cylinder z 0 0 ${dieR} 0 ${dieHeight2} side in units box
+
+fix lowerPunch all wall/gran/region ${wall_mdr} region lowerPunch contacts
+fix upperPunch all wall/gran/region ${wall_mdr} region upperPunch contacts
+fix die all wall/gran/region ${wall_mdr} region die contacts
+
+# Force on Plunger [N]
+compute     frc     all     reduce sum f_upperPunch[4]
+variable    frcv     equal   c_frc
+
+run 0
+
+#------------------------Pressure Calculation------------------------------------------------------
+
+variable    area        equal   PI*${dieR}*${dieR}  # Punch cross-sectional area [m^2]
+variable    prs         equal   -v_frcv/v_area      # Compaction pressure [Pa]
+variable    prs_atom    atom    v_prs               # Create a per-atom variable that holds the value of prs
+
+#------------------------Porosity Calculation------------------------------------------------------
+variable        posw equal ${dieH}+v_disp_upper              # Z position of ww layer (um)
+
+variable        vol_atom atom (4.0/3.0)*PI*c_rad*c_rad*c_rad
+
+compute         vol_se all reduce sum v_vol_atom    # Total volume of type 1
+
+variable        Vbox   equal v_area*v_posw          # m^3 Box volume: A_base * z_height
+variable        Vsolid equal c_vol_se               # m^3
+
+variable        poro   equal 1.0-(v_Vsolid/v_Vbox) # Porosity = 1 - V_solid / V_box
+variable        poro_atom atom v_poro              # Create a per-atom variable that holds the value of poro
+
+##################################### INTEGRATION #################################################
+
+fix 1 all nve/sphere
+
+########################################### SCREEN OUTPUT  ####################################################
+
+compute       1 all erotate/sphere
+thermo_style  custom dt step atoms ke vol v_prs v_poro v_posw
+thermo        500
+thermo_modify lost ignore norm no
+
+##################################### SET UP DUMP OUTPUTS  ####################################################
+
+dump 1 all custom 2500 post/mdl50.dump id type mass diameter x y z vx vy vz fx fy fz v_poro_atom v_prs_atom
+
+# dump 2 all custom 2500 post/mdl_*.txt id type mass diameter x y z vx vy vz fx fy fz v_poro_atom v_prs_atom
+
+############################################## RUN SIMULATION #################################################
+
+variable step0 equal $(step)
+
+# --- PHASE 1: Move Down ---
+variable disp_upper delete
+variable disp_upper equal -${velc}*(step-${step0})*dt
+# Start (z=20), End (z = 8.5), dt = 5.e-11 [s], v = 1.0 [m/s]
+run 230000
+
+# --- PHASE 2: Update Timestep, Continue Down ---
+timestep 1.e-12
+variable step1      equal $(step)
+variable stroke1    equal ${velc}*(${step1}-${step0})*5.e-11
+variable disp_upper delete
+variable disp_upper equal -(${stroke1}+${velc}*(step-${step1})*dt)
+
+# Check Every 0.25 um
+label loop1
+  if "${prs} >= ${tarp}" then "jump SELF loop2a"
+  run 250000
+jump SELF loop1
+
+label loop2a
+
+# --- PHASE 3: Update Plunger to go UP ---
+variable step2      equal   $(step)
+variable stroke2    equal   ${velc}*(${step2}-${step1})*dt
+variable stroke12   equal   ${stroke1}+${stroke2}
+variable disp_upper delete
+variable disp_upper equal   -(${stroke12}-${velc}*(step-${step2})*dt)
+
+# Check Every 0.50 um
+label loop2
+  if "${prs} <= 1" then "jump SELF loop3a"
+  run 500000
+jump SELF loop2
+
+label loop3a
+
+# Rest
+run 500000
+
+############### WRITE OUTPUT ###############
+
+write_data data/comp50.data
