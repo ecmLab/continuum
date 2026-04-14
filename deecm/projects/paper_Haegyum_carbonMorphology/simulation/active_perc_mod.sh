@@ -3,7 +3,7 @@
 #SBATCH --partition=RM-shared
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=64
-#SBATCH --time=02:00:00
+#SBATCH --time=03:00:00
 #SBATCH --account=mat250014p
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=vazquezm
@@ -20,7 +20,7 @@ SCRIPT_DIR="${SLURM_SUBMIT_DIR:-.}"
 RESULT_ROOT="${SCRIPT_DIR}/results"
 SUMMARY="${SCRIPT_DIR}/active_summary.txt"
 
-MORPH_DIRS=(mesh_cnt_surface)
+MORPH_DIRS=(mesh_cnt_surface mesh_homo)
 # MORPH_DIRS=(mesh_cnt10 mesh_cnt14 mesh_cnt18 mesh_cnt22 mesh_cnt26 mesh_cnt30)
 
 # Header for summary file
@@ -41,7 +41,7 @@ for morph in "${MORPH_DIRS[@]}"; do
     
     mr=$(basename "$mr_dir")
     label="${morph}_${mr}"
-    dump="${mr_dir}post/rst_${label}.dump"
+    dump="${mr_dir}post/rst_pr35_${label}.dump"
     
     if [[ ! -f "$dump" ]]; then
       echo "[warn] No dump file: ${dump}" >&2
