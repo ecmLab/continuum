@@ -19,9 +19,9 @@ neigh_modify    every 1 delay 0 check yes
 echo            both
 timestep        1.e-5
 
-variable        tarp        equal     0.40   # Target Porosity
-variable        tarp1       equal     0.35   # Target Porosity
-variable        tarp2       equal     0.30   # Target Porosity
+variable        tarp        equal     0.45   # Target Porosity
+variable        tarp1       equal     0.40   # Target Porosity
+variable        tarp2       equal     0.35   # Target Porosity
 #--------------------------Material Information---------------------------------------------------------
 variable        Eam           equal     160e6   # Metal (Mn-DRX) [kPa] (https://doi.org/10.1007/s10832-016-0057-7)
 variable        vam           equal     0.3     # Metal (Mn-DRX) [-]   (https://doi.org/10.1007/s10832-016-0057-7)
@@ -112,7 +112,7 @@ thermo          5000
 thermo_modify   lost ignore norm no
 
 # Output to file
-dump    dmp all custom 50000 ${outputdir}/post/rst_${label}.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass v_prs_atom v_poro_atom
+dump    dmp all custom 50000 ${outputdir}/post/rst_pr35_${label}.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass v_prs_atom v_poro_atom
 
 #------------------------Compaction Process------------------------------------------------------
 # Start (z=30.0), End (z = 5.5), dt = 1.e-5 
@@ -120,7 +120,7 @@ fix 1 ww move linear 0 0 -20.0
 run 122500
 
 fix 1 ww move linear 0 0 -10.0
-# Start Checking For Porosity 0.40 (Check every 0.1 um)
+# Start Checking For Porosity 0.45 (Check every 0.1 um)
 label loop1
   if "${poro} <= ${tarp}" then "jump SELF loop2a"
 
@@ -131,7 +131,7 @@ label loop2a
 timestep 1.e-6
 fix 1 ww move linear 0 0 -5.0
 
-# Start Checking For Porosity 0.35 (Check every 0.05 um)
+# Start Checking For Porosity 0.40 (Check every 0.05 um, radius of particle)
 label loop2
   if "${poro} <= ${tarp1}" then "jump SELF loop3a"
 
@@ -139,19 +139,19 @@ label loop2
 jump SELF loop2
 
 label loop3a
-timestep 5.e-8
+timestep 1.e-7
 fix 1 ww move linear 0 0 -1.0
 
-# Start Checking For Porosity 0.30 (Check every 0.01 um)
+# Start Checking For Porosity 0.35 (Check every 0.01 um)
 label loop3
   if "${poro} <= ${tarp2}" then "jump SELF loop4"
 
-  run 200000
+  run 100000
 jump SELF loop3
 
 label loop4
 fix 1 ww move linear 0 0 0
-run 50000
+run 100000
 
 # Save compacted state
-write_data      ${outputdir}/mdl_por30.data
+write_data      ${outputdir}/mdl_pr35.data

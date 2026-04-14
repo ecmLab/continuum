@@ -1,4 +1,5 @@
 ###### DFE Method to compute Particle distribution under pressure #######
+# Run with mpirun /home/jmv8431/sim_local/LIGGGHTS-PUBLIC/src/lmp_auto -in lmp_mr.in
 
 #------------------General Settings for Granular Systems--------------------------------------------
 atom_style      granular
@@ -13,9 +14,9 @@ neigh_modify    every 1 delay 0 check yes
 echo            both
 timestep        1.e-5
 
-variable        tarp        equal     0.40   # Target Porosity
-variable        tarp1       equal     0.35   # Target Porosity
-variable        tarp2       equal     0.30   # Target Porosity
+variable        tarp        equal     0.45   # Target Porosity
+variable        tarp1       equal     0.40   # Target Porosity
+variable        tarp2       equal     0.35   # Target Porosity
 #--------------------------Material Information---------------------------------------------------------
 variable        Eam           equal     160e6   # Metal (Mn-DRX) [kPa] (https://doi.org/10.1007/s10832-016-0057-7)
 variable        vam           equal     0.3     # Metal (Mn-DRX) [-]   (https://doi.org/10.1007/s10832-016-0057-7)
@@ -27,7 +28,7 @@ variable        Eww           equal     105.e6  # Grade 4 Titanium [kPa] (https:
 variable        vww           equal     0.37    # Grade 4 Titanium [-]   (https://asm.matweb.com/search/specificmaterial.asp?bassnum=mtu040)
 #---------------------Generate Box----------------------------------------
 
-read_data        ../mesh_cnt_surface/massratio/mr1/mdl.data
+read_data        ../mesh_cnt_surface/massratio/mr3/mdl.data
 # read_data        ../mesh_cnt30/massratio/mr11/mdl.data
 # read_data        ../mesh_graphene/massratio/mr1/mdl.data
 # read_data        ../mesh_homo/massratio/mr1/mdl.data
@@ -110,12 +111,12 @@ variable       ts_rayleigh equal f_ts_check[1]
 variable       ts_hertz    equal f_ts_check[2]
 variable       ts_skin     equal f_ts_check[3]
 
-thermo_style    custom step atoms ke vol v_prs v_poro c_posw v_ts_rayleigh v_ts_hertz v_ts_skin
+thermo_style    custom dt step atoms ke vol v_prs v_poro c_posw v_ts_rayleigh v_ts_hertz v_ts_skin
 thermo          1000
 thermo_modify   lost ignore norm no
 
 # Output to file
-dump    dmp all custom 5000 post/1_cnt_surface_pck_test_2.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass v_prs_atom v_poro_atom
+dump    dmp all custom 5000 post/cnt_surface_pr35_mr3.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass v_prs_atom v_poro_atom
 # dump    dmp all custom 20000 post/cnt30_mr11_pck3d6.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 # dump    dmp all custom 5000 post/graphene_mr1_pck200.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 # dump    dmp all custom 5000 post/homo_mr1_pck200.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
@@ -130,7 +131,7 @@ dump    dmp all custom 5000 post/1_cnt_surface_pck_test_2.dump id type x y z vx 
 fix 1 ww move linear 0 0 -20
 run 122500
 
-# Start Checking For Porosity 0.40 (Check every 0.2 um)
+# Start Checking For Porosity 0.45 (Check every 0.2 um, Smallest Particle Radius is 0.05)
 label loop1
   if "${poro} <= ${tarp}" then "jump SELF loop2a"
 
@@ -141,7 +142,7 @@ label loop2a
 timestep 1.e-6
 fix 1 ww move linear 0 0 -10
 
-# Start Checking For Porosity 0.35 (Check every 0.1 um)
+# Start Checking For Porosity 0.40 (Check every 0.1 um)
 label loop2
   if "${poro} <= ${tarp1}" then "jump SELF loop3a"
 
@@ -152,7 +153,7 @@ label loop3a
 timestep 1.e-7
 fix 1 ww move linear 0 0 -10
 
-# Start Checking For Porosity 0.30 (Check every 0.05 um)
+# Start Checking For Porosity 0.35 (Check every 0.05 um)
 label loop3
   if "${poro} <= ${tarp2}" then "jump SELF loop4"
 
