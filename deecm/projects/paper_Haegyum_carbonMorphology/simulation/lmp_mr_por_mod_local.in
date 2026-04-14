@@ -21,17 +21,20 @@ variable        tarp2       equal     0.35   # Target Porosity
 variable        Eam           equal     160e6   # Metal (Mn-DRX) [kPa] (https://doi.org/10.1007/s10832-016-0057-7)
 variable        vam           equal     0.3     # Metal (Mn-DRX) [-]   (https://doi.org/10.1007/s10832-016-0057-7)
 
-variable        Ecb           equal     35.e6   # MWCNT [kPa] (https://www.nature.com/articles/s41598-017-10279-0)
-variable        vcb           equal     0.27    # MWCNT [-]   (https://www.nature.com/articles/s41598-017-10279-0)
+#variable        Ecb           equal     35.e6   # MWCNT [kPa] (https://www.nature.com/articles/s41598-017-10279-0)
+#variable        vcb           equal     0.27    # MWCNT [-]   (https://www.nature.com/articles/s41598-017-10279-0)
+
+variable        Ecb           equal     15.e6   # Carbon (AB) [kPa] (https://advanced.onlinelibrary.wiley.com/doi/10.1002/adfm.202423877)
+variable        vcb           equal     0.20    # Carbon (AB) [-]   (https://www.azom.com/properties.aspx?ArticleID=516)
 
 variable        Eww           equal     105.e6  # Grade 4 Titanium [kPa] (https://asm.matweb.com/search/specificmaterial.asp?bassnum=mtu040)
 variable        vww           equal     0.37    # Grade 4 Titanium [-]   (https://asm.matweb.com/search/specificmaterial.asp?bassnum=mtu040)
 #---------------------Generate Box----------------------------------------
 
-read_data        ../mesh_cnt_surface/massratio/mr3/mdl.data
+# read_data        ../mesh_cnt_surface/massratio/mr3/mdl.data
 # read_data        ../mesh_cnt30/massratio/mr11/mdl.data
 # read_data        ../mesh_graphene/massratio/mr1/mdl.data
-# read_data        ../mesh_homo/massratio/mr1/mdl.data
+read_data        ../mesh_homo/massratio/mr1/mdl.data
 # read_data        ../mesh_superp/massratio/mr1/mdl.data
 
 group  ag   type  1
@@ -65,10 +68,15 @@ fix     m5 all property/global coefficientRollingFriction peratomtypepair 3 &
         ${corf_all} ${corf_all} ${corf_all}
 
 # Cohesion energy density (3x3) Units (KPa) 50000 is 50,000 kPa
+#fix     m6 all property/global cohesionEnergyDensity peratomtypepair 3 &
+#        50000   3.5e6    0 &
+#        3.5e6   3.5e6    0 &
+#        0       0        0
+
 fix     m6 all property/global cohesionEnergyDensity peratomtypepair 3 &
-        50000   3.5e6    0 &
-        3.5e6   3.5e6    0 &
-        0       0        0
+        50000   100000    0 &
+        100000  100000    0 &
+        0       0         0
 
 #Define pair style
 pair_style gran model hertz tangential history cohesion sjkr
@@ -116,7 +124,7 @@ thermo          1000
 thermo_modify   lost ignore norm no
 
 # Output to file
-dump    dmp all custom 5000 post/cnt_surface_pr35_mr3.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass v_prs_atom v_poro_atom
+dump    dmp all custom 5000 post/cnt_homo_pr35_mr3.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass v_prs_atom v_poro_atom
 # dump    dmp all custom 20000 post/cnt30_mr11_pck3d6.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 # dump    dmp all custom 5000 post/graphene_mr1_pck200.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 # dump    dmp all custom 5000 post/homo_mr1_pck200.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass

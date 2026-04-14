@@ -14,7 +14,7 @@ RESULT_ROOT="${SCRIPT_DIR}/results"
 DRY_RUN=${DRY_RUN:-0}
 MR_FILTER=${MR_FILTER:-}
 
-MORPH_DIRS=(mesh_cnt_surface)
+MORPH_DIRS=(mesh_homo)
 # MORPH_DIRS=(mesh_cnt14 mesh_cnt16 mesh_cnt18 mesh_cnt22 mesh_cnt26 mesh_cnt30)
 # MORPH_DIRS=(mesh_superp mesh_cnt mesh_graphene mesh_homo)
 
