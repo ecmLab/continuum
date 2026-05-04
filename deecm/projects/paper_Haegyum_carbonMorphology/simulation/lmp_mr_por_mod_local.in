@@ -31,11 +31,8 @@ variable        Eww           equal     105.e6  # Grade 4 Titanium [kPa] (https:
 variable        vww           equal     0.37    # Grade 4 Titanium [-]   (https://asm.matweb.com/search/specificmaterial.asp?bassnum=mtu040)
 #---------------------Generate Box----------------------------------------
 
-# read_data        ../mesh_cnt_surface/massratio/mr3/mdl.data
-# read_data        ../mesh_cnt30/massratio/mr11/mdl.data
-# read_data        ../mesh_graphene/massratio/mr1/mdl.data
-read_data        ../mesh_homo/massratio/mr1/mdl.data
-# read_data        ../mesh_superp/massratio/mr1/mdl.data
+read_data        ../mesh_cntsurface_100/massratio/mr11/mdl.data
+# read_data        ../mesh_homo/massratio/mr1/mdl.data
 
 group  ag   type  1
 group  ac   type  2
@@ -68,24 +65,24 @@ fix     m5 all property/global coefficientRollingFriction peratomtypepair 3 &
         ${corf_all} ${corf_all} ${corf_all}
 
 # Cohesion energy density (3x3) Units (KPa) 50000 is 50,000 kPa
-#fix     m6 all property/global cohesionEnergyDensity peratomtypepair 3 &
-#        50000   3.5e6    0 &
-#        3.5e6   3.5e6    0 &
-#        0       0        0
-
 fix     m6 all property/global cohesionEnergyDensity peratomtypepair 3 &
-        50000   100000    0 &
-        100000  100000    0 &
-        0       0         0
+        50000   3.5e6    0 &
+        3.5e6   3.5e6    0 &
+        0       0        0
+
+#fix     m6 all property/global cohesionEnergyDensity peratomtypepair 3 &
+#        50000   100000    0 &
+#        100000  100000    0 &
+#        0       0         0
 
 #Define pair style
 pair_style gran model hertz tangential history cohesion sjkr
 pair_coeff      * *
 
 fix xwalls1 ptc wall/gran model hertz tangential history primitive type 3 xplane 0
-fix xwalls2 ptc wall/gran model hertz tangential history primitive type 3 xplane 15
+fix xwalls2 ptc wall/gran model hertz tangential history primitive type 3 xplane 30
 fix ywalls1 ptc wall/gran model hertz tangential history primitive type 3 yplane 0
-fix ywalls2 ptc wall/gran model hertz tangential history primitive type 3 yplane 15
+fix ywalls2 ptc wall/gran model hertz tangential history primitive type 3 yplane 30
 fix zwalls1 ptc wall/gran model hertz tangential history primitive type 3 zplane 0
 # Height of Z is 30.040107
 
@@ -94,7 +91,7 @@ fix             integr ptc nve/sphere
 
 #------------------------Pressure Calculation------------------------------------------------------
 compute        frc    ww   reduce sum fz             # Total Force on ww (top layer) in nN
-variable       prs  equal  (c_frc)*4.4444e-6         # Pressure in unit of MPa on ww (15 x 15 um area)
+variable       prs  equal  (c_frc)*1.1111e-06         # Pressure in unit of MPa on ww (30 x 30 um area)
 variable       prs_atom atom v_prs                   # Create a per-atom variable that holds the value of prs
 
 #------------------------Porosity Calculation------------------------------------------------------
@@ -106,33 +103,33 @@ variable        vol_atom atom (4.0/3.0)*PI*c_rad*c_rad*c_rad
 compute         vol_ag ag reduce sum v_vol_atom    # Total volume of type 1 (metal)
 compute         vol_ac ac reduce sum v_vol_atom    # Total volume of type 2 (CNT)
 
-variable        Vbox   equal 225.0*c_posw          # um^3 Box volume: A_base * z_height, where z_height = mean z of type 3 (top wall)
+variable        Vbox   equal 30*30*c_posw          # um^3 Box volume: A_base * z_height, where z_height = mean z of type 3 (top wall)
 variable        Vsolid equal c_vol_ag+c_vol_ac     # um^3
 
 variable        poro   equal 1.0-(v_Vsolid/v_Vbox) # Porosity = 1 - V_solid / V_box
 variable        poro_atom atom v_poro              # Create a per-atom variable that holds the value of poro
 
 # Warn if timestep > 10% of Rayleigh time or 10% of Hertz time
-fix             ts_check all check/timestep/gran 500 0.2 0.1 warn no
+fix             ts_check all check/timestep/gran 10 0.2 0.1 warn no
 
 variable       ts_rayleigh equal f_ts_check[1]
 variable       ts_hertz    equal f_ts_check[2]
 variable       ts_skin     equal f_ts_check[3]
 
 thermo_style    custom dt step atoms ke vol v_prs v_poro c_posw v_ts_rayleigh v_ts_hertz v_ts_skin
-thermo          1000
+thermo          10
 thermo_modify   lost ignore norm no
 
 # Output to file
-dump    dmp all custom 5000 post/cnt_homo_pr35_mr3.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass v_prs_atom v_poro_atom
+dump    dmp all custom 20 post/cntsurface_100_pr35_mr11.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass v_prs_atom v_poro_atom
 # dump    dmp all custom 20000 post/cnt30_mr11_pck3d6.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 # dump    dmp all custom 5000 post/graphene_mr1_pck200.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 # dump    dmp all custom 5000 post/homo_mr1_pck200.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 # dump    dmp all custom 5000 post/superp_mr1_pck200.dump id type x y z vx vy vz fx fy fz omegax omegay omegaz radius mass
 
 #------------------------Stabalize Partciles After Read------------------------------------------------------
-# run 1000
-# quit
+run 1000
+quit
 
 #------------------------Compaction Process------------------------------------------------------
 # Start (z=30.0), End (z = 5.5), dt = 1.e-5
@@ -174,6 +171,4 @@ run 10000
 
 # Save compacted state (Aprox. 2.5-hrs to run with 64 procs)
 # write_data      ../mesh_cnt30/massratio/mr11/mdl_pck3d6.data
-# write_data      ../mesh_graphene/massratio/mr1/mdl_pck200.data
 # write_data      ../mesh_homo/massratio/mr1/mdl_pck200.data
-# write_data      ../mesh_superp/massratio/mr1/mdl_pck200.data

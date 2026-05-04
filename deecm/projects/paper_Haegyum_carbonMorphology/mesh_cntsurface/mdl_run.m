@@ -1,143 +1,180 @@
 %% mdl_run.m
-%  Generates DRX cathode + CNT models. CNT rods wrap around DRX surfaces
-%  in random configurations (geodesic random walks).
-%  If the user-specified L/D cannot place enough CNTs to hit the target
-%  carbon weight ratio, L/D is decreased by 1 and additional shorter rods
-%  are inserted, repeating until the target is met or L/D = min_LD.
-%%% By: Howard Tu, 03/11/2026
+%  Array-job version. One Slurm array task = one mass ratio.
+%  Each task gets the iwt index from $SLURM_ARRAY_TASK_ID and runs
+%  exactly one case, then exits. No parpool, no parfor.
+%%% By: Howard Tu, 03/11/2026   |   HPC array-job version
 clc; clear;
-% "Unit = micro" unit system: Mass: pg, Distance: um, Time: us, Density: pg/um^3
-nWt = 11;
+% Unit: pg, um, us, pg/um^3
 
 %% ============================================================
 %  USER-CONFIGURABLE PARAMETERS
 %% ============================================================
-LD_ratio       = 100;
+LD_ratio       = 10;
 load_mg_cm2    = 10.0;
 box_lz_um      = 30;
 olap_cc        = 0.85;
 olap_dc        = 0.85;
 intra_cc       = 0.85;
 wrap_perturb   = 0.30;
-min_LD         = 5;     % floor for adaptive L/D reduction
+min_LD         = 5;
 
-for iwt = 1:nWt
+%% ============================================================
+%  SELECT WHICH CASE TO RUN
+%% ============================================================
+arr = getenv('SLURM_ARRAY_TASK_ID');
+if isempty(arr)
+    % Fallback: allow manual runs e.g. `IWT=3 matlab -batch mdl_run`
+    arr = getenv('IWT');
+end
+if isempty(arr)
+    error(['mdl_run:noTaskId', ...
+           'No SLURM_ARRAY_TASK_ID (or IWT) set. ', ...
+           'Submit with: sbatch --array=1-11 run_matlab.sh']);
+end
+iwt = str2double(arr);
+if isnan(iwt) || iwt < 1 || iwt ~= round(iwt)
+    error('mdl_run:badTaskId','Invalid task id "%s" (need positive integer).', arr);
+end
 
-[drx,carbon,gst] = particle_info(LD_ratio);
+%% ============================================================
+%  ENSURE OUTPUT DIR EXISTS  (idempotent — safe across array tasks)
+%% ============================================================
+out_dir = fullfile('massratio', sprintf('mr%d', iwt));
+if ~exist('massratio','dir'), mkdir('massratio'); end
+if ~exist(out_dir,'dir'),     mkdir(out_dir);     end
 
-carbon.olap_cc      = olap_cc;
-carbon.olap_dc      = olap_dc;
-carbon.intra_cc     = intra_cc;
-carbon.wrap_perturb = wrap_perturb;
+%% ============================================================
+%  RUN
+%% ============================================================
+t0 = tic;
+fprintf('====== Starting case mr%d on host %s ======\n', iwt, getHostname());
+runOneCase(iwt, LD_ratio, load_mg_cm2, box_lz_um, ...
+           olap_cc, olap_dc, intra_cc, wrap_perturb, min_LD);
+fprintf('====== Case mr%d completed in %.2f minutes ======\n', iwt, toc(t0)/60);
 
-carbon.cluster = rebuildCNTCluster(carbon.dia, carbon.length, carbon.intra_cc);
 
-[sys,drx,carbon] = create_sys(drx, carbon, iwt, box_lz_um, load_mg_cm2);
-sys.cord = zeros(0,7);
+%% ===== Helpers ==============================================
 
-fid  = strcat('massratio/mr',num2str(iwt),'/');
-stmp = ['mkdir ' fid];
-eval(stmp);
+function h = getHostname()
+    [s, h] = system('hostname -s');
+    if s ~= 0, h = 'unknown'; else, h = strtrim(h); end
+end
 
-fprintf('CNT initial L/D = %g  ->  L = %.3f μm, %d beads/rod, spacing = %.4f μm\n', ...
-    carbon.LD_ratio, carbon.length, carbon.cluster.sphere_count, carbon.dia*carbon.intra_cc);
-fprintf('Total particles: DRX = %d, target carbon spheres = %d (%d clusters)\n', ...
-    drx.nTot, carbon.nTot, carbon.nClusters);
-fprintf('Initial target porosity: %6.4f\n', 1-(drx.rVol+carbon.rVol)/sys.vol);
+%% ===== Per-case driver (one mass ratio) =====
+function runOneCase(iwt, LD_ratio, load_mg_cm2, box_lz_um, ...
+                    olap_cc, olap_dc, intra_cc, wrap_perturb, min_LD)
 
-% 1. Insert DRX particles
-sys.cord = insrtPtc(sys, drx, drx.typ, drx.den, 1);
+    rng(iwt, 'twister');   % reproducible per case
 
-% 2. Iteratively wrap CNT rods, dropping L/D by 1 until target carbon
-%    volume is reached (or min_LD hit).
-target_carbon_volume = carbon.vol;
-sphere_volume        = (pi/6) * carbon.dia^3;
-placed_carbon_volume = 0;
-total_inserted       = 0;
-total_failed         = 0;
-current_LD           = LD_ratio;
+    [drx, carbon, gst] = particle_info(LD_ratio);
 
-while placed_carbon_volume < target_carbon_volume && current_LD >= min_LD
-    carbon.LD_ratio = current_LD;
-    carbon.length   = current_LD * carbon.dia;
-    carbon.cluster  = rebuildCNTCluster(carbon.dia, carbon.length, carbon.intra_cc);
+    carbon.olap_cc      = olap_cc;
+    carbon.olap_dc      = olap_dc;
+    carbon.intra_cc     = intra_cc;
+    carbon.wrap_perturb = wrap_perturb;
+    carbon.cluster      = rebuildCNTCluster(carbon.dia, carbon.length, carbon.intra_cc);
 
-    remaining        = target_carbon_volume - placed_carbon_volume;
-    nNeeded          = max(1, round(remaining / carbon.cluster.cluster_volume));
-    carbon.nClusters = nNeeded;
+    [sys, drx, carbon] = create_sys(drx, carbon, iwt, box_lz_um, load_mg_cm2);
+    sys.cord = zeros(0, 7);
 
-    fprintf('CNT batch: L/D=%d, L=%.3f μm, %d beads/rod, target %d rods\n', ...
-        current_LD, carbon.length, carbon.cluster.sphere_count, nNeeded);
+    fid = fullfile('massratio', sprintf('mr%d', iwt));
 
-    [sys, batch_stats] = insertCarbonOnDRXSurface(sys, carbon);
+    fprintf('[mr%d] CNT initial L/D=%g  L=%.3f um, %d beads/rod, spacing=%.4f um\n', ...
+        iwt, carbon.LD_ratio, carbon.length, carbon.cluster.sphere_count, ...
+        carbon.dia*carbon.intra_cc);
+    fprintf('[mr%d] DRX=%d, target carbon spheres=%d (%d clusters)\n', ...
+        iwt, drx.nTot, carbon.nTot, carbon.nClusters);
+    fprintf('[mr%d] Initial target porosity: %6.4f\n', ...
+        iwt, 1-(drx.rVol+carbon.rVol)/sys.vol);
 
-    placed_in_batch      = batch_stats.inserted_clusters * carbon.cluster.sphere_count * sphere_volume;
-    placed_carbon_volume = placed_carbon_volume + placed_in_batch;
-    total_inserted       = total_inserted + batch_stats.inserted_clusters;
-    total_failed         = total_failed + batch_stats.failed_clusters;
+    % 1. Insert DRX
+    sys.cord = insrtPtc(sys, drx, drx.typ, drx.den, 1);
 
-    fprintf('  Placed %d/%d clusters. Carbon volume %.4f / %.4f μm^3 (%.2f%%)\n', ...
-        batch_stats.inserted_clusters, nNeeded, ...
-        placed_carbon_volume, target_carbon_volume, ...
-        100*placed_carbon_volume/max(target_carbon_volume,eps));
+    % 2. Iteratively wrap CNT rods
+    target_carbon_volume = carbon.vol;
+    sphere_volume        = (pi/6) * carbon.dia^3;
+    placed_carbon_volume = 0;
+    total_inserted       = 0;
+    total_failed         = 0;
+    current_LD           = LD_ratio;
 
-    if placed_carbon_volume < target_carbon_volume
-        if current_LD <= min_LD
-            fprintf('Warning: target carbon volume not met at minimum L/D=%d. Stopping.\n', min_LD);
-            break;
+    while placed_carbon_volume < target_carbon_volume && current_LD >= min_LD
+        carbon.LD_ratio = current_LD;
+        carbon.length   = current_LD * carbon.dia;
+        carbon.cluster  = rebuildCNTCluster(carbon.dia, carbon.length, carbon.intra_cc);
+
+        remaining        = target_carbon_volume - placed_carbon_volume;
+        nNeeded          = max(1, round(remaining / carbon.cluster.cluster_volume));
+        carbon.nClusters = nNeeded;
+
+        fprintf('[mr%d] CNT batch: L/D=%d, L=%.3f um, %d beads/rod, target %d rods\n', ...
+            iwt, current_LD, carbon.length, carbon.cluster.sphere_count, nNeeded);
+
+        [sys, batch_stats] = insertCarbonOnDRXSurface(sys, carbon, iwt);
+
+        placed_in_batch      = batch_stats.inserted_clusters * carbon.cluster.sphere_count * sphere_volume;
+        placed_carbon_volume = placed_carbon_volume + placed_in_batch;
+        total_inserted       = total_inserted + batch_stats.inserted_clusters;
+        total_failed         = total_failed + batch_stats.failed_clusters;
+
+        fprintf('[mr%d]   Placed %d/%d clusters. Carbon vol %.4f / %.4f um^3 (%.2f%%)\n', ...
+            iwt, batch_stats.inserted_clusters, nNeeded, ...
+            placed_carbon_volume, target_carbon_volume, ...
+            100*placed_carbon_volume/max(target_carbon_volume,eps));
+
+        if placed_carbon_volume < target_carbon_volume
+            if current_LD <= min_LD
+                fprintf('[mr%d] Warning: target carbon vol not met at min L/D=%d. Stopping.\n', ...
+                    iwt, min_LD);
+                break;
+            end
+            current_LD = current_LD - 5;
         end
-        % If a batch placed nothing, decrement still proceeds via this path.
-        current_LD = current_LD - 5;
     end
-end
 
-carbon_stats = struct('name','CNT_surface', ...
-                      'inserted_clusters',     total_inserted, ...
-                      'failed_clusters',       total_failed, ...
-                      'final_LD',              current_LD, ...
-                      'placed_carbon_volume',  placed_carbon_volume, ...
-                      'target_carbon_volume',  target_carbon_volume);
-
-% 3. Ghost particle layer (top of box)
-gst.max  = min([carbon.dia, min(drx.dia)]);
-gst.nxy  = ceil(3*(sqrt(2)-1) * sys.lx/gst.max);
-gst.dia  = sys.lx/gst.nxy;
-gst.cord = zeros(gst.nxy^2,7);
-gst.cord(:,1) = [size(sys.cord,1)+1 : size(sys.cord,1)+gst.nxy^2];
-gst.cord(:,2) = gst.typ;
-gst.cord(:,3) = gst.dia;
-gst.cord(:,4) = gst.den;
-gst.cord(:,7) = sys.lz + gst.dia/2;
-for ig = 1 : gst.nxy
-    for jg = 1 : gst.nxy
-        gst.cord((ig-1)*gst.nxy+jg,5) = gst.dia/2 + gst.dia*(jg-1);
-        gst.cord((ig-1)*gst.nxy+jg,6) = gst.dia/2 + gst.dia*(ig-1);
+    % 3. Ghost layer
+    gst.max  = min([carbon.dia, min(drx.dia)]);
+    gst.nxy  = ceil(3*(sqrt(2)-1) * sys.lx/gst.max);
+    gst.dia  = sys.lx/gst.nxy;
+    gst.cord = zeros(gst.nxy^2, 7);
+    gst.cord(:,1) = (size(sys.cord,1)+1 : size(sys.cord,1)+gst.nxy^2)';
+    gst.cord(:,2) = gst.typ;
+    gst.cord(:,3) = gst.dia;
+    gst.cord(:,4) = gst.den;
+    gst.cord(:,7) = sys.lz + gst.dia/2;
+    for ig = 1:gst.nxy
+        for jg = 1:gst.nxy
+            gst.cord((ig-1)*gst.nxy+jg, 5) = gst.dia/2 + gst.dia*(jg-1);
+            gst.cord((ig-1)*gst.nxy+jg, 6) = gst.dia/2 + gst.dia*(ig-1);
+        end
     end
+
+    % 4. Output LAMMPS data file
+    out_path = fullfile(fid, 'mdl.data');
+    fileID = fopen(out_path, 'w');
+    if fileID < 0
+        error('Could not open %s for writing.', out_path);
+    end
+    fprintf(fileID, 'LAMMPS data file\n\n');
+    fprintf(fileID, '%6d %6s\n', size(sys.cord,1)+size(gst.cord,1), 'atoms');
+    fprintf(fileID, '\n   3 atom types\n\n');
+    fprintf(fileID, '%23.19f %23.19f %3s %3s\n', 0.0, sys.lx, 'xlo', 'xhi');
+    fprintf(fileID, '%23.19f %23.19f %3s %3s\n', 0.0, sys.ly, 'ylo', 'yhi');
+    fprintf(fileID, '%23.19f %23.19f %3s %3s\n', 0.0, sys.lz+gst.dia, 'zlo', 'zhi');
+    fprintf(fileID, '\nAtoms # sphere\n\n');
+    fprintf(fileID, '%5d %4d %8.5f %8.5f %20.15f %20.15f %20.15f\n', sys.cord');
+    fprintf(fileID, '%5d %4d %8.5f %8.5f %20.15f %20.15f %20.15f\n', gst.cord');
+    fclose(fileID);
+
+    fprintf('[mr%d] Final: clusters placed=%d, failed=%d, final L/D=%d\n', ...
+        iwt, total_inserted, total_failed, current_LD);
+    fprintf('[mr%d] Carbon vol realized: %.4f / %.4f um^3 (%.2f%%)\n\n', ...
+        iwt, placed_carbon_volume, target_carbon_volume, ...
+        100*placed_carbon_volume/max(target_carbon_volume,eps));
 end
 
-% 4. Output LAMMPS data file
-stmp   = strcat(fid,'mdl.data');
-fileID = fopen(stmp,'w');
-fprintf(fileID,'LAMMPS data file\n\n');
-fprintf(fileID,'%6d %6s\n',size(sys.cord,1)+size(gst.cord,1),'atoms');
-fprintf(fileID,'\n   3 atom types\n\n');
-fprintf(fileID,'%23.19f %23.19f %3s %3s\n',0.0, sys.lx, 'xlo', 'xhi');
-fprintf(fileID,'%23.19f %23.19f %3s %3s\n',0.0, sys.ly, 'ylo', 'yhi');
-fprintf(fileID,'%23.19f %23.19f %3s %3s\n',0.0, sys.lz+gst.dia, 'zlo', 'zhi');
-fprintf(fileID,'\nAtoms # sphere\n\n');
-fprintf(fileID,'%5d %4d %8.5f %8.5f %20.15f %20.15f %20.15f\n',sys.cord');
-fprintf(fileID,'%5d %4d %8.5f %8.5f %20.15f %20.15f %20.15f\n',gst.cord');
-fclose(fileID);
 
-fprintf('Final: clusters placed = %d, failed = %d, final L/D = %d\n', ...
-    carbon_stats.inserted_clusters, carbon_stats.failed_clusters, carbon_stats.final_LD);
-fprintf('Carbon volume realized: %.4f / %.4f μm^3 (%.2f%%)\n\n', ...
-    placed_carbon_volume, target_carbon_volume, ...
-    100*placed_carbon_volume/max(target_carbon_volume,eps));
-end
-
-
-%% ===== CNT cluster rebuilder (consistent with particle_info) =====
+%% ===== CNT cluster rebuilder (matches particle_info) =====
 function cluster = rebuildCNTCluster(base_dia, length_um, intra_cc)
     if length_um <= 0
         length_um = base_dia;
@@ -155,10 +192,9 @@ function cluster = rebuildCNTCluster(base_dia, length_um, intra_cc)
 end
 
 
-%% ===== Surface-attached CNT placement =====
-
-function [sys, stats] = insertCarbonOnDRXSurface(sys, carbon)
-    stats = struct('name', 'CNT_surface', 'inserted_clusters', 0, 'failed_clusters', 0);
+%% ===== Surface-attached CNT placement (with spatial hash) =====
+function [sys, stats] = insertCarbonOnDRXSurface(sys, carbon, iwt)
+    stats = struct('name','CNT_surface','inserted_clusters',0,'failed_clusters',0);
     if carbon.nClusters <= 0
         return;
     end
@@ -166,32 +202,61 @@ function [sys, stats] = insertCarbonOnDRXSurface(sys, carbon)
     if isempty(drx_particles)
         error('No DRX particles found. Cannot attach CNTs to surfaces.');
     end
-    fprintf('Wrapping %d CNT rods (L/D=%g) around DRX surfaces...\n', ...
-        carbon.nClusters, carbon.LD_ratio);
+
+    max_dia   = max(max(sys.cord(:,3)), carbon.dia);
+    cell_size = max_dia;
+    cluster_size   = carbon.cluster.sphere_count;
+    extra_capacity = carbon.nClusters * cluster_size + 64;
+    H = hashInit(sys.lx, sys.ly, sys.lz + cell_size, cell_size, ...
+                 size(sys.cord,1) + extra_capacity);
+    H = hashAddBatch(H, sys.cord(:,5:7), sys.cord(:,3), sys.cord(:,2));
+
+    fprintf('[mr%d] Wrapping %d CNT rods (L/D=%g)...\n', ...
+        iwt, carbon.nClusters, carbon.LD_ratio);
+
+    new_atoms = zeros(carbon.nClusters * cluster_size, 7);
+    new_count = 0;
+    sys_n0    = size(sys.cord, 1);
+
     for c = 1:carbon.nClusters
-        [placed, newAtoms] = placeCNTTangentially(sys, carbon, drx_particles);
+        [placed, positions] = placeCNTTangentially(sys, carbon, drx_particles, H);
         if placed
-            sys.cord = [sys.cord; newAtoms]; %#ok<AGROW>
+            n   = size(positions, 1);
+            ids = (sys_n0 + new_count + 1 : sys_n0 + new_count + n).';
+            block = [ids, ...
+                     repmat(carbon.typ, n, 1), ...
+                     repmat(carbon.dia, n, 1), ...
+                     repmat(carbon.den, n, 1), ...
+                     positions];
+            new_atoms(new_count+1 : new_count+n, :) = block;
+            H = hashAddBatch(H, positions, ...
+                             repmat(carbon.dia, n, 1), ...
+                             repmat(carbon.typ, n, 1));
+            new_count = new_count + n;
             stats.inserted_clusters = stats.inserted_clusters + 1;
         else
             stats.failed_clusters = stats.failed_clusters + 1;
         end
         if mod(c, 100) == 0
-            fprintf('  progress %d/%d\n', c, carbon.nClusters);
+            fprintf('[mr%d]   progress %d/%d\n', iwt, c, carbon.nClusters);
         end
+    end
+
+    if new_count > 0
+        sys.cord = [sys.cord; new_atoms(1:new_count, :)];
     end
 end
 
-function [placed, newAtoms] = placeCNTTangentially(sys, carbon, drx_particles)
+function [placed, positions] = placeCNTTangentially(sys, carbon, drx_particles, H)
     placed       = false;
-    newAtoms     = [];
+    positions    = [];
     max_attempts = 5000;
     nDRX    = size(drx_particles, 1);
     c_r     = carbon.dia / 2;
     nSeg    = carbon.cluster.sphere_count;
     spacing = carbon.dia * carbon.intra_cc;
 
-    for attempt = 1:max_attempts
+    for attempt = 1:max_attempts %#ok<NASGU>
         idx_drx    = randi(nDRX);
         drx_center = drx_particles(idx_drx, 5:7);
         drx_r      = drx_particles(idx_drx, 3) / 2;
@@ -211,31 +276,31 @@ function [placed, newAtoms] = placeCNTTangentially(sys, carbon, drx_particles)
             continue;
         end
 
-        if canPlace(sys, positions, carbon.dia, carbon.olap_cc, carbon.olap_dc)
-            placed   = true;
-            newAtoms = buildAtomBlock(sys, positions, carbon);
-            break;
+        if canPlaceHash(H, positions, carbon.dia, carbon.olap_cc, carbon.olap_dc)
+            placed = true;
+            return;
         end
     end
+    positions = [];
 end
 
 function positions = randomGeodesicWalk(center, R, nSeg, d_theta, perturb)
     u = randn(1,3); u = u / norm(u);
     t = randn(1,3); t = t - dot(t,u)*u; t = t / norm(t);
     positions = zeros(nSeg, 3);
+    cd = cos(d_theta); sd = sin(d_theta);
     for i = 1:nSeg
         positions(i,:) = center + R*u;
-        if i == nSeg
-            break;
-        end
-        u_new = u*cos(d_theta) + t*sin(d_theta);
-        t_new = -u*sin(d_theta) + t*cos(d_theta);
+        if i == nSeg, break; end
+        u_new = u*cd + t*sd;
+        t_new = -u*sd + t*cd;
         u = u_new / norm(u_new);
         t = t_new - dot(t_new, u)*u;
         t = t / norm(t);
         if perturb > 0
             phi = (rand-0.5) * 2 * perturb;
-            t = t*cos(phi) + cross(u,t)*sin(phi);
+            cp = cos(phi); sp = sin(phi);
+            t = t*cp + cross(u,t)*sp;
             t = t - dot(t,u)*u;
             t = t / norm(t);
         end
@@ -244,6 +309,10 @@ end
 
 function tf = hasSelfCollision(positions, spacing)
     n = size(positions, 1);
+    if n < 3
+        tf = false;
+        return;
+    end
     min_sq = (spacing * 0.95)^2;
     tf = false;
     for i = 1:n-2
@@ -255,40 +324,97 @@ function tf = hasSelfCollision(positions, spacing)
     end
 end
 
-function tf = canPlace(sys, positions, dia, olap_cc, olap_dc)
-    tf = true;
-    if isempty(sys.cord)
-        return;
+
+%% ===== Spatial hash =====
+function H = hashInit(lx, ly, lz, cell_size, capacity)
+    H.cs = cell_size;
+    H.nx = max(1, ceil(lx / cell_size));
+    H.ny = max(1, ceil(ly / cell_size));
+    H.nz = max(1, ceil(lz / cell_size));
+    H.cells = cell(H.nx, H.ny, H.nz);
+    H.pos = zeros(capacity, 3);
+    H.dia = zeros(capacity, 1);
+    H.typ = zeros(capacity, 1);
+    H.n   = 0;
+end
+
+function H = hashAddBatch(H, positions, diameters, types)
+    n = size(positions, 1);
+    if n == 0, return; end
+    cap = size(H.pos, 1);
+    if H.n + n > cap
+        new_cap = max(cap*2, H.n + n + 1024);
+        H.pos(new_cap, 3) = 0;
+        H.dia(new_cap, 1) = 0;
+        H.typ(new_cap, 1) = 0;
     end
-    for i = 1:size(positions,1)
-        pos   = positions(i,:);
-        mnBnd = pos - dia;
-        mxBnd = pos + dia;
-        nearby = sys.cord(sys.cord(:,5) >= mnBnd(1) & sys.cord(:,5) <= mxBnd(1) & ...
-                          sys.cord(:,6) >= mnBnd(2) & sys.cord(:,6) <= mxBnd(2) & ...
-                          sys.cord(:,7) >= mnBnd(3) & sys.cord(:,7) <= mxBnd(3), :);
-        if isempty(nearby)
+    rng_idx = H.n + (1:n).';
+    H.pos(rng_idx, :) = positions;
+    H.dia(rng_idx)    = diameters;
+    H.typ(rng_idx)    = types;
+
+    ix = max(1, min(H.nx, ceil(positions(:,1) / H.cs)));
+    iy = max(1, min(H.ny, ceil(positions(:,2) / H.cs)));
+    iz = max(1, min(H.nz, ceil(positions(:,3) / H.cs)));
+    for k = 1:n
+        H.cells{ix(k), iy(k), iz(k)}(end+1, 1) = rng_idx(k);
+    end
+    H.n = H.n + n;
+end
+
+function tf = canPlaceHash(H, positions, dia, olap_cc, olap_dc)
+    tf = true;
+    if H.n == 0, return; end
+    cs = H.cs;
+
+    for i = 1:size(positions, 1)
+        pos = positions(i, :);
+        ixmin = max(1,    ceil((pos(1) - dia) / cs));
+        ixmax = min(H.nx, ceil((pos(1) + dia) / cs));
+        iymin = max(1,    ceil((pos(2) - dia) / cs));
+        iymax = min(H.ny, ceil((pos(2) + dia) / cs));
+        izmin = max(1,    ceil((pos(3) - dia) / cs));
+        izmax = min(H.nz, ceil((pos(3) + dia) / cs));
+        if ixmin > ixmax || iymin > iymax || izmin > izmax
             continue;
         end
-        dist_sq     = (pos(1) - nearby(:,5)).^2 + (pos(2) - nearby(:,6)).^2 + (pos(3) - nearby(:,7)).^2;
-        min_dist_sq = ((dia + nearby(:,3))/2).^2;
 
-        tol = ones(size(nearby,1), 1);
-        tol(nearby(:,2) == 2) = olap_cc;
-        tol(nearby(:,2) == 1) = olap_dc;
+        nC = (ixmax-ixmin+1) * (iymax-iymin+1) * (izmax-izmin+1);
+        bufs = cell(nC, 1);
+        k = 0;
+        for ix = ixmin:ixmax
+            for iy = iymin:iymax
+                for iz = izmin:izmax
+                    k = k + 1;
+                    bufs{k} = H.cells{ix, iy, iz};
+                end
+            end
+        end
+        idxs = vertcat(bufs{:});
+        if isempty(idxs), continue; end
+
+        nb_pos = H.pos(idxs, :);
+        nb_dia = H.dia(idxs);
+        nb_typ = H.typ(idxs);
+
+        in_box = nb_pos(:,1) >= pos(1)-dia & nb_pos(:,1) <= pos(1)+dia & ...
+                 nb_pos(:,2) >= pos(2)-dia & nb_pos(:,2) <= pos(2)+dia & ...
+                 nb_pos(:,3) >= pos(3)-dia & nb_pos(:,3) <= pos(3)+dia;
+        if ~any(in_box), continue; end
+        nb_pos = nb_pos(in_box, :);
+        nb_dia = nb_dia(in_box);
+        nb_typ = nb_typ(in_box);
+
+        dist_sq     = (pos(1)-nb_pos(:,1)).^2 + (pos(2)-nb_pos(:,2)).^2 + (pos(3)-nb_pos(:,3)).^2;
+        min_dist_sq = ((dia + nb_dia)/2).^2;
+
+        tol = ones(numel(nb_dia), 1);
+        tol(nb_typ == 2) = olap_cc;
+        tol(nb_typ == 1) = olap_dc;
 
         if any(dist_sq < min_dist_sq .* tol)
             tf = false;
             return;
         end
-    end
-end
-
-function block = buildAtomBlock(sys, positions, carbon)
-    n         = size(positions, 1);
-    block     = zeros(n, 7);
-    start_idx = size(sys.cord, 1);
-    for i = 1:n
-        block(i,:) = [start_idx + i, carbon.typ, carbon.dia, carbon.den, positions(i,:)];
     end
 end
