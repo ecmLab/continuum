@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=mat_10
+#SBATCH --job-name=mat_60
 #SBATCH --account=interlayer
 #SBATCH --partition=shared
 #SBATCH --qos=normal
 #SBATCH --array=1-11
-#SBATCH --time=03:00:00
+#SBATCH --time=04:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
