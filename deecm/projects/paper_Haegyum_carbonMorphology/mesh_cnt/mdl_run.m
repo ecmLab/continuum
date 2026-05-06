@@ -4,7 +4,7 @@
 clc; clear;
 % "Unit = micro" unit system is used to be consistent with the LAMMPS input file
 % Mass: picograms, Distance: micrometers, time:microseconds, density:picograms/micrometer^3
-nWt    = 11;  
+nWt    = 11; %11  
 
 for iwt = 1:nWt
 
@@ -15,7 +15,7 @@ for iwt = 1:nWt
 sys.cord = [];
 
 % 0. Generate folder of different files
-    fid = strcat('massratio/mr',num2str(iwt),'/');
+    fid = strcat('mesh_cnt10/massratio/mr',num2str(iwt),'/');
     stmp = ['mkdir ' fid];
     eval(stmp);
 

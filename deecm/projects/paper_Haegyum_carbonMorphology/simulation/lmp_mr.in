@@ -93,7 +93,7 @@ compute_modify  thermo_temp dynamic/dof yes
 label loop1
   run   2000
   if "${prs} > ${press_tgt}" then "jump SELF loop2"
-jump mr.in loop1
+jump SELF loop1
 
 # 2. Run second period: hold to pressure = 200MPa so that kinetic energy decrease
 label loop2

@@ -1,0 +1,103 @@
+# Example LAMMPS/LIGGGHTS input script for Metal-Carbon lithium diffusion system
+# Metal (type 1) - e.g., Ag particles that alloy with Li
+# Carbon (type 2) - Fully lithiated carbon acting as Li pathway
+#
+# Usage: fix metal_carbon_diffusion all metal_carbon_diffusion [options]
+#        fix metal_radius_expansion all metal_radius_expansion [options]
+
+### Environment Setup
+units         micro           # micro unit system (length: μm, time: μs, mass: pg)
+atom_style    sphere 1
+boundary      fm fm fm
+comm_modify   vel yes
+neighbor      0.001 bin
+neigh_modify  every 1 delay 0
+timestep      0.00001         # Time step in μs (10 ns)
+
+### Read restart
+read_restart ../pack.restart
+
+### Define groups
+group  metal  type 1
+group  carbon type 2
+group  all_particles type 1 2
+
+### Granular Force Fields (example - adjust for your system)
+pair_style gran/hertz/history 100000 50000 1000 NULL 0.5 1
+pair_coeff * *
+
+### NVE integration
+fix nve_fix all nve/sphere
+
+### Metal-Carbon Lithium Diffusion Fix
+# Arguments:
+#   metal_type N        - atom type for metal particles (default: 1)
+#   carbon_type N       - atom type for carbon particles (default: 2)
+#   c_li_max VALUE      - max Li concentration in carbon (mol/m³, default: 76900)
+#   D_Li_C VALUE        - Li diffusion coefficient in carbon (m²/s, default: 1e-14)
+#   D_Li_metal VALUE    - Li diffusion coefficient in metal (m²/s, default: 1e-14)
+#   source TYPE COORD THICKNESS C_SOURCE
+#                       - defines infinite Li source region
+#                       - TYPE: zlo, zhi, xlo, xhi, ylo, yhi
+#                       - COORD: coordinate of source plane (μm)
+#                       - THICKNESS: thickness of source region (μm)
+#                       - C_SOURCE: Li concentration at source (mol/m³)
+
+fix diffusion all metal_carbon_diffusion &
+    metal_type 1 &
+    carbon_type 2 &
+    c_li_max 76900.0 &
+    D_Li_C 1.0e-14 &
+    D_Li_metal 1.0e-14 &
+    source zlo 0.0 0.05 76900.0
+
+### Metal Radius Expansion Fix
+# Arguments:
+#   metal_type N        - atom type for metal particles (default: 1)
+#   carbon_type N       - atom type for carbon particles (default: 2)
+#   update_every N      - steps between radius updates (default: 10)
+#   Omega_metal VALUE   - molar volume of metal (m³/mol, default: 10.96e-6 for Ag)
+#   Omega_Li_eff VALUE  - effective molar volume of Li in alloy (m³/mol, default: 9.0e-6)
+
+fix expansion all metal_radius_expansion &
+    metal_type 1 &
+    carbon_type 2 &
+    update_every 100 &
+    Omega_metal 10.96e-6 &
+    Omega_Li_eff 9.0e-6
+
+### Wall definitions (if needed)
+variable sxy equal 2.5
+variable sz  equal 2.0
+
+fix xwall all wall/gran hertz/history 100000 50000 1000 NULL 0.5 1 xplane 0.0 ${sxy}
+fix ywall all wall/gran hertz/history 100000 50000 1000 NULL 0.5 1 yplane 0.0 ${sxy}
+fix zwall all wall/gran hertz/history 100000 50000 1000 NULL 0.5 1 zplane 0.0 ${sz}
+
+### Compute and output
+# Average lithium flux (from diffusion fix)
+variable avg_flux equal f_diffusion
+
+# Radius expansion diagnostics (from expansion fix)
+variable update_count equal f_expansion
+variable avg_expansion equal f_expansion[1]
+variable avg_li_ratio equal f_expansion[2]
+
+### Thermo output
+thermo_style custom step atoms ke vol v_avg_flux v_update_count v_avg_expansion v_avg_li_ratio
+thermo 1000
+thermo_modify lost ignore norm no
+
+### Dump output
+dump 1 all custom 10000 post/dump*.lmp &
+    id type x y z vx vy vz radius mass &
+    f_diffusion_lithiumContent &
+    f_diffusion_lithiumConcentration &
+    f_diffusion_lithiumMols &
+    f_diffusion_metalMols
+
+### Run simulation
+run 1000000
+
+### Write restart
+write_restart metal_carbon.restart
