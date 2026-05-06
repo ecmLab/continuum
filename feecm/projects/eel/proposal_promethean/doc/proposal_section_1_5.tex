@@ -1,0 +1,103 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{subcaption}
+\usepackage{caption}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+\setlength{\parskip}{4pt plus 1pt}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+\noindent\textbf{1.5 Mechano-electrochemical simulation and digital
+twin development (RIT)}
+
+The RIT team will lead theoretical efforts, including AI-enabled
+atomistic calculations of key materials involved in the cell design
+and an interpretable AI-driven electro--chemo--mechanical digital twin
+that quantitatively determines design parameters.
+
+\textbf{Subtask I: Material-parameter calculation.}
+AI-enabled DFT/MD calculations will estimate adhesion energies for
+LVPF/PTFE, graphite/PTFE, and electrode/GPE interfaces, which define
+cohesive parameters for debonding and contact-retention modeling.
+MD/coarse-grained simulations will compute GPE modulus, ionic
+conductivity, and relaxation time as functions of fluorinated-acrylate
+and liquid-electrolyte fractions.  Continuum composite calculations
+will estimate package shrink stress and barrier-layer stiffness as
+functions of shrink strain, BN loading, coating modulus, and coating
+thickness.
+
+\textbf{Subtask II: Digital twin development (Fig.~\ref{fig:dt}a).}
+A coupled chemo-mechanical model integrates Subtask~I parameters and
+experiment with the cell-level wrapped-pouch geometry.
+Polymerization-induced eigenstrains in the GPE
+($\varepsilon_{\rm GPE}$) and the conformal package
+($\varepsilon_{\rm pkg}$), together with lithiation-driven electrode
+breathing and any external stack pressure $\sigma_{\rm stack}$,
+generate the through-thickness contact pressure $\langle p_c\rangle$.
+A pressure-dependent contact resistance
+$R_c(p_c) = R_0\,e^{-\alpha p_c}$ closes the model and yields the
+central output, the contact-stability metric
+$\Pi_c = \langle p_c\rangle/p_{\min}$, where $p_{\min}$ is the stress
+required to maintain $R_c \le 10$--$20$~m$\Omega\cdot$cm$^2$.  Design
+maps over $(\varepsilon_{\rm pkg}, \varepsilon_{\rm GPE}, E_{\rm sep},
+\sigma_{\rm stack})$, with secondary axes for PTFE fraction (3--8\%),
+CNT loading (1--5 wt\%), collector porosity (20--60\%), and electrode
+thickness, identify operating windows where $\Pi_c \ge 1$, ionic
+conductivity $\ge 1$~mS\,cm$^{-1}$, and inactive mass $\le 15\%$ are
+simultaneously met without rigid compression.
+
+\textbf{Preliminary result.}
+Figure~\ref{fig:dt}b maps $\Pi_c$ at the pressure-free condition
+($\sigma_{\rm stack}=0$): package shrink $\varepsilon_{\rm pkg} \gtrsim
+0.07$ alone clears $\Pi_c = 1$ without external compression.  Three
+actionable findings emerge.  (i)~$\varepsilon_{\rm pkg}$ is the
+dominant linear lever, with $\Pi_c \propto \varepsilon_{\rm pkg}$ at
+fixed $\varepsilon_{\rm GPE}$.  (ii)~$\varepsilon_{\rm GPE}$ must be
+co-designed with $\varepsilon_{\rm pkg}$: high $\varepsilon_{\rm GPE}$
+at low $\varepsilon_{\rm pkg}$ locally unloads the separator--cathode
+interface and risks debonding.  (iii)~Stiffening the GPE
+(Fig.~\ref{fig:dt}c) provides a useful but diminishing-returns boost
+that saturates near $E_{\rm sep} \approx 25$~MPa.  Together these
+identify an engineering window---$\varepsilon_{\rm pkg} \in [0.07,
+0.10]$, $\varepsilon_{\rm GPE} \le 0.05$, $E_{\rm sep} \ge 10$~MPa---
+that meets contact stability without rigid compression.
+
+\begin{figure}[h]
+  \centering
+  \begin{subfigure}[b]{0.32\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/geometry_schematic.pdf}
+    \caption{}
+    \label{fig:dt-a}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/prop_heatmap_sigma0.pdf}
+    \caption{}
+    \label{fig:dt-b}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/prop_E_sep_sigma0.pdf}
+    \caption{}
+    \label{fig:dt-c}
+  \end{subfigure}
+  \caption{(a)~Wrapped-pouch cross-section: polymer envelope (hatched)
+  wraps the active stack and supplies through-thickness compression
+  via cure shrinkage.  (b)~$\Pi_c$ over
+  $(\varepsilon_{\rm pkg},\,\varepsilon_{\rm GPE})$ at
+  $\sigma_{\rm stack}=0$, $E_{\rm sep}=10$~MPa; white contour marks
+  $\Pi_c=1$.  (c)~$\Pi_c$ vs.\ GPE modulus at
+  $\varepsilon_{\rm GPE}=0.02$; diminishing returns above $E_{\rm sep}
+  \approx 25$~MPa.}
+  \label{fig:dt}
+\end{figure}
+
+\end{document}

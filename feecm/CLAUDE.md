@@ -4,11 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-FEECM (Finite Element Electrochemistry) is a collection of MOOSE-based applications for modeling battery and electrochemical systems. It contains three main applications:
+FEECM (Finite Element Electrochemistry) is a collection of MOOSE-based applications for modeling battery and electrochemical systems. It contains four applications:
 
-- **eel**: A parallel finite-element code for modeling battery-related physics including mass transport, electrostatics, mechanical deformation, and thermal effects
-- **ec_beta**: Electrochemistry beta version (passed testing phase, under development) 
-- **ecm_test**: Electro-chemo-mechanics test version (not yet passed testing phase)
+- **ec_beta**: Electrochemistry beta version — electrochemistry only (Butler-Volmer, ion transport, current density). Easiest entry point.
+- **ecm_test**: Electro-chemo-mechanics test version — adds mechanics coupling on top of electrochemistry.
+- **tecm_test**: Thermal-electro-chemo-mechanics — most comprehensive, also adds thermal physics. Active development; forked from `eel` and extended.
+- **eel**: Parallel finite-element code for battery physics (mass transport, electrostatics, mechanical deformation, thermal). Originally from literature (UChicago Argonne, 2023); serves as the baseline for `tecm_test`.
+
+## Repository Layout
+
+```
+feecm/
+├── ec_beta/      ← app source + build artifacts
+├── ecm_test/
+├── eel/
+├── tecm_test/
+└── projects/     ← all input files (.i) and project work, separated from app source
+    ├── problems-ecBeta/
+    ├── problems-ecmTest/
+    ├── problems-eel/
+    └── problems-tecmTest/
+```
+
+The `projects/` folder is the science workspace; the four app folders are the tooling. Each app folder still has its own `doc/` for documenting the app itself; project-level scientific writeups live under `projects/<name>/doc/`.
 
 ## Build System
 
@@ -34,9 +52,11 @@ cd eel && make -j N
 Each application follows MOOSE app structure:
 - `src/`: Source code organized by object types (kernels, materials, bcs, etc.)
 - `include/`: Header files mirroring src structure
-- `problems/`: Input files (.i) for simulations and test cases
 - `test/`: Test framework files
-- `doc/`: Documentation and configuration
+- `doc/`: Documentation describing the app itself
+- `<app>-opt`: Compiled optimized executable (note: ecm_test's executable is named `ecm-opt`, not `ecm_test-opt`)
+
+Input files (.i) for simulations and test cases live **outside** the app folders, under the top-level `projects/problems-<app>/` trees.
 
 ## Testing
 
@@ -60,10 +80,23 @@ Each application has test runners:
 ### Correct Workflow:
 ```bash
 # Navigate to input file directory first
-cd examples/phase2_EDL/
-# Then run with relative path to executable
-../../tecm_test-opt -i single_ion.i
+cd projects/problems-tecmTest/phase2_edl/
+# Then run with relative path to the app's executable
+../../../tecm_test/tecm_test-opt -i single_ion.i
 ```
+
+The relative path is `../../../<app>/<exe>`: three `..` to climb out of `projects/problems-<app>/<name>/` to `feecm/`, then into the app folder.
+
+### Per-app executable paths (from a project subdirectory):
+
+| Project tree | Executable invocation |
+|---|---|
+| `projects/problems-ecBeta/<name>/`  | `../../../ec_beta/ec_beta-opt -i <file>.i` |
+| `projects/problems-ecmTest/<name>/` | `../../../ecm_test/ecm-opt -i <file>.i` |
+| `projects/problems-eel/<name>/`     | `../../../eel/eel-opt -i <file>.i` |
+| `projects/problems-tecmTest/<name>/`| `../../../tecm_test/tecm_test-opt -i <file>.i` |
+
+If a project lives more than one level deep under its `problems-<app>/` tree (e.g., `projects/problems-ecBeta/paper_X/case1/`), add one more `..` for each extra level.
 
 ### Why this matters:
 - MOOSE resolves relative paths (output directories, file references) relative to current working directory

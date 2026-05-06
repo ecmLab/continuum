@@ -1,0 +1,85 @@
+# PTFE-on-graphite cleavage demo (LJ-only, frozen graphite substrate).
+# Methodology: equilibrate at 300 K, then steered MD pull PTFE COM upward
+# at constant velocity; record (z_target, z_com, F_z) for post-processing.
+
+# ---------------------- setup ----------------------
+units           real
+atom_style      full
+boundary        p p f
+read_data       system.data
+
+# ---------------------- force field ----------------------
+# OPLS-AA-style LJ parameters (epsilon kcal/mol, sigma Å); LJ only, no Coulomb.
+pair_style      lj/cut 10.0
+pair_modify     mix arithmetic shift yes
+pair_coeff      1 1 0.0700 3.55      # C(graphite)  ~Steele/AIREBO eqv.
+pair_coeff      2 2 0.0660 3.50      # C(PTFE)
+pair_coeff      3 3 0.0610 2.95      # F
+
+bond_style      harmonic
+bond_coeff      1 268.0 1.529        # C-C
+bond_coeff      2 367.0 1.332        # C-F
+
+angle_style     harmonic
+angle_coeff     1 58.35 112.7        # C-C-C
+angle_coeff     2 50.00 109.5        # C-C-F
+angle_coeff     3 77.00 109.5        # F-C-F
+
+dihedral_style  opls
+dihedral_coeff  1 0.0 0.0 0.5 0.0    # C-C-C-C (mild trans preference)
+
+special_bonds   lj 0.0 0.0 0.5
+
+# ---------------------- groups ----------------------
+group           graphite type 1
+group           ptfe     subtract all graphite
+
+# Freeze graphite (rigid substrate)
+fix             freeze graphite setforce 0.0 0.0 0.0
+
+# ---------------------- neighbors / output ----------------------
+neighbor        2.0 bin
+neigh_modify    every 1 delay 0 check yes exclude group graphite graphite
+
+thermo          500
+thermo_style    custom step temp pe ke press
+timestep        1.0
+
+# ---------------------- minimize + equilibrate ----------------------
+min_style       cg
+minimize        1.0e-4 1.0e-6 200 2000
+
+velocity        ptfe create 300.0 91823 mom yes rot yes dist gaussian
+fix             nvt ptfe nvt temp 300.0 300.0 100.0
+
+run             40000   # 40 ps equilibration
+
+# ---------------------- cleavage pull ----------------------
+# COM tracker
+compute         comp ptfe com
+
+# Reference time / position at start of pull
+variable        step0  equal  step
+variable        z0     equal  c_comp[3]
+
+# Pull velocity (Å / fs).  0.0001 -> 0.1 nm/ns = 10 m/s.
+variable        v_pull equal  0.0001
+variable        K_sp   equal  10.0     # spring K (kcal/mol/Å^2) -- soft enough to read forces
+
+# Tether target moves upward at v_pull
+variable        z_tgt  equal  v_z0 + v_v_pull*(step-v_step0)
+variable        z_com  equal  c_comp[3]
+variable        f_z    equal  v_K_sp*(v_z_tgt - v_z_com)
+
+# Apply spring on PTFE COM in z-direction only
+fix             pull ptfe spring tether ${K_sp} NULL NULL v_z_tgt 0.0
+
+# Log force-distance every 100 fs
+fix             trace all print 100 "${step} ${z_tgt} ${z_com} ${f_z}" &
+                file force_distance.dat title "step z_tgt(A) z_com(A) F_z(kcal/mol/A)" screen no
+
+# Pull for 200 ps -> 20 Å total displacement (well beyond detachment)
+run             200000
+
+# ---------------------- final state ----------------------
+write_data      final.data

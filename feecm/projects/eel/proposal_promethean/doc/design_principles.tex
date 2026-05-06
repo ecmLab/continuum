@@ -1,0 +1,520 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{bm}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{listings}
+
+\geometry{margin=1in}
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Pressure-free contact stability}
+\lhead{Promethean proposal -- design principles}
+\cfoot{\thepage}
+
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  columns=fullflexible,
+}
+
+\title{\textbf{Pressure-free monolithic battery: \\
+preliminary contact-stability model and design principles}}
+\author{\texttt{eel/examples/proposal\_promethean}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Scope}
+
+This document accompanies \texttt{pressure\_free\_stack.i} and supporting
+sources in \texttt{eel/examples/proposal\_promethean/}.  The model is a
+preliminary, mechanics-only digital twin of the monolithic Li-ion cell
+described in \S3 of the proposal.  Its purpose is to evaluate whether the
+\emph{pressure-free} design point---no external stack pressure, only
+polymerization-induced eigenstrains from the gel polymer electrolyte and
+the conformal coating---can produce enough interfacial contact pressure
+to keep the contact resistance within the operating window targeted in
+\S1.5.
+
+The full digital twin requires a coupled chemo-electro-mechanical
+formulation; here we deliberately restrict to mechanics and a closed-form
+$R_c(p_c)$ closure so that the central output, the contact stability
+metric $\Pi_c$, can be evaluated cheaply across a design grid.  Coupled
+ionic and electronic transport are deferred to a follow-on study.
+
+\section{Geometry}
+
+We model a 2D plane-strain cross-section of the pouch.  Bottom-to-top the
+active stack is
+\[
+\text{Cu collector}\;|\;\text{anode}\;|\;\text{separator (GPE)}\;|\;\text{cathode}\;|\;\text{Al collector},
+\]
+fully enveloped on all four sides by a polymer package layer.
+Per-stack layer thicknesses are summarized in Table~\ref{tab:geom} and
+follow the team's DARPA Phase-3 cell-design spreadsheet
+(\texttt{ref/DARPA cell density.xlsx}).  Total package thickness is
+$t_{\text{pkg}} = 100~\mu$m on each face.
+
+The package wrap is what generates through-thickness compression in this
+model.  With lateral rollers (plane-strain mirror symmetry), the
+\emph{side} panels of the package envelope contract in $y$ as they cure;
+because their bottom and top edges connect to the bottom and top
+package strips, this contraction pulls those strips inward and compresses
+the active stack.  A geometry with only top/bottom strips and a free top
+boundary gives $\sigma_{yy}\equiv 0$ throughout (force balance on the
+free surface), so the wrap is essential.
+
+\paragraph{Caveat on the slice width $W_{\text{inner}}$.}
+The slice width is set to $W_{\text{inner}} = 1$~mm in this preliminary
+study---a cosmetic choice that keeps the mesh small.  The real cell
+footprint is $4 \times 4$~cm$^2$ (Phase 3), so the actual lateral extent
+is $\sim$40~mm.  The side-panel wrap mechanism that generates
+through-thickness compression scales as $t_{\text{pkg}} / W_{\text{inner}}$
+(side-panel cross-sectional area divided by stack cross-sectional area).
+At $W_{\text{inner}} = 1$~mm this ratio is $0.10$, while at the real
+$W_{\text{inner}} = 40$~mm it is $0.0025$---about \emph{40$\times$
+smaller}.  Plane-strain modeling also captures only one of the two
+in-plane wrap directions; the second adds another factor of $\sim$2.
+The absolute $\Pi_c$ values reported below should therefore be read as
+\emph{relative} indicators along the design axes, not as absolute
+go/no-go numbers.  A 3D shell-wrap model, or a 2D analysis with
+$W_{\text{inner}}$ set to the actual lateral extent, is needed before
+quoting absolute $\Pi_c$ values to the program manager.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\linewidth]{figures/geometry_schematic.pdf}
+\caption{Cross-section of the wrapped pouch.  Hatched region is the
+polymer package envelope (top, bottom, and both side panels);
+non-hatched layers are the active stack.  Red arrows indicate the two
+cure-shrinkage eigenstrains; blue arrows mark the symmetry-roller and
+fixed-bottom boundary conditions; green arrows mark the optional
+external stack pressure $\sigma_{\rm stack}$ on the top face.}
+\label{fig:geom}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Per-stack layer thicknesses [mm], from DARPA Phase-3 design.}
+\label{tab:geom}
+\begin{tabular}{lcc}
+\toprule
+Layer & Symbol & Default \\
+\midrule
+Cu current collector (porous) & $t_{\text{cu}}$       & 0.025 \\
+Graphite anode                & $t_{\text{anode}}$    & 0.055 \\
+GPE / separator               & $t_{\text{sep}}$      & 0.055 \\
+LVPF cathode                  & $t_{\text{cathode}}$  & 0.137 \\
+Al current collector (porous) & $t_{\text{al}}$       & 0.025 \\
+Package layer (each face)     & $t_{\text{pkg}}$      & 0.100 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Constitutive model}
+
+Each block is treated as a homogenized, isotropic, compressible
+neo-Hookean solid with multiplicative split of the deformation gradient
+\begin{equation}
+\mathbf{F} = \mathbf{F}_m \, \mathbf{F}_g, \qquad
+\mathbf{F}_g = \mathbf{F}_c \, \mathbf{F}_l ,
+\label{eq:multi-split}
+\end{equation}
+where $\mathbf{F}_c$ is the cure-shrinkage eigen part, $\mathbf{F}_l$ is
+the lithiation eigen part, and $\mathbf{F}_m$ carries the elastic
+response.  Only $\mathbf{F}_m$ enters the energy density,
+\begin{equation}
+\psi_m(\mathbf{F}_m) = \tfrac{\lambda}{2}(\ln J_m)^2 - G \ln J_m
++ \tfrac{G}{2}(\mathbf{F}_m\!:\!\mathbf{F}_m - 3),
+\quad J_m = \det \mathbf{F}_m ,
+\end{equation}
+with first Piola--Kirchhoff stress $\mathbf{P} = \partial \psi_m /
+\partial \mathbf{F}_m \cdot \mathbf{F}_g^{-T}$ and Cauchy stress
+$\bm{\sigma} = J^{-1}\,\mathbf{P}\,\mathbf{F}^T$.  The model is solved
+on the undeformed mesh; eigenstrains and elastic strains are both small
+($\lesssim$~10\%) so the geometric corrections are modest.
+
+Default Lam\'e parameters per block are derived from $E$ and $\nu$ in
+Table~\ref{tab:moduli}.
+
+\begin{table}[H]
+\centering
+\caption{Default linear-elastic moduli per block.  Values are
+representative; sweep ranges in \S\ref{sec:design} cover the proposal
+windows.}
+\label{tab:moduli}
+\begin{tabular}{lccl}
+\toprule
+Block          & $E$ [MPa] & $\nu$ & Notes \\
+\midrule
+Cu collector   & $5.0\times 10^{4}$ & 0.34 & Porous-homogenized \\
+Graphite anode & $1.0\times 10^{3}$ & 0.30 & Composite electrode \\
+GPE/separator  & 10                 & 0.45 & Soft, near-incompressible \\
+LVPF cathode   & $5.0\times 10^{3}$ & 0.30 & Composite electrode \\
+Al collector   & $3.0\times 10^{4}$ & 0.33 & Porous-homogenized \\
+Package layer  & $1.0\times 10^{3}$ & 0.40 & Acrylate + ceramic \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Eigenstrain physics}
+
+\subsection{Cure shrinkage (\texttt{CureShrinkageDeformationGradient})}
+
+Polymerization of the in-situ-cured GPE and of the conformal package
+coating is accompanied by a volumetric shrinkage of 2--14\%
+(reported in the proposal for in-situ-polymerized acrylates).  We model
+both as an isotropic, cure-driven eigen deformation
+gradient,
+\begin{equation}
+\mathbf{F}_c = \sqrt[3]{1 - c\,\varepsilon_{\text{sh}}}\;\mathbf{I},
+\qquad c \in [0,1],
+\end{equation}
+where $c$ is a dimensionless cure variable that ramps from 0 to 1 over a
+pseudo-time interval representing the polymerization step.  The
+volumetric shrinkage $\varepsilon_{\text{sh}}$ is block-dependent:
+$\varepsilon_{\text{GPE}}$ in the separator, $\varepsilon_{\text{pkg}}$ in
+the package, and zero in the conductor and electrode blocks.
+
+\subsection{Lithiation breathing (\texttt{LithiationDeformationGradient})}
+
+During cycling, the active electrodes breathe.  We model this as a
+state-of-charge-driven eigen deformation gradient,
+\begin{equation}
+\mathbf{F}_l = \sqrt[3]{1 + \alpha_{\text{Li}}\,s}\;\mathbf{I},
+\qquad s \in [0,1] ,
+\end{equation}
+with sign convention: $\alpha_{\text{Li}} > 0$ for materials that expand
+on lithiation, $\alpha_{\text{Li}} < 0$ for materials that contract on
+lithiation.  $s = 0$ is fully discharged (cathode lithiated, anode
+delithiated) and $s = 1$ is fully charged.  Defaults are
+$\alpha_{\text{Li}}^{\text{anode}} = +0.10$ (graphite expands
+$\sim$10\% on full lithiation) and $\alpha_{\text{Li}}^{\text{cathode}}
+= -0.05$ (LVPF, low-volume-change).
+
+The two eigen parts are composed by
+\texttt{CompositeDeformationGradient} into the single
+$\mathbf{F}_g = \mathbf{F}_c\,\mathbf{F}_l$ that
+\texttt{MechanicalDeformationGradient} pulls back to obtain
+$\mathbf{F}_m$.
+
+Figure~\ref{fig:cycling} shows the contact-stability response for the
+default electrode breathing parameters under a two-cycle charge/discharge
+sweep at the baseline design point ($\varepsilon_{\rm GPE} = 0.05$,
+$\varepsilon_{\rm pkg} = 0.05$, $\sigma_{\rm stack} = 0$).  After cure,
+$\Pi_c$ oscillates between the post-cure floor ($s = 0$, $\Pi_c\approx
+0.68$) and a peak $\sim$25\% higher at full charge ($s = 1$,
+$\Pi_c\approx 0.84$): the anode swells more than the cathode shrinks,
+the stack thickens against the rigid envelope, and contact pressure
+rises.  At the baseline shrink combination ($\varepsilon_{\rm GPE} =
+\varepsilon_{\rm pkg} = 0.05$, $\sigma_{\rm stack} = 0$) the cell
+sits below the $\Pi_c = 1$ target throughout the cycle; engineering
+toward higher $\varepsilon_{\rm pkg}$ or modest $\sigma_{\rm stack}$
+lifts both the floor and the peak across unity (cf.\
+Fig.~\ref{fig:heatmap}).  The cycling demo is reproduced by
+\texttt{../../eel-opt -i pressure\_free\_stack.i cycle\_amplitude=1.0
+t\_cycle=1.0 end\_time=3.0 Executioner/dt=0.05
+Outputs/file\_base=rst/cycling\_demo}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{figures/cycling_trajectory.pdf}
+\caption{Cycling demo at the baseline design point.  Top panel: prescribed
+state of charge $s$.  Bottom panel: contact stability metric $\Pi_c$
+(left axis, navy) and stack-averaged contact pressure
+$\langle p_c \rangle$ (right axis, red dashed).  Shaded region is the
+cure ramp.  Lithiation breathing modulates $\Pi_c$ between
+$\sim$0.68 and $\sim$0.84 each cycle at the baseline shrink point.}
+\label{fig:cycling}
+\end{figure}
+
+\section{Boundary conditions and loading}
+
+\begin{itemize}
+\item \textbf{Lateral edges} ($x = 0,\,W_{\text{outer}}$): roller,
+$u_x = 0$.  Models in-plane mirror symmetry of a long pouch and prevents
+rigid-body translation.  It is also the BC that closes the package
+envelope kinematically: with $u_x=0$ on both sides, the package side
+panels' volumetric shrinkage is fully redirected into the $y$ direction.
+\item \textbf{Bottom edge} ($y = 0$): roller, $u_y = 0$.
+\item \textbf{Top edge} ($y = H_{\text{outer}}$): traction
+$t_y = -\sigma_{\text{stack}}$, where $\sigma_{\text{stack}} \ge 0$ is
+the externally applied stack pressure.  $\sigma_{\text{stack}} = 0$ is
+the pressure-free baseline.
+\end{itemize}
+
+Cure is ramped from 0 to 1 over $t \in [0, 1]$, then plateaus.  After
+cure completes, $s$ may cycle sinusoidally,
+\begin{equation}
+s(t) = \tfrac{1}{2}A_{\text{cyc}} \bigl[1 - \cos\!\bigl(2\pi(t-1)/T_{\text{cyc}}\bigr)\bigr],
+\quad t \ge 1,
+\end{equation}
+with amplitude $A_{\text{cyc}}$ (default 0, i.e.\ no cycling) and period
+$T_{\text{cyc}}$ (default 1).  This is sufficient to demonstrate that
+contact pressure tracks lithiation and to bound the worst-case
+$\Pi_c$ over a cycle.
+
+\section{Contact-resistance closure and stability metric}
+
+For each electrode interface $\Gamma_k$ we define an average normal
+contact pressure
+\begin{equation}
+p_c^{(k)} \;=\; - \frac{1}{|\Gamma_k|} \int_{\Gamma_k} \sigma_{yy} \,\mathrm{d}A
+\end{equation}
+(positive in compression).  The contact resistance per interface follows
+the standard exponential closure used in the proposal,
+\begin{equation}
+R_c(p_c) \;=\; R_0 \, \exp\!\bigl(-\alpha\, p_c\bigr),
+\label{eq:Rc}
+\end{equation}
+with $R_0 = 200~$m$\Omega\cdot$cm$^2$ (uncompressed PTFE-binder-bonded
+electrode/collector contact, mid-range of literature values for
+binder-bonded battery interfaces) and $\alpha = 0.5$~MPa$^{-1}$
+(pressure sensitivity, mid of the 0.3--1.0~MPa$^{-1}$ literature range
+for compliant solid-electrolyte/electrode contacts).  These should be
+re-fit from the team's peel-test and four-point-probe measurements
+before any quantitative go/no-go decision is taken; the v0 sweep below
+is sized to span $\Pi_c = 1$ across the proposal-allowed design grid
+under these defaults.
+
+The contact-stability metric is
+\begin{equation}
+\Pi_c \;=\; \frac{\langle p_c \rangle}{p_{\text{min}}},
+\qquad p_{\text{min}} \;=\; \frac{1}{\alpha}\,\ln\!\frac{R_0}{R_c^{\text{target}}},
+\label{eq:Pic}
+\end{equation}
+with $R_c^{\text{target}} = 20~$m$\Omega\cdot$cm$^2$ from
+\S1.5 of the proposal.  $\Pi_c \ge 1$ is the design objective, i.e.\ the
+average contact pressure exceeds the minimum required to land $R_c$ at
+or below target.
+
+\section{Design variables, default values, and sweep ranges}
+\label{sec:design}
+
+Table~\ref{tab:design-vars} lists the seven design variables identified
+in the proposal and their default values / sweep ranges in this model.
+The first block (eigenstrain magnitudes and applied pressure) controls
+the static post-cure compression and is the focus of the included sweep
+driver.  The second block (electrode breathing) controls the cycling
+modulation of $\Pi_c$.  The third block (geometry/material moduli) is
+held fixed in the v0 sweep but exposed as top-of-file variables for
+manual study.
+
+\begin{table}[H]
+\centering
+\caption{Design variables. Sweep ranges follow the proposal (\S1, \S1.5).}
+\label{tab:design-vars}
+\begin{tabular}{lcccl}
+\toprule
+Variable & Symbol & Default & Sweep range & Source \\
+\midrule
+GPE polymerization shrink     & $\varepsilon_{\text{GPE}}$  & 0.05 & 0.02--0.14 & \S1.3 \\
+Package coating shrink        & $\varepsilon_{\text{pkg}}$  & 0.05 & 0.02--0.10 & \S1.4 \\
+External stack pressure       & $\sigma_{\text{stack}}$     & 0.0 MPa  & 0--1 MPa & comparison \\
+\midrule
+Anode lithiation expansion    & $\alpha_{\text{Li}}^{\text{a}}$ & $+0.10$ & --- & graphite \\
+Cathode lithiation expansion  & $\alpha_{\text{Li}}^{\text{c}}$ & $-0.05$ & --- & LVPF (low-vol) \\
+Cycling amplitude / period    & $A_{\text{cyc}},\,T_{\text{cyc}}$ & 0,\,1 & --- & demo only \\
+\midrule
+GPE modulus                   & $E_{\text{sep}}$            & 10 MPa    & 1--50 MPa  & \S1.5 \\
+Package modulus               & $E_{\text{pkg}}$            & 1000 MPa  & ---       & estimate \\
+Layer thicknesses             & $t_*$                       & Table~\ref{tab:geom}  & --- & nominal cell \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Output and what to look at}
+
+Per-interface contact pressures, contact resistances, the stack-averaged
+$\langle p_c \rangle$, and $\Pi_c$ are all written to the postprocessor
+CSV at every time step.  Two further postprocessors track the running
+\texttt{TimeExtremeValue} of $\Pi_c$ (min and max) for cycling runs.
+
+The included Python driver, \texttt{sweep.py}, walks the
+$(\varepsilon_{\text{GPE}}, \varepsilon_{\text{pkg}},
+\sigma_{\text{stack}})$ grid with cure on and cycling off, and emits
+\texttt{sweeps/design\_map.csv} with one row per sweep point.  Columns
+include the four interface contact pressures, the four
+$R_c$ values, the worst (most tensile) interface
+\texttt{pc\_worst}, the worst (largest) \texttt{Rc\_worst}, and
+$\Pi_c$.  Negative values of \texttt{pc\_worst} flag interfaces driven
+into tension by GPE shrink; these are debonding risks even if
+$\langle p_c \rangle$ remains positive.
+
+\section{Preliminary findings (default modulus set)}
+
+Figure~\ref{fig:heatmap} summarizes the 48-point design grid (slice
+$E_{\rm sep} = 10$~MPa; the full sweep is 192 points across four
+axes, see Section~\ref{sec:design}).  The white $\Pi_c = 1$ contour
+splits each panel into a \emph{feasible} region (to the right of the
+contour, $\Pi_c \ge 1$) and an infeasible one (left).  Even at
+$\sigma_{\rm stack}=0$ (truly pressure-free), a defined window with
+$\varepsilon_{\rm pkg} \gtrsim 0.07$ already lands above target;
+adding 0.5--1.0~MPa external pressure widens that window further.
+$\Pi_c$ values across the surveyed grid span 0.03--1.77 with the
+default closure parameters, so the variables are well-engineered to
+land near the design target.  Three observations explain the trend
+structure:
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{figures/design_map_heatmap.pdf}
+\caption{Contact-stability metric $\Pi_c$ over the
+$(\varepsilon_{\rm GPE},\,\varepsilon_{\rm pkg})$ grid at three
+externally applied stack pressures (slice at $E_{\rm sep}=10$~MPa).
+The white contour marks the $\Pi_c = 1$ design boundary: cells to
+its right meet the $R_c \le 20\,\mathrm{m\Omega\,cm^2}$ target with
+margin, those to its left fall short.  Even with no external stack
+pressure, package shrink $\varepsilon_{\rm pkg}\gtrsim 0.07$ alone
+already lands the design above target; modest applied pressure
+($\sigma_{\rm stack} = 0.5$--1.0~MPa) shifts the boundary to lower
+$\varepsilon_{\rm pkg}$ values, opening the feasible window.}
+\label{fig:heatmap}
+\end{figure}
+
+\begin{enumerate}
+\item \textbf{Package shrink dominates compression.}  $\Pi_c$ scales
+nearly linearly with $\varepsilon_{\text{pkg}}$ at fixed
+$\varepsilon_{\text{GPE}}$ and $\sigma_{\text{stack}}$: doubling
+$\varepsilon_{\text{pkg}}$ approximately doubles $\langle p_c\rangle$,
+as visible in Fig.~\ref{fig:lines-pkg}.  This is the primary lever in
+the pressure-free design, and the lines are nearly parallel across
+the $\varepsilon_{\rm GPE}$ family---$\varepsilon_{\rm pkg}$ acts
+roughly independently of GPE shrink within this range.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{figures/Pi_c_vs_eps_pkg.pdf}
+\caption{$\Pi_c$ vs.\ $\varepsilon_{\rm pkg}$ at four
+$\varepsilon_{\rm GPE}$ levels and three external stack pressures
+(slice at $E_{\rm sep}=10$~MPa).  Dashed line marks the $\Pi_c=1$
+target.  Slope is nearly constant ($\sim$17 per unit
+$\varepsilon_{\rm pkg}$); the design crosses target around
+$\varepsilon_{\rm pkg}\approx 0.07$ at the pressure-free condition.}
+\label{fig:lines-pkg}
+\end{figure}
+
+\item \textbf{GPE shrink can hurt the sep--cathode interface.}  At fixed
+$\varepsilon_{\text{pkg}}$, increasing $\varepsilon_{\text{GPE}}$
+\emph{decreases} the contact pressure at the separator--cathode
+interface and can drive it into tension when
+$\varepsilon_{\text{pkg}}$ is small (e.g.\ 0.02).  Physically, the GPE
+shrink pulls the cathode toward the anode through the soft separator,
+unloading those interfaces.  Figure~\ref{fig:lines-GPE} shows the
+mild but consistent negative slope of $\Pi_c$ vs.\ $\varepsilon_{\rm
+GPE}$, and Fig.~\ref{fig:bars} resolves the effect interface by
+interface: at $(\varepsilon_{\rm GPE},\,\varepsilon_{\rm pkg}) =
+(0.12,\,0.02)$ the sep$|$cathode interface is in tension---a
+debonding risk---even though the stack-average $p_c$ remains positive.  The design implication is that
+$\varepsilon_{\text{GPE}}$ must be chosen \emph{jointly} with
+$\varepsilon_{\text{pkg}}$, not independently maximized.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{figures/Pi_c_vs_eps_GPE.pdf}
+\caption{$\Pi_c$ vs.\ $\varepsilon_{\rm GPE}$ at four
+$\varepsilon_{\rm pkg}$ levels.  All curves slope mildly negative:
+larger GPE shrink unloads the separator interfaces.}
+\label{fig:lines-GPE}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{figures/interface_pc_bars.pdf}
+\caption{Per-interface contact pressure for four representative design
+points.  The orange ``low pkg, high GPE'' configuration drives the
+sep$|$cathode interface into tension.  Triplets in the legend are
+$(\varepsilon_{\rm GPE}/\varepsilon_{\rm pkg}/\sigma_{\rm stack})$.}
+\label{fig:bars}
+\end{figure}
+
+\item \textbf{GPE stiffness is a real but diminishing-returns lever.}
+The fourth-axis sweep over $E_{\text{sep}} \in \{1, 10, 25, 50\}$~MPa
+(Fig.~\ref{fig:E-sep-lever}) quantifies how stiffening the GPE
+amplifies pressure transmission through the stack.  At the
+most-favorable shrink corner ($\varepsilon_{\rm GPE}=0.02$,
+$\varepsilon_{\rm pkg}=0.10$, $\sigma_{\rm stack}=0$), going from
+$E_{\text{sep}} = 1 \to 10 \to 25 \to 50$~MPa lifts $\Pi_c$ from
+$1.22 \to 1.61 \to 1.81 \to 1.94$.  Returns flatten visibly above
+$\sim$25~MPa---once the GPE is stiff enough that the through-stack
+modulus is no longer separator-dominated, further stiffening adds
+little.  At the soft end ($E_{\rm sep} = 1$~MPa), even the best
+package shrink ($\varepsilon_{\rm pkg} = 0.10$) only just clears
+$\Pi_c = 1$ when no external pressure is applied; this is the regime
+where the proposal's PVC heat-shrink risk-mitigation overwrap pays
+off.  In the practical engineering window, $E_{\rm sep}$ in the
+10--25~MPa range, $\varepsilon_{\rm pkg}$ in the 0.05--0.10 range, and
+modest $\sigma_{\rm stack}$ together comfortably hit $\Pi_c \ge 1$.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{figures/Pi_c_vs_E_sep.pdf}
+\caption{$\Pi_c$ vs.\ GPE Young's modulus $E_{\rm sep}$ at
+$\varepsilon_{\rm GPE} = 0.02$, across $\varepsilon_{\rm pkg} \in
+\{0.02, 0.05, 0.08, 0.10\}$ and three external stack pressures.
+Diminishing returns set in above $E_{\rm sep} \approx 25$~MPa;
+designs with $\varepsilon_{\rm pkg} \ge 0.08$ clear $\Pi_c=1$
+across most of the surveyed $E_{\rm sep}$ range.}
+\label{fig:E-sep-lever}
+\end{figure}
+\end{enumerate}
+
+\section{Files in this study}
+
+\begin{description}
+\item[\texttt{pressure\_free\_stack.i}]
+2D plane-strain layered pouch, all design variables exposed at the top.
+\item[\texttt{sweep.py}]
+$(\varepsilon_{\text{GPE}}, \varepsilon_{\text{pkg}},
+\sigma_{\text{stack}})$ design-map driver.
+\item[\texttt{include/materials/kinematics/CureShrinkageDeformationGradient.h}\\
+\texttt{src/materials/kinematics/CureShrinkageDeformationGradient.C}]
+Cure-driven volumetric eigenstrain.
+\item[\texttt{include/materials/kinematics/LithiationDeformationGradient.h}\\
+\texttt{src/materials/kinematics/LithiationDeformationGradient.C}]
+SoC-driven volumetric eigenstrain.
+\item[\texttt{include/materials/kinematics/CompositeDeformationGradient.h}\\
+\texttt{src/materials/kinematics/CompositeDeformationGradient.C}]
+Generic ordered product of deformation gradients.
+\end{description}
+
+\section{Limitations and roadmap}
+
+\begin{itemize}
+\item Mechanics-only; ionic conductivity $\kappa_{\text{eff}}$ and
+electronic conductivity $\sigma_{\text{eff}}$ are not solved.  Adding
+the charge-balance and Li-conservation equations is the natural next
+step and brings $\kappa_{\text{eff}} \ge 1$~mS/cm
+into the verifiable target set.
+\item Linear, isotropic homogenization of the porous current collectors
+and composite electrodes.  A more faithful model would distinguish CNT
+network conductivity, PTFE-binder fractions, and active-material
+volume fractions explicitly.
+\item Cohesive zones at the electrode/separator and electrode/collector
+interfaces are not yet modelled.  Once
+\texttt{InterfaceTractionWithCreepDegradation} is wired to the
+PTFE-adhesion energies (DFT/MD output of subtask~I), debonding under
+cycling becomes an additional failure mode to track alongside contact
+loss.
+\item The contact-resistance closure $R_c(p_c)$ uses generic
+$(R_0, \alpha)$.  These should be replaced with values fit to the
+team's peel and four-point-probe measurements before any quantitative
+go/no-go decision is taken from $\Pi_c$.
+\end{itemize}
+
+\end{document}
