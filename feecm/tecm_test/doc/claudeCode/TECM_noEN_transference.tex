@@ -1,0 +1,92 @@
+
+\documentclass[11pt]{article}
+
+\title{TECM without Electroneutrality (TECM-no-EN) \\
+\large Using Transference Numbers $t_i$ with Explicit Valence $z_i$ (BasicTeX Minimal)}
+\author{Compiled by ChatGPT}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Fields and Notation}
+Primary fields on reference domain $\Omega$:
+\[
+\{\ \varphi(\mathbf X,t),\ T(\mathbf X,t),\ \Phi(\mathbf X,t),\ c_+(\mathbf X,t),\ c_-(\mathbf X,t)\ \}.
+\]
+Kinematics: $F=\nabla\varphi$. Electric field: $\mathbf E=-\nabla\Phi$. Valences $z_{+}=+1$, $z_{-}=-1$.
+
+\section*{Poisson (Space Charge)}
+\[
+-\nabla\cdot(\varepsilon\,\nabla\Phi)
+= \rho_e
+= F\,(z_+ c_+ + z_- c_-)+\rho_{\mathrm{fixed}}.
+\]
+
+\section*{Species Balances}
+\[
+\dot c_i + \nabla\cdot \mathbf j_i = R_i, \qquad i\in\{+,-\}.
+\]
+
+\section*{Fluxes (Diffusion + Electromigration via $t_i$ and $z_i$)}
+\[
+\mathbf j_i
+= -\sum_{j\in\{+,-\}} M^0_{ij}\,\nabla \mu_j
+\;+\; \frac{t_i}{z_i\,F}\,\mathbf i.
+\]
+Current partition (reuse in flux):
+\[
+\mathbf i
+= -\,\sigma_e^0\,\nabla\Phi
+\;-\;\frac{\sigma_e^0}{F}\,\big(t_+\,\nabla\mu_+ + t_-\,\nabla\mu_-\big).
+\]
+Notes: $t_i\ge 0$, $t_+ + t_- = 1$. The electromigration parts are
+\[
+\mathbf j_+^{\mathrm{em}}=\frac{t_+}{F}\mathbf i,\qquad
+\mathbf j_-^{\mathrm{em}}=-\frac{t_-}{F}\mathbf i.
+\]
+
+\section*{Heat Balance}
+\[
+\rho c_p \,\dot T - \nabla\cdot(\kappa\,\nabla T)
+= \mathbf i\cdot\mathbf E + \eta\, i_{\mathrm{BV}} + r_{\mathrm{mech}}.
+\]
+
+\section*{Mechanics (Quasi-Static)}
+\[
+\nabla\cdot \mathbf P + \mathbf b = \mathbf 0, 
+\qquad \mathbf P=\partial \psi(F,c_+,c_-,T)/\partial F.
+\]
+
+\section*{Interfacial Electrochemistry}
+\[
+i_{\mathrm{BV}}
+= i_0 \left[
+\exp\!\Big(\frac{\alpha_a F\,\eta}{RT}\Big)
+- \exp\!\Big(\!-\frac{\alpha_c F\,\eta}{RT}\Big)
+\right],
+\quad
+\eta=\Phi_{\mathrm{el}}-\Phi_{\mathrm{sol}}-\Delta\Phi_{\mathrm{eq}}(c_+,c_-,T).
+\]
+Example stoichiometry: $R_+=-i_{\mathrm{BV}}/F$ for Li$^+$ insertion.
+
+\section*{Entropy Production (Sketch)}
+Choose $\psi$ convex; $M^0\succeq 0$, $\sigma_e^0>0$, $\kappa>0$. A typical form is
+\[
+\dot{s}_{\mathrm{prod}} =
+\frac{1}{T}\left[
+\sum_{i} \big(-\mathbf j_i\big)\cdot\nabla\mu_i
++ \mathbf i\cdot\mathbf E
++ \kappa\,\frac{\nabla T\cdot\nabla T}{T}
+\right] \ge 0.
+\]
+
+\section*{Implementation Notes}
+\begin{itemize}
+\item Resolve Debye length in the mesh for \emph{Poisson}.
+\item Diagonal $M^0_{ij}=M_i \delta_{ij}$ recovers Fick-like diffusion; off-diagonals capture cross-effects.
+\item Insert your activity model in $\mu_i$.
+\item Setting $\rho_e=0$ and eliminating Poisson collapses to the electroneutral (salt) model.
+\end{itemize}
+
+\end{document}

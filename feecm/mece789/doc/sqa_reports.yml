@@ -1,0 +1,6 @@
+Applications:
+    mece789:
+        app_types:
+            - mece789App
+        content_directory: ${ROOT_DIR}/doc/content
+        log_default: WARNING

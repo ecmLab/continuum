@@ -1,0 +1,269 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{amsmath,amssymb,bm}
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+% Keep dependencies minimal for portability
+
+\title{TECM Development}
+\author{CEWLAB}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\section*{Preface}
+This document records the development of the TECM (Thermo--Electro--Chemo--Mechanical) framework. We present all detailed equations for the key constitutive laws and weak forms. Code identifiers and file paths are shown in monospaced text. The first chapter below captures a clean, paper-aligned baseline understanding of the current package.
+
+\section{Baseline: Theory and Code Mapping}
+
+\subsection{Context and Scope}
+TECM is a MOOSE-based finite element application for fully coupled, three-dimensional electro--chemo--thermo--mechanics, intended for general electrochemical systems, such as Li-ion batteries, solid-state batteries, and electrochemical memory devices.
+
+The theoretical derivations and codebase follow the variational inf--sup formulation: all governing equations derive from a total potential whose variations yield conjugate fluxes and stresses. This mapping is implemented through modular "energy density" materials plus generic "thermodynamic force" aggregators, and assembled by weak-form kernels for divergence/time-derivative operators.
+
+\subsection{Variational Statement}
+The total potential takes the following form:
+\begin{align}
+\Pi &= \int_{\Omega} (\dot{\psi} + q - \chi - \zeta - \mu\,\dot c\,)\,\mathrm{d}V + \int_{\partial\Omega} \gamma\,\mathrm{d}A - P\,, \label{eq:Pi}\
+\end{align}
+
+\paragraph{Variables and notation for Eq.~(\ref{eq:Pi}).}
+\begin{itemize}
+  \item \(\Omega\): domain; \(\Gamma=\partial\Omega\): boundary.
+  \item \(\mathbf{F}=\nabla_{\!\mathbf{X}}\boldsymbol{\varphi}\): deformation gradient; \(\dot{\mathbf{F}}\): material time rate of deformation gradient; \(J=\det\mathbf{F}\).
+  \item \(c\): species concentration (extendable to \(c_i\)); \(\dot c\): material time rate of species concentration; \(\mu\): chemical potential.
+  \item \(T\): temperature; \(\Phi\): electric potential.
+  \item \(\psi(T, c, \mathbf{F})\): Helmholtz free energy density (storage and reversible couplings).
+  \item \(q(\nabla\Phi,\nabla\mu, \mathbf{F})\): electrical kinetic potential density (may depend on \(\mathbf{F}\)).
+  \item \(\chi(\nabla T)\): Fourier potential density for heat conduction.
+  \item \(\zeta(\nabla\mu)\): dual chemical potential density governing diffusion in \(\mu\)-space.
+  \item \(\gamma(T, c, \Phi)\): boundary/interface potential density (e.g., charge transfer, interface resistance).
+  \item \(P_{ext}\): external power potential (imposed tractions, currents, heat/mass fluxes).
+\end{itemize}
+
+Variations with respect to gradients of state variables produce thermodynamic conjugates:
+\begin{align}
+\mathbf{P} &= \frac{\partial \psi}{\partial \mathbf{F}} &&\text{(first Piola--Kirchhoff stress)}\\
+\mathbf{i} &= -\frac{\partial q}{\partial (\nabla \Phi)} &&\text{(current density)}\\
+\mathbf{j} &= -\frac{\partial (q + \zeta)}{\partial (\nabla \mu)} &&\text{(mass flux)}\\
+\mathbf{h} &= -T\frac{\partial \chi}{\partial (\nabla T)} &&\text{(heat flux)}\
+\end{align}
+
+The governing balance equations (strong form) are
+\begin{align}
+\rho c_p \frac{\partial T}{\partial t} + \nabla\!\cdot\!\mathbf{h} &= q_{\mathrm{int}} + q_{\mathrm{rxn}} &&\text{(heat)}\label{eq:heat}\,,\\
+\frac{\partial c}{\partial t} + \nabla\!\cdot\!\mathbf{j} &= 0 &&\text{(species)}\label{eq:species}\,,\\
+\nabla\!\cdot\!\mathbf{i} &= 0 &&\text{(charge electroneutrality)}\label{eq:chargeEN}\,,\\
+\nabla\!\cdot\!\mathbf{P} &= \mathbf{0} &&\text{(mechanical equilibrium)}\label{eq:mech}\,.
+\end{align}
+Their weak forms follow by multiplying with test functions and integrating by parts; in the code they are assembled by compact divergence/time-derivative kernels.
+
+\subsection{Energy Densities and Conjugates in Code}
+The paper's potentials are implemented as Material classes that expose their conjugate derivatives. A generic accumulator \texttt{ThermodynamicForce<T>} sums the relevant derivatives to produce total fluxes/stresses.
+
+\paragraph{Electrical kinetic potential \(q(\nabla\Phi,\mathbf{F})\).}
+A standard choice is
+\begin{equation}
+q = \tfrac{1}{2}\, (\nabla\Phi)^{\!\mathsf{T}}\, \boldsymbol{\sigma}(\mathbf{F})\, (\nabla\Phi)\,, \qquad \Rightarrow \quad \mathbf{i} = \frac{\partial q}{\partial (\nabla\Phi)} = \boldsymbol{\sigma}(\mathbf{F})\, \nabla\Phi\,.
+\end{equation}
+This allows conductivity to depend on deformation (anisotropy, stretch-induced changes). In the current code path, \texttt{BulkChargeTransport} uses an isotropic \(\sigma\) that may depend on state, and returns \(\partial q/\partial(\nabla\Phi)=\sigma\,\nabla\Phi\) (see \texttt{src/materials/BulkChargeTransport.C}:32--36). The material class \texttt{ElectricalEnergyDensity} is designed to accommodate at least a dependence on \(\mathbf{F}\) and \(\nabla\Phi\).
+
+\paragraph{Optional electrochemical cross-term in \(q\).}
+To encode Onsager symmetry between electrical and chemical driving forces, a coupling term can be added to \(q\):
+\begin{equation}
+q_{\mathrm{mig}} = \frac{\sigma}{F}\, (\nabla\Phi)\!\cdot\!(\nabla\mu)\quad \Rightarrow \quad
+\frac{\partial q_{\mathrm{mig}}}{\partial (\nabla\Phi)} = \frac{\sigma}{F}\, \nabla\mu\,,\quad
+\frac{\partial q_{\mathrm{mig}}}{\partial (\nabla\mu)} = \frac{\sigma}{F}\, \nabla\Phi\,.
+\end{equation}
+File: \texttt{src/materials/Migration.C}.
+
+\paragraph{Dual chemical potential \(\zeta(\nabla\mu)\).}
+With mobility \(M\),
+\begin{equation}
+\zeta = \tfrac{1}{2}\, M\, |\nabla\mu|^2 \quad \Rightarrow \quad \mathbf{j} = \frac{\partial \zeta}{\partial (\nabla\mu)} = M\, \nabla\mu\,.
+\end{equation}
+Files: \texttt{src/materials/DualChemicalEnergyDensity.C}, \texttt{src/materials/MassDiffusion.C}.
+
+\paragraph{Fourier potential \(\chi(\nabla T)\).}
+With conductivity \(\kappa\),
+\begin{equation}
+\chi = \tfrac{1}{2}\, \kappa\, |\nabla T|^2 \quad \Rightarrow \quad \mathbf{h} = \frac{\partial \chi}{\partial (\nabla T)} = \kappa\, \nabla T\,.
+\end{equation}
+Files: \texttt{src/materials/ThermalEnergyDensity.h}, \texttt{src/materials/FourierPotential.C}. (Implementation uses an equivalent log-temperature representation; see the note above.)
+
+\paragraph{Chemical storage rate \(\dot\psi(c,\dot c)\).}
+The entropic term yields
+\begin{equation}
+\mu = \frac{\partial \dot\psi}{\partial \dot c} = \mu_0 + R T\, \ln\!\left(\frac{c}{c_0}\right) + \text{(mech./other)}\,.
+\end{equation}
+File: \texttt{src/materials/EntropicChemicalEnergyDensity.C}. The chemical potential is constructed via local L2 projection in \texttt{src/materials/ChemicalPotential.C}.
+
+\paragraph{Mechanical energy (large deformation).}
+We decompose the total gradient as \(\mathbf{F} = \mathbf{F}_m\, \mathbf{F}_g\), with eigen-gradient \(\mathbf{F}_g = \mathbf{F}_s\, \mathbf{F}_t\) from swelling and thermal expansion. A compressible Neo--Hookean model gives
+\begin{equation}
+\mathbf{P}_m = \lambda\, \ln J_m\, \mathbf{F}_m^{-\mathsf{T}} + G\, (\mathbf{F}_m - \mathbf{F}_m^{-\mathsf{T}})\,,\qquad J_m = \det\mathbf{F}_m\,,
+\end{equation}
+and the algorithmic conjugate is \(\partial \dot\psi/\partial \dot{\mathbf{F}} = \mathbf{P} = \mathbf{P}_m\, \mathbf{F}_g^{-1}\). Files: \texttt{src/materials/ElasticEnergyDensity.C}, \texttt{src/materials/MechanicalEnergyDensity.C}, \texttt{src/materials/NeoHookeanSolid.C}, \texttt{src/materials/MechanicalDeformationGradient.C}.
+
+\paragraph{Swelling eigen-strain.}
+With molar volume \(\Omega\), coefficient \(\alpha_s\), and reference concentration \(c_{\mathrm{ref}}\),
+\begin{equation}
+J_s = 1 + \alpha_s\, \Omega\, (c - c_{\mathrm{ref}})\,, \qquad \mathbf{F}_s = J_s^{1/3} \mathbf{I}\,, \qquad \frac{\partial J_s}{\partial c} = \alpha_s\,\Omega\,.
+\end{equation}
+Files: \texttt{src/materials/SwellingDeformationGradient.C}, swelling coupling back to \(\mu\) in \texttt{src/materials/MechanicalEnergyDensity.C}.
+
+\paragraph{Thermal source (Joule and reaction heat).}
+From \(q\), Joule heating is \(q_{\mathrm{J}} = \boldsymbol{\sigma} : (\nabla\Phi \otimes \nabla\Phi)\), which reduces to \(q_{\mathrm{J}}=\sigma\, |\nabla\Phi|^2\) for isotropic \(\sigma\). Reaction heat at interfaces is \(q_{\mathrm{rxn}} = i\,\eta\). In code, Joule and other thermal contributions enter via material derivatives and are aggregated by \texttt{src/materials/VariationalHeatSource.C} (see also \texttt{src/materials/BulkChargeTransport.C}:32--36).
+
+\paragraph{Aggregation.}
+\begin{itemize}
+  \item Current density \(\mathbf{i}\): \texttt{src/materials/CurrentDensity.C}
+  \item Mass flux \(\mathbf{j}\): \texttt{src/materials/MassFlux.C}
+  \item Heat flux \(\mathbf{h}\): \texttt{src/materials/HeatFlux.C}
+  \item Stress \(\mathbf{P}\): \texttt{src/materials/FirstPiolaKirchhoffStress.C}
+\end{itemize}
+
+Volumetric heat source is unified variationally by summing d(energy)/d(ln T):
+\begin{itemize}
+  \item Joule and other thermal couplings: \texttt{src/materials/VariationalHeatSource.C}
+  \item dE/d ln T provided in: \texttt{src/materials/BulkChargeTransport.C}
+\end{itemize}
+
+\subsection{Weak-Form Assembly (Kernels)}
+Core divergence/time operators assemble balances using the conjugates supplied by materials:
+\begin{itemize}
+  \item Heat time term: \texttt{src/kernels/EnergyBalanceTimeDerivative.C}
+  \item Divergence of vectors (h, j, i): \texttt{src/kernels/RankOneDivergence.C}
+  \item Divergence of tensors (P): \texttt{src/kernels/RankTwoDivergence.C}
+  \item Material-supplied sources (q, R, etc.): \texttt{src/kernels/MaterialSource.C}
+\end{itemize}
+
+Boundary/interface modeling includes open flux and heat outflow BCs, and a Butler--Volmer interfacial material returning current, mass, and heat fluxes:
+\begin{itemize}
+  \item Open flux BC: \texttt{src/bcs/OpenBC.C}
+  \item Heat outflow BC: \texttt{src/bcs/HeatConductionOutflow.C}
+  \item Interfacial reaction: \texttt{src/materials/ChargeTransferReaction.C}
+\end{itemize}
+
+At the interface, the code implements a symmetric Butler--Volmer form with optional series resistance:
+\begin{equation}
+\eta = (\Phi_s - \Phi_e) - U + \rho\, i_{\mathrm{old}}\,, \qquad
+i = i_0\, \Big[\exp\!\Big(\frac{\alpha F\, \eta}{R T}\Big) - \exp\!\Big(-\frac{\alpha F\, \eta}{R T}\Big)\Big]\,,\label{eq:BV}
+\end{equation}
+where \(\alpha\) is used symmetrically for both branches in the current code, \(U\) is the open-circuit potential, and \(T\) is averaged across the interface.
+
+\section{Limitations of the Original Paper and Developments}
+This chapter enumerates limitations of the original paper and records the developments we added or propose, ordered by priority and impact.
+
+\subsection{Binary Species Transport}
+\paragraph{Limitation.} The baseline effectively uses a single mobile species; explicit binary-ion coupling is absent.
+\paragraph{Development.} Extend to a binary electrolyte \((c_+, c_-)\) with chemical potentials \((\mu_+, \mu_-)\):
+\begin{align}
+\mathbf{j}_i &= -M_i\, \nabla\mu_i + \frac{t_i}{z_i F}\,\mathbf{i}\,, \quad i \in\{+, -\}\,,\\
+\mathbf{i} &= -\sigma^0 \nabla\Phi - \frac{\sigma^0}{F} \sum_{i=\{+, -\}} t_i\, \nabla\mu_i\,.
+\end{align}
+We keep this to binary (not full Stefan--Maxwell) to balance fidelity and complexity.
+\paragraph{Why it matters.} Although single-species captures most solid-state cell behavior (\(\sim\)90\% of our research cases), binary transport is essential for EDL and liquid/soft electrolytes (\(\sim\)10\% of our research cases), where cation/anion partitioning governs interfacial physics.
+
+\subsection{Space-Charge (Poisson) Relation and No-EN Transport}
+\paragraph{Limitation.} The original paper does not include a Poisson relation; only the electroneutral charge conservation (\(\nabla\!\cdot\!\mathbf{i}=0\)). This precludes modeling space-charge regions and electric double layers (EDL) near interfaces.
+
+\paragraph{Development.} We add a Poisson potential and compatible closures:
+\begin{align}
+-\nabla\!\cdot(\epsilon\, \nabla \Psi) &= \rho_e\,,\\
+\mathbf{i} &= -\sigma^0 \nabla\Phi - \frac{\sigma^0}{F} \sum_i t_i\, \nabla\mu_i\,,\\
+\mathbf{j}_i &= -M_i\, \nabla\mu_i + \frac{t_i}{z_i F}\,\mathbf{i}\,.
+\end{align}
+This enables EDL and space-charge dynamics in liquid electrolytes and electrochemical RAM. Implementations:
+\begin{itemize}
+  \item Poisson kernel: \texttt{src/kernels/Case\_1/PoissonEquation.C}
+  \item Nernst--Planck electromigration kernel: \texttt{src/kernels/Case\_1/ADNernstPlanckConvection.C}
+  \item Current density (no-EN): \texttt{src/materials/CurrentDensityNoEN.C}
+  \item Species flux (no-EN): \texttt{src/materials/SpeciesFluxNoEN.C}
+\end{itemize}
+\paragraph{Why it matters.} Enables correct EDL structure, interfacial capacitance, and transient charging that strongly affect device response and stability.
+
+\subsection{Non-Dimensionalization Framework}
+\paragraph{Limitation.} The original paper does not present a non-dimensionalization strategy. Without proper scaling, coupled TECM problems can suffer from numerical conditioning issues and lack clear dimensionless groupings.
+
+\paragraph{Development.} We define characteristic scales and expose dimensionless parameters via materials to improve conditioning and interpretability:
+\begin{itemize}
+  \item Scales and groups: \texttt{src/materials/NonDimensionalParameters.C}
+  \item Dimensionless diffusion and properties: \texttt{src/kernels/NonDimensionalDiffusion.C}, \texttt{src/materials/NonDimensionalDiffusivity.C}
+\end{itemize}
+Representative definitions:
+\begin{align}
+L_0 &= \frac{F c_0 D_0}{j_0}\,, & t_0 &= \frac{L_0^2}{D_0}\,, & \phi_0 &= \frac{R T_0}{F}\,, \\
+\mu_0 &= R T_0\,, & \sigma_0 &= \frac{R T_0}{\Omega_0}\,, & \kappa &= \frac{F^2 c_0 L_0^2}{\epsilon R T_0}\,.
+\end{align}
+Nernst--Einstein: \(\sigma_0 = \tfrac{F^2 c_0 D_0}{R T_0}\). A dimensionless diffusion equation reads
+\begin{equation}
+\frac{\partial \tilde u}{\partial \tilde t} = \nabla_{\!\tilde x} \!\cdot\! \big( \tilde D \, \nabla_{\!\tilde x} \tilde u \big)\,, \qquad \tilde D = D/D_0\,.
+\end{equation}
+These constructs improve solver robustness and reveal dominant physics via dimensionless groups.
+
+\subsection{Inelastic Mechanics and Damage}
+\paragraph{Limitation.} Hyperelastic-only; no plasticity, viscoelasticity, creep, fracture, or damage.
+\paragraph{Development (proposed).} Add viscoelastic/plastic options and damage/cohesive or phase-field fracture models.
+\paragraph{Why it matters.} Cycling induces irreversible deformation and cracking; these alter transport pathways and lifetime predictions.
+
+\subsection{Interface Physics Breadth}
+\paragraph{Limitation.} Symmetric Butler--Volmer and limited state dependence; no interphase growth or roughness.
+\paragraph{Development (proposed).} Generalize to asymmetric \(\alpha_a,\alpha_c\), \(i_0(c, T, \sigma)\), \(U(c, T, \sigma)\); include film growth and roughness evolution; optional Marcus kinetics.
+\paragraph{Why it matters.} Interfaces dominate overpotentials and degradation; richer kinetics improve predictive fidelity.
+
+\subsection{Porous/Multiphase Structure}
+\paragraph{Limitation.} No explicit porous mixture or evolving microstructure.
+\paragraph{Development (proposed).} Homogenized porosity/tortuosity models, optional Darcy advection, and structure–transport feedbacks.
+\paragraph{Why it matters.} Composite cathodes and separators rely on porosity/tortuosity; morphology changes shift effective transport and reaction rates.
+
+\subsection{Non-Ideal Thermodynamics}
+\paragraph{Limitation.} Ideal-solution entropy only; no activity coefficients or gradient-energy (Cahn--Hilliard).
+\paragraph{Development (proposed).} Add activities (regular solution) and gradient-energy terms for phase separation.
+\paragraph{Why it matters.} Non-ideal mixing and interfacial energy control phase behavior, interfaces, and miscibility.
+
+\subsection{Numerical Strategy Guidance}
+\paragraph{Limitation.} No explicit solver recipe (scaling, preconditioning, adaptivity).
+\paragraph{Development (proposed).} Document scaling order, line-search/continuation, field-split preconditioning, adaptive time-stepping, and mesh adaptivity.
+\paragraph{Why it matters.} Robust solution of tightly coupled 3D problems hinges on disciplined solver configuration.
+
+\subsection{Field Property Dependencies}
+\paragraph{Limitation.} \(\sigma, \epsilon, \kappa, M\) not fully specified as functions of \(c, T, \mathbf{F}\).
+\paragraph{Development (proposed).} Provide hooks and data models for \(\sigma(c, T, \mathbf{F})\), \(\epsilon(c, T)\), \(\kappa(c, T)\), \(M(c, T)\); support anisotropy.
+\paragraph{Why it matters.} Ionic and polymeric conductors show strong state/deformation dependence that feed back into transport and mechanics.
+
+\subsection{Thermal Boundary Physics}
+\paragraph{Limitation.} Pure conduction; no radiative/convective boundaries; isotropic \(\kappa\) only.
+\paragraph{Development (proposed).} Add Robin (convection), radiation, and anisotropic \(\kappa\); include latent heats where relevant.
+\paragraph{Why it matters.} Realistic boundary transfer is essential for pack integration, hot-spot mitigation, and safety.
+
+\subsection{Thermo--Electro Cross-Effects}
+\paragraph{Limitation.} No Seebeck/Peltier/Thomson or Soret/Dufour couplings.
+\paragraph{Development (proposed).} Extend constitutive sets to include thermoelectric and thermo-diffusive cross-terms.
+\paragraph{Why it matters.} Under strong thermal gradients, cross-effects modify currents/fluxes and can be leveraged or must be mitigated.
+
+\subsection{Examples and Paper Alignment}
+Examples instantiate the variational building blocks and verify couplings:
+\begin{itemize}
+  \item EDL benchmark (space charge, mesh resolving Debye length): \texttt{examples/benchmark\_EDL/edl.i}
+  \item ECRAM and coupled transport: \texttt{examples/paper\_ecram/ecram\_ec.i}, \texttt{examples/paper\_ecram/ecram\_full.i}
+\end{itemize}
+
+Alignment to the paper:
+\begin{itemize}
+  \item Variational origins: energy-density materials + AD derivatives map to the paper's conjugates.
+  \item Onsager-like reciprocity: migration energy couples \(\nabla\Phi\) and \(\nabla\mu\) symmetrically.
+  \item Thermal bookkeeping: d(energy)/d ln T provides consistent volumetric heat sources, including Joule heating.
+  \item Chemo-mechanics: multiplicative eigen-strains (swelling/thermal) and pressure contribution to mu.
+  \item No-EN: Poisson + transference-based closures for space charge regimes.
+\end{itemize}
+
+\subsection{Summary}
+The current TECM implementation reflects a faithful, modular realization of the paper's inf--sup variational framework in MOOSE: energy densities define conjugates, generic accumulators produce physical fluxes/stresses, and compact kernels assemble the balances. Both electroneutral and no-EN pathways are present, and a non-dimensionalization layer supports numerics and comparability. This chapter stands as the baseline understanding to ground future limitation analysis and development planning.
+
+\end{document}

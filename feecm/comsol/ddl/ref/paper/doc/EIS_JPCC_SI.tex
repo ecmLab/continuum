@@ -1,0 +1,212 @@
+\documentclass[journal=jpccck,manuscript=suppinfo,super]{achemso}
+\usepackage{achemso}
+\usepackage{amsmath}
+\usepackage{cases}
+\usepackage{caption}
+\usepackage{nomencl}
+\usepackage{booktabs}
+
+\setlength{\hoffset}{0cm} \setlength{\marginparsep}{0cm}
+\setlength{\voffset}{0cm} \setlength{\marginparwidth}{0cm}
+\setlength{\oddsidemargin}{0cm} \setlength{\evensidemargin}{0cm}
+\setlength{\textwidth}{6.5in} \setlength{\topmargin}{0in}
+\setlength{\headsep}{0cm} \setlength{\headheight}{0cm}
+\setlength{\textheight}{9in} \linespread{1.6}
+
+\newcommand {\eps}   {\epsilon}
+
+\setkeys{acs}{articletitle=true}
+\setkeys{acs}{maxauthors=10}
+
+
+\title{Physical Interpretations of Nyquist Plots for EDLC Electrodes and Devices}
+
+\author{Bing-Ang Mei}
+\affiliation[UCLA]
+{University of California Los Angeles, Henry Samueli School of Engineering and Applied Science, Mechanical and Aerospace Engineering Department, 420 Westwood Plaza, Los Angeles, CA 90095, USA}
+\author{Obaidallah Munteshari}
+\affiliation[UCLA]
+{University of California Los Angeles, Henry Samueli School of Engineering and Applied Science, Mechanical and Aerospace Engineering Department, 420 Westwood Plaza, Los Angeles, CA 90095, USA}
+\author{Jonathan Lau}
+\affiliation[UCLA]
+{University of California Los Angeles, Henry Samueli School of Engineering and Applied Science, Materials Science and Engineering Department, 420 Westwood Plaza, Los Angeles, CA 90095, USA}
+\author{Bruce Dunn}
+\affiliation[UCLA]
+{University of California Los Angeles, Henry Samueli School of Engineering and Applied Science, Materials Science and Engineering Department, 420 Westwood Plaza, Los Angeles, CA 90095, USA}
+\author{Laurent Pilon}
+\affiliation[UCLA]
+{University of California Los Angeles, Henry Samueli School of Engineering and Applied Science, Mechanical and Aerospace Engineering Department, 420 Westwood Plaza, Los Angeles, CA 90095, USA}
+\email{pilon@seas.ucla.edu}
+\phone{+1 (310) 206-5598}
+\fax{+1 (310) 206-2302}
+
+
+\begin{document}
+\maketitle
+\newpage
+\section{Nomenclature}
+\begin{tabbing}
+\hspace*{2.5cm}\=\kill
+\(a\) \> Effective ion diameter (nm) \\
+\(c\) \> Ion concentration (mol/L) \\		
+%\(C_{C,BET}\) \> Areal capacitive capacitance (F/m\(^2\)) \\
+%\(C_{F,BET}\) \> Areal faradaic capacitance (F/m\(^2\)) \\
+\(C_{diff,eq}\) \> Equilibrium differential capacitance (F/m\(^2\)) \\
+%\(C_{BET}\) \> Areal capacitance (\(\mu\)F/cm\(^2\)) \\
+%\(C_{g}\) \> Gravimetric capacitance (F/g) \\
+\(D\) \> Diffusion coefficient of ions in electrolyte (m\(^2\)/s)		\\
+\(e\) \> Elementary charge, \(e=1.602\times10^{-19}\)~C				\\
+\(f\) \> Frequency (Hz)	\\
+\(F\) \> Faraday constant, \(F=e N_A=9.648\times10^4\)~C~mol\(^{-1}\)	\\
+\(H\) \> Stern layer thickness (nm) \\
+\(i\) \> Imaginary unit, \(i^2=-1\)	\\
+\(I_{s}\) \> Imposed current (A) \\
+\(j\) \> Current density (A/m\(^2\)) \\
+\(j_{GC}\) \> Current density imposed in galvanostatic cycling (A/m\(^2\)) \\
+\(j_{dc}\) \> Time independent DC current density (A/m\(^2\)), Eq. (1) \\
+\(j_{s}\) \> Current density (A/m\(^2\)) \\
+\(j_{0}\) \> Amplitude of the current density oscillations (A/m\(^2\)), Eq. (1) \\
+\(k_{B}\) \> Boltzmann constant, \(k_B=1.38\times10^{-23}\)~m\(^{2}\)~kg~s\(^{-2}\)~K\(^{-1}\) \\
+\(L\) \> Total thickness of the electrolyte domain (nm) \\%(m)	
+\(L_e\) \> Total thickness of the electrode (nm)		\\
+\(L_D\) \> Thickness of the diffuse layer (nm)		\\
+\(n_c\) \> Cycle number		\\
+\(N_A\) \> Avogadro number, \(N_A=6.022\times 10^{23}\)~mol\(^{-1}\)	\\
+\(N_i\) \> Ion flux of species \(i\) (mol m\(^{-2}\)s\(^{-1}\))							\\
+\(R_e\) \> Electrode resistance (\(\Omega\) m\(^{2}\))	\\
+\(R_{GC}\) \> Internal resistance from galvanostatic cycling (\(\Omega\) m\(^{2}\) or \(\Omega\)), Eq. (11)	\\
+\(R_D\) \> diffuse layer resistance (\(\Omega\) m\(^{2}\)), Eq. (6)\\
+\(R_\infty\) \> Bulk electrolyte resistance (\(\Omega\) m\(^{2}\)), Eq. (7)	 \\
+\(R_u\) \> Universal gas constant, \(R_u=8.314\)~J~mol\(^{-1}\)K\(^{-1}\)	\\
+\(T\) \> Local temperature (K)						\\
+\(t\) \> Time (s) 									\\
+\(t_c\) \> Charging time for galvanostatic cycling (s) \\
+\(v\) \> Scan rate of the cyclic voltammetry	 (V/s)	\\
+\(z\) \> Ion valency								\\
+\(Z\) \> Impedance, \(Z=Z_{re}+iZ_{im}\) (\(\Omega\) m\(^{2}\) or \(\Omega\))	\\
+\(Z_{re}, Z_{im}\) \> Real and imaginary parts of the impedance (\(\Omega\) m\(^{2}\) or \(\Omega\))	\\
+\textbf{Greek symbols}								\\
+\(\Delta\psi\) \> Potential drop in galvanostatic cycling (V)					\\
+\(\epsilon_0\) \> Vacuum permittivity, \(\epsilon_0=8.854\times10^{-12}\)~F~m\(^{-1}\)	\\
+\(\epsilon_r\) \> dielectric constant of the electrolyte\\
+\(\phi\) \> Phase difference between \(\psi_s\) and \(j_s\) (rad)		\\
+\(\lambda_D\) \> Debye length (nm) \\
+\(\nu\) \> Packing parameter	\\
+\(\sigma_e\) \> Electrical conductivity of carbon electrode (S/m) \\%(S m\(^{-1}\))			\\
+\(\tau\) \> Tortuosity of the electrode	\\
+\(\tau_{GC}\) \> Cycle period of galvanostatic cycling (s)	\\
+%\(\tau_{CV}\) \> Cycle period of cyclic voltammetry (s)	\\
+\(\psi\) \> Electric potential (V)					\\
+\(\psi_{dc}\) \> Time independent DC electric potential (V)					\\
+\(\psi_D\) \> Electric potential at the Stern/diffuse layer interface (V)					\\
+\(\psi_{min}\), \(\psi_{max}\) \> Minimum and maximum of the potential window (V)		\\
+\(\psi_s\) \> Imposed potential (V)	\\
+\(\psi_0\) \> Amplitude of the oscillating potential (V)					\\
+\textbf{Superscripts and subscripts}				\\
+\(\infty\) \> Refers to bulk electrolyte			\\
+\(D\) \> Refers to diffuse layer				\\
+\(eq\) \> Refers to equilibrium conditions				\\
+\(EIS\) \> Refers to EIS measurements				\\
+\(i\) \> Refers to ion species \(i\)				\\
+\(St\) \> Refers to Stern layer				\\
+\end{tabbing}
+
+\renewcommand{\theequation}{S.\arabic{equation}}
+\section{Governing equations}
+The local electric potential $\psi (x, t)$ in the electrode material was governed by the continuity equation combined with Ohm$^\prime$s law to yield \cite{GoldinGM2012EA,WiedemannAH2013EA}
+\begin{equation}
+\label{OhmLaw}
+\frac {\partial} {\partial x} \left ( \sigma_e \frac {\partial \psi} {\partial x} \right )  =  0
+\end{equation}
+where $\sigma_e$ is the electrical conductivity of the electrode.
+
+The modified Poisson-Nernst-Planck (MPNP) model governed the spatiotemporal evolution of the electric potential $\psi(x, t)$ and ion concentrations $c_i(x, t)$ ($i$ = 1,2) in binary and symmetric electrolytes according to \cite{BazantMZ2009ACIS, KilicM2007PREb, OlesenLH2010PRE}
+\begin{subequations}
+\begin{align}
+  \frac {\partial} {\partial x} \left ( \eps_0 \eps_r \frac {\partial \psi} {\partial x} \right ) & =  \begin{cases}
+   0 & \text{in the Stern layer  } \\
+   -zF(c_1 - c_2)       & \text{in the diffuse layer or bulk electrolyte}
+                   \end{cases} \\
+    \frac{\displaystyle \partial c_i}{\displaystyle \partial t} &= - \frac {\partial N_i}{\partial x}   \quad\quad\quad\quad\quad \textrm{in the diffuse layer or bulk electrolyte}.&
+\end{align}
+\end{subequations}
+Here, $F=eN_A$ is the Faraday constant, $\epsilon_0 = 8.854$ $\times$ $10^{12}$ F m$^{-1}$ is the vacuum permittivity, and $\epsilon_r$ is the dielectric constant of the electrolyte, respectively. The mass flux vector $N_i(x, t)$ of ion species ``i" (in mol/m$^2$s) at location $x$ and time $t$ was defined as \cite{KilicM2007PREb}
+\begin{equation}
+\label{Ni}
+N_i (x, t) = - D \frac {\partial c_i} {\partial x}
+- \frac { z F D c_i} {R_u T} \frac {\partial \psi} {\partial x} - \frac{D N_A a^3 c_i}{1-N_A a^3 (c_1+c_2)}\frac {\partial}{\partial x} (c_1+c_2) \qquad \textrm{for $i$ = 1,2}
+\end{equation}
+where $D$ is the diffusion coefficient of both ion species. The three terms on the right hand side of Equation (\ref{Ni}) correspond to the ion
+fluxes due to diffusion, electromigration, and steric effects,
+respectively \cite{BazantMZ2009ACIS,KilicM2007PREa}. This model accounts for finite ion size and is applicable to cases with large electric potential and/or electrolyte concentrations.
+
+
+\section{Initial and boundary conditions}
+In order to solve the one-dimensional governing Equations (\ref{OhmLaw}) to (\ref{Ni}) for the local and time-dependent potential $\psi(x,t)$ and ion concentrations $c_i(x,t)$, one needs one initial condition and two boundary conditions for each variable in each material. Zero electric potential and uniform ion concentrations equal to the bulk concentrations $c_{\infty}$ were used as initial conditions for solving the MPNP model, i.e.,
+\begin{eqnarray}  \label{Init}
+\psi (x, 0) = 0  & \text{and}  & c_i(x, 0) = c_{\infty}
+\end{eqnarray}
+
+The boundary conditions at the current collector/electrode interface varied for different simulations. In EIS simulations, $\psi_s (t)$ is a harmonic function of time $t$ which can be expressed, in complex notations, as \cite{bard1980electrochemical, LasiaA2002, OrazemME2008, YuanXZ2010},
+\begin{subequations}
+\label{EqEISPsis_BC}
+\begin{equation}
+\label{EqEISPsis_electrode}
+\psi_s (t) = \psi_{dc} + \psi_0 e^{i 2 \pi f t} \qquad \text{for single-electrode simulations}
+\end{equation}
+\begin{equation}
+\label{EqEISPsis_device}
+\psi_s^c (t) = 2\psi_{dc} + 2\psi_0 e^{i 2 \pi f t} \qquad \text{for two-electrode simulations}
+\end{equation}
+\end{subequations}
+where $\psi_{dc}$ is the time-independent DC potential, $\psi_0$ is the amplitude of the oscillating potential at frequency $f$. For galvanostatic cycling, the current density $j_s(t)$ at the current collector/electrode interface is imposed as
+\begin{numcases}
+{j_s(t) =}
+j_{GC} & \text{for} $t_0 \le t \le t_0 + t_c$ \qquad \ \ \nonumber  \\
+-j_{GC} & \text{for} $t_0 + t_c < t \le t_0 + t_c + t_d$
+\label{EqjsisCCm}
+\end{numcases}
+where $j_{GC}$ is the magnitude of the imposed current density, $t_0$ is the starting time, $t_c$ is the time of charging, and $t_d$ is the time of discharging. Note that the electrode was cycled for a fixed potential window between $\psi_{min}=0$ V and $\psi_{max}=1$ V in the present simulation. Thus, $t_c$ and $t_d$ were not fixed and depended on the imposed current density $j_{GC}$.
+
+\subsection{Single-electrode simulations}
+The boundary condition at the centerline, located at $x=L_e+L$, was given by
+\begin{equation}
+\label{EqPsicenter}
+\psi(L_e+L,t) = 0 \quad \textrm{and} \quad c_i(L_e+L,t) = c_\infty.
+\end{equation} 
+Moreover, the electric potential and current density were both continuous across the electrode/electrolyte interface, located at $x=L_e$, so that
+%%%%%%%%%%%%%%%
+\begin{equation}  \label{EqGMPNPBCElectrodeA}
+\psi (L_e^-,t) = \psi (L_e^+,t)  \ \  \textrm{and}  \
+- \sigma_e \frac {\partial \psi} {\partial x} (L_e^-,t) = - \eps_0 \eps_r \frac {\partial^2 \psi} {\partial x \partial t} (L_e^+,t).
+\end{equation}
+The electric potential varied linearly across the Stern layer so that the electric field at the planar Stern/diffuse layer interfaces, located at $x = L_e + H$ satisfied \cite{WangH2013JPS, WangH2013JPCCa}
+\begin{equation}  
+\label{psi_stern_simA}
+\frac{\partial\psi}{\partial x}(L_e + H,t)=\frac{\psi(L_e)-\psi(L_e + H)}{H}.
+\end{equation}
+These boundary conditions accounted for the presence of the Stern layers without explicitly simulating them in the computational domain thus reducing significantly the number of meshes \cite{WangH2013JPS}.
+
+Finally, based on assumption (5), no ion intercalated into the electrode. Thus, the ion mass flux vanished at the electrode/electrolyte interface, located at $x = L_e$, such that \cite{WangH2013JPCCa}
+\begin{equation}\label{EqNiA=0}
+N_i (L_e,t)= 0 \qquad \textrm{for i = 1, 2},
+\end{equation}
+
+\subsection{Two-electrode simulations}
+For two-electrode simulations, the potential at one electrode was imposed as $\psi_s(t)$ [Equation (1)] while the other electrode was grounded, i.e., 
+\begin{equation}
+\psi (2L_e+2L, t) = 0.
+\end{equation}
+Moreover, by virtue of symmetry, the electric potential, current density, and ion flux at the electrode/electrolyte interface, located at $x=L_e+2L$ were identical to the boundary conditions described in Equations (\ref{EqGMPNPBCElectrodeA})-(\ref{EqNiA=0}), i.e.,
+\begin{eqnarray}
+\label{EqGMPNPBCElectrodeB}
+\psi (L_e+2L^-,t) &=& \psi (L_e+2L^+,t)  \\
+- \sigma_e \frac {\partial \psi} {\partial x} (L_e+2L^+,t) &=& - \eps_0 \eps_r \frac {\partial^2 \psi} {\partial x \partial t} (L_e+2L^-,t), \\
+\frac{\partial\psi}{\partial x}(L_e + 2L - H,t) &=& \frac{\psi(L_e + 2L - H)-\psi(L_e + 2L)}{H},\\
+N_i (L_e+2L,t) &=& 0 \qquad \textrm{for i = 1, 2}.
+\end{eqnarray}  
+
+\newpage
+\bibliography{reference_abb_JPCC_EIS} 
+
+\end{document}

@@ -106,6 +106,8 @@ temp_print_trace.*
 failed-unittest
 build
 moose/
+*.mph
+*.mph.lock
 
 # Allow certain files in gold directories
 !**/gold/*.e
