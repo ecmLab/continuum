@@ -9,11 +9,14 @@ MassDiffusion::validParams()
 {
   InputParameters params = DualChemicalEnergyDensity::validParams();
   params.addRequiredParam<MaterialPropertyName>("mobility", "The mobility of the species");
+  params.addParam<MaterialPropertyName>("phi0", "The characteristic potential");
+  params.addParam<MaterialPropertyName>("L0","The Characteristic Length");
   return params;
 }
 
 MassDiffusion::MassDiffusion(const InputParameters & parameters)
-  : DualChemicalEnergyDensity(parameters), _M(getADMaterialProperty<Real>("mobility"))
+  : DualChemicalEnergyDensity(parameters),
+  _M(getADMaterialProperty<Real>("mobility"))
 {
 }
 
