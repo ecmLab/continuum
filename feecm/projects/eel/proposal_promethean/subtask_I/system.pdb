@@ -1,0 +1,985 @@
+REMARK   PTFE-on-graphite system; generated from LAMMPS data file
+REMARK   chain A = graphite slab; chains B,C,... = PTFE oligomers
+CRYST1   19.680   21.304   61.700  90.00  90.00  90.00 P 1           1
+HETATM    1  Cgr GRA A   1       0.000   0.000  -6.700  1.00  0.00           C
+HETATM    2  Cgr GRA A   1       0.000   1.420  -6.700  1.00  0.00           C
+HETATM    3  Cgr GRA A   1       1.230   2.130  -6.700  1.00  0.00           C
+HETATM    4  Cgr GRA A   1       1.230   3.550  -6.700  1.00  0.00           C
+HETATM    5  Cgr GRA A   1       0.000   4.261  -6.700  1.00  0.00           C
+HETATM    6  Cgr GRA A   1       0.000   5.681  -6.700  1.00  0.00           C
+HETATM    7  Cgr GRA A   1       1.230   6.391  -6.700  1.00  0.00           C
+HETATM    8  Cgr GRA A   1       1.230   7.811  -6.700  1.00  0.00           C
+HETATM    9  Cgr GRA A   1       0.000   8.522  -6.700  1.00  0.00           C
+HETATM   10  Cgr GRA A   1       0.000   9.942  -6.700  1.00  0.00           C
+HETATM   11  Cgr GRA A   1       1.230  10.652  -6.700  1.00  0.00           C
+HETATM   12  Cgr GRA A   1       1.230  12.072  -6.700  1.00  0.00           C
+HETATM   13  Cgr GRA A   1       0.000  12.783  -6.700  1.00  0.00           C
+HETATM   14  Cgr GRA A   1       0.000  14.203  -6.700  1.00  0.00           C
+HETATM   15  Cgr GRA A   1       1.230  14.913  -6.700  1.00  0.00           C
+HETATM   16  Cgr GRA A   1       1.230  16.333  -6.700  1.00  0.00           C
+HETATM   17  Cgr GRA A   1       0.000  17.043  -6.700  1.00  0.00           C
+HETATM   18  Cgr GRA A   1       0.000  18.463  -6.700  1.00  0.00           C
+HETATM   19  Cgr GRA A   1       1.230  19.174  -6.700  1.00  0.00           C
+HETATM   20  Cgr GRA A   1       1.230  20.594  -6.700  1.00  0.00           C
+HETATM   21  Cgr GRA A   1       2.460   0.000  -6.700  1.00  0.00           C
+HETATM   22  Cgr GRA A   1       2.460   1.420  -6.700  1.00  0.00           C
+HETATM   23  Cgr GRA A   1       3.690   2.130  -6.700  1.00  0.00           C
+HETATM   24  Cgr GRA A   1       3.690   3.550  -6.700  1.00  0.00           C
+HETATM   25  Cgr GRA A   1       2.460   4.261  -6.700  1.00  0.00           C
+HETATM   26  Cgr GRA A   1       2.460   5.681  -6.700  1.00  0.00           C
+HETATM   27  Cgr GRA A   1       3.690   6.391  -6.700  1.00  0.00           C
+HETATM   28  Cgr GRA A   1       3.690   7.811  -6.700  1.00  0.00           C
+HETATM   29  Cgr GRA A   1       2.460   8.522  -6.700  1.00  0.00           C
+HETATM   30  Cgr GRA A   1       2.460   9.942  -6.700  1.00  0.00           C
+HETATM   31  Cgr GRA A   1       3.690  10.652  -6.700  1.00  0.00           C
+HETATM   32  Cgr GRA A   1       3.690  12.072  -6.700  1.00  0.00           C
+HETATM   33  Cgr GRA A   1       2.460  12.783  -6.700  1.00  0.00           C
+HETATM   34  Cgr GRA A   1       2.460  14.203  -6.700  1.00  0.00           C
+HETATM   35  Cgr GRA A   1       3.690  14.913  -6.700  1.00  0.00           C
+HETATM   36  Cgr GRA A   1       3.690  16.333  -6.700  1.00  0.00           C
+HETATM   37  Cgr GRA A   1       2.460  17.043  -6.700  1.00  0.00           C
+HETATM   38  Cgr GRA A   1       2.460  18.463  -6.700  1.00  0.00           C
+HETATM   39  Cgr GRA A   1       3.690  19.174  -6.700  1.00  0.00           C
+HETATM   40  Cgr GRA A   1       3.690  20.594  -6.700  1.00  0.00           C
+HETATM   41  Cgr GRA A   1       4.920   0.000  -6.700  1.00  0.00           C
+HETATM   42  Cgr GRA A   1       4.920   1.420  -6.700  1.00  0.00           C
+HETATM   43  Cgr GRA A   1       6.150   2.130  -6.700  1.00  0.00           C
+HETATM   44  Cgr GRA A   1       6.150   3.550  -6.700  1.00  0.00           C
+HETATM   45  Cgr GRA A   1       4.920   4.261  -6.700  1.00  0.00           C
+HETATM   46  Cgr GRA A   1       4.920   5.681  -6.700  1.00  0.00           C
+HETATM   47  Cgr GRA A   1       6.150   6.391  -6.700  1.00  0.00           C
+HETATM   48  Cgr GRA A   1       6.150   7.811  -6.700  1.00  0.00           C
+HETATM   49  Cgr GRA A   1       4.920   8.522  -6.700  1.00  0.00           C
+HETATM   50  Cgr GRA A   1       4.920   9.942  -6.700  1.00  0.00           C
+HETATM   51  Cgr GRA A   1       6.150  10.652  -6.700  1.00  0.00           C
+HETATM   52  Cgr GRA A   1       6.150  12.072  -6.700  1.00  0.00           C
+HETATM   53  Cgr GRA A   1       4.920  12.783  -6.700  1.00  0.00           C
+HETATM   54  Cgr GRA A   1       4.920  14.203  -6.700  1.00  0.00           C
+HETATM   55  Cgr GRA A   1       6.150  14.913  -6.700  1.00  0.00           C
+HETATM   56  Cgr GRA A   1       6.150  16.333  -6.700  1.00  0.00           C
+HETATM   57  Cgr GRA A   1       4.920  17.043  -6.700  1.00  0.00           C
+HETATM   58  Cgr GRA A   1       4.920  18.463  -6.700  1.00  0.00           C
+HETATM   59  Cgr GRA A   1       6.150  19.174  -6.700  1.00  0.00           C
+HETATM   60  Cgr GRA A   1       6.150  20.594  -6.700  1.00  0.00           C
+HETATM   61  Cgr GRA A   1       7.380   0.000  -6.700  1.00  0.00           C
+HETATM   62  Cgr GRA A   1       7.380   1.420  -6.700  1.00  0.00           C
+HETATM   63  Cgr GRA A   1       8.610   2.130  -6.700  1.00  0.00           C
+HETATM   64  Cgr GRA A   1       8.610   3.550  -6.700  1.00  0.00           C
+HETATM   65  Cgr GRA A   1       7.380   4.261  -6.700  1.00  0.00           C
+HETATM   66  Cgr GRA A   1       7.380   5.681  -6.700  1.00  0.00           C
+HETATM   67  Cgr GRA A   1       8.610   6.391  -6.700  1.00  0.00           C
+HETATM   68  Cgr GRA A   1       8.610   7.811  -6.700  1.00  0.00           C
+HETATM   69  Cgr GRA A   1       7.380   8.522  -6.700  1.00  0.00           C
+HETATM   70  Cgr GRA A   1       7.380   9.942  -6.700  1.00  0.00           C
+HETATM   71  Cgr GRA A   1       8.610  10.652  -6.700  1.00  0.00           C
+HETATM   72  Cgr GRA A   1       8.610  12.072  -6.700  1.00  0.00           C
+HETATM   73  Cgr GRA A   1       7.380  12.783  -6.700  1.00  0.00           C
+HETATM   74  Cgr GRA A   1       7.380  14.203  -6.700  1.00  0.00           C
+HETATM   75  Cgr GRA A   1       8.610  14.913  -6.700  1.00  0.00           C
+HETATM   76  Cgr GRA A   1       8.610  16.333  -6.700  1.00  0.00           C
+HETATM   77  Cgr GRA A   1       7.380  17.043  -6.700  1.00  0.00           C
+HETATM   78  Cgr GRA A   1       7.380  18.463  -6.700  1.00  0.00           C
+HETATM   79  Cgr GRA A   1       8.610  19.174  -6.700  1.00  0.00           C
+HETATM   80  Cgr GRA A   1       8.610  20.594  -6.700  1.00  0.00           C
+HETATM   81  Cgr GRA A   1       9.840   0.000  -6.700  1.00  0.00           C
+HETATM   82  Cgr GRA A   1       9.840   1.420  -6.700  1.00  0.00           C
+HETATM   83  Cgr GRA A   1      11.070   2.130  -6.700  1.00  0.00           C
+HETATM   84  Cgr GRA A   1      11.070   3.550  -6.700  1.00  0.00           C
+HETATM   85  Cgr GRA A   1       9.840   4.261  -6.700  1.00  0.00           C
+HETATM   86  Cgr GRA A   1       9.840   5.681  -6.700  1.00  0.00           C
+HETATM   87  Cgr GRA A   1      11.070   6.391  -6.700  1.00  0.00           C
+HETATM   88  Cgr GRA A   1      11.070   7.811  -6.700  1.00  0.00           C
+HETATM   89  Cgr GRA A   1       9.840   8.522  -6.700  1.00  0.00           C
+HETATM   90  Cgr GRA A   1       9.840   9.942  -6.700  1.00  0.00           C
+HETATM   91  Cgr GRA A   1      11.070  10.652  -6.700  1.00  0.00           C
+HETATM   92  Cgr GRA A   1      11.070  12.072  -6.700  1.00  0.00           C
+HETATM   93  Cgr GRA A   1       9.840  12.783  -6.700  1.00  0.00           C
+HETATM   94  Cgr GRA A   1       9.840  14.203  -6.700  1.00  0.00           C
+HETATM   95  Cgr GRA A   1      11.070  14.913  -6.700  1.00  0.00           C
+HETATM   96  Cgr GRA A   1      11.070  16.333  -6.700  1.00  0.00           C
+HETATM   97  Cgr GRA A   1       9.840  17.043  -6.700  1.00  0.00           C
+HETATM   98  Cgr GRA A   1       9.840  18.463  -6.700  1.00  0.00           C
+HETATM   99  Cgr GRA A   1      11.070  19.174  -6.700  1.00  0.00           C
+HETATM  100  Cgr GRA A   1      11.070  20.594  -6.700  1.00  0.00           C
+HETATM  101  Cgr GRA A   1      12.300   0.000  -6.700  1.00  0.00           C
+HETATM  102  Cgr GRA A   1      12.300   1.420  -6.700  1.00  0.00           C
+HETATM  103  Cgr GRA A   1      13.530   2.130  -6.700  1.00  0.00           C
+HETATM  104  Cgr GRA A   1      13.530   3.550  -6.700  1.00  0.00           C
+HETATM  105  Cgr GRA A   1      12.300   4.261  -6.700  1.00  0.00           C
+HETATM  106  Cgr GRA A   1      12.300   5.681  -6.700  1.00  0.00           C
+HETATM  107  Cgr GRA A   1      13.530   6.391  -6.700  1.00  0.00           C
+HETATM  108  Cgr GRA A   1      13.530   7.811  -6.700  1.00  0.00           C
+HETATM  109  Cgr GRA A   1      12.300   8.522  -6.700  1.00  0.00           C
+HETATM  110  Cgr GRA A   1      12.300   9.942  -6.700  1.00  0.00           C
+HETATM  111  Cgr GRA A   1      13.530  10.652  -6.700  1.00  0.00           C
+HETATM  112  Cgr GRA A   1      13.530  12.072  -6.700  1.00  0.00           C
+HETATM  113  Cgr GRA A   1      12.300  12.783  -6.700  1.00  0.00           C
+HETATM  114  Cgr GRA A   1      12.300  14.203  -6.700  1.00  0.00           C
+HETATM  115  Cgr GRA A   1      13.530  14.913  -6.700  1.00  0.00           C
+HETATM  116  Cgr GRA A   1      13.530  16.333  -6.700  1.00  0.00           C
+HETATM  117  Cgr GRA A   1      12.300  17.043  -6.700  1.00  0.00           C
+HETATM  118  Cgr GRA A   1      12.300  18.463  -6.700  1.00  0.00           C
+HETATM  119  Cgr GRA A   1      13.530  19.174  -6.700  1.00  0.00           C
+HETATM  120  Cgr GRA A   1      13.530  20.594  -6.700  1.00  0.00           C
+HETATM  121  Cgr GRA A   1      14.760   0.000  -6.700  1.00  0.00           C
+HETATM  122  Cgr GRA A   1      14.760   1.420  -6.700  1.00  0.00           C
+HETATM  123  Cgr GRA A   1      15.990   2.130  -6.700  1.00  0.00           C
+HETATM  124  Cgr GRA A   1      15.990   3.550  -6.700  1.00  0.00           C
+HETATM  125  Cgr GRA A   1      14.760   4.261  -6.700  1.00  0.00           C
+HETATM  126  Cgr GRA A   1      14.760   5.681  -6.700  1.00  0.00           C
+HETATM  127  Cgr GRA A   1      15.990   6.391  -6.700  1.00  0.00           C
+HETATM  128  Cgr GRA A   1      15.990   7.811  -6.700  1.00  0.00           C
+HETATM  129  Cgr GRA A   1      14.760   8.522  -6.700  1.00  0.00           C
+HETATM  130  Cgr GRA A   1      14.760   9.942  -6.700  1.00  0.00           C
+HETATM  131  Cgr GRA A   1      15.990  10.652  -6.700  1.00  0.00           C
+HETATM  132  Cgr GRA A   1      15.990  12.072  -6.700  1.00  0.00           C
+HETATM  133  Cgr GRA A   1      14.760  12.783  -6.700  1.00  0.00           C
+HETATM  134  Cgr GRA A   1      14.760  14.203  -6.700  1.00  0.00           C
+HETATM  135  Cgr GRA A   1      15.990  14.913  -6.700  1.00  0.00           C
+HETATM  136  Cgr GRA A   1      15.990  16.333  -6.700  1.00  0.00           C
+HETATM  137  Cgr GRA A   1      14.760  17.043  -6.700  1.00  0.00           C
+HETATM  138  Cgr GRA A   1      14.760  18.463  -6.700  1.00  0.00           C
+HETATM  139  Cgr GRA A   1      15.990  19.174  -6.700  1.00  0.00           C
+HETATM  140  Cgr GRA A   1      15.990  20.594  -6.700  1.00  0.00           C
+HETATM  141  Cgr GRA A   1      17.220   0.000  -6.700  1.00  0.00           C
+HETATM  142  Cgr GRA A   1      17.220   1.420  -6.700  1.00  0.00           C
+HETATM  143  Cgr GRA A   1      18.450   2.130  -6.700  1.00  0.00           C
+HETATM  144  Cgr GRA A   1      18.450   3.550  -6.700  1.00  0.00           C
+HETATM  145  Cgr GRA A   1      17.220   4.261  -6.700  1.00  0.00           C
+HETATM  146  Cgr GRA A   1      17.220   5.681  -6.700  1.00  0.00           C
+HETATM  147  Cgr GRA A   1      18.450   6.391  -6.700  1.00  0.00           C
+HETATM  148  Cgr GRA A   1      18.450   7.811  -6.700  1.00  0.00           C
+HETATM  149  Cgr GRA A   1      17.220   8.522  -6.700  1.00  0.00           C
+HETATM  150  Cgr GRA A   1      17.220   9.942  -6.700  1.00  0.00           C
+HETATM  151  Cgr GRA A   1      18.450  10.652  -6.700  1.00  0.00           C
+HETATM  152  Cgr GRA A   1      18.450  12.072  -6.700  1.00  0.00           C
+HETATM  153  Cgr GRA A   1      17.220  12.783  -6.700  1.00  0.00           C
+HETATM  154  Cgr GRA A   1      17.220  14.203  -6.700  1.00  0.00           C
+HETATM  155  Cgr GRA A   1      18.450  14.913  -6.700  1.00  0.00           C
+HETATM  156  Cgr GRA A   1      18.450  16.333  -6.700  1.00  0.00           C
+HETATM  157  Cgr GRA A   1      17.220  17.043  -6.700  1.00  0.00           C
+HETATM  158  Cgr GRA A   1      17.220  18.463  -6.700  1.00  0.00           C
+HETATM  159  Cgr GRA A   1      18.450  19.174  -6.700  1.00  0.00           C
+HETATM  160  Cgr GRA A   1      18.450  20.594  -6.700  1.00  0.00           C
+HETATM  161  Cgr GRA A   1       0.000   0.000  -3.350  1.00  0.00           C
+HETATM  162  Cgr GRA A   1       0.000   1.420  -3.350  1.00  0.00           C
+HETATM  163  Cgr GRA A   1       1.230   2.130  -3.350  1.00  0.00           C
+HETATM  164  Cgr GRA A   1       1.230   3.550  -3.350  1.00  0.00           C
+HETATM  165  Cgr GRA A   1       0.000   4.261  -3.350  1.00  0.00           C
+HETATM  166  Cgr GRA A   1       0.000   5.681  -3.350  1.00  0.00           C
+HETATM  167  Cgr GRA A   1       1.230   6.391  -3.350  1.00  0.00           C
+HETATM  168  Cgr GRA A   1       1.230   7.811  -3.350  1.00  0.00           C
+HETATM  169  Cgr GRA A   1       0.000   8.522  -3.350  1.00  0.00           C
+HETATM  170  Cgr GRA A   1       0.000   9.942  -3.350  1.00  0.00           C
+HETATM  171  Cgr GRA A   1       1.230  10.652  -3.350  1.00  0.00           C
+HETATM  172  Cgr GRA A   1       1.230  12.072  -3.350  1.00  0.00           C
+HETATM  173  Cgr GRA A   1       0.000  12.783  -3.350  1.00  0.00           C
+HETATM  174  Cgr GRA A   1       0.000  14.203  -3.350  1.00  0.00           C
+HETATM  175  Cgr GRA A   1       1.230  14.913  -3.350  1.00  0.00           C
+HETATM  176  Cgr GRA A   1       1.230  16.333  -3.350  1.00  0.00           C
+HETATM  177  Cgr GRA A   1       0.000  17.043  -3.350  1.00  0.00           C
+HETATM  178  Cgr GRA A   1       0.000  18.463  -3.350  1.00  0.00           C
+HETATM  179  Cgr GRA A   1       1.230  19.174  -3.350  1.00  0.00           C
+HETATM  180  Cgr GRA A   1       1.230  20.594  -3.350  1.00  0.00           C
+HETATM  181  Cgr GRA A   1       2.460   0.000  -3.350  1.00  0.00           C
+HETATM  182  Cgr GRA A   1       2.460   1.420  -3.350  1.00  0.00           C
+HETATM  183  Cgr GRA A   1       3.690   2.130  -3.350  1.00  0.00           C
+HETATM  184  Cgr GRA A   1       3.690   3.550  -3.350  1.00  0.00           C
+HETATM  185  Cgr GRA A   1       2.460   4.261  -3.350  1.00  0.00           C
+HETATM  186  Cgr GRA A   1       2.460   5.681  -3.350  1.00  0.00           C
+HETATM  187  Cgr GRA A   1       3.690   6.391  -3.350  1.00  0.00           C
+HETATM  188  Cgr GRA A   1       3.690   7.811  -3.350  1.00  0.00           C
+HETATM  189  Cgr GRA A   1       2.460   8.522  -3.350  1.00  0.00           C
+HETATM  190  Cgr GRA A   1       2.460   9.942  -3.350  1.00  0.00           C
+HETATM  191  Cgr GRA A   1       3.690  10.652  -3.350  1.00  0.00           C
+HETATM  192  Cgr GRA A   1       3.690  12.072  -3.350  1.00  0.00           C
+HETATM  193  Cgr GRA A   1       2.460  12.783  -3.350  1.00  0.00           C
+HETATM  194  Cgr GRA A   1       2.460  14.203  -3.350  1.00  0.00           C
+HETATM  195  Cgr GRA A   1       3.690  14.913  -3.350  1.00  0.00           C
+HETATM  196  Cgr GRA A   1       3.690  16.333  -3.350  1.00  0.00           C
+HETATM  197  Cgr GRA A   1       2.460  17.043  -3.350  1.00  0.00           C
+HETATM  198  Cgr GRA A   1       2.460  18.463  -3.350  1.00  0.00           C
+HETATM  199  Cgr GRA A   1       3.690  19.174  -3.350  1.00  0.00           C
+HETATM  200  Cgr GRA A   1       3.690  20.594  -3.350  1.00  0.00           C
+HETATM  201  Cgr GRA A   1       4.920   0.000  -3.350  1.00  0.00           C
+HETATM  202  Cgr GRA A   1       4.920   1.420  -3.350  1.00  0.00           C
+HETATM  203  Cgr GRA A   1       6.150   2.130  -3.350  1.00  0.00           C
+HETATM  204  Cgr GRA A   1       6.150   3.550  -3.350  1.00  0.00           C
+HETATM  205  Cgr GRA A   1       4.920   4.261  -3.350  1.00  0.00           C
+HETATM  206  Cgr GRA A   1       4.920   5.681  -3.350  1.00  0.00           C
+HETATM  207  Cgr GRA A   1       6.150   6.391  -3.350  1.00  0.00           C
+HETATM  208  Cgr GRA A   1       6.150   7.811  -3.350  1.00  0.00           C
+HETATM  209  Cgr GRA A   1       4.920   8.522  -3.350  1.00  0.00           C
+HETATM  210  Cgr GRA A   1       4.920   9.942  -3.350  1.00  0.00           C
+HETATM  211  Cgr GRA A   1       6.150  10.652  -3.350  1.00  0.00           C
+HETATM  212  Cgr GRA A   1       6.150  12.072  -3.350  1.00  0.00           C
+HETATM  213  Cgr GRA A   1       4.920  12.783  -3.350  1.00  0.00           C
+HETATM  214  Cgr GRA A   1       4.920  14.203  -3.350  1.00  0.00           C
+HETATM  215  Cgr GRA A   1       6.150  14.913  -3.350  1.00  0.00           C
+HETATM  216  Cgr GRA A   1       6.150  16.333  -3.350  1.00  0.00           C
+HETATM  217  Cgr GRA A   1       4.920  17.043  -3.350  1.00  0.00           C
+HETATM  218  Cgr GRA A   1       4.920  18.463  -3.350  1.00  0.00           C
+HETATM  219  Cgr GRA A   1       6.150  19.174  -3.350  1.00  0.00           C
+HETATM  220  Cgr GRA A   1       6.150  20.594  -3.350  1.00  0.00           C
+HETATM  221  Cgr GRA A   1       7.380   0.000  -3.350  1.00  0.00           C
+HETATM  222  Cgr GRA A   1       7.380   1.420  -3.350  1.00  0.00           C
+HETATM  223  Cgr GRA A   1       8.610   2.130  -3.350  1.00  0.00           C
+HETATM  224  Cgr GRA A   1       8.610   3.550  -3.350  1.00  0.00           C
+HETATM  225  Cgr GRA A   1       7.380   4.261  -3.350  1.00  0.00           C
+HETATM  226  Cgr GRA A   1       7.380   5.681  -3.350  1.00  0.00           C
+HETATM  227  Cgr GRA A   1       8.610   6.391  -3.350  1.00  0.00           C
+HETATM  228  Cgr GRA A   1       8.610   7.811  -3.350  1.00  0.00           C
+HETATM  229  Cgr GRA A   1       7.380   8.522  -3.350  1.00  0.00           C
+HETATM  230  Cgr GRA A   1       7.380   9.942  -3.350  1.00  0.00           C
+HETATM  231  Cgr GRA A   1       8.610  10.652  -3.350  1.00  0.00           C
+HETATM  232  Cgr GRA A   1       8.610  12.072  -3.350  1.00  0.00           C
+HETATM  233  Cgr GRA A   1       7.380  12.783  -3.350  1.00  0.00           C
+HETATM  234  Cgr GRA A   1       7.380  14.203  -3.350  1.00  0.00           C
+HETATM  235  Cgr GRA A   1       8.610  14.913  -3.350  1.00  0.00           C
+HETATM  236  Cgr GRA A   1       8.610  16.333  -3.350  1.00  0.00           C
+HETATM  237  Cgr GRA A   1       7.380  17.043  -3.350  1.00  0.00           C
+HETATM  238  Cgr GRA A   1       7.380  18.463  -3.350  1.00  0.00           C
+HETATM  239  Cgr GRA A   1       8.610  19.174  -3.350  1.00  0.00           C
+HETATM  240  Cgr GRA A   1       8.610  20.594  -3.350  1.00  0.00           C
+HETATM  241  Cgr GRA A   1       9.840   0.000  -3.350  1.00  0.00           C
+HETATM  242  Cgr GRA A   1       9.840   1.420  -3.350  1.00  0.00           C
+HETATM  243  Cgr GRA A   1      11.070   2.130  -3.350  1.00  0.00           C
+HETATM  244  Cgr GRA A   1      11.070   3.550  -3.350  1.00  0.00           C
+HETATM  245  Cgr GRA A   1       9.840   4.261  -3.350  1.00  0.00           C
+HETATM  246  Cgr GRA A   1       9.840   5.681  -3.350  1.00  0.00           C
+HETATM  247  Cgr GRA A   1      11.070   6.391  -3.350  1.00  0.00           C
+HETATM  248  Cgr GRA A   1      11.070   7.811  -3.350  1.00  0.00           C
+HETATM  249  Cgr GRA A   1       9.840   8.522  -3.350  1.00  0.00           C
+HETATM  250  Cgr GRA A   1       9.840   9.942  -3.350  1.00  0.00           C
+HETATM  251  Cgr GRA A   1      11.070  10.652  -3.350  1.00  0.00           C
+HETATM  252  Cgr GRA A   1      11.070  12.072  -3.350  1.00  0.00           C
+HETATM  253  Cgr GRA A   1       9.840  12.783  -3.350  1.00  0.00           C
+HETATM  254  Cgr GRA A   1       9.840  14.203  -3.350  1.00  0.00           C
+HETATM  255  Cgr GRA A   1      11.070  14.913  -3.350  1.00  0.00           C
+HETATM  256  Cgr GRA A   1      11.070  16.333  -3.350  1.00  0.00           C
+HETATM  257  Cgr GRA A   1       9.840  17.043  -3.350  1.00  0.00           C
+HETATM  258  Cgr GRA A   1       9.840  18.463  -3.350  1.00  0.00           C
+HETATM  259  Cgr GRA A   1      11.070  19.174  -3.350  1.00  0.00           C
+HETATM  260  Cgr GRA A   1      11.070  20.594  -3.350  1.00  0.00           C
+HETATM  261  Cgr GRA A   1      12.300   0.000  -3.350  1.00  0.00           C
+HETATM  262  Cgr GRA A   1      12.300   1.420  -3.350  1.00  0.00           C
+HETATM  263  Cgr GRA A   1      13.530   2.130  -3.350  1.00  0.00           C
+HETATM  264  Cgr GRA A   1      13.530   3.550  -3.350  1.00  0.00           C
+HETATM  265  Cgr GRA A   1      12.300   4.261  -3.350  1.00  0.00           C
+HETATM  266  Cgr GRA A   1      12.300   5.681  -3.350  1.00  0.00           C
+HETATM  267  Cgr GRA A   1      13.530   6.391  -3.350  1.00  0.00           C
+HETATM  268  Cgr GRA A   1      13.530   7.811  -3.350  1.00  0.00           C
+HETATM  269  Cgr GRA A   1      12.300   8.522  -3.350  1.00  0.00           C
+HETATM  270  Cgr GRA A   1      12.300   9.942  -3.350  1.00  0.00           C
+HETATM  271  Cgr GRA A   1      13.530  10.652  -3.350  1.00  0.00           C
+HETATM  272  Cgr GRA A   1      13.530  12.072  -3.350  1.00  0.00           C
+HETATM  273  Cgr GRA A   1      12.300  12.783  -3.350  1.00  0.00           C
+HETATM  274  Cgr GRA A   1      12.300  14.203  -3.350  1.00  0.00           C
+HETATM  275  Cgr GRA A   1      13.530  14.913  -3.350  1.00  0.00           C
+HETATM  276  Cgr GRA A   1      13.530  16.333  -3.350  1.00  0.00           C
+HETATM  277  Cgr GRA A   1      12.300  17.043  -3.350  1.00  0.00           C
+HETATM  278  Cgr GRA A   1      12.300  18.463  -3.350  1.00  0.00           C
+HETATM  279  Cgr GRA A   1      13.530  19.174  -3.350  1.00  0.00           C
+HETATM  280  Cgr GRA A   1      13.530  20.594  -3.350  1.00  0.00           C
+HETATM  281  Cgr GRA A   1      14.760   0.000  -3.350  1.00  0.00           C
+HETATM  282  Cgr GRA A   1      14.760   1.420  -3.350  1.00  0.00           C
+HETATM  283  Cgr GRA A   1      15.990   2.130  -3.350  1.00  0.00           C
+HETATM  284  Cgr GRA A   1      15.990   3.550  -3.350  1.00  0.00           C
+HETATM  285  Cgr GRA A   1      14.760   4.261  -3.350  1.00  0.00           C
+HETATM  286  Cgr GRA A   1      14.760   5.681  -3.350  1.00  0.00           C
+HETATM  287  Cgr GRA A   1      15.990   6.391  -3.350  1.00  0.00           C
+HETATM  288  Cgr GRA A   1      15.990   7.811  -3.350  1.00  0.00           C
+HETATM  289  Cgr GRA A   1      14.760   8.522  -3.350  1.00  0.00           C
+HETATM  290  Cgr GRA A   1      14.760   9.942  -3.350  1.00  0.00           C
+HETATM  291  Cgr GRA A   1      15.990  10.652  -3.350  1.00  0.00           C
+HETATM  292  Cgr GRA A   1      15.990  12.072  -3.350  1.00  0.00           C
+HETATM  293  Cgr GRA A   1      14.760  12.783  -3.350  1.00  0.00           C
+HETATM  294  Cgr GRA A   1      14.760  14.203  -3.350  1.00  0.00           C
+HETATM  295  Cgr GRA A   1      15.990  14.913  -3.350  1.00  0.00           C
+HETATM  296  Cgr GRA A   1      15.990  16.333  -3.350  1.00  0.00           C
+HETATM  297  Cgr GRA A   1      14.760  17.043  -3.350  1.00  0.00           C
+HETATM  298  Cgr GRA A   1      14.760  18.463  -3.350  1.00  0.00           C
+HETATM  299  Cgr GRA A   1      15.990  19.174  -3.350  1.00  0.00           C
+HETATM  300  Cgr GRA A   1      15.990  20.594  -3.350  1.00  0.00           C
+HETATM  301  Cgr GRA A   1      17.220   0.000  -3.350  1.00  0.00           C
+HETATM  302  Cgr GRA A   1      17.220   1.420  -3.350  1.00  0.00           C
+HETATM  303  Cgr GRA A   1      18.450   2.130  -3.350  1.00  0.00           C
+HETATM  304  Cgr GRA A   1      18.450   3.550  -3.350  1.00  0.00           C
+HETATM  305  Cgr GRA A   1      17.220   4.261  -3.350  1.00  0.00           C
+HETATM  306  Cgr GRA A   1      17.220   5.681  -3.350  1.00  0.00           C
+HETATM  307  Cgr GRA A   1      18.450   6.391  -3.350  1.00  0.00           C
+HETATM  308  Cgr GRA A   1      18.450   7.811  -3.350  1.00  0.00           C
+HETATM  309  Cgr GRA A   1      17.220   8.522  -3.350  1.00  0.00           C
+HETATM  310  Cgr GRA A   1      17.220   9.942  -3.350  1.00  0.00           C
+HETATM  311  Cgr GRA A   1      18.450  10.652  -3.350  1.00  0.00           C
+HETATM  312  Cgr GRA A   1      18.450  12.072  -3.350  1.00  0.00           C
+HETATM  313  Cgr GRA A   1      17.220  12.783  -3.350  1.00  0.00           C
+HETATM  314  Cgr GRA A   1      17.220  14.203  -3.350  1.00  0.00           C
+HETATM  315  Cgr GRA A   1      18.450  14.913  -3.350  1.00  0.00           C
+HETATM  316  Cgr GRA A   1      18.450  16.333  -3.350  1.00  0.00           C
+HETATM  317  Cgr GRA A   1      17.220  17.043  -3.350  1.00  0.00           C
+HETATM  318  Cgr GRA A   1      17.220  18.463  -3.350  1.00  0.00           C
+HETATM  319  Cgr GRA A   1      18.450  19.174  -3.350  1.00  0.00           C
+HETATM  320  Cgr GRA A   1      18.450  20.594  -3.350  1.00  0.00           C
+HETATM  321  Cgr GRA A   1       0.000   0.000   0.000  1.00  0.00           C
+HETATM  322  Cgr GRA A   1       0.000   1.420   0.000  1.00  0.00           C
+HETATM  323  Cgr GRA A   1       1.230   2.130   0.000  1.00  0.00           C
+HETATM  324  Cgr GRA A   1       1.230   3.550   0.000  1.00  0.00           C
+HETATM  325  Cgr GRA A   1       0.000   4.261   0.000  1.00  0.00           C
+HETATM  326  Cgr GRA A   1       0.000   5.681   0.000  1.00  0.00           C
+HETATM  327  Cgr GRA A   1       1.230   6.391   0.000  1.00  0.00           C
+HETATM  328  Cgr GRA A   1       1.230   7.811   0.000  1.00  0.00           C
+HETATM  329  Cgr GRA A   1       0.000   8.522   0.000  1.00  0.00           C
+HETATM  330  Cgr GRA A   1       0.000   9.942   0.000  1.00  0.00           C
+HETATM  331  Cgr GRA A   1       1.230  10.652   0.000  1.00  0.00           C
+HETATM  332  Cgr GRA A   1       1.230  12.072   0.000  1.00  0.00           C
+HETATM  333  Cgr GRA A   1       0.000  12.783   0.000  1.00  0.00           C
+HETATM  334  Cgr GRA A   1       0.000  14.203   0.000  1.00  0.00           C
+HETATM  335  Cgr GRA A   1       1.230  14.913   0.000  1.00  0.00           C
+HETATM  336  Cgr GRA A   1       1.230  16.333   0.000  1.00  0.00           C
+HETATM  337  Cgr GRA A   1       0.000  17.043   0.000  1.00  0.00           C
+HETATM  338  Cgr GRA A   1       0.000  18.463   0.000  1.00  0.00           C
+HETATM  339  Cgr GRA A   1       1.230  19.174   0.000  1.00  0.00           C
+HETATM  340  Cgr GRA A   1       1.230  20.594   0.000  1.00  0.00           C
+HETATM  341  Cgr GRA A   1       2.460   0.000   0.000  1.00  0.00           C
+HETATM  342  Cgr GRA A   1       2.460   1.420   0.000  1.00  0.00           C
+HETATM  343  Cgr GRA A   1       3.690   2.130   0.000  1.00  0.00           C
+HETATM  344  Cgr GRA A   1       3.690   3.550   0.000  1.00  0.00           C
+HETATM  345  Cgr GRA A   1       2.460   4.261   0.000  1.00  0.00           C
+HETATM  346  Cgr GRA A   1       2.460   5.681   0.000  1.00  0.00           C
+HETATM  347  Cgr GRA A   1       3.690   6.391   0.000  1.00  0.00           C
+HETATM  348  Cgr GRA A   1       3.690   7.811   0.000  1.00  0.00           C
+HETATM  349  Cgr GRA A   1       2.460   8.522   0.000  1.00  0.00           C
+HETATM  350  Cgr GRA A   1       2.460   9.942   0.000  1.00  0.00           C
+HETATM  351  Cgr GRA A   1       3.690  10.652   0.000  1.00  0.00           C
+HETATM  352  Cgr GRA A   1       3.690  12.072   0.000  1.00  0.00           C
+HETATM  353  Cgr GRA A   1       2.460  12.783   0.000  1.00  0.00           C
+HETATM  354  Cgr GRA A   1       2.460  14.203   0.000  1.00  0.00           C
+HETATM  355  Cgr GRA A   1       3.690  14.913   0.000  1.00  0.00           C
+HETATM  356  Cgr GRA A   1       3.690  16.333   0.000  1.00  0.00           C
+HETATM  357  Cgr GRA A   1       2.460  17.043   0.000  1.00  0.00           C
+HETATM  358  Cgr GRA A   1       2.460  18.463   0.000  1.00  0.00           C
+HETATM  359  Cgr GRA A   1       3.690  19.174   0.000  1.00  0.00           C
+HETATM  360  Cgr GRA A   1       3.690  20.594   0.000  1.00  0.00           C
+HETATM  361  Cgr GRA A   1       4.920   0.000   0.000  1.00  0.00           C
+HETATM  362  Cgr GRA A   1       4.920   1.420   0.000  1.00  0.00           C
+HETATM  363  Cgr GRA A   1       6.150   2.130   0.000  1.00  0.00           C
+HETATM  364  Cgr GRA A   1       6.150   3.550   0.000  1.00  0.00           C
+HETATM  365  Cgr GRA A   1       4.920   4.261   0.000  1.00  0.00           C
+HETATM  366  Cgr GRA A   1       4.920   5.681   0.000  1.00  0.00           C
+HETATM  367  Cgr GRA A   1       6.150   6.391   0.000  1.00  0.00           C
+HETATM  368  Cgr GRA A   1       6.150   7.811   0.000  1.00  0.00           C
+HETATM  369  Cgr GRA A   1       4.920   8.522   0.000  1.00  0.00           C
+HETATM  370  Cgr GRA A   1       4.920   9.942   0.000  1.00  0.00           C
+HETATM  371  Cgr GRA A   1       6.150  10.652   0.000  1.00  0.00           C
+HETATM  372  Cgr GRA A   1       6.150  12.072   0.000  1.00  0.00           C
+HETATM  373  Cgr GRA A   1       4.920  12.783   0.000  1.00  0.00           C
+HETATM  374  Cgr GRA A   1       4.920  14.203   0.000  1.00  0.00           C
+HETATM  375  Cgr GRA A   1       6.150  14.913   0.000  1.00  0.00           C
+HETATM  376  Cgr GRA A   1       6.150  16.333   0.000  1.00  0.00           C
+HETATM  377  Cgr GRA A   1       4.920  17.043   0.000  1.00  0.00           C
+HETATM  378  Cgr GRA A   1       4.920  18.463   0.000  1.00  0.00           C
+HETATM  379  Cgr GRA A   1       6.150  19.174   0.000  1.00  0.00           C
+HETATM  380  Cgr GRA A   1       6.150  20.594   0.000  1.00  0.00           C
+HETATM  381  Cgr GRA A   1       7.380   0.000   0.000  1.00  0.00           C
+HETATM  382  Cgr GRA A   1       7.380   1.420   0.000  1.00  0.00           C
+HETATM  383  Cgr GRA A   1       8.610   2.130   0.000  1.00  0.00           C
+HETATM  384  Cgr GRA A   1       8.610   3.550   0.000  1.00  0.00           C
+HETATM  385  Cgr GRA A   1       7.380   4.261   0.000  1.00  0.00           C
+HETATM  386  Cgr GRA A   1       7.380   5.681   0.000  1.00  0.00           C
+HETATM  387  Cgr GRA A   1       8.610   6.391   0.000  1.00  0.00           C
+HETATM  388  Cgr GRA A   1       8.610   7.811   0.000  1.00  0.00           C
+HETATM  389  Cgr GRA A   1       7.380   8.522   0.000  1.00  0.00           C
+HETATM  390  Cgr GRA A   1       7.380   9.942   0.000  1.00  0.00           C
+HETATM  391  Cgr GRA A   1       8.610  10.652   0.000  1.00  0.00           C
+HETATM  392  Cgr GRA A   1       8.610  12.072   0.000  1.00  0.00           C
+HETATM  393  Cgr GRA A   1       7.380  12.783   0.000  1.00  0.00           C
+HETATM  394  Cgr GRA A   1       7.380  14.203   0.000  1.00  0.00           C
+HETATM  395  Cgr GRA A   1       8.610  14.913   0.000  1.00  0.00           C
+HETATM  396  Cgr GRA A   1       8.610  16.333   0.000  1.00  0.00           C
+HETATM  397  Cgr GRA A   1       7.380  17.043   0.000  1.00  0.00           C
+HETATM  398  Cgr GRA A   1       7.380  18.463   0.000  1.00  0.00           C
+HETATM  399  Cgr GRA A   1       8.610  19.174   0.000  1.00  0.00           C
+HETATM  400  Cgr GRA A   1       8.610  20.594   0.000  1.00  0.00           C
+HETATM  401  Cgr GRA A   1       9.840   0.000   0.000  1.00  0.00           C
+HETATM  402  Cgr GRA A   1       9.840   1.420   0.000  1.00  0.00           C
+HETATM  403  Cgr GRA A   1      11.070   2.130   0.000  1.00  0.00           C
+HETATM  404  Cgr GRA A   1      11.070   3.550   0.000  1.00  0.00           C
+HETATM  405  Cgr GRA A   1       9.840   4.261   0.000  1.00  0.00           C
+HETATM  406  Cgr GRA A   1       9.840   5.681   0.000  1.00  0.00           C
+HETATM  407  Cgr GRA A   1      11.070   6.391   0.000  1.00  0.00           C
+HETATM  408  Cgr GRA A   1      11.070   7.811   0.000  1.00  0.00           C
+HETATM  409  Cgr GRA A   1       9.840   8.522   0.000  1.00  0.00           C
+HETATM  410  Cgr GRA A   1       9.840   9.942   0.000  1.00  0.00           C
+HETATM  411  Cgr GRA A   1      11.070  10.652   0.000  1.00  0.00           C
+HETATM  412  Cgr GRA A   1      11.070  12.072   0.000  1.00  0.00           C
+HETATM  413  Cgr GRA A   1       9.840  12.783   0.000  1.00  0.00           C
+HETATM  414  Cgr GRA A   1       9.840  14.203   0.000  1.00  0.00           C
+HETATM  415  Cgr GRA A   1      11.070  14.913   0.000  1.00  0.00           C
+HETATM  416  Cgr GRA A   1      11.070  16.333   0.000  1.00  0.00           C
+HETATM  417  Cgr GRA A   1       9.840  17.043   0.000  1.00  0.00           C
+HETATM  418  Cgr GRA A   1       9.840  18.463   0.000  1.00  0.00           C
+HETATM  419  Cgr GRA A   1      11.070  19.174   0.000  1.00  0.00           C
+HETATM  420  Cgr GRA A   1      11.070  20.594   0.000  1.00  0.00           C
+HETATM  421  Cgr GRA A   1      12.300   0.000   0.000  1.00  0.00           C
+HETATM  422  Cgr GRA A   1      12.300   1.420   0.000  1.00  0.00           C
+HETATM  423  Cgr GRA A   1      13.530   2.130   0.000  1.00  0.00           C
+HETATM  424  Cgr GRA A   1      13.530   3.550   0.000  1.00  0.00           C
+HETATM  425  Cgr GRA A   1      12.300   4.261   0.000  1.00  0.00           C
+HETATM  426  Cgr GRA A   1      12.300   5.681   0.000  1.00  0.00           C
+HETATM  427  Cgr GRA A   1      13.530   6.391   0.000  1.00  0.00           C
+HETATM  428  Cgr GRA A   1      13.530   7.811   0.000  1.00  0.00           C
+HETATM  429  Cgr GRA A   1      12.300   8.522   0.000  1.00  0.00           C
+HETATM  430  Cgr GRA A   1      12.300   9.942   0.000  1.00  0.00           C
+HETATM  431  Cgr GRA A   1      13.530  10.652   0.000  1.00  0.00           C
+HETATM  432  Cgr GRA A   1      13.530  12.072   0.000  1.00  0.00           C
+HETATM  433  Cgr GRA A   1      12.300  12.783   0.000  1.00  0.00           C
+HETATM  434  Cgr GRA A   1      12.300  14.203   0.000  1.00  0.00           C
+HETATM  435  Cgr GRA A   1      13.530  14.913   0.000  1.00  0.00           C
+HETATM  436  Cgr GRA A   1      13.530  16.333   0.000  1.00  0.00           C
+HETATM  437  Cgr GRA A   1      12.300  17.043   0.000  1.00  0.00           C
+HETATM  438  Cgr GRA A   1      12.300  18.463   0.000  1.00  0.00           C
+HETATM  439  Cgr GRA A   1      13.530  19.174   0.000  1.00  0.00           C
+HETATM  440  Cgr GRA A   1      13.530  20.594   0.000  1.00  0.00           C
+HETATM  441  Cgr GRA A   1      14.760   0.000   0.000  1.00  0.00           C
+HETATM  442  Cgr GRA A   1      14.760   1.420   0.000  1.00  0.00           C
+HETATM  443  Cgr GRA A   1      15.990   2.130   0.000  1.00  0.00           C
+HETATM  444  Cgr GRA A   1      15.990   3.550   0.000  1.00  0.00           C
+HETATM  445  Cgr GRA A   1      14.760   4.261   0.000  1.00  0.00           C
+HETATM  446  Cgr GRA A   1      14.760   5.681   0.000  1.00  0.00           C
+HETATM  447  Cgr GRA A   1      15.990   6.391   0.000  1.00  0.00           C
+HETATM  448  Cgr GRA A   1      15.990   7.811   0.000  1.00  0.00           C
+HETATM  449  Cgr GRA A   1      14.760   8.522   0.000  1.00  0.00           C
+HETATM  450  Cgr GRA A   1      14.760   9.942   0.000  1.00  0.00           C
+HETATM  451  Cgr GRA A   1      15.990  10.652   0.000  1.00  0.00           C
+HETATM  452  Cgr GRA A   1      15.990  12.072   0.000  1.00  0.00           C
+HETATM  453  Cgr GRA A   1      14.760  12.783   0.000  1.00  0.00           C
+HETATM  454  Cgr GRA A   1      14.760  14.203   0.000  1.00  0.00           C
+HETATM  455  Cgr GRA A   1      15.990  14.913   0.000  1.00  0.00           C
+HETATM  456  Cgr GRA A   1      15.990  16.333   0.000  1.00  0.00           C
+HETATM  457  Cgr GRA A   1      14.760  17.043   0.000  1.00  0.00           C
+HETATM  458  Cgr GRA A   1      14.760  18.463   0.000  1.00  0.00           C
+HETATM  459  Cgr GRA A   1      15.990  19.174   0.000  1.00  0.00           C
+HETATM  460  Cgr GRA A   1      15.990  20.594   0.000  1.00  0.00           C
+HETATM  461  Cgr GRA A   1      17.220   0.000   0.000  1.00  0.00           C
+HETATM  462  Cgr GRA A   1      17.220   1.420   0.000  1.00  0.00           C
+HETATM  463  Cgr GRA A   1      18.450   2.130   0.000  1.00  0.00           C
+HETATM  464  Cgr GRA A   1      18.450   3.550   0.000  1.00  0.00           C
+HETATM  465  Cgr GRA A   1      17.220   4.261   0.000  1.00  0.00           C
+HETATM  466  Cgr GRA A   1      17.220   5.681   0.000  1.00  0.00           C
+HETATM  467  Cgr GRA A   1      18.450   6.391   0.000  1.00  0.00           C
+HETATM  468  Cgr GRA A   1      18.450   7.811   0.000  1.00  0.00           C
+HETATM  469  Cgr GRA A   1      17.220   8.522   0.000  1.00  0.00           C
+HETATM  470  Cgr GRA A   1      17.220   9.942   0.000  1.00  0.00           C
+HETATM  471  Cgr GRA A   1      18.450  10.652   0.000  1.00  0.00           C
+HETATM  472  Cgr GRA A   1      18.450  12.072   0.000  1.00  0.00           C
+HETATM  473  Cgr GRA A   1      17.220  12.783   0.000  1.00  0.00           C
+HETATM  474  Cgr GRA A   1      17.220  14.203   0.000  1.00  0.00           C
+HETATM  475  Cgr GRA A   1      18.450  14.913   0.000  1.00  0.00           C
+HETATM  476  Cgr GRA A   1      18.450  16.333   0.000  1.00  0.00           C
+HETATM  477  Cgr GRA A   1      17.220  17.043   0.000  1.00  0.00           C
+HETATM  478  Cgr GRA A   1      17.220  18.463   0.000  1.00  0.00           C
+HETATM  479  Cgr GRA A   1      18.450  19.174   0.000  1.00  0.00           C
+HETATM  480  Cgr GRA A   1      18.450  20.594   0.000  1.00  0.00           C
+TER
+HETATM  481  Cpt PTF B   2       1.791   2.663   3.500  1.00  0.00           C
+HETATM  482  F   PTF B   2       2.590   2.663   2.434  1.00  0.00           F
+HETATM  483  F   PTF B   2       1.022   1.576   3.478  1.00  0.00           F
+HETATM  484  F   PTF B   2       1.022   3.750   3.478  1.00  0.00           F
+HETATM  485  Cpt PTF B   2       2.638   2.663   4.773  1.00  0.00           C
+HETATM  486  F   PTF B   2       2.638   3.751   5.542  1.00  0.00           F
+HETATM  487  F   PTF B   2       2.638   1.575   5.542  1.00  0.00           F
+HETATM  488  Cpt PTF B   2       3.486   2.663   3.500  1.00  0.00           C
+HETATM  489  F   PTF B   2       3.486   3.751   2.731  1.00  0.00           F
+HETATM  490  F   PTF B   2       3.486   1.575   2.731  1.00  0.00           F
+HETATM  491  Cpt PTF B   2       4.333   2.663   4.773  1.00  0.00           C
+HETATM  492  F   PTF B   2       4.333   3.751   5.542  1.00  0.00           F
+HETATM  493  F   PTF B   2       4.333   1.575   5.542  1.00  0.00           F
+HETATM  494  Cpt PTF B   2       5.180   2.663   3.500  1.00  0.00           C
+HETATM  495  F   PTF B   2       5.180   3.751   2.731  1.00  0.00           F
+HETATM  496  F   PTF B   2       5.180   1.575   2.731  1.00  0.00           F
+HETATM  497  Cpt PTF B   2       6.027   2.663   4.773  1.00  0.00           C
+HETATM  498  F   PTF B   2       6.027   3.751   5.542  1.00  0.00           F
+HETATM  499  F   PTF B   2       6.027   1.575   5.542  1.00  0.00           F
+HETATM  500  Cpt PTF B   2       6.875   2.663   3.500  1.00  0.00           C
+HETATM  501  F   PTF B   2       6.875   3.751   2.731  1.00  0.00           F
+HETATM  502  F   PTF B   2       6.875   1.575   2.731  1.00  0.00           F
+HETATM  503  Cpt PTF B   2       7.722   2.663   4.773  1.00  0.00           C
+HETATM  504  F   PTF B   2       7.722   3.751   5.542  1.00  0.00           F
+HETATM  505  F   PTF B   2       7.722   1.575   5.542  1.00  0.00           F
+HETATM  506  Cpt PTF B   2       8.569   2.663   3.500  1.00  0.00           C
+HETATM  507  F   PTF B   2       8.569   3.751   2.731  1.00  0.00           F
+HETATM  508  F   PTF B   2       8.569   1.575   2.731  1.00  0.00           F
+HETATM  509  Cpt PTF B   2       9.416   2.663   4.773  1.00  0.00           C
+HETATM  510  F   PTF B   2       9.416   3.751   5.542  1.00  0.00           F
+HETATM  511  F   PTF B   2       9.416   1.575   5.542  1.00  0.00           F
+HETATM  512  Cpt PTF B   2      10.264   2.663   3.500  1.00  0.00           C
+HETATM  513  F   PTF B   2      10.264   3.751   2.731  1.00  0.00           F
+HETATM  514  F   PTF B   2      10.264   1.575   2.731  1.00  0.00           F
+HETATM  515  Cpt PTF B   2      11.111   2.663   4.773  1.00  0.00           C
+HETATM  516  F   PTF B   2      11.111   3.751   5.542  1.00  0.00           F
+HETATM  517  F   PTF B   2      11.111   1.575   5.542  1.00  0.00           F
+HETATM  518  Cpt PTF B   2      11.958   2.663   3.500  1.00  0.00           C
+HETATM  519  F   PTF B   2      11.958   3.751   2.731  1.00  0.00           F
+HETATM  520  F   PTF B   2      11.958   1.575   2.731  1.00  0.00           F
+HETATM  521  Cpt PTF B   2      12.805   2.663   4.773  1.00  0.00           C
+HETATM  522  F   PTF B   2      12.805   3.751   5.542  1.00  0.00           F
+HETATM  523  F   PTF B   2      12.805   1.575   5.542  1.00  0.00           F
+HETATM  524  Cpt PTF B   2      13.653   2.663   3.500  1.00  0.00           C
+HETATM  525  F   PTF B   2      13.653   3.751   2.731  1.00  0.00           F
+HETATM  526  F   PTF B   2      13.653   1.575   2.731  1.00  0.00           F
+HETATM  527  Cpt PTF B   2      14.500   2.663   4.773  1.00  0.00           C
+HETATM  528  F   PTF B   2      14.500   3.751   5.542  1.00  0.00           F
+HETATM  529  F   PTF B   2      14.500   1.575   5.542  1.00  0.00           F
+HETATM  530  Cpt PTF B   2      15.347   2.663   3.500  1.00  0.00           C
+HETATM  531  F   PTF B   2      15.347   3.751   2.731  1.00  0.00           F
+HETATM  532  F   PTF B   2      15.347   1.575   2.731  1.00  0.00           F
+HETATM  533  Cpt PTF B   2      16.194   2.663   4.773  1.00  0.00           C
+HETATM  534  F   PTF B   2      16.194   3.751   5.542  1.00  0.00           F
+HETATM  535  F   PTF B   2      16.194   1.575   5.542  1.00  0.00           F
+HETATM  536  Cpt PTF B   2      17.042   2.663   3.500  1.00  0.00           C
+HETATM  537  F   PTF B   2      17.042   3.751   2.731  1.00  0.00           F
+HETATM  538  F   PTF B   2      17.042   1.575   2.731  1.00  0.00           F
+HETATM  539  Cpt PTF B   2      17.889   2.663   4.773  1.00  0.00           C
+HETATM  540  F   PTF B   2      17.090   2.663   5.839  1.00  0.00           F
+HETATM  541  F   PTF B   2      18.658   1.576   4.795  1.00  0.00           F
+HETATM  542  F   PTF B   2      18.658   3.750   4.795  1.00  0.00           F
+TER
+HETATM  543  Cpt PTF C   3       1.791   7.989   3.500  1.00  0.00           C
+HETATM  544  F   PTF C   3       2.590   7.989   2.434  1.00  0.00           F
+HETATM  545  F   PTF C   3       1.022   6.902   3.478  1.00  0.00           F
+HETATM  546  F   PTF C   3       1.022   9.076   3.478  1.00  0.00           F
+HETATM  547  Cpt PTF C   3       2.638   7.989   4.773  1.00  0.00           C
+HETATM  548  F   PTF C   3       2.638   9.077   5.542  1.00  0.00           F
+HETATM  549  F   PTF C   3       2.638   6.901   5.542  1.00  0.00           F
+HETATM  550  Cpt PTF C   3       3.486   7.989   3.500  1.00  0.00           C
+HETATM  551  F   PTF C   3       3.486   9.077   2.731  1.00  0.00           F
+HETATM  552  F   PTF C   3       3.486   6.901   2.731  1.00  0.00           F
+HETATM  553  Cpt PTF C   3       4.333   7.989   4.773  1.00  0.00           C
+HETATM  554  F   PTF C   3       4.333   9.077   5.542  1.00  0.00           F
+HETATM  555  F   PTF C   3       4.333   6.901   5.542  1.00  0.00           F
+HETATM  556  Cpt PTF C   3       5.180   7.989   3.500  1.00  0.00           C
+HETATM  557  F   PTF C   3       5.180   9.077   2.731  1.00  0.00           F
+HETATM  558  F   PTF C   3       5.180   6.901   2.731  1.00  0.00           F
+HETATM  559  Cpt PTF C   3       6.027   7.989   4.773  1.00  0.00           C
+HETATM  560  F   PTF C   3       6.027   9.077   5.542  1.00  0.00           F
+HETATM  561  F   PTF C   3       6.027   6.901   5.542  1.00  0.00           F
+HETATM  562  Cpt PTF C   3       6.875   7.989   3.500  1.00  0.00           C
+HETATM  563  F   PTF C   3       6.875   9.077   2.731  1.00  0.00           F
+HETATM  564  F   PTF C   3       6.875   6.901   2.731  1.00  0.00           F
+HETATM  565  Cpt PTF C   3       7.722   7.989   4.773  1.00  0.00           C
+HETATM  566  F   PTF C   3       7.722   9.077   5.542  1.00  0.00           F
+HETATM  567  F   PTF C   3       7.722   6.901   5.542  1.00  0.00           F
+HETATM  568  Cpt PTF C   3       8.569   7.989   3.500  1.00  0.00           C
+HETATM  569  F   PTF C   3       8.569   9.077   2.731  1.00  0.00           F
+HETATM  570  F   PTF C   3       8.569   6.901   2.731  1.00  0.00           F
+HETATM  571  Cpt PTF C   3       9.416   7.989   4.773  1.00  0.00           C
+HETATM  572  F   PTF C   3       9.416   9.077   5.542  1.00  0.00           F
+HETATM  573  F   PTF C   3       9.416   6.901   5.542  1.00  0.00           F
+HETATM  574  Cpt PTF C   3      10.264   7.989   3.500  1.00  0.00           C
+HETATM  575  F   PTF C   3      10.264   9.077   2.731  1.00  0.00           F
+HETATM  576  F   PTF C   3      10.264   6.901   2.731  1.00  0.00           F
+HETATM  577  Cpt PTF C   3      11.111   7.989   4.773  1.00  0.00           C
+HETATM  578  F   PTF C   3      11.111   9.077   5.542  1.00  0.00           F
+HETATM  579  F   PTF C   3      11.111   6.901   5.542  1.00  0.00           F
+HETATM  580  Cpt PTF C   3      11.958   7.989   3.500  1.00  0.00           C
+HETATM  581  F   PTF C   3      11.958   9.077   2.731  1.00  0.00           F
+HETATM  582  F   PTF C   3      11.958   6.901   2.731  1.00  0.00           F
+HETATM  583  Cpt PTF C   3      12.805   7.989   4.773  1.00  0.00           C
+HETATM  584  F   PTF C   3      12.805   9.077   5.542  1.00  0.00           F
+HETATM  585  F   PTF C   3      12.805   6.901   5.542  1.00  0.00           F
+HETATM  586  Cpt PTF C   3      13.653   7.989   3.500  1.00  0.00           C
+HETATM  587  F   PTF C   3      13.653   9.077   2.731  1.00  0.00           F
+HETATM  588  F   PTF C   3      13.653   6.901   2.731  1.00  0.00           F
+HETATM  589  Cpt PTF C   3      14.500   7.989   4.773  1.00  0.00           C
+HETATM  590  F   PTF C   3      14.500   9.077   5.542  1.00  0.00           F
+HETATM  591  F   PTF C   3      14.500   6.901   5.542  1.00  0.00           F
+HETATM  592  Cpt PTF C   3      15.347   7.989   3.500  1.00  0.00           C
+HETATM  593  F   PTF C   3      15.347   9.077   2.731  1.00  0.00           F
+HETATM  594  F   PTF C   3      15.347   6.901   2.731  1.00  0.00           F
+HETATM  595  Cpt PTF C   3      16.194   7.989   4.773  1.00  0.00           C
+HETATM  596  F   PTF C   3      16.194   9.077   5.542  1.00  0.00           F
+HETATM  597  F   PTF C   3      16.194   6.901   5.542  1.00  0.00           F
+HETATM  598  Cpt PTF C   3      17.042   7.989   3.500  1.00  0.00           C
+HETATM  599  F   PTF C   3      17.042   9.077   2.731  1.00  0.00           F
+HETATM  600  F   PTF C   3      17.042   6.901   2.731  1.00  0.00           F
+HETATM  601  Cpt PTF C   3      17.889   7.989   4.773  1.00  0.00           C
+HETATM  602  F   PTF C   3      17.090   7.989   5.839  1.00  0.00           F
+HETATM  603  F   PTF C   3      18.658   6.902   4.795  1.00  0.00           F
+HETATM  604  F   PTF C   3      18.658   9.076   4.795  1.00  0.00           F
+TER
+HETATM  605  Cpt PTF D   4       1.791  13.315   3.500  1.00  0.00           C
+HETATM  606  F   PTF D   4       2.590  13.315   2.434  1.00  0.00           F
+HETATM  607  F   PTF D   4       1.022  12.228   3.478  1.00  0.00           F
+HETATM  608  F   PTF D   4       1.022  14.403   3.478  1.00  0.00           F
+HETATM  609  Cpt PTF D   4       2.638  13.315   4.773  1.00  0.00           C
+HETATM  610  F   PTF D   4       2.638  14.403   5.542  1.00  0.00           F
+HETATM  611  F   PTF D   4       2.638  12.227   5.542  1.00  0.00           F
+HETATM  612  Cpt PTF D   4       3.486  13.315   3.500  1.00  0.00           C
+HETATM  613  F   PTF D   4       3.486  14.403   2.731  1.00  0.00           F
+HETATM  614  F   PTF D   4       3.486  12.227   2.731  1.00  0.00           F
+HETATM  615  Cpt PTF D   4       4.333  13.315   4.773  1.00  0.00           C
+HETATM  616  F   PTF D   4       4.333  14.403   5.542  1.00  0.00           F
+HETATM  617  F   PTF D   4       4.333  12.227   5.542  1.00  0.00           F
+HETATM  618  Cpt PTF D   4       5.180  13.315   3.500  1.00  0.00           C
+HETATM  619  F   PTF D   4       5.180  14.403   2.731  1.00  0.00           F
+HETATM  620  F   PTF D   4       5.180  12.227   2.731  1.00  0.00           F
+HETATM  621  Cpt PTF D   4       6.027  13.315   4.773  1.00  0.00           C
+HETATM  622  F   PTF D   4       6.027  14.403   5.542  1.00  0.00           F
+HETATM  623  F   PTF D   4       6.027  12.227   5.542  1.00  0.00           F
+HETATM  624  Cpt PTF D   4       6.875  13.315   3.500  1.00  0.00           C
+HETATM  625  F   PTF D   4       6.875  14.403   2.731  1.00  0.00           F
+HETATM  626  F   PTF D   4       6.875  12.227   2.731  1.00  0.00           F
+HETATM  627  Cpt PTF D   4       7.722  13.315   4.773  1.00  0.00           C
+HETATM  628  F   PTF D   4       7.722  14.403   5.542  1.00  0.00           F
+HETATM  629  F   PTF D   4       7.722  12.227   5.542  1.00  0.00           F
+HETATM  630  Cpt PTF D   4       8.569  13.315   3.500  1.00  0.00           C
+HETATM  631  F   PTF D   4       8.569  14.403   2.731  1.00  0.00           F
+HETATM  632  F   PTF D   4       8.569  12.227   2.731  1.00  0.00           F
+HETATM  633  Cpt PTF D   4       9.416  13.315   4.773  1.00  0.00           C
+HETATM  634  F   PTF D   4       9.416  14.403   5.542  1.00  0.00           F
+HETATM  635  F   PTF D   4       9.416  12.227   5.542  1.00  0.00           F
+HETATM  636  Cpt PTF D   4      10.264  13.315   3.500  1.00  0.00           C
+HETATM  637  F   PTF D   4      10.264  14.403   2.731  1.00  0.00           F
+HETATM  638  F   PTF D   4      10.264  12.227   2.731  1.00  0.00           F
+HETATM  639  Cpt PTF D   4      11.111  13.315   4.773  1.00  0.00           C
+HETATM  640  F   PTF D   4      11.111  14.403   5.542  1.00  0.00           F
+HETATM  641  F   PTF D   4      11.111  12.227   5.542  1.00  0.00           F
+HETATM  642  Cpt PTF D   4      11.958  13.315   3.500  1.00  0.00           C
+HETATM  643  F   PTF D   4      11.958  14.403   2.731  1.00  0.00           F
+HETATM  644  F   PTF D   4      11.958  12.227   2.731  1.00  0.00           F
+HETATM  645  Cpt PTF D   4      12.805  13.315   4.773  1.00  0.00           C
+HETATM  646  F   PTF D   4      12.805  14.403   5.542  1.00  0.00           F
+HETATM  647  F   PTF D   4      12.805  12.227   5.542  1.00  0.00           F
+HETATM  648  Cpt PTF D   4      13.653  13.315   3.500  1.00  0.00           C
+HETATM  649  F   PTF D   4      13.653  14.403   2.731  1.00  0.00           F
+HETATM  650  F   PTF D   4      13.653  12.227   2.731  1.00  0.00           F
+HETATM  651  Cpt PTF D   4      14.500  13.315   4.773  1.00  0.00           C
+HETATM  652  F   PTF D   4      14.500  14.403   5.542  1.00  0.00           F
+HETATM  653  F   PTF D   4      14.500  12.227   5.542  1.00  0.00           F
+HETATM  654  Cpt PTF D   4      15.347  13.315   3.500  1.00  0.00           C
+HETATM  655  F   PTF D   4      15.347  14.403   2.731  1.00  0.00           F
+HETATM  656  F   PTF D   4      15.347  12.227   2.731  1.00  0.00           F
+HETATM  657  Cpt PTF D   4      16.194  13.315   4.773  1.00  0.00           C
+HETATM  658  F   PTF D   4      16.194  14.403   5.542  1.00  0.00           F
+HETATM  659  F   PTF D   4      16.194  12.227   5.542  1.00  0.00           F
+HETATM  660  Cpt PTF D   4      17.042  13.315   3.500  1.00  0.00           C
+HETATM  661  F   PTF D   4      17.042  14.403   2.731  1.00  0.00           F
+HETATM  662  F   PTF D   4      17.042  12.227   2.731  1.00  0.00           F
+HETATM  663  Cpt PTF D   4      17.889  13.315   4.773  1.00  0.00           C
+HETATM  664  F   PTF D   4      17.090  13.315   5.839  1.00  0.00           F
+HETATM  665  F   PTF D   4      18.658  12.228   4.795  1.00  0.00           F
+HETATM  666  F   PTF D   4      18.658  14.403   4.795  1.00  0.00           F
+TER
+HETATM  667  Cpt PTF E   5       1.791  18.641   3.500  1.00  0.00           C
+HETATM  668  F   PTF E   5       2.590  18.641   2.434  1.00  0.00           F
+HETATM  669  F   PTF E   5       1.022  17.554   3.478  1.00  0.00           F
+HETATM  670  F   PTF E   5       1.022  19.729   3.478  1.00  0.00           F
+HETATM  671  Cpt PTF E   5       2.638  18.641   4.773  1.00  0.00           C
+HETATM  672  F   PTF E   5       2.638  19.729   5.542  1.00  0.00           F
+HETATM  673  F   PTF E   5       2.638  17.553   5.542  1.00  0.00           F
+HETATM  674  Cpt PTF E   5       3.486  18.641   3.500  1.00  0.00           C
+HETATM  675  F   PTF E   5       3.486  19.729   2.731  1.00  0.00           F
+HETATM  676  F   PTF E   5       3.486  17.553   2.731  1.00  0.00           F
+HETATM  677  Cpt PTF E   5       4.333  18.641   4.773  1.00  0.00           C
+HETATM  678  F   PTF E   5       4.333  19.729   5.542  1.00  0.00           F
+HETATM  679  F   PTF E   5       4.333  17.553   5.542  1.00  0.00           F
+HETATM  680  Cpt PTF E   5       5.180  18.641   3.500  1.00  0.00           C
+HETATM  681  F   PTF E   5       5.180  19.729   2.731  1.00  0.00           F
+HETATM  682  F   PTF E   5       5.180  17.553   2.731  1.00  0.00           F
+HETATM  683  Cpt PTF E   5       6.027  18.641   4.773  1.00  0.00           C
+HETATM  684  F   PTF E   5       6.027  19.729   5.542  1.00  0.00           F
+HETATM  685  F   PTF E   5       6.027  17.553   5.542  1.00  0.00           F
+HETATM  686  Cpt PTF E   5       6.875  18.641   3.500  1.00  0.00           C
+HETATM  687  F   PTF E   5       6.875  19.729   2.731  1.00  0.00           F
+HETATM  688  F   PTF E   5       6.875  17.553   2.731  1.00  0.00           F
+HETATM  689  Cpt PTF E   5       7.722  18.641   4.773  1.00  0.00           C
+HETATM  690  F   PTF E   5       7.722  19.729   5.542  1.00  0.00           F
+HETATM  691  F   PTF E   5       7.722  17.553   5.542  1.00  0.00           F
+HETATM  692  Cpt PTF E   5       8.569  18.641   3.500  1.00  0.00           C
+HETATM  693  F   PTF E   5       8.569  19.729   2.731  1.00  0.00           F
+HETATM  694  F   PTF E   5       8.569  17.553   2.731  1.00  0.00           F
+HETATM  695  Cpt PTF E   5       9.416  18.641   4.773  1.00  0.00           C
+HETATM  696  F   PTF E   5       9.416  19.729   5.542  1.00  0.00           F
+HETATM  697  F   PTF E   5       9.416  17.553   5.542  1.00  0.00           F
+HETATM  698  Cpt PTF E   5      10.264  18.641   3.500  1.00  0.00           C
+HETATM  699  F   PTF E   5      10.264  19.729   2.731  1.00  0.00           F
+HETATM  700  F   PTF E   5      10.264  17.553   2.731  1.00  0.00           F
+HETATM  701  Cpt PTF E   5      11.111  18.641   4.773  1.00  0.00           C
+HETATM  702  F   PTF E   5      11.111  19.729   5.542  1.00  0.00           F
+HETATM  703  F   PTF E   5      11.111  17.553   5.542  1.00  0.00           F
+HETATM  704  Cpt PTF E   5      11.958  18.641   3.500  1.00  0.00           C
+HETATM  705  F   PTF E   5      11.958  19.729   2.731  1.00  0.00           F
+HETATM  706  F   PTF E   5      11.958  17.553   2.731  1.00  0.00           F
+HETATM  707  Cpt PTF E   5      12.805  18.641   4.773  1.00  0.00           C
+HETATM  708  F   PTF E   5      12.805  19.729   5.542  1.00  0.00           F
+HETATM  709  F   PTF E   5      12.805  17.553   5.542  1.00  0.00           F
+HETATM  710  Cpt PTF E   5      13.653  18.641   3.500  1.00  0.00           C
+HETATM  711  F   PTF E   5      13.653  19.729   2.731  1.00  0.00           F
+HETATM  712  F   PTF E   5      13.653  17.553   2.731  1.00  0.00           F
+HETATM  713  Cpt PTF E   5      14.500  18.641   4.773  1.00  0.00           C
+HETATM  714  F   PTF E   5      14.500  19.729   5.542  1.00  0.00           F
+HETATM  715  F   PTF E   5      14.500  17.553   5.542  1.00  0.00           F
+HETATM  716  Cpt PTF E   5      15.347  18.641   3.500  1.00  0.00           C
+HETATM  717  F   PTF E   5      15.347  19.729   2.731  1.00  0.00           F
+HETATM  718  F   PTF E   5      15.347  17.553   2.731  1.00  0.00           F
+HETATM  719  Cpt PTF E   5      16.194  18.641   4.773  1.00  0.00           C
+HETATM  720  F   PTF E   5      16.194  19.729   5.542  1.00  0.00           F
+HETATM  721  F   PTF E   5      16.194  17.553   5.542  1.00  0.00           F
+HETATM  722  Cpt PTF E   5      17.042  18.641   3.500  1.00  0.00           C
+HETATM  723  F   PTF E   5      17.042  19.729   2.731  1.00  0.00           F
+HETATM  724  F   PTF E   5      17.042  17.553   2.731  1.00  0.00           F
+HETATM  725  Cpt PTF E   5      17.889  18.641   4.773  1.00  0.00           C
+HETATM  726  F   PTF E   5      17.090  18.641   5.839  1.00  0.00           F
+HETATM  727  F   PTF E   5      18.658  17.554   4.795  1.00  0.00           F
+HETATM  728  F   PTF E   5      18.658  19.729   4.795  1.00  0.00           F
+TER
+CONECT  481  482  483  484  485
+CONECT  482  481
+CONECT  483  481
+CONECT  484  481
+CONECT  485  481  486  487  488
+CONECT  486  485
+CONECT  487  485
+CONECT  488  485  489  490  491
+CONECT  489  488
+CONECT  490  488
+CONECT  491  488  492  493  494
+CONECT  492  491
+CONECT  493  491
+CONECT  494  491  495  496  497
+CONECT  495  494
+CONECT  496  494
+CONECT  497  494  498  499  500
+CONECT  498  497
+CONECT  499  497
+CONECT  500  497  501  502  503
+CONECT  501  500
+CONECT  502  500
+CONECT  503  500  504  505  506
+CONECT  504  503
+CONECT  505  503
+CONECT  506  503  507  508  509
+CONECT  507  506
+CONECT  508  506
+CONECT  509  506  510  511  512
+CONECT  510  509
+CONECT  511  509
+CONECT  512  509  513  514  515
+CONECT  513  512
+CONECT  514  512
+CONECT  515  512  516  517  518
+CONECT  516  515
+CONECT  517  515
+CONECT  518  515  519  520  521
+CONECT  519  518
+CONECT  520  518
+CONECT  521  518  522  523  524
+CONECT  522  521
+CONECT  523  521
+CONECT  524  521  525  526  527
+CONECT  525  524
+CONECT  526  524
+CONECT  527  524  528  529  530
+CONECT  528  527
+CONECT  529  527
+CONECT  530  527  531  532  533
+CONECT  531  530
+CONECT  532  530
+CONECT  533  530  534  535  536
+CONECT  534  533
+CONECT  535  533
+CONECT  536  533  537  538  539
+CONECT  537  536
+CONECT  538  536
+CONECT  539  536  540  541  542
+CONECT  540  539
+CONECT  541  539
+CONECT  542  539
+CONECT  543  544  545  546  547
+CONECT  544  543
+CONECT  545  543
+CONECT  546  543
+CONECT  547  543  548  549  550
+CONECT  548  547
+CONECT  549  547
+CONECT  550  547  551  552  553
+CONECT  551  550
+CONECT  552  550
+CONECT  553  550  554  555  556
+CONECT  554  553
+CONECT  555  553
+CONECT  556  553  557  558  559
+CONECT  557  556
+CONECT  558  556
+CONECT  559  556  560  561  562
+CONECT  560  559
+CONECT  561  559
+CONECT  562  559  563  564  565
+CONECT  563  562
+CONECT  564  562
+CONECT  565  562  566  567  568
+CONECT  566  565
+CONECT  567  565
+CONECT  568  565  569  570  571
+CONECT  569  568
+CONECT  570  568
+CONECT  571  568  572  573  574
+CONECT  572  571
+CONECT  573  571
+CONECT  574  571  575  576  577
+CONECT  575  574
+CONECT  576  574
+CONECT  577  574  578  579  580
+CONECT  578  577
+CONECT  579  577
+CONECT  580  577  581  582  583
+CONECT  581  580
+CONECT  582  580
+CONECT  583  580  584  585  586
+CONECT  584  583
+CONECT  585  583
+CONECT  586  583  587  588  589
+CONECT  587  586
+CONECT  588  586
+CONECT  589  586  590  591  592
+CONECT  590  589
+CONECT  591  589
+CONECT  592  589  593  594  595
+CONECT  593  592
+CONECT  594  592
+CONECT  595  592  596  597  598
+CONECT  596  595
+CONECT  597  595
+CONECT  598  595  599  600  601
+CONECT  599  598
+CONECT  600  598
+CONECT  601  598  602  603  604
+CONECT  602  601
+CONECT  603  601
+CONECT  604  601
+CONECT  605  606  607  608  609
+CONECT  606  605
+CONECT  607  605
+CONECT  608  605
+CONECT  609  605  610  611  612
+CONECT  610  609
+CONECT  611  609
+CONECT  612  609  613  614  615
+CONECT  613  612
+CONECT  614  612
+CONECT  615  612  616  617  618
+CONECT  616  615
+CONECT  617  615
+CONECT  618  615  619  620  621
+CONECT  619  618
+CONECT  620  618
+CONECT  621  618  622  623  624
+CONECT  622  621
+CONECT  623  621
+CONECT  624  621  625  626  627
+CONECT  625  624
+CONECT  626  624
+CONECT  627  624  628  629  630
+CONECT  628  627
+CONECT  629  627
+CONECT  630  627  631  632  633
+CONECT  631  630
+CONECT  632  630
+CONECT  633  630  634  635  636
+CONECT  634  633
+CONECT  635  633
+CONECT  636  633  637  638  639
+CONECT  637  636
+CONECT  638  636
+CONECT  639  636  640  641  642
+CONECT  640  639
+CONECT  641  639
+CONECT  642  639  643  644  645
+CONECT  643  642
+CONECT  644  642
+CONECT  645  642  646  647  648
+CONECT  646  645
+CONECT  647  645
+CONECT  648  645  649  650  651
+CONECT  649  648
+CONECT  650  648
+CONECT  651  648  652  653  654
+CONECT  652  651
+CONECT  653  651
+CONECT  654  651  655  656  657
+CONECT  655  654
+CONECT  656  654
+CONECT  657  654  658  659  660
+CONECT  658  657
+CONECT  659  657
+CONECT  660  657  661  662  663
+CONECT  661  660
+CONECT  662  660
+CONECT  663  660  664  665  666
+CONECT  664  663
+CONECT  665  663
+CONECT  666  663
+CONECT  667  668  669  670  671
+CONECT  668  667
+CONECT  669  667
+CONECT  670  667
+CONECT  671  667  672  673  674
+CONECT  672  671
+CONECT  673  671
+CONECT  674  671  675  676  677
+CONECT  675  674
+CONECT  676  674
+CONECT  677  674  678  679  680
+CONECT  678  677
+CONECT  679  677
+CONECT  680  677  681  682  683
+CONECT  681  680
+CONECT  682  680
+CONECT  683  680  684  685  686
+CONECT  684  683
+CONECT  685  683
+CONECT  686  683  687  688  689
+CONECT  687  686
+CONECT  688  686
+CONECT  689  686  690  691  692
+CONECT  690  689
+CONECT  691  689
+CONECT  692  689  693  694  695
+CONECT  693  692
+CONECT  694  692
+CONECT  695  692  696  697  698
+CONECT  696  695
+CONECT  697  695
+CONECT  698  695  699  700  701
+CONECT  699  698
+CONECT  700  698
+CONECT  701  698  702  703  704
+CONECT  702  701
+CONECT  703  701
+CONECT  704  701  705  706  707
+CONECT  705  704
+CONECT  706  704
+CONECT  707  704  708  709  710
+CONECT  708  707
+CONECT  709  707
+CONECT  710  707  711  712  713
+CONECT  711  710
+CONECT  712  710
+CONECT  713  710  714  715  716
+CONECT  714  713
+CONECT  715  713
+CONECT  716  713  717  718  719
+CONECT  717  716
+CONECT  718  716
+CONECT  719  716  720  721  722
+CONECT  720  719
+CONECT  721  719
+CONECT  722  719  723  724  725
+CONECT  723  722
+CONECT  724  722
+CONECT  725  722  726  727  728
+CONECT  726  725
+CONECT  727  725
+CONECT  728  725
+END
