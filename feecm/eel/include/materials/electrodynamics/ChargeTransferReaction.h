@@ -23,9 +23,8 @@ protected:
   const Real _alpha;
   const Real _F;
   const Real _R;
-  const Real _T;
-//  const ADVariableValue & _T;
-//  const ADVariableValue & _T_neighbor;
+  const ADVariableValue & _T;
+  const ADVariableValue & _T_neighbor;
 
   const ADVariableValue & _Phi_s;
   const ADVariableValue & _Phi_e;
