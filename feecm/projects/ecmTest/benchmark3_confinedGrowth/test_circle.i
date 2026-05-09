@@ -63,7 +63,7 @@ name = 'circle'
   [./action]
     add_variables = true
     strain = FINITE
-    use_displaced_mesh = true
+    # use_displaced_mesh removed (deprecated in TensorMechanics action)
     volumetric_locking_correction = true
     generate_output = 'stress_xx stress_yy vonmises_stress strain_xx strain_yy'
     block = 'blockCeramic blockMetal interLayer'
@@ -206,9 +206,7 @@ name = 'circle'
     enable = true
 
     omega = 2
-    alpha1 = 0.0
-    alpha2 = 1.0
-    alpha3 = 0.0
+    alpha = '0.0 1.0 0.0'
     concentration = 0.0
     cref = 0.0
 

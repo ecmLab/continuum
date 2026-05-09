@@ -1,17 +1,17 @@
 order = FIRST
 strnRt = 0.002
-name = '01_conformalContact_mech'
+out = 'strnRt_${strnRt}'
 
 [Mesh]
+  coord_type = RZ
   patch_size = 80
   patch_update_strategy = auto
   [./blocks]
     type = FileMeshGenerator
-    file = data/conformalContact.msh
+    file = data/0_conformalContact.msh
   [../]
 
 []
-
 [GlobalParams]
   displacements = 'disp_x disp_y'
 []
@@ -54,7 +54,7 @@ name = '01_conformalContact_mech'
   [./action]
     add_variables = true
     strain = FINITE
-    use_displaced_mesh = true
+    #use_displaced_mesh = true
     volumetric_locking_correction = true
     generate_output = 'stress_xx stress_yy vonmises_stress strain_xx strain_yy'
     block = 'blockCeramic blockMetal interLayer'
@@ -178,7 +178,7 @@ name = '01_conformalContact_mech'
     saturation_exponent = 0.05
     pre_factor = 4.25e4
     temperature = 298
-
+    #intBnd = 'bottom'
     effective_inelastic_strain_name = effective_plastic_strain
     max_inelastic_increment = 0.1
     internal_solve_full_iteration_history = true
@@ -244,7 +244,7 @@ name = '01_conformalContact_mech'
 
 [Outputs]
   exodus = true
-  file_base = rst/${name}
+  file_base = rst/Benchmark3_CC_hyper_visco_creep_${out}
   [out]
     type = Checkpoint
     interval = 5

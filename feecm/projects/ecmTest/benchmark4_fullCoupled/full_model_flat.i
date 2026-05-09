@@ -1,6 +1,7 @@
-elem = QUAD4
-order = FIRST
+# elem = QUAD4
+# order = FIRST
 [Mesh]
+  coord_type = RZ
   patch_size = 80
   patch_update_strategy = auto
   parallel_type = REPLICATED
@@ -26,7 +27,6 @@ order = FIRST
 [GlobalParams]
   displacements = 'ux uy'
 []
-
 [Variables]
   [./ux]
     block = 'blockCeramic blockMetal interLayer'
@@ -235,8 +235,8 @@ order = FIRST
 
 [Contact]
   [./mech_contact]
-    disp_x = ux
-    disp_y = uy
+    # disp_x = ux
+    # disp_y = uy
     mesh = mesh
     secondary = 'blockCeramic_top'
     primary = 'blockMetal_bottom'
@@ -257,7 +257,7 @@ order = FIRST
     primary_boundary = 'blockMetal_bottom'
     primary_subdomain = 'mech_contact_primary_subdomain'
     k = 1e-3
-    k_function = gapk
+    #k_function = gapk
     use_displaced_mesh = true
     threshold_pressure = 1e-15
   [../]
@@ -290,7 +290,7 @@ order = FIRST
     variable = li_metal_conc
     diffusivity = diffusivity
     use_displaced_mesh = false
-    R = 8.31443
+    #R = 8.31443
     temperature = 298
   [../]
   [./li_metal_dt]
@@ -310,22 +310,22 @@ order = FIRST
 []
 
 [Materials]
-  [./equilibrium_potential]
-    type = ADComputeEquilibriumPotential
-    R = 8.31446
-    faraday = 96.4853329
-    temperature = 298
-    cref = 0
-    concentration = li_metal_conc
-    include_conc = false
-    include_reaction_rate = true
-    reaction_rate = 10
-    # reaction_rate = 780.0
-    # reaction_rate_function = reaction_rate
-    include_mechanical_effects = true
-    exclude_elastic_contribution = false
-    block = 'interLayer'
-  [../]
+  # [./equilibrium_potential]
+  #   type = ADComputeEquilibriumPotential
+  #   R = 8.31446
+  #   faraday = 96.4853329
+  #   temperature = 298
+  #   cref = 0
+  #   concentration = li_metal_conc
+  #   include_conc = false
+  #   include_reaction_rate = true
+  #   reaction_rate = 10
+  #   # reaction_rate = 780.0
+  #   # reaction_rate_function = reaction_rate
+  #   include_mechanical_effects = true
+  #   exclude_elastic_contribution = false
+  #   block = 'interLayer'
+  # [../]
 
   [./diffusivity_Li]
     type = ADDiffusionAlongPrincipalDirectionsMaterial

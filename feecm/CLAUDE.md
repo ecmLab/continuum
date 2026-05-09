@@ -4,29 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-FEECM (Finite Element Electrochemistry) is a collection of MOOSE-based applications for modeling battery and electrochemical systems. It contains four applications:
+FEECM (Finite Element Electrochemistry) is a collection of MOOSE-based applications for modeling battery and electrochemical systems. It contains three applications:
 
-- **ec_beta**: Electrochemistry beta version — electrochemistry only (Butler-Volmer, ion transport, current density). Easiest entry point.
-- **ecm_test**: Electro-chemo-mechanics test version — adds mechanics coupling on top of electrochemistry.
-- **tecm_test**: Thermal-electro-chemo-mechanics — most comprehensive, also adds thermal physics. Active development; forked from `eel` and extended.
+- **ecm_test**: Electro-chemo-mechanics — covers electrochemistry (Butler-Volmer, ion transport, current density), mechanics coupling (diffusion-mechanics, contact, swelling, porous flow), and consolidates the former `ec_beta` capabilities.
+- **tecm_test**: Thermal-electro-chemo-mechanics — adds thermal physics on top of ECM. Active development; forked from `eel` and extended.
 - **eel**: Parallel finite-element code for battery physics (mass transport, electrostatics, mechanical deformation, thermal). Originally from literature (UChicago Argonne, 2023); serves as the baseline for `tecm_test`.
+
+> **Historical note:** the repo previously also had an `ec_beta` app (electrochemistry-only beta version). It was consolidated into `ecm_test` and removed; all 74 of its registered classes now live in `ecm_test` and the `ecm-opt` executable is a strict superset of the former `ec_beta-opt`.
 
 ## Repository Layout
 
 ```
 feecm/
-├── ec_beta/      ← app source + build artifacts
 ├── ecm_test/
 ├── eel/
 ├── tecm_test/
-└── projects/     ← all input files (.i) and project work, separated from app source
-    ├── problems-ecBeta/
-    ├── problems-ecmTest/
-    ├── problems-eel/
-    └── problems-tecmTest/
+├── patchMoose2Feecm/  ← MOOSE framework patches (manual application)
+└── projects/          ← all input files (.i) and project work, separated from app source
+    ├── ecmTest/        (← merged from former ecBeta + original ecmTest)
+    ├── eel/
+    └── tecmTest/
 ```
 
-The `projects/` folder is the science workspace; the four app folders are the tooling. Each app folder still has its own `doc/` for documenting the app itself; project-level scientific writeups live under `projects/<name>/doc/`.
+The `projects/` folder is the science workspace; the three app folders are the tooling. Each app folder still has its own `doc/` for documenting the app itself; project-level scientific writeups live under `projects/<name>/doc/`.
 
 ## Build System
 
@@ -35,9 +35,9 @@ This is a MOOSE framework-based project. Each application has its own Makefile t
 ### Building Applications
 ```bash
 # Build specific applications
-cd ec_beta && make -j N
-cd ecm_test && make -j N  
+cd ecm_test && make -j N
 cd eel && make -j N
+cd tecm_test && make -j N
 
 # Where N is the number of parallel jobs
 ```
@@ -56,21 +56,21 @@ Each application follows MOOSE app structure:
 - `doc/`: Documentation describing the app itself
 - `<app>-opt`: Compiled optimized executable (note: ecm_test's executable is named `ecm-opt`, not `ecm_test-opt`)
 
-Input files (.i) for simulations and test cases live **outside** the app folders, under the top-level `projects/problems-<app>/` trees.
+Input files (.i) for simulations and test cases live **outside** the app folders, under the top-level `projects/<app>/` trees.
 
 ## Testing
 
 Each application has test runners:
 ```bash
 # Run tests for specific applications
-./ec_beta/run_tests
 ./ecm_test/run_tests
 ./eel/run_tests
+./tecm_test/run_tests
 
 # Unit tests
-./ec_beta/unit/run_tests
 ./ecm_test/unit/run_tests
 ./eel/unit/run_tests
+./tecm_test/unit/run_tests
 ```
 
 ## Running Input Files - Important Workflow
@@ -80,23 +80,22 @@ Each application has test runners:
 ### Correct Workflow:
 ```bash
 # Navigate to input file directory first
-cd projects/problems-tecmTest/phase2_edl/
+cd projects/tecmTest/phase2_edl/
 # Then run with relative path to the app's executable
 ../../../tecm_test/tecm_test-opt -i single_ion.i
 ```
 
-The relative path is `../../../<app>/<exe>`: three `..` to climb out of `projects/problems-<app>/<name>/` to `feecm/`, then into the app folder.
+The relative path is `../../../<app>/<exe>`: three `..` to climb out of `projects/<app>/<name>/` to `feecm/`, then into the app folder.
 
 ### Per-app executable paths (from a project subdirectory):
 
 | Project tree | Executable invocation |
 |---|---|
-| `projects/problems-ecBeta/<name>/`  | `../../../ec_beta/ec_beta-opt -i <file>.i` |
-| `projects/problems-ecmTest/<name>/` | `../../../ecm_test/ecm-opt -i <file>.i` |
-| `projects/problems-eel/<name>/`     | `../../../eel/eel-opt -i <file>.i` |
-| `projects/problems-tecmTest/<name>/`| `../../../tecm_test/tecm_test-opt -i <file>.i` |
+| `projects/ecmTest/<name>/`  | `../../../ecm_test/ecm-opt -i <file>.i` |
+| `projects/eel/<name>/`      | `../../../eel/eel-opt -i <file>.i` |
+| `projects/tecmTest/<name>/` | `../../../tecm_test/tecm_test-opt -i <file>.i` |
 
-If a project lives more than one level deep under its `problems-<app>/` tree (e.g., `projects/problems-ecBeta/paper_X/case1/`), add one more `..` for each extra level.
+If a project lives more than one level deep under its `<app>/` tree (e.g., `projects/ecmTest/paper_fengyu_anodeLess_BL/randomPores/`), add one more `..` for each extra level.
 
 ### Why this matters:
 - MOOSE resolves relative paths (output directories, file references) relative to current working directory
@@ -105,13 +104,7 @@ If a project lives more than one level deep under its `problems-<app>/` tree (e.
 
 ## MOOSE Modules Used
 
-### ec_beta
-- CHEMICAL_REACTIONS: yes
-- HEAT_TRANSFER: yes
-- PHASE_FIELD: yes
-- SOLID_MECHANICS: yes
-
-### ecm_test  
+### ecm_test
 - CHEMICAL_REACTIONS: yes
 - CONTACT: yes
 - FLUID_PROPERTIES: yes
@@ -125,27 +118,30 @@ If a project lives more than one level deep under its `problems-<app>/` tree (e.
 - NAVIER_STOKES: yes
 - SOLID_MECHANICS: yes
 
+### tecm_test
+- (see `tecm_test/Makefile`)
+
 ## Key Physics and Components
 
-### Electrochemistry (ec_beta)
-- Butler-Volmer kinetics
-- Ion transport and migration
-- Chemical potential coupling
-- Current density calculations
-
 ### Electro-Chemo-Mechanics (ecm_test)
+- Butler-Volmer kinetics, ion transport, migration, current density (former ec_beta capabilities)
 - Coupled diffusion-mechanics
 - Contact mechanics and delamination
 - Stress-assisted transport
 - Swelling and growth deformation
 - Porous flow modeling
+- MIEC (mixed ionic/electronic conductors), Nernst-Planck convection, anisotropic diffusion / conductivity
 
 ### Battery Modeling (eel)
 - Mass transport of charged species
-- Electrostatics/Electrodynamics  
+- Electrostatics/Electrodynamics
 - Mechanical deformation
 - Thermal effects
 - Multi-physics coupling
+
+### Thermal-Electro-Chemo-Mechanics (tecm_test)
+- Forked from `eel`, adds phase-oriented EDL development and non-dimensional layer
+- See `tecm_test/AGENTS.md` for the phase-oriented development conventions
 
 ## Input File Format
 

@@ -4,11 +4,12 @@
 # Following the sample size used in LePage's paper
 sz_x  = 1.5        # axisymmetric, total width is 3mm
 sz_y  = 7.5        # plan symmetric, total length is 15mm
-strn_rt = 2e-2     # Strain rate
+strn_rt = 4e-5     # Strain rate
 
 [GlobalParams]
   displacements = 'disp_r disp_z'
 []
+
 [Mesh]
   coord_type = RZ
   type = GeneratedMesh
@@ -32,7 +33,7 @@ strn_rt = 2e-2     # Strain rate
   [./all]
     add_variables = true
     strain = FINITE
-    # use_displaced_mesh removed (deprecated)
+    #use_displaced_mesh = true
     volumetric_locking_correction = true
     generate_output = 'stress_yy strain_yy vonmises_stress'
     use_automatic_differentiation = true
@@ -41,105 +42,105 @@ strn_rt = 2e-2     # Strain rate
 []
 
 [AuxVariables]
-  [./Fp_yy]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./effPlastic_strain]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./yldStrength]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./effstrain]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./strain_rate]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./hard]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./mandel_yy]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./logStrain_yy]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./defGrad_yy]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
+  # [./Fp_yy]
+  #   order = CONSTANT
+  #   family = MONOMIAL
+  # [../]
+  # [./effPlastic_strain]
+  #   order = CONSTANT
+  #   family = MONOMIAL
+  # [../]
+  # [./yldStrength]
+  #   order = CONSTANT
+  #   family = MONOMIAL
+  # [../]
+  # [./effstrain]
+  #   order = CONSTANT
+  #   family = MONOMIAL
+  # [../]
+  # [./strain_rate]
+  #   order = CONSTANT
+  #   family = MONOMIAL
+  # [../]
+  # [./hard]
+  #   order = CONSTANT
+  #   family = MONOMIAL
+  # [../]
+  # [./mandel_yy]
+  #   order = CONSTANT
+  #   family = MONOMIAL
+  # [../]
+  # [./logStrain_yy]
+  #   order = CONSTANT
+  #   family = MONOMIAL
+  # [../]
+  # [./defGrad_yy]
+  #   order = CONSTANT
+  #   family = MONOMIAL
+  # [../]
 
 []
 
 [AuxKernels]
-  [./fp_yy]
-    type = ADRankTwoAux
-    variable = Fp_yy
-    rank_two_tensor = plastic_distortion
-    index_i = 1
-    index_j = 1
-    execute_on = timestep_end
-  [../]
-  [./log_strain_yy]
-    type = ADRankTwoAux
-    variable = logStrain_yy
-    rank_two_tensor = logarithmic_elastic_strain
-    index_i = 1
-    index_j = 1
-    execute_on = timestep_end
-  [../]
-  [./def_grad_yy]
-    type = ADRankTwoAux
-    variable = defGrad_yy
-    rank_two_tensor = deformation_gradient
-    index_i = 1
-    index_j = 1
-    execute_on = timestep_end
-  [../]
-  [./effective_plastic_strain]
-    type = ADMaterialRealAux
-    variable = effPlastic_strain
-    property = effective_plastic_strain
-    execute_on = timestep_end
-  [../]
-  [./yield_strength]
-    type = ADMaterialRealAux
-    variable = yldStrength
-    property = yield_strength
-    execute_on = 'TIMESTEP_END'
-  [../]
-  [./effective_strain]
-    type = ADRankTwoScalarAux
-    rank_two_tensor = total_strain
-    variable = effstrain
-    scalar_type = EffectiveStrain
-  [../]
-  [./strain_rate]
-    type = ADMaterialRealAux
-    variable = strain_rate
-    property = plastic_strain_rate
-  [../]
-  [./hard]
-    type = ADMaterialRealAux
-    variable = hard
-    property = hardening_variable
-  [../]
-  [./mandel_yy]
-    type = ADRankTwoAux
-    variable = mandel_yy
-    rank_two_tensor = mandel_stress
-    index_i = 1
-    index_j = 1
-  [../]
+  # [./fp_yy]
+  #   type = ADRankTwoAux
+  #   variable = Fp_yy
+  #   rank_two_tensor = plastic_distortion
+  #   index_i = 1
+  #   index_j = 1
+  #   execute_on = timestep_end
+  # [../]
+  # [./log_strain_yy]
+  #   type = ADRankTwoAux
+  #   variable = logStrain_yy
+  #   rank_two_tensor = logarithmic_elastic_strain
+  #   index_i = 1
+  #   index_j = 1
+  #   execute_on = timestep_end
+  # [../]
+  # [./def_grad_yy]
+  #   type = ADRankTwoAux
+  #   variable = defGrad_yy
+  #   rank_two_tensor = deformation_gradient
+  #   index_i = 1
+  #   index_j = 1
+  #   execute_on = timestep_end
+  # [../]
+  # [./effective_plastic_strain]
+  #   type = ADMaterialRealAux
+  #   variable = effPlastic_strain
+  #   property = effective_plastic_strain
+  #   execute_on = timestep_end
+  # [../]
+  # [./yield_strength]
+  #   type = ADMaterialRealAux
+  #   variable = yldStrength
+  #   property = yield_strength
+  #   execute_on = 'TIMESTEP_END'
+  # [../]
+  # [./effective_strain]
+  #   type = ADRankTwoScalarAux
+  #   rank_two_tensor = total_strain
+  #   variable = effstrain
+  #   scalar_type = EffectiveStrain
+  # [../]
+  # [./strain_rate]
+  #   type = ADMaterialRealAux
+  #   variable = strain_rate
+  #   property = plastic_strain_rate
+  # [../]
+  # [./hard]
+  #   type = ADMaterialRealAux
+  #   variable = hard
+  #   property = hardening_variable
+  # [../]
+  # [./mandel_yy]
+  #   type = ADRankTwoAux
+  #   variable = mandel_yy
+  #   rank_two_tensor = mandel_stress
+  #   index_i = 1
+  #   index_j = 1
+  # [../]
 
 []
 
@@ -190,7 +191,7 @@ strn_rt = 2e-2     # Strain rate
     gas_constant = 8.314462681e-3 # kJ/K/mol
     saturation_exponent = 0.05
     pre_factor = 4.25e4
-    temperature = 298
+    temperature = 320
 
     effective_inelastic_strain_name = effective_plastic_strain
     max_inelastic_increment = 10
@@ -213,49 +214,49 @@ strn_rt = 2e-2     # Strain rate
     variable = disp_z
     boundary = top
   [../]
-  [./effPlastic_strain]
-    type = ElementAverageValue
-    variable = effPlastic_strain
-  [../]
-  [./fp_yy]
-    type = ElementAverageValue
-    variable = Fp_yy
-  [../]
-  [./yield_stregnth]
-    type = ElementAverageValue
-    variable = yldStrength
-  [../]
-  [./matl_ts_min]
-    type = MaterialTimeStepPostprocessor
-  [../]
-  [./eff_strain]
-    type=ElementAverageValue
-    variable = effstrain
-  [../]
+  # [./effPlastic_strain]
+  #   type = ElementAverageValue
+  #   variable = effPlastic_strain
+  # [../]
+  # [./fp_yy]
+  #   type = ElementAverageValue
+  #   variable = Fp_yy
+  # [../]
+  # [./yield_stregnth]
+  #   type = ElementAverageValue
+  #   variable = yldStrength
+  # [../]
+  # [./matl_ts_min]
+  #   type = MaterialTimeStepPostprocessor
+  # [../]
+  # [./eff_strain]
+  #   type=ElementAverageValue
+  #   variable = effstrain
+  # [../]
 
-  [./strain_rate]
-    type = ElementAverageValue
-    variable = strain_rate
-  [../]
+  # [./strain_rate]
+  #   type = ElementAverageValue
+  #   variable = strain_rate
+  # [../]
 
-  [./hard]
-    type = ElementAverageValue
-    variable = hard
-  [../]
+  # [./hard]
+  #   type = ElementAverageValue
+  #   variable = hard
+  # [../]
 
-  [./mandel_yy]
-    type = ElementAverageValue
-    variable = mandel_yy
-  [../]
-  [./logStrain_yy]
-    type = ElementAverageValue
-    variable = logStrain_yy
-  [../]
+  # [./mandel_yy]
+  #   type = ElementAverageValue
+  #   variable = mandel_yy
+  # [../]
+  # [./logStrain_yy]
+  #   type = ElementAverageValue
+  #   variable = logStrain_yy
+  # [../]
 
-  [./defGrad_yy]
-    type = ElementAverageValue
-    variable = defGrad_yy
-  [../]
+  # [./defGrad_yy]
+  #   type = ElementAverageValue
+  #   variable = defGrad_yy
+  # [../]
   [./von_mises]
     type = ElementAverageValue
     variable = vonmises_stress
@@ -296,13 +297,13 @@ strn_rt = 2e-2     # Strain rate
     optimal_iterations = 100
 #    timestep_limiting_postprocessor = matl_ts_min
   [../]
-  end_time = 10.0
+  end_time = 10000.0
 []
 
 [Outputs]
   exodus = true
   csv    = true
-  file_base = rst/tension_constTrueStrainRate000
+  file_base = rst_ashok/tension_constTrueStrainRate${strn_rt}_T320
 []
 
 #[Debug]

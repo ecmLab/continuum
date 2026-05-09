@@ -1,4 +1,5 @@
 [Mesh]
+  coord_type = RZ
   patch_size = 80
   patch_update_strategy = auto
   parallel_type = REPLICATED
@@ -19,7 +20,6 @@
 [GlobalParams]
   displacements = 'disp_x disp_y'
 []
-
 [Variables]
   [./disp_x]
   [../]
@@ -178,7 +178,7 @@
   start_time = 0.0
   dt = 0.001
   dtmax = 2.0
-  dtmin = 1e-5
+  dtmin = 1e-9
   num_steps = 10
 
 [] # Executioner

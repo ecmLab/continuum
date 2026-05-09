@@ -16,6 +16,7 @@
 # in the swelling block to auto-calculate the normals and principal directions
 
 [Mesh]
+  coord_type = RZ
   [./mesh]
     type = FileMeshGenerator
     file = data/cosine.msh
@@ -25,7 +26,6 @@
 [GlobalParams]
   displacements = 'disp_x disp_y'
 []
-
 [Variables]
   [./disp_x]
   [../]
@@ -69,7 +69,7 @@
   [./all]
     add_variables = true
     strain = FINITE
-    # use_displaced_mesh removed (deprecated in TensorMechanics action)
+   # use_displaced_mesh = true
     volumetric_locking_correction = true
     generate_output = 'stress_xx stress_yy vonmises_stress strain_xx strain_yy elastic_strain_xx elastic_strain_yy'
     use_automatic_differentiation = true
@@ -117,14 +117,14 @@
     type = ADMatAnisoDiffusion
     diffusivity = diffusivity
     variable = conc
-    # use_displaced_mesh removed (deprecated in TensorMechanics action)
+    use_displaced_mesh = false
     block = 'interLayer'
   []
 
   [./li_metal_dt]
     type = ADTimeDerivative
     variable = conc
-    # use_displaced_mesh removed (deprecated in TensorMechanics action)
+    use_displaced_mesh = false
     block = 'interLayer'
   [../]
 

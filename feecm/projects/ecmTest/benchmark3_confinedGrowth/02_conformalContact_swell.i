@@ -1,17 +1,20 @@
 order = FIRST
-strnRt = 0.002
-name = '02_conformalContact_swell'
-
+strnRt = 0.02
+m1 = 1.0
+m2 = 0
+m3 = 0 
+#name = '02_conformalContact_swell'
+out = 'fiber_strnRt_${strnRt}'
 [Mesh]
+  coord_type = RZ
   patch_size = 80
   patch_update_strategy = auto
   [./blocks]
     type = FileMeshGenerator
-    file = data/conformalContact.msh
+    file = data/0_conformalContact.msh
   [../]
 
 []
-
 [GlobalParams]
   displacements = 'disp_x disp_y'
 []
@@ -54,7 +57,7 @@ name = '02_conformalContact_swell'
   [./action]
     add_variables = true
     strain = FINITE
-    use_displaced_mesh = true
+    #use_displaced_mesh = true
     volumetric_locking_correction = true
     generate_output = 'stress_xx stress_yy vonmises_stress strain_xx strain_yy'
     block = 'blockCeramic blockMetal interLayer'
@@ -68,7 +71,7 @@ name = '02_conformalContact_swell'
     mesh = blocks
     primary = blockCeramic_top
     secondary = blockMetal_bottom
-    penalty = 1e-2
+    penalty = 1
 #    formulation = kinematic
     formulation = mortar
   [../]
@@ -156,6 +159,7 @@ name = '02_conformalContact_swell'
     saturation_exponent = 0.05
     pre_factor = 4.25e4
     temperature = 298
+    
 
     effective_inelastic_strain_name = effective_plastic_strain
     max_inelastic_increment = 0.1
@@ -178,6 +182,7 @@ name = '02_conformalContact_swell'
     saturation_exponent = 0.05
     pre_factor = 4.25e4
     temperature = 298
+    alpha = "${m1} ${m2} ${m3}"
 
     effective_inelastic_strain_name = effective_plastic_strain
     max_inelastic_increment = 0.1
@@ -185,11 +190,9 @@ name = '02_conformalContact_swell'
     internal_solve_output_on = on_error
     block = 'interLayer'
     enable = true
+    intBnd = interLayer_bottom
 
     omega = 2
-    alpha1 = 0.0
-    alpha2 = 1.0
-    alpha3 = 0.0
     concentration = 0.0
     cref = 0.0
 
@@ -238,7 +241,7 @@ name = '02_conformalContact_swell'
   dt = 0.005
   dtmin = 1e-5
   dtmax = 0.5
-  end_time = 5
+  end_time = 15
   timestep_tolerance = 1e-6
   [./TimeStepper]
     type = IterationAdaptiveDT
@@ -253,7 +256,7 @@ name = '02_conformalContact_swell'
 
 [Outputs]
   exodus = true
-  file_base = rst/${name}
+  file_base = rst/Benchmark3_CC_hyper_visco_swelling_creep_${out}
   [out]
     type = Checkpoint
     interval = 5

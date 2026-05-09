@@ -1,6 +1,7 @@
-elem = QUAD4
-order = FIRST
+# elem = QUAD4
+# order = FIRST
 [Mesh]
+  coord_type = RZ
   patch_size = 80
   patch_update_strategy = auto
   parallel_type = REPLICATED
@@ -100,6 +101,7 @@ order = FIRST
     boundary = 'blockCeramic_top blockMetal_bottom'
     diffusion_variable = li_ion_V
     diffusivity = thermal_conductivity
+    check_boundary_restricted = false
   [../]
 
   [./peeq]
@@ -215,8 +217,8 @@ order = FIRST
 
 [Contact]
   [./mech_contact]
-    disp_x = ux
-    disp_y = uy
+    # disp_x = ux
+    # disp_y = uy
     mesh = mesh
     secondary = 'blockCeramic_top'
     primary = 'blockMetal_bottom'
@@ -283,7 +285,7 @@ order = FIRST
 
 [Materials]
   [./diffusivity_Li]
-    type = ADDiffusionAlongPrincipalDirectionsMaterial
+    type = ADDiffusionAlongPrincipalDirectionsMaterial   #ADDiffusionAlongPrincipalDirectionsMaterial
     diffusivity_vector = '1e10 0 0'
     block = 'interLayer'
   [../]

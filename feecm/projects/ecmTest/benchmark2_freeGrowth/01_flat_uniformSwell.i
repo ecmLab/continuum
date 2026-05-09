@@ -1,4 +1,9 @@
+m1 = 0.5
+m2 = 0.5
+m3 = 0
+out = arial
 [Mesh]
+  coord_type = RZ
   patch_size = 80
   patch_update_strategy = auto
   parallel_type = REPLICATED
@@ -14,8 +19,8 @@
     ny = 2
   [../]
 []
-
-
+## Need to define this block otherwise simulation won't run
+## And Ask DComputeFiniteStrain
 [GlobalParams]
   displacements = 'disp_x disp_y'
 []
@@ -28,14 +33,20 @@
   [../]
 
 []
-
+## AuxVariables are feeded into ADIsoTropicHyperViscoSwelling not
+## boundry condtions
 [AuxVariables]
   [./conc]
-
   [../]
-
 []
-
+[AuxKernels]
+  [./conc]
+    type = FunctionAux
+    variable = conc
+    function = '1.0e-13*t'
+    #block = 'interLayer'
+  [../]
+[]
 [Modules/TensorMechanics/Master]
   [./all]
     add_variables = true
@@ -45,17 +56,6 @@
     use_automatic_differentiation = true
   [../]
 []
-
-[AuxKernels]
-  [./conc]
-    type = FunctionAux
-    variable = conc
-    function = '1.0e-15*t'
-    block = 'interLayer'
-  [../]
-
-[]
-
 [Materials]
   [./elasticity_tensor]
     type = ADComputeIsotropicElasticityTensor
@@ -80,7 +80,7 @@
     max_inelastic_increment = 1.0
     # block = '1'
     omega = 1e13
-    alpha = '1 0 0'
+    alpha = '${fparse m1} ${fparse m2} ${fparse m3}'
     concentration = conc
     cref = 0.0
     intBnd = 'bottom'
@@ -92,7 +92,7 @@
 [BCs]
   [./top_y]
     type = ADDirichletBC
-    boundary = 'top'
+    boundary = 'bottom'
     variable = disp_y
     value = 0.0
     preset = true
@@ -100,18 +100,11 @@
 
   [./top_x]
     type = ADDirichletBC
-    boundary = 'top'
+    boundary = 'bottom'
     variable = disp_x
     value = 0.0
     preset = true
   [../]
-  [./top_flux]
-    type = ADNeumannBC
-    variable = conc
-    value = 1e-14
-    boundary = bottom
-  [../]
-
 []
 
 [Preconditioning]
@@ -138,15 +131,15 @@
   start_time = 0.0
   dt = 0.001
   dtmax = 2.0
-  dtmin = 1e-5
-  num_steps = 10
+  dtmin = 1e-9
+  num_steps = 1000
 
 [] # Executioner
 
 [Outputs]
   [./out]
     type = Exodus
-    file_base = rst/flat
+    file_base = rst/01_flat_unifrom_visco_swell_${out}
   [../]
 [] # Outputs
 

@@ -212,7 +212,6 @@
 [Outputs]
   [./out]
     type = Exodus
-    csv = true
     file_base = rst/inclined
 #    output_material_properties = true
   [../]
