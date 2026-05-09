@@ -12,6 +12,7 @@
 #applied current density = 0.012 mA/cm^2 = 1.2e-5
 # exchange_current_density = 0.001 mA/cm^2 = 1e-6
 [Mesh]
+  coord_type = RZ
   [./mesh]
     type = FileMeshGenerator
     file = 'test_full.msh'
@@ -361,7 +362,6 @@
   reference_vector = 'ref'
   group_variables = 'V V_cathode V_anode'
   acceptable_iterations = 2
-  coord_type = RZ
 []
 [Outputs]
   # exodus = true

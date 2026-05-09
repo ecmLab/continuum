@@ -12,6 +12,7 @@
 # 2) Convergence changes when changing R_ct
 # Note k in GapDisplacementConductanceConstraint is 1/Rct
 [Mesh]
+  coord_type = RZ
   [./mesh]
     type = FileMeshGenerator
     file = 'test1_quad3.msh'
@@ -332,7 +333,6 @@
   reference_vector = 'ref'
   group_variables = 'V thermal_lm li_metal_conc'
   acceptable_iterations = 2
-  coord_type = RZ
 []
 [Outputs]
   exodus = true

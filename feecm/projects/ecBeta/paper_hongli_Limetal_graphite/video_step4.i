@@ -162,7 +162,7 @@
   []
 
   [cLi]
-  type = paperHongli
+  type = PaperHongli
   cLi  = cLi
   c1   = 0.5
   c2   = -2

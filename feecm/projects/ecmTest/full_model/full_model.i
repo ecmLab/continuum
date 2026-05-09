@@ -316,7 +316,7 @@ order = FIRST
 
 [Materials]
   [./diffusivity_Li]
-    type = ADDiffusionAlongPrincipalDirections
+    type = ADDiffusionAlongPrincipalDirectionsMaterial
     diffusivity_vector = '1e10 0 0'
     block = 'interLayer blockMetal'
   [../]

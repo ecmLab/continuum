@@ -54,7 +54,7 @@ name = '02_conformalContact_fixLi'
   [./action]
     add_variables = true
     strain = FINITE
-    use_displaced_mesh = true
+    # use_displaced_mesh removed (deprecated in TensorMechanics action)
     volumetric_locking_correction = true
     generate_output = 'stress_xx stress_yy vonmises_stress strain_xx strain_yy'
     block = 'blockCeramic blockMetal'

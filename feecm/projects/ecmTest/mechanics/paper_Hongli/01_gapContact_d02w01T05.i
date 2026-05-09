@@ -220,7 +220,7 @@ name = 'gapContact_d02w01H05'
 
 [Materials]
   [./LiDiffusion]
-   type = ADDiffusionAlongPrincipalDirections
+   type = ADDiffusionAlongPrincipalDirectionsMaterial
    block = 'interLayer'
    diffusivity_vector = '100 0 0'
   []

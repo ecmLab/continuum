@@ -5,6 +5,7 @@
 #   2) Ag dissolves in the fluid
 # If we want to model Ag precipitation in the fluid then perhaps we need 2 phases
 [Mesh]
+  coord_type = RZ
   [mesh]
     # type = FileMeshGenerator
     # file = test_mesh.e
@@ -53,14 +54,14 @@
     type = ParsedGenerateSideset
     # combinatorial_geometry = 'x*x+y*y<1.01'
     combinatorial_geometry = 'x<1.0001e-6'
-    included_subdomain_ids = 1
+    included_subdomains = 1
     new_sideset_name = 'injection_area'
     input = 'AgC'
   []
   [outflow_area]
     type = ParsedGenerateSideset
     combinatorial_geometry = 'x > 9.9999e-6'
-    included_subdomain_ids = 1
+    included_subdomains = 1
     new_sideset_name = 'outflow_area'
     input = injection_area
   []
@@ -80,7 +81,6 @@
 []
 
 [Problem]
-  coord_type = RZ
 []
 
 [GlobalParams]

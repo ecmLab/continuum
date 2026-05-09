@@ -90,57 +90,57 @@
   [mass_water_dot]
     type = PorousFlowMassTimeDerivative
     fluid_component = 0
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     variable = pwater
   []
   [flux_water]
     type = PorousFlowAdvectiveFlux
     fluid_component = 0
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     variable = pwater
   []
   [vol_strain_rate_water]
     type = PorousFlowMassVolumetricExpansion
     fluid_component = 0
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     variable = pwater
   []
   [mass_co2_dot]
     type = PorousFlowMassTimeDerivative
     fluid_component = 1
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     variable = pgas
   []
   [flux_co2]
     type = PorousFlowAdvectiveFlux
     fluid_component = 1
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     variable = pgas
   []
   [vol_strain_rate_co2]
     type = PorousFlowMassVolumetricExpansion
     fluid_component = 1
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     variable = pgas
   []
   [energy_dot]
     type = PorousFlowEnergyTimeDerivative
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     variable = T
   []
   [advection]
     type = PorousFlowHeatAdvection
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     variable = T
   []
   [conduction]
     type = PorousFlowHeatConduction
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     variable = T
   []
   [vol_strain_rate_heat]
     type = PorousFlowHeatVolumetricExpansion
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     variable = T
   []
   [grad_stress_x]
@@ -148,13 +148,13 @@
     temperature = T
     variable = disp_x
     eigenstrain_names = thermal_contribution
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     component = 0
   []
   [poro_x]
     type = PorousFlowEffectiveStressCoupling
     variable = disp_x
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     component = 0
   []
   [grad_stress_y]
@@ -162,13 +162,13 @@
     temperature = T
     variable = disp_y
     eigenstrain_names = thermal_contribution
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     component = 1
   []
   [poro_y]
     type = PorousFlowEffectiveStressCoupling
     variable = disp_y
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     component = 1
   []
 []
@@ -299,7 +299,7 @@
     variable = disp_x
     component = 0
     postprocessor = constrained_effective_fluid_pressure_at_wellbore
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
   []
   [cavity_pressure_y]
     type = Pressure
@@ -307,7 +307,7 @@
     variable = disp_y
     component = 1
     postprocessor = constrained_effective_fluid_pressure_at_wellbore
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
   []
 
   [cold_co2]
@@ -315,7 +315,7 @@
     boundary = injection_area
     variable = T
     value = 290  # injection temperature
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
   []
   [constant_co2_injection]
     type = PorousFlowSink
@@ -323,7 +323,7 @@
     variable = pgas
     fluid_phase = 1
     flux_function = -1E-4
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
   []
 
   [outer_water_removal]
@@ -336,7 +336,7 @@
     PT_shift = 20E6
     use_mobility = true
     use_relperm = true
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
   []
   [outer_co2_removal]
     type = PorousFlowPiecewiseLinearSink
@@ -348,7 +348,7 @@
     PT_shift = 20.1E6
     use_mobility = true
     use_relperm = true
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
   []
 []
 
@@ -498,7 +498,7 @@
     variable = effective_fluid_pressure
     point = '1 0 0'
     execute_on = timestep_begin
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
   []
   [constrained_effective_fluid_pressure_at_wellbore]
     type = FunctionValuePostprocessor

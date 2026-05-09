@@ -13,6 +13,7 @@
 # nx=1000, bias_x=1.01
 # nx=2000, bias_x=1.003
 [Mesh]
+  coord_type = RZ
   type = GeneratedMesh
   dim = 2
   nx = 500
@@ -23,11 +24,6 @@
   ymin = 0
   ymax = 0.1e-6
 []
-
-[Problem]
-  coord_type = RZ
-[]
-
 [GlobalParams]
   displacements = 'disp_r disp_z'
   PorousFlowDictator = dictator

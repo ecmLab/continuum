@@ -23,6 +23,7 @@ v_cutoff = 2750
 h = 26
 
 [Mesh]
+  coord_type = RZ
   [./mesh]
     type = FileMeshGenerator
     file = 'test_full4.msh'
@@ -379,7 +380,6 @@ h = 26
   reference_vector = 'ref'
   group_variables = 'V V_cathode V_anode'
   acceptable_iterations = 2
-  coord_type = RZ
 []
 [Outputs]
   # exodus = true

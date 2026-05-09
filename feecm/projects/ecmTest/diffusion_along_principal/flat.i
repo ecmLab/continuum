@@ -62,7 +62,7 @@
 
 [Materials]
   [./diffusivity_Li1]
-    type = ADDiffusionAlongPrincipalDirections
+    type = ADDiffusionAlongPrincipalDirectionsMaterial
     diffusivity_name =  'diffusivity'
     diffusivity_vector = '1 0 0'
     intBnd = 'bottom'
@@ -70,7 +70,7 @@
     # output_properties = diffusion_tensor
   [../]
   # [./diffusivity_Li2]
-  #   type = ADDiffusionAlongPrincipalDirections
+  #   type = ADDiffusionAlongPrincipalDirectionsMaterial
   #   diffusivity_name =  'diffusivity'
   #   diffusivity_vector = '1 0 0'
   #   intBnd = 'top'

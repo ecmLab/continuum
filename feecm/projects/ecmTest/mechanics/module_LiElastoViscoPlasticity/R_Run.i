@@ -3,12 +3,8 @@
 [GlobalParams]
   displacements = 'disp_r disp_z'
 []
-
-[Problem]
-  coord_type = RZ
-[]
-
 [Mesh]
+  coord_type = RZ
   type = GeneratedMesh
   xmax = 6.35e-3
   ymax = 15.5e-3

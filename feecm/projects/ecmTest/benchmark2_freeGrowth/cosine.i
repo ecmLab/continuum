@@ -69,7 +69,7 @@
   [./all]
     add_variables = true
     strain = FINITE
-    use_displaced_mesh = true
+    # use_displaced_mesh removed (deprecated in TensorMechanics action)
     volumetric_locking_correction = true
     generate_output = 'stress_xx stress_yy vonmises_stress strain_xx strain_yy elastic_strain_xx elastic_strain_yy'
     use_automatic_differentiation = true
@@ -117,14 +117,14 @@
     type = ADMatAnisoDiffusion
     diffusivity = diffusivity
     variable = conc
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated in TensorMechanics action)
     block = 'interLayer'
   []
 
   [./li_metal_dt]
     type = ADTimeDerivative
     variable = conc
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated in TensorMechanics action)
     block = 'interLayer'
   [../]
 
@@ -157,7 +157,7 @@
 
 [Materials]
   [./LiDiffusion]
-   type = ADDiffusionAlongPrincipalDirections
+   type = ADDiffusionAlongPrincipalDirectionsMaterial
    block = 'interLayer'
    diffusivity_vector = '100 0 0'
   []

@@ -120,29 +120,29 @@
   [mass_water_dot]
     type = PorousFlowMassTimeDerivative
     fluid_component = 0
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     variable = pwater
   []
   [flux_water]
     type = PorousFlowAdvectiveFlux
     fluid_component = 0
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     variable = pwater
   []
 
   [energy_dot]
     type = PorousFlowEnergyTimeDerivative
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     variable = temp
   []
   [advection]
     type = PorousFlowHeatAdvection
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     variable = temp
   []
   [conduction]
     type = PorousFlowExponentialDecay
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     variable = temp
     reference = 293
     rate = rate
@@ -152,7 +152,7 @@
     temperature = temp
     eigenstrain_names = thermal_contribution
     variable = disp_r
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     component = 0
   []
   [grad_stress_z]
@@ -160,13 +160,13 @@
     temperature = temp
     eigenstrain_names = thermal_contribution
     variable = disp_z
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     component = 1
   []
   [poro_r]
     type = PorousFlowEffectiveStressCoupling
     variable = disp_r
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     component = 0
   []
 []
@@ -441,7 +441,7 @@
     variable = disp_r
     component = 0
     postprocessor = p_bh # note, this lags
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
   []
 []
 
@@ -451,20 +451,20 @@
     variable = pwater
     point = '0.1 0 0'
     execute_on = timestep_begin
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
   []
   [mineral_bh] # mineral concentration (m^3(mineral)/m^3(rock)) at the borehole
     type = PointValue
     variable = mineral_conc_m3_per_m3
     point = '0.1 0 0'
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
   []
 []
 
 [VectorPostprocessors]
   [ptsuss]
     type = LineValueSampler
-    use_displaced_mesh = false
+    # use_displaced_mesh removed (deprecated)
     start_point = '0.1 0 0'
     end_point = '5000 0 0'
     sort_by = x

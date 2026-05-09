@@ -1,15 +1,12 @@
 name = 't20'
 
 [Mesh]
+  coord_type = RZ
  [GeneratedMesh]
    type = FileMeshGenerator
    file = data/${name}.msh
  []
  
-[]
-
-[Problem]
-  coord_type = RZ
 []
 
 [Variables]

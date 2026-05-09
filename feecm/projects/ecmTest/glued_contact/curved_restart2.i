@@ -255,13 +255,13 @@
 
 [Materials]
   [./diffusivity_Li]
-    type = ADDiffusionAlongPrincipalDirections
+    type = ADDiffusionAlongPrincipalDirectionsMaterial
     diffusivity_vector = '1e2 0 0'
     block = 'interLayer'
   [../]
 
   [./diffusivity_Li2]
-    type = ADDiffusionAlongPrincipalDirections
+    type = ADDiffusionAlongPrincipalDirectionsMaterial
     diffusivity_vector = '1e2 0 0'
     block = 'blockMetal'
   [../]

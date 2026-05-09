@@ -3,12 +3,8 @@
 [GlobalParams]
   displacements = 'disp_r disp_z'
 []
-
-[Problem]
-  coord_type = RZ
-[]
-
 [Mesh]
+  coord_type = RZ
   type = GeneratedMesh
   xmax = 6.35e-3
   ymax = 15.5e-3
@@ -29,7 +25,7 @@
   [./all]
     add_variables = true
     strain = FINITE
-    use_displaced_mesh = true
+    # use_displaced_mesh removed (deprecated)
     volumetric_locking_correction = true
     generate_output = 'stress_yy strain_yy vonmises_stress'
     use_automatic_differentiation = true

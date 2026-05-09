@@ -61,7 +61,7 @@
 # This kernel describes the convection term in the Nernst-Planck equation
 # diffusivity is ratio of electron diffusivity and the normalized permittivity
   [./electron_source]
-    type = sourceTerm
+    type = SourceTerm
     variable = cE
     srcCoef  = src_coefficient
     function = source_func
@@ -83,7 +83,7 @@
 # zIons is the charge state, zIons = -1 for electron
 # scale is the scale up of this term, for problem stability
   [./Voltage_chargeDensity]
-    type = chargeDensity
+    type = ChargeDensity
     variable = phi
     conIons  = cE
     zIons    = -1

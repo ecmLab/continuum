@@ -112,7 +112,7 @@
 #  prop_names = 'diffusivity'
 #  prop_values = 0.01
 
-  type = paperHongli
+  type = PaperHongli
   applied_current = 0.2
   exchange_current = 1.3
   reaction_rate = 0.5

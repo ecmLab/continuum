@@ -9,12 +9,8 @@ strn_rt = 30e-5     # Strain rate
 [GlobalParams]
   displacements = 'disp_r disp_z'
 []
-
-[Problem]
-  coord_type = RZ
-[]
-
 [Mesh]
+  coord_type = RZ
   type = GeneratedMesh
   xmax = ${sz_x}
   ymax = ${sz_y}
