@@ -92,7 +92,7 @@
 
 [InterfaceKernels]
   [interface]
-    type = MixSEInterfaceEn
+    type = MiecSEInterfaceEn
     variable = potEn
     neighbor_var = potMt
     potLi    = potLi

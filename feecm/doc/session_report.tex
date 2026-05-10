@@ -349,4 +349,163 @@ report's Section 5.1 since they don't live anywhere else in code.
   \item Inspect any Ashok contribution: \code{git log integrate-ashok \textasciicircum{}HowardTu --oneline}.
 \end{tightitemize}
 
+\section{Phase 8 (continued, 2026-05-09 to 2026-05-10): project reorganization}
+
+\subsection{moose\_tests\_shared deduplication}
+Compared the 6 sub-projects in \code{ecmTest/moose\_tests\_shared/} against the 4 same-named sub-projects in \code{ecmTest/test/}. Result: zero byte-level overlap (same project names, entirely disjoint file sets). Verdict: merge rather than delete.
+
+Actions:
+\begin{tightitemize}
+  \item Whole-folder moves into \code{test/}: \code{creep\_compression}, \code{creep\_tension} (no sister to merge with).
+  \item Per-file merges into \code{test/<sub>/}: \code{creep\_contact}, \code{one\_element\_creep} (with the temperature-sweep \code{198/}, \code{298/}, \code{398/} sub-folders preserved), \code{one\_element\_no\_creep}, \code{unidirectional\_swelling}.
+  \item One filename collision avoided: \code{moose\_tests\_shared/unidirectional\_swelling/swelling\_linear\_conc.i} renamed to \code{swelling\_linear\_conc\_mts.i}.
+  \item Notebook (\code{Anand\_viscoplastic\_creep\_lepage\_verification\_moose.ipynb}) preserved.
+  \item \code{Example\_figures\_howard\_berkely\_Jul7\_2020.pptx} and \code{Readme.md} moved to \code{ecmTest/doc/} (README renamed \code{moose\_tests\_shared\_README.md}).
+  \item \code{moose\_tests\_shared/} folder deleted.
+\end{tightitemize}
+
+Re-audited the merged \code{test/} folder: \textbf{81/81 PASS} (pre-merge was 14/16; the 65 absorbed inputs all ran clean).
+
+\subsection{Project tree convention finalized}
+User declared the three-bucket convention for \code{ecmTest/} (saved to memory):
+\begin{tightitemize}
+  \item \code{test/} --- app-development tests
+  \item \code{benchmarks/} --- capability checks
+  \item top-level \code{YYYY\_paper\_*} or \code{YYYY\_proposal\_*} --- scientific work
+\end{tightitemize}
+The user renamed paper folders accordingly (e.g.\ \code{paper\_xingxing\_liExpulsion} $\to$ \code{2022\_paper\_xingxing\_liExpulsion}, \code{EC\_RAM} $\to$ \code{2026\_paper\_keXu\_ecram}).
+
+\subsection{ECM\_benchmark deduplication (continued)}
+Inside \code{ecmTest/}, the historic \code{ECM\_benchmark/} folder (Ashok-organized hierarchy) was deduplicated against the parallel flat-named entries (\code{benchmark1\_metalCreep}, \code{benchmark2\_freeGrowth}, etc.) at the top of \code{ecmTest/}. Same-named files were already byte-identical from prior syncs; ECM\_benchmark-only files were moved into the corresponding flat folders, then \code{ECM\_benchmark/} was deleted. All 27 inputs across the merged folders pass \code{--check-input}.
+
+\subsection{doc folder relocated}
+User moved \code{ecmTest/doc/} (containing the JMPS paper draft) into \code{ecmTest/benchmarks/doc/} so the paper lives alongside the benchmarks it describes.
+
+\section{Phase 9 (2026-05-09 to 2026-05-10): JMPS paper drafting}
+
+User decided: target \emph{Journal of the Mechanics and Physics of Solids} (JMPS), solid-state focus only. Paper-relevant projects consolidated under \code{ecmTest/benchmarks/}.
+
+\subsection{Project consolidation for the paper}
+11 projects moved into \code{ecmTest/benchmarks/} (joining the 7 already-named \code{benchmark*} sub-projects):
+
+\begin{tightitemize}
+  \item Validation: \code{mcmeeking\_paper\_results}, \code{kim-kim-suzuki}
+  \item Plating / stripping: \code{plating\_and\_stripping}, \code{agLi}, \code{dendrite\_growth}
+  \item Contact mechanics: \code{contact\_swelling}, \code{glued\_contact}, \code{czm}
+  \item Full-cell coupling: \code{full\_cell}, \code{full\_model}, \code{example1\_LiCreepInSE}
+\end{tightitemize}
+
+\subsection{Paper draft state}
+Working file: \code{feecm/projects/ecmTest/benchmarks/doc/growth\_deformation\_kinematics.tex}.
+
+The 2024 LyX-derived 10-page draft was extended to a \textbf{24-page} working manuscript:
+
+\begin{tightitemize}
+  \item \textbf{Title sharpened:} ``A Coupled Electro-Chemo-Mechanical Framework for Lithium-Metal Solid-State Batteries: Growth, Plasticity, Diffusion, and Contact''
+  \item \textbf{Build hygiene:} swapped \code{[latin9]inputenc} $\to$ \code{[utf8]} (UTF-8 em/en-dashes were breaking pdflatex), removed dependency on missing \code{refstyle} package, removed stray Overleaf URL from a §3.1 figure caption.
+  \item \textbf{§2.4 sign + form errors fixed:} added missing minus sign in Fick's law; replaced incorrect product-rule expansion with conservative form $\partial c/\partial t = \nabla\!\cdot\!(\mathbf{D}\nabla c)$.
+  \item \textbf{§1 Introduction (new):} 4 paragraphs --- motivation, mechanical-Li context, prior-work survey, contribution \& outline. Citations as \code{\textbackslash{}cite\{TBD:Name\}} placeholders rendered as \emph{[cite: TBD:Name]}.
+  \item \textbf{§2.5 (new):} full Nernst-Planck derivation for $\mathrm{Li}^+$ migration in SE.
+  \item \textbf{§2.8 (new):} Numerical Implementation subsection (6 paragraphs covering spatial / temporal discretization, coupled solve, scaling, linear solver, mortar contact, reproducibility).
+  \item \textbf{§3.1 commentary:} 3 paragraphs interpreting the existing creep figures (Anand viscoplastic model, rate sensitivity, Arrhenius temperature scaling).
+  \item \textbf{§3.2--§3.4 + §4 (drafted):} all sub-subsections drafted with \code{\textbackslash{}framebox} placeholders for figures and descriptive captions.
+  \item \textbf{§5 Conclusions (new):} summary + future-work paragraph.
+\end{tightitemize}
+
+\textbf{Pending for the paper:} (a) \textasciitilde{}12 figures still as placeholder boxes (decision: text first, real figures in a dedicated session because each sim run + post-process is a multi-hour effort); (b) bibliography (\textasciitilde{}20 \code{TBD:Name} references to look up).
+
+A separate inventory checklist at \code{feecm/doc/paper\_inventory.md} maps each placeholder to its source input file.
+
+\section{Phase 10 (2026-05-10): source redundancy cleanup}
+
+Initial audit of \code{ecm\_test/src/} (115 \code{.C} files) surfaced multiple categories of redundancy: pure duplicates (same body, different class names), near-duplicates differing only in coupled-variable identity, filename typos, and naming-convention drift. Tier-1 (pure duplicate) deletions executed:
+
+\begin{center}
+\begin{tabular}{l l l c}
+\toprule
+Pair & Kept & Deleted & Inputs updated \\
+\midrule
+\code{MiecSEInterfaceEn} / \code{MixSEInterfaceEn} & \code{Miec} & \code{Mix} & 2 \\
+\code{MiecSEInterfacePrs} / \code{MixSEInterfacePrs} & \code{Miec} & \code{Mix} & 0 \\
+\code{IonicSEInterface} / \code{SingleSEInterface} & \code{Ionic} & \code{Single} & 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{6 source/header files deleted}, 2 input files rewritten (\code{mdl2.i}, \code{mdl3.i} in \code{2023\_paper\_fengyu\_anodeLess\_BL/randomPores/}). ecm\_test rebuilds clean (\code{libecm-opt.0.dylib}: 2.27\,MB).
+
+\textbf{Remaining redundancies (queued, not yet executed):}
+\begin{tightitemize}
+  \item \textbf{Tier 2:} merge \code{NernstPlanckConvectionScaled} into \code{NernstPlanckConvection} (Scaled variant only adds optional \code{scale} parameter; default 1).
+  \item \textbf{Tier 2:} consolidate the 6 SE-Butler-Volmer BCs (\code{SingleSEElectrodeBV}, \code{SingleSEIntLiBV}, \code{SingleSEIntSEBV}, \code{MixSEIntBV}, \code{MixSEMetalBV}, \code{MixSEVoidBV}) --- each 90\% shared logic, differing in coupled-variable name. Could collapse to 1--2 parameterized BCs. Needs domain judgment about which params to expose.
+  \item \textbf{Tier 3:} rename 4 filename typos (\code{Noramlto}$\to$\code{NormalTo}, \code{Istropic}$\to$\code{Isotropic}, \code{CreepSwelling}$\leftrightarrow$\code{SwellingCreep} word-order, \code{Ansio}$\to$\code{Aniso}).
+  \item \textbf{Tier 4:} standardize the inconsistent \code{Aniso*}/\code{*Anisotropy}/\code{Anisotropic*} naming conventions (informational).
+\end{tightitemize}
+
+\section{Lessons learned --- read at start of next session}
+\label{sec:lessons}
+
+These are recurring patterns and gotchas observed across the multi-day session. Stable enough to be useful next time.
+
+\subsection{MOOSE-specific gotchas}
+
+\begin{tightitemize}
+  \item \textbf{Filename $\neq$ class name.} Many files have typo'd filenames not matching the registered class name (\code{ADIstropicElasticSwelling.C} registers \code{ADIsotropicElasticSwelling}; \code{ADChemoMechanoAnisoDiffusion.C} registers \code{ADChemoMechanoAnsioDiffusion}; \code{AnisoDiffusionFluxNoramltoBoundary.C} registers \code{AnisoDiffusionFluxNormalToBoundary}). To find true registrations: \code{grep -r "registerMooseObject" ecm\_test/src/}.
+  \item \textbf{Class registrations are global within an app.} Two \code{.C} files registering the same name = build error.
+  \item \textbf{Recurring deprecation pattern across MOOSE versions:}
+    \begin{tightitemize}
+      \item \code{[Problem] coord\_type = RZ} $\to$ \code{[Mesh] coord\_type = RZ}
+      \item \code{Modules/TensorMechanics/Master/.../use\_displaced\_mesh} $\to$ remove
+      \item \code{Modules/TensorMechanics/Master} $\to$ \code{Physics/SolidMechanics/QuasiStatic}
+      \item \code{ADPresetBC} $\to$ \code{ADDirichletBC} with \code{preset = true}
+      \item \code{included\_subdomain\_ids} $\to$ \code{included\_subdomains}
+      \item \code{ContactDOFSetSize}, \code{NormalNodalLMMechanicalContact}: removed; require migration to mortar contact (substantial input rewrite).
+      \item \code{Outputs/out/csv = true} inside \code{Exodus} block: remove (CSV is now its own output type).
+    \end{tightitemize}
+  \item \textbf{\code{--check-input} is fast but limited.} It catches parse, registration, BC topology, and mesh-load errors but \emph{not} solve-time convergence. A passing audit doesn't guarantee a passing solve.
+  \item \textbf{Cross-app class duplication is rampant.} Same class name (e.g.\ \code{CurrentDensity}) can exist in multiple apps with different physics. Always disambiguate by full path.
+  \item \textbf{macOS Bash 3.2 caveats.} No associative arrays (\code{declare -A} fails); no GNU \code{timeout} (use \code{perl -e 'alarm shift; exec @ARGV'} as substitute); \code{\textbackslash{}s} in perl regex matches \code{\textbackslash{}n} (use \code{[ \textbackslash{}t]} explicitly to avoid eating newlines and merging lines --- this caused the \code{use\_displaced\_mesh} commenting bug).
+\end{tightitemize}
+
+\subsection{Workflow patterns that worked}
+
+\begin{tightitemize}
+  \item \textbf{Three-tier audit:} (1) \code{git ls-tree} cross-branch comparisons for structural diff, (2) blob-hash comparisons for byte-level dedup, (3) \code{--check-input} for runtime sanity. Each uncovers a different class of issues.
+  \item \textbf{Diff-and-port for unrelated histories:} when two branches share no common ancestor (e.g.\ AshokG vs.\ master), \code{git merge} fails. Approach: feature branch off the destination, then \code{git checkout other-branch -- <path>} per-file with sed substitutions for app names.
+  \item \textbf{Bulk-fix recipe order:} for projects with hundreds of failing inputs, fix in this order to maximize cascade: (a) class registration / casing, (b) MOOSE deprecations (coord\_type, use\_displaced\_mesh, included\_subdomains), (c) missing data files (regenerate \code{.msh} from \code{.geo}, fake CSVs), (d) per-input one-off issues last.
+  \item \textbf{Sync-from-fixed-side trick:} if two parallel project trees have the same files and one side has been recently fixed, the cheapest path to fix the other is \code{cmp -s} discovery $\to$ \code{cp} from the fixed side. Done twice (ecBeta $\to$ ecmTest ECM\_benchmark sync) with zero regressions.
+  \item \textbf{Phase-A read-only audit before any moves} pays for itself. Categorize as ``in both, identical / in both, different / only in one'' --- only the third category needs port work.
+\end{tightitemize}
+
+\subsection{Process recommendations for paper-drafting sessions}
+
+\begin{tightitemize}
+  \item \textbf{Text first, figures last.} Each MOOSE simulation is minutes-to-hours; figure post-processing requires reading Exodus. Doing this in parallel with text-drafting wastes conversation time. Plan: complete text in one session, kick off batch sim runs (overnight), then a separate session for figure post-processing.
+  \item \textbf{Bibliography deferred deliberately.} Writing \code{\textbackslash{}cite\{TBD:Name\}} as searchable placeholders is faster than maintaining a stub \code{.bib} during drafting. Final pass to convert all \code{TBD:*} markers to real citations.
+  \item \textbf{Compile early, compile often.} The \code{[latin9]inputenc} silent failure (PDF generated despite \code{!} errors in the log) wasn't caught for a full pass because \code{nonstopmode} hides errors. Always grep for lines starting with \code{!} in the \code{.log} file after pdflatex.
+  \item \textbf{Build artifacts to \code{build/}} per AGENTS.md hygiene. Keep \code{.tex} and \code{.pdf} in the doc folder; everything else (\code{.aux}, \code{.log}, \code{.out}, \code{.synctex.gz}) goes in \code{build/}.
+\end{tightitemize}
+
+\subsection{Key files to read at the start of next session}
+
+\begin{tightitemize}
+  \item \code{feecm/CLAUDE.md} --- updated with the 3-app post-consolidation layout.
+  \item \code{feecm/tecm\_test/AGENTS.md} --- phase-oriented dev rules.
+  \item \code{feecm/doc/session\_report.tex} (this document) --- the running history.
+  \item \code{feecm/doc/paper\_inventory.md} --- per-section inventory of the JMPS paper draft.
+  \item \code{feecm/projects/ecmTest/benchmarks/doc/growth\_deformation\_kinematics.tex} --- the working paper.
+  \item Memory files at \code{\textasciitilde{}/.claude/projects/-Users-howardtu-Documents-modeling-continuum/memory/} --- carry FEECM lineage and ecmTest organization conventions across sessions.
+\end{tightitemize}
+
+\subsection{Open todo when you return}
+
+\begin{tightitemize}
+  \item Real figure generation for the JMPS paper (replace 12 placeholder boxes).
+  \item Bibliography population (\textasciitilde{}20 references; \code{TBD:Name} markers searchable in the .tex).
+  \item Source redundancy: continue with NernstPlanckScaled merge, SE-BV consolidation, typo renames.
+  \item Decide whether to merge \code{integrate-ashok} branch into \code{HowardTu} and push (Option-2 plan from earlier session).
+  \item The remaining \textasciitilde{}30 ecmTest projects with \code{--check-input} failures: most are missing data files (\code{.e} checkpoints, \code{.msh} files) that need regeneration from \code{.geo} or restoration from another machine.
+  \item \code{feecm/projects/doc/project\_audit.pdf} (60 projects, 379 inputs from 2026-05-06): substantially \textbf{stale} after all the reorg work. Either regenerate or mark as historical.
+\end{tightitemize}
+
 \end{document}

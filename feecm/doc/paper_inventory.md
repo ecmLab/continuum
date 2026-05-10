@@ -1,12 +1,14 @@
 # JMPS Paper Inventory & Punch List
 
-**Source:** `projects/ecmTest/doc/growth_deformation_kinematics.tex` (536 lines, 23 KB)
-**Title (current):** *A Unified Framework for the Simulation of Solid-State Batteries*
+**Source:** `projects/ecmTest/benchmarks/doc/growth_deformation_kinematics.tex` (now 24-page PDF, 360 KB)
+**Title (current):** *A Coupled Electro-Chemo-Mechanical Framework for Lithium-Metal Solid-State Batteries: Growth, Plasticity, Diffusion, and Contact*
 **Target venue:** Journal of the Mechanics and Physics of Solids (JMPS)
 **Scope:** Solid-state Li-metal SSB only
-**Generated:** 2026-05-09
+**Generated:** 2026-05-09  ·  **Updated:** 2026-05-10
 
-This is a Phase-1 inventory — what's drafted, what's missing, and which `projects/ecmTest/benchmarks/<sub>/` files supply each missing piece.
+> **Status update 2026-05-10:** Title was sharpened. §1 (Introduction), §2.5 (Li⁺ Nernst-Planck), §2.8 (Numerical Implementation), §3.1 commentary, §3.2–§3.4 (sub-subsections with placeholder figures), §4 (5 sub-cases with placeholder figures), and §5 (Conclusions) are all drafted. **What remains:** ~12 placeholder figures need real simulation outputs, and ~20 `[cite: TBD:Name]` references need real bibliography entries. Doc folder relocated to `projects/ecmTest/benchmarks/doc/`.
+
+This document was the Phase-1 inventory (what's drafted, what's missing, and which `projects/ecmTest/benchmarks/<sub>/` files supply each missing piece). The "what's missing" list below reflects the **2026-05-09 baseline**; many items have since been drafted (see status update above and `feecm/doc/session_report.tex` Phase 9 for the full delta).
 
 ---
 

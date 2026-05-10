@@ -13,11 +13,17 @@
 \newcommand{\PASS}{\textcolor{passgreen}{\textbf{PASS}}}
 \newcommand{\FAIL}{\textcolor{failred}{\textbf{FAIL}}}
 \newcommand{\code}[1]{\texttt{\small #1}}
-\title{FEECM Project Audit Report}
+\title{FEECM Project Audit Report \\ \large \textcolor{failred}{[STALE --- 2026-05-06 snapshot]}}
 \author{Per-project \texttt{--check-input} verification across the \texttt{feecm/projects/} tree}
-\date{2026-05-06}
+\date{2026-05-06 (superseded; see notice below)}
 \begin{document}
 \maketitle
+
+\begin{center}
+\fbox{\parbox{0.92\textwidth}{\textbf{This audit is from 2026-05-06 and is now stale.}\\[0.3em]
+Many subsequent changes have been made: \texttt{ec\_beta} was consolidated into \texttt{ecm\_test} and removed; \texttt{moose\_tests\_shared/} merged into \texttt{ecmTest/test/}; \texttt{ECM\_benchmark/} folder dissolved; paper folders renamed with \texttt{YYYY\_paper\_*} convention; 11 paper-relevant projects moved into \texttt{ecmTest/benchmarks/}. The four-app layout described below collapsed to three apps. \\[0.3em]
+For the current state and a full session history, see \texttt{feecm/doc/session\_report.tex}. To regenerate this audit against the current tree, re-run the audit script described in \S1 below; the per-project pass/fail tallies will differ substantially.}}
+\end{center}
 
 \section{Scope and method}
 Each input file under \code{feecm/projects/<app>/<project>/} (top-level and
