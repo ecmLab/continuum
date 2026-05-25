@@ -222,13 +222,13 @@
   # [../]
   #
   # [./left_right]
-  #   type = ADPresetBC
+  #   type = ADDirichletBC
   #   variable = ux
   #   boundary = '11 12 14 17 19'
   #   value = 0
   # [../]
   # [./bottom]
-  #   type = ADPresetBC
+  #   type = ADDirichletBC
   #   variable = uy
   #   boundary = '11'
   #   value = 0

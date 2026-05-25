@@ -273,7 +273,7 @@
 
 [BCs]
   [./Li_top]
-    type = ADPresetBC
+    type = ADDirichletBC
     boundary = '18'
     variable = uy
     # component = 1
@@ -282,25 +282,25 @@
   [../]
 
   [./left_right]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = ux
     boundary = '11 12 14 17 19'
     value = 0
   [../]
   # [./bottom]
-  #   type = ADPresetBC
+  #   type = ADDirichletBC
   #   variable = uy
   #   boundary = '11'
   #   value = 0
   # [../]
   [./li_ion_top]
-    type = ADPresetBC
+    type = ADDirichletBC
     boundary = '18'
     variable = li_ion
     value = 100.0
   [../]
   [./li_ion_bot]
-    type = ADPresetBC
+    type = ADDirichletBC
     boundary = '11'
     variable = li_ion
     value = 10.0

@@ -57,14 +57,14 @@
     type = ParsedGenerateSideset
     # combinatorial_geometry = 'x*x+y*y<1.01'
     combinatorial_geometry = 'y<0.0001e-6'
-    included_subdomain_ids = 1
+    included_subdomains = 1
     new_sideset_name = 'injection_area'
     input = 'AgC'
   []
   [outflow_area]
     type = ParsedGenerateSideset
     combinatorial_geometry = 'y>29.99e-6'
-    included_subdomain_ids = 1
+    included_subdomains = 1
     new_sideset_name = 'outflow_area'
     input = injection_area
   []

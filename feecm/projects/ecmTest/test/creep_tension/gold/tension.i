@@ -162,7 +162,7 @@
 
 [BCs]
   [./boty]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = uy
     boundary = 'bottom'
     value = 0
@@ -174,7 +174,7 @@
     function = vel2
   [../]
   [./ux]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = ux
     boundary = 'top bottom left'
     value = 0

@@ -203,7 +203,6 @@
     hardening_modulus = 10.0e6
     rate_exponent = 0.15
  [Debug]
-  show_material_props = true
 []   activation_energy = 37
     gas_constant = 8.314462681e-3 # kJ/K/mol
     saturation_exponent = 0.05

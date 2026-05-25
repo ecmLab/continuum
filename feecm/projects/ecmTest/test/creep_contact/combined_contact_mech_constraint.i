@@ -209,13 +209,13 @@
   [../]
 
   [./left_right]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = ux
     boundary = 'ceramic_left ceramic_bot ceramic_right Li_right Li_left'
     value = 0
   [../]
   [./bottom]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = uy
     boundary = 'Li_top'
     value = 0

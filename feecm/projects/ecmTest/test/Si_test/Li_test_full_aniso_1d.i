@@ -201,7 +201,6 @@
     variable = li_metal_conc
     stress_based_chemical_potential = mu_sigma
     diffusivity = diffusivity
-    R = 96.4853329
     temperature = 298
   [../]
   [./diffusion_dt]

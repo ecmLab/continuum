@@ -13,7 +13,6 @@ D_Li = 2.4e-14    # m^2/s (Li+ diffusivity in electrolyte, based on Nernst-Einst
 
 # 2D material properties
 sigma_2d = 1e6    # S/m (electronic conductivity of graphene)
-c_max = 30000     # mol/m^3 (maximum Li+ intercalation capacity in C, LiC6)
 #sigma_2d = 10    # S/m (electronic conductivity of MoS2)
 #c_max = 60000     # mol/m^3 (maximum Li+ intercalation capacity in MoS2, Li1MoS2)
 
@@ -36,7 +35,6 @@ Omega = 13e-6     # m^3/mol (molar volume of Li)
 L_gate = 1e-6     # m (gate length)
 L_channel = 10e-6 # m (channel length)
 t_elyte = 100e-9  # m (electrolyte thickness)
-t_2d = 1e-9       # m (2D material thickness)
 
 [GlobalParams]
   energy_densities = 'psi_c psi_m q m'

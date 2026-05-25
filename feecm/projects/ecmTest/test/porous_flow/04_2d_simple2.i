@@ -344,8 +344,6 @@
     value = 0.2
     # block = AgC
     variable = ag_c
-    min = 0.01
-    max = 0.05
   []
   # [mineral_conc]
   #   type = ConstantIC

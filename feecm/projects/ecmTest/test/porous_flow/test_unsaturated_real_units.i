@@ -126,7 +126,6 @@
   # mass_fraction_vars = ag_c
   use_displaced_mesh = false
   # number_aqueous_kinetic = 1
-  multiply_by_density = true
   # stabilization = KT
   # flux_limiter_type = superbee
   relative_permeability_exponent = 3
@@ -372,7 +371,6 @@
   [porosity_Agc]
     type = PorousFlowPorosityConst
     porosity = 0.9
-    chemical = false
     block = AgC
     # initial_mineral_concentrations = initial_and_reference_conc
     # reference_chemistry = initial_and_reference_conc
@@ -381,7 +379,6 @@
   [porosity_LiLayer]
     type = PorousFlowPorosityConst
     porosity = 0.05
-    chemical = false
     block = LiLayer
     # initial_mineral_concentrations = initial_and_reference_conc
     # reference_chemistry = initial_and_reference_conc

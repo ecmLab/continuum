@@ -12,6 +12,7 @@
 # Permeability in the Porous layer is Carman Kozeny formulation of type 1 where k_ij = A k_ij^0 * phi^n/ (1-phi)^m
 #                                                                   A = f d^2 -> d is a grain size or particle size
 [Mesh]
+  coord_type = RZ
   [mesh]
     # type = FileMeshGenerator
     # file = test_mesh.e
@@ -36,14 +37,14 @@
     type = ParsedGenerateSideset
     # combinatorial_geometry = 'x*x+y*y<1.01'
     combinatorial_geometry = 'y<0.0001e-6'
-    included_subdomain_ids = 1
+    included_subdomains = 1
     new_sideset_name = 'injection_area'
     input = 'AgC'
   []
   [outflow_area]
     type = ParsedGenerateSideset
     combinatorial_geometry = 'y>29.99e-6'
-    included_subdomain_ids = 1
+    included_subdomains = 1
     new_sideset_name = 'outflow_area'
     input = injection_area
   []
@@ -70,7 +71,6 @@
 []
 
 [Problem]
-  coord_type = RZ
   type = ReferenceResidualProblem
   extra_tag_vectors = 'ref'
   reference_vector = 'ref'
@@ -325,7 +325,6 @@
   [porosity_Agc]
     type = PorousFlowPorosityConst
     porosity = 0.5
-    chemical = false
     block = AgC
     # initial_mineral_concentrations = initial_and_reference_conc
     # reference_chemistry = initial_and_reference_conc
@@ -334,7 +333,6 @@
   [porosity_LiLayer]
     type = PorousFlowPorosityConst
     porosity = 0.95
-    chemical = false
     block = LiLayer
     # initial_mineral_concentrations = initial_and_reference_conc
     # reference_chemistry = initial_and_reference_conc
@@ -452,7 +450,6 @@
   exodus = true
   csv = true
   sync_times = '500'
-  sync_only = false
   file_base = xxx2
 []
 [AuxVariables]

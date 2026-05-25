@@ -605,21 +605,21 @@ order = FIRST
 
 [BCs]
   [./Li_top_y]
-    type = ADPresetBC
+    type = ADDirichletBC
     boundary = '18'
     variable = uy
     value = 0.0
   [../]
 
   [./Li_top_x]
-    type = ADPresetBC
+    type = ADDirichletBC
     boundary = '18'
     variable = ux
     value = 0.0
   [../]
 
   [./left_right]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = ux
     boundary = '14 17 12 19'
     value = 0
@@ -633,7 +633,7 @@ order = FIRST
   [../]
 
   [./li_ion_bot]
-    type = ADPresetBC
+    type = ADDirichletBC
     boundary = '11'
     variable = li_ion_V
     value = 0.0
@@ -662,7 +662,7 @@ order = FIRST
     # value = 1.0
   [../]
   # [./li_con_top]
-  #   type = ADPresetBC
+  #   type = ADDirichletBC
   #   boundary = 18
   #   variable = li_metal_conc
   #   value = 0

@@ -1,5 +1,3 @@
-elem = QUAD4
-order = FIRST
 [Mesh]
   patch_size = 80
   patch_update_strategy = auto

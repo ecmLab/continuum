@@ -42,7 +42,6 @@
   [./all]
     add_variables = true
     strain = FINITE
-    use_displaced_mesh = true
     volumetric_locking_correction = true
     generate_output = 'stress_xx stress_yy vonmises_stress strain_xx strain_yy elastic_strain_xx elastic_strain_yy'
     use_automatic_differentiation = true

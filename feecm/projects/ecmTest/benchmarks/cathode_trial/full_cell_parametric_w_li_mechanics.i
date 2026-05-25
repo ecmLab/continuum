@@ -12,7 +12,6 @@
 #applied current density = 0.012 mA/cm^2 = 1.2e-5
 # exchange_current_density = 0.001 mA/cm^2 = 1e-6
 
-current_density = 1e-3
 k_anode = 1e-4
 faraday = 96.4853329
 temperature = 298
@@ -20,11 +19,11 @@ gas_constant = 8.31446
 c_ref_cathode = 4.9e-2
 c_ref_anode = 0.1
 v_cutoff = 2750
-h = 26
 c_init_cat = 2.45e-3
 c_init_anode = 0.1
 
 [Mesh]
+  coord_type = RZ
   [./mesh]
     type = FileMeshGenerator
     file = 'test_full4.msh'
@@ -635,7 +634,6 @@ c_init_anode = 0.1
   reference_vector = 'ref'
   group_variables = 'V V_cathode V_anode li_metal_conc; ux uy; normal_lm_x_cathode normal_lm_y_cathode normal_lm_x_anode normal_lm_y_anode'
   acceptable_iterations = 2
-  coord_type = RZ
 []
 [Outputs]
   # exodus = true

@@ -138,7 +138,6 @@
 [Materials]
   [./diffusivity]
     type = ADDiffusionAlongPrincipalDirectionsMaterial
-    diffusivity_name = 'diffusivity'
     diffusivity_vector = '1e15 0 0'
   [../]
 

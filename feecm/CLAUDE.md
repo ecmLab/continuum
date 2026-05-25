@@ -4,29 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-FEECM (Finite Element Electrochemistry) is a collection of MOOSE-based applications for modeling battery and electrochemical systems. It contains three applications:
+FEECM (Finite Element Electrochemistry) is a collection of MOOSE-based applications for modeling battery and electrochemical systems. It contains two applications:
 
 - **ecm_test**: Electro-chemo-mechanics — covers electrochemistry (Butler-Volmer, ion transport, current density), mechanics coupling (diffusion-mechanics, contact, swelling, porous flow), and consolidates the former `ec_beta` capabilities.
-- **tecm_test**: Thermal-electro-chemo-mechanics — adds thermal physics on top of ECM. Active development; forked from `eel` and extended.
-- **eel**: Parallel finite-element code for battery physics (mass transport, electrostatics, mechanical deformation, thermal). Originally from literature (UChicago Argonne, 2023); serves as the baseline for `tecm_test`.
+- **tecm_test**: Thermal-electro-chemo-mechanics — battery physics (mass transport, electrostatics, mechanical deformation, thermal) plus phase-oriented EDL development and a non-dimensional layer. Originally forked from `eel` (UChicago Argonne literature baseline, 2023); now consolidates the full `eel` capability.
 
-> **Historical note:** the repo previously also had an `ec_beta` app (electrochemistry-only beta version). It was consolidated into `ecm_test` and removed; all 74 of its registered classes now live in `ecm_test` and the `ecm-opt` executable is a strict superset of the former `ec_beta-opt`.
+> **Historical notes:**
+> - The repo previously had an `ec_beta` app (electrochemistry-only beta version). It was consolidated into `ecm_test` and removed; all 74 of its registered classes now live in `ecm_test` and the `ecm-opt` executable is a strict superset of the former `ec_beta-opt`.
+> - The repo previously had a standalone `eel` app (parallel FE battery physics). It was consolidated into `tecm_test` and removed; all of its registered classes now live in `tecm_test` and the `tecm_test-opt` executable is a strict superset of the former `eel-opt`. The former `projects/eel/` work moved under `projects/tecmTest/`.
 
 ## Repository Layout
 
 ```
 feecm/
 ├── ecm_test/
-├── eel/
 ├── tecm_test/
 ├── patchMoose2Feecm/  ← MOOSE framework patches (manual application)
 └── projects/          ← all input files (.i) and project work, separated from app source
     ├── ecmTest/        (← merged from former ecBeta + original ecmTest)
-    ├── eel/
-    └── tecmTest/
+    └── tecmTest/       (← original tecmTest + merged former projects/eel)
 ```
 
-The `projects/` folder is the science workspace; the three app folders are the tooling. Each app folder still has its own `doc/` for documenting the app itself; project-level scientific writeups live under `projects/<name>/doc/`.
+The `projects/` folder is the science workspace; the two app folders are the tooling. Each app folder still has its own `doc/` for documenting the app itself; project-level scientific writeups live under `projects/<name>/doc/`.
 
 ## Build System
 
@@ -36,7 +35,6 @@ This is a MOOSE framework-based project. Each application has its own Makefile t
 ```bash
 # Build specific applications
 cd ecm_test && make -j N
-cd eel && make -j N
 cd tecm_test && make -j N
 
 # Where N is the number of parallel jobs
@@ -64,12 +62,10 @@ Each application has test runners:
 ```bash
 # Run tests for specific applications
 ./ecm_test/run_tests
-./eel/run_tests
 ./tecm_test/run_tests
 
 # Unit tests
 ./ecm_test/unit/run_tests
-./eel/unit/run_tests
 ./tecm_test/unit/run_tests
 ```
 
@@ -92,7 +88,6 @@ The relative path is `../../../<app>/<exe>`: three `..` to climb out of `project
 | Project tree | Executable invocation |
 |---|---|
 | `projects/ecmTest/<name>/`  | `../../../ecm_test/ecm-opt -i <file>.i` |
-| `projects/eel/<name>/`      | `../../../eel/eel-opt -i <file>.i` |
 | `projects/tecmTest/<name>/` | `../../../tecm_test/tecm_test-opt -i <file>.i` |
 
 If a project lives more than one level deep under its `<app>/` tree (e.g., `projects/ecmTest/paper_fengyu_anodeLess_BL/randomPores/`), add one more `..` for each extra level.
@@ -114,12 +109,13 @@ If a project lives more than one level deep under its `<app>/` tree (e.g., `proj
 - SOLID_MECHANICS: yes
 - XFEM: yes
 
-### eel
+### tecm_test
+- CHEMICAL_REACTIONS: yes
+- HEAT_TRANSFER: yes
 - NAVIER_STOKES: yes
 - SOLID_MECHANICS: yes
-
-### tecm_test
-- (see `tecm_test/Makefile`)
+- THERMAL_HYDRAULICS: yes
+- (see `tecm_test/Makefile` for the authoritative list)
 
 ## Key Physics and Components
 
@@ -132,15 +128,9 @@ If a project lives more than one level deep under its `<app>/` tree (e.g., `proj
 - Porous flow modeling
 - MIEC (mixed ionic/electronic conductors), Nernst-Planck convection, anisotropic diffusion / conductivity
 
-### Battery Modeling (eel)
-- Mass transport of charged species
-- Electrostatics/Electrodynamics
-- Mechanical deformation
-- Thermal effects
-- Multi-physics coupling
-
 ### Thermal-Electro-Chemo-Mechanics (tecm_test)
-- Forked from `eel`, adds phase-oriented EDL development and non-dimensional layer
+- Battery physics: mass transport of charged species, electrostatics/electrodynamics, mechanical deformation, thermal effects, multi-physics coupling (the former `eel` capability)
+- Phase-oriented EDL development and non-dimensional layer
 - See `tecm_test/AGENTS.md` for the phase-oriented development conventions
 
 ## Input File Format

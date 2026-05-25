@@ -119,7 +119,6 @@
   mass_fraction_vars = ag_c
   use_displaced_mesh = false
   number_aqueous_kinetic = 1
-  multiply_by_density = true
   # stabilization = KT
   # flux_limiter_type = superbee
   relative_permeability_exponent = 3
@@ -343,8 +342,6 @@
     value = 0.2
     # block = AgC
     variable = ag_c
-    min = 0.01
-    max = 0.05
   []
   # [mineral_conc]
   #   type = ConstantIC

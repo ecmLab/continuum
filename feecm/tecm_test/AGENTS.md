@@ -44,8 +44,7 @@ Scope: entire repo.
 - Invoke the executable by its correct location relative to that directory. From a project at `feecm/projects/tecmTest/<name>/`, the path is three `..` up to `feecm/`, then into the app: `../../../tecm_test/tecm_test-opt -i <file>.i --check-input` followed by `../../../tecm_test/tecm_test-opt -i <file>.i`.
 - Per-app executable invocations from `projects/<app>/<name>/`:
   - `../../../ecm_test/ecm-opt` (note: the binary is `ecm-opt`, not `ecm_test-opt`. ecm_test absorbed the former ec_beta capabilities — ec_beta no longer exists.)
-  - `../../../eel/eel-opt`
-  - `../../../tecm_test/tecm_test-opt`
+  - `../../../tecm_test/tecm_test-opt` (tecm_test absorbed the former eel capabilities — the standalone eel app no longer exists; its projects moved under `projects/tecmTest/`.)
 - Add one extra `..` per additional nesting level (e.g., `projects/tecmTest/paper_X/case1/` → four `..`).
 - Adjust the relative path as needed, but always run from the input file's directory and point to the correct executable path.
 

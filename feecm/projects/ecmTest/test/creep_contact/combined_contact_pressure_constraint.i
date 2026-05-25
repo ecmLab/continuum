@@ -159,7 +159,7 @@
 
 [BCs]
   [./Li_top]
-    type = ADPresetBC
+    type = ADDirichletBC
     boundary = 'Li_top'
     variable = uy
     value = 0
@@ -169,7 +169,7 @@
   [../]
 
   [./left_right]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = ux
     boundary = 'ceramic_left ceramic_bot ceramic_right Li_right Li_left'
     value = 0

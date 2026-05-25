@@ -50,7 +50,6 @@
   [./all]
     add_variables = true
     strain = FINITE
-    use_displaced_mesh = true
     # volumetric_locking_correction = true
     generate_output = 'stress_zz strain_zz vonmises_stress'
     use_automatic_differentiation = true
@@ -168,19 +167,19 @@
 
 [BCs]
   [./symmy]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = uy
     boundary = 'bottom'
     value = 0
   [../]
   [./symmx]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = ux
     boundary = 'left'
     value = 0
   [../]
   [./symmz]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = uz
     boundary = back
     value = 0

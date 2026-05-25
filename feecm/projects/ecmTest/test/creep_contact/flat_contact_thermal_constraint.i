@@ -240,25 +240,25 @@
   [../]
 
   [./left_right]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = ux
     boundary = '11 12 14 17 19'
     value = 0
   [../]
   [./bottom]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = uy
     boundary = '11'
     value = 0
   [../]
   [./temp_top]
-    type = ADPresetBC
+    type = ADDirichletBC
     boundary = '18'
     variable = temp
     value = 100.0
   [../]
   [./temp_bot]
-    type = ADPresetBC
+    type = ADDirichletBC
     boundary = '11'
     variable = temp
     value = 10.0

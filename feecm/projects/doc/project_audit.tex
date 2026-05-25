@@ -13,70 +13,50 @@
 \newcommand{\PASS}{\textcolor{passgreen}{\textbf{PASS}}}
 \newcommand{\FAIL}{\textcolor{failred}{\textbf{FAIL}}}
 \newcommand{\code}[1]{\texttt{\small #1}}
-\title{FEECM Project Audit Report \\ \large \textcolor{failred}{[STALE --- 2026-05-06 snapshot]}}
-\author{Per-project \texttt{--check-input} verification across the \texttt{feecm/projects/} tree}
-\date{2026-05-06 (superseded; see notice below)}
+\title{FEECM Project Audit Report}
+\author{Per-project \texttt{-{}-check-input} verification across \texttt{feecm/projects/}}
+\date{2026-05-20}
 \begin{document}
 \maketitle
 
-\begin{center}
-\fbox{\parbox{0.92\textwidth}{\textbf{This audit is from 2026-05-06 and is now stale.}\\[0.3em]
-Many subsequent changes have been made: \texttt{ec\_beta} was consolidated into \texttt{ecm\_test} and removed; \texttt{moose\_tests\_shared/} merged into \texttt{ecmTest/test/}; \texttt{ECM\_benchmark/} folder dissolved; paper folders renamed with \texttt{YYYY\_paper\_*} convention; 11 paper-relevant projects moved into \texttt{ecmTest/benchmarks/}. The four-app layout described below collapsed to three apps. \\[0.3em]
-For the current state and a full session history, see \texttt{feecm/doc/session\_report.tex}. To regenerate this audit against the current tree, re-run the audit script described in \S1 below; the per-project pass/fail tallies will differ substantially.}}
-\end{center}
-
 \section{Scope and method}
-Each input file under \code{feecm/projects/<app>/<project>/} (top-level and
-one folder deeper where projects nest) was run through the corresponding
-app executable with \code{-{}-check-input}. This validates the input file's
-syntax, parser/factory registrations, mesh/file references, and basic
-integrity, but does \emph{not} time-step the simulation. An input that
-passes \code{-{}-check-input} may still fail at solve time; a failing
-input is definitely broken at parse/setup.
+Every input file under \code{feecm/projects/<app>/} was run through the corresponding app executable with \code{-{}-check-input}. This validates input syntax, parser/factory registrations, mesh/file references, and basic integrity, but does \emph{not} time-step the simulation. An input that passes \code{-{}-check-input} may still fail at solve time; a failing input is definitely broken at parse/setup.
 
-The four apps and their executables:
+As of this audit the repository has \textbf{two} apps (the former \code{ec\_beta} and \code{eel} apps were consolidated into \code{ecm\_test} and \code{tecm\_test} respectively and removed):
 \begin{itemize}
-  \item \code{ecBeta} $\to$ \code{ec\_beta/ec\_beta-opt}
   \item \code{ecmTest} $\to$ \code{ecm\_test/ecm-opt}
-  \item \code{eel} $\to$ \code{eel/eel-opt}
-  \item \code{tecmTest} $\to$ \code{tecm\_test/tecm\_test-opt}
+  \item \code{tecmTest} $\to$ \code{tecm\_test/tecm\_test-opt} (now also hosts the former \code{projects/eel/} work)
 \end{itemize}
 
 \section{Headline results}
-\textbf{Total inputs audited:} 379\\
-\textbf{PASS:} 73 (\textcolor{passgreen}{19.3\%})\\
-\textbf{FAIL:} 306 (\textcolor{failred}{80.7\%})\\
+\textbf{Total inputs audited:} 467\\
+\textbf{PASS:} 243 (\textcolor{passgreen}{52.0\%})\\
+\textbf{FAIL:} 224 (\textcolor{failred}{48.0\%})\\
 
 \subsection{Per-app summary}
 \begin{tabular}{lrrrr}
 \toprule
 App & Inputs & PASS & FAIL & Pass rate \\
 \midrule
-\code{ecBeta} & 76 & 16 & 60 & 21.1\% \\
-\code{ecmTest} & 247 & 30 & 217 & 12.1\% \\
-\code{eel} & 38 & 13 & 25 & 34.2\% \\
-\code{tecmTest} & 18 & 14 & 4 & 77.8\% \\
+\code{ecmTest} & 400 & 203 & 197 & 50.8\% \\
+\code{tecmTest} & 67 & 40 & 27 & 59.7\% \\
 \bottomrule
 \end{tabular}
 
 \section{Failure categories}
-The 306 failures break down as follows:
-
-\begin{longtable}{lr p{0.55\textwidth}}
+The 224 failures break down as follows:
+\begin{longtable}{lr}
 \toprule
-Category & Count & Notes \\
+Category & Count \\
 \midrule
 \endhead
-\code{Unused param} & 123 & A \code{*.i}-level parameter is declared but the active blocks do not consume it; usually an outdated input where a feature was removed but the param remained. \\
-\code{Other} & 63 & Errors not matching the patterns above. \\
-\code{Missing file} & 61 & Input file references a data file (\code{.e}, \code{.msh}, \code{.csv}, etc.) that is not present at the expected path. Most are gitignored mesh / Exodus checkpoint outputs that need to be regenerated or copied from another machine. \\
-\code{Missing class} & 45 & Input references a MOOSE class that is not registered in the target app. Either a custom class never committed to source, an Ashok-era name, or a MOOSE framework class that was renamed/removed in the upstream version. \\
-\code{App error} & 6 & Application-level error (often a downstream consequence of an earlier missing object). \\
-\code{Missing checkpoint} & 3 & Input expects a restart checkpoint from a prerequisite simulation that has not been run. \\
-\code{Integrity action} & 2 & CheckIntegrityAction failed (a structural inconsistency between blocks, variables, and materials). \\
-\code{Block subset error} & 1 & A material/kernel is restricted to a block set that is not a subset of the variable's block set (geometry mismatch). \\
-\code{Missing variable} & 1 & Input references a Variable that has not been declared in the \code{[Variables]} block. \\
-\code{Invalid value} & 1 & A parameter has an invalid expression or symbolic value (e.g.\ a string where a Real is expected). \\
+\code{Other} & 98 \\
+\code{Missing file} & 89 \\
+\code{Missing class} & 22 \\
+\code{Unset CLI variable} & 10 \\
+\code{Integrity action} & 3 \\
+\code{Missing variable} & 1 \\
+\code{Invalid value} & 1 \\
 \bottomrule
 \end{longtable}
 \subsection{Most-requested missing classes}
@@ -84,825 +64,618 @@ Category & Count & Notes \\
 \toprule
 Class name & Inputs blocked \\
 \midrule
-\code{ParamDiffusion} & 20 \\
-\code{paperHongli} & 9 \\
-\code{ContactDOFSetSize} & 7 \\
-\code{NormalNodalLMMechanicalContact} & 3 \\
-\code{ADPresetBC} & 2 \\
+\code{NormalNodalLMMechanicalContact} & 12 \\
+\code{MaskedBodyForce} & 3 \\
+\code{CurrentDensityLi} & 2 \\
+\code{CahnHilliardBL} & 1 \\
 \code{ChargeTransferReaction} & 1 \\
-\code{sourceTerm} & 1 \\
 \code{CondensedMassDiffusion} & 1 \\
+\code{PoissonEquation} & 1 \\
 \code{DarcyPressure} & 1 \\
 \bottomrule
 \end{tabular}
 
 \section{Per-project results}
+For each project the table lists every audited input with its status and (on failure) a short categorized issue.
 
-For each project, the table lists every audited input file with its status
-and (on failure) a short categorized summary. Inputs that pass are shown in
-\PASS; failing inputs in \FAIL.
-
-\subsection{App: \code{ecBeta}}
-
-\subsubsection{\code{ecBeta/ECM\_benchmark}\hfill (0/23 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsection{App: \code{ecmTest}}
+\subsubsection{\code{ecmTest/2022\_paper\_xingxing\_liExpulsion}\hfill (1/3 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
-\code{benchmark1\_metalCreep/tension\_constTrueStrainRate.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{benchmark2\_freeGrowth/01\_flat\_uniformSwell.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{benchmark2\_freeGrowth/02\_flat\_diffusionSwell.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{benchmark2\_freeGrowth/02\_flat\_diffusionSwell\_Ash.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{benchmark2\_freeGrowth/cosine.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{benchmark2\_freeGrowth/diffusion.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{benchmark2\_freeGrowth/inclined.i} & \FAIL & Unused param \code{Outputs/out/csv} \\
-\code{benchmark2\_freeGrowth/swell.i} & \FAIL & Missing file \code{cosine\_conformal.msh-mesh.cpa.gz} \\
-\code{benchmark2\_freeGrowth/swelling\_linear\_conc\_cosine.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\code{benchmark2\_freeGrowth/test.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{benchmark2\_freeGrowth/test\_uniformSwell.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{benchmark2\_freeGrowth/test\_unifromSwell.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{benchmark2\_uniformGrowth/elastic\_swelling\_linear\_conc\_Ash.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{benchmark2\_uniformGrowth/swelling\_linear\_conc\_Ash.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{benchmark2\_uniformGrowth/swelling\_linear\_conc\_cosine.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\code{benchmark3\_confinedGrowth/01\_conformalContact\_mech.i} & \FAIL & Missing class \code{ContactDOFSetSize} \\
-\code{benchmark3\_confinedGrowth/02\_conformalContact\_swell.i} & \FAIL & Missing class \code{ContactDOFSetSize} \\
-\code{benchmark3\_confinedGrowth/test\_circle.i} & \FAIL & Missing class \code{ContactDOFSetSize} \\
-\code{benchmark3\_confinedGrowth/test\_cosine.i} & \FAIL & Missing class \code{ContactDOFSetSize} \\
-\code{benchmark3\_confinedGrowth/test\_incline.i} & \FAIL & Missing class \code{ContactDOFSetSize} \\
-\code{benchmark3\_growthDiffusion/benchmark3\_growthDiffusion.i} & \FAIL & Missing file \code{inclined.msh-mesh.cpa.gz} \\
-\code{benchmark4\_fullCoupled/full\_model.i} & \FAIL & Missing class \code{ContactDOFSetSize} \\
-\code{benchmark4\_fullCoupled/full\_model\_flat.i} & \FAIL & Missing class \code{ContactDOFSetSize} \\
+\code{li\_ele.i} & \FAIL & Other: \code{Error opening file '/Users/howardtu/Documents/modeling/continuum/fe...} \\
+\code{matdiffusion.i} & \PASS & --- \\
+\code{test.i} & \FAIL & Other \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{ecBeta/EC\_RAM}\hfill (1/2 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{ecmTest/2023\_paper\_fengyu\_anodeLess\_BL}\hfill (12/20 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
-\code{transientNp\_SingleBlock.i} & \PASS & --- \\
-\code{TwoBlockCase\_OneD.i} & \FAIL & Missing class \code{ChargeTransferReaction} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecBeta/dendrite\_growth}\hfill (4/4 pass)}
-All 4 inputs pass. Files: \code{DendriteGrowth.i}, \code{ECSpaper.i}, \code{phaseField\_coupling\_pot.i}, \code{phaseField.i}.
-
-\subsubsection{\code{ecBeta/paper\_fengyu\_anodeLess\_BL}\hfill (6/12 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
+\code{agLi\_210519/ag.i} & \PASS & --- \\
+\code{agLi\_210519/si.i} & \PASS & --- \\
+\code{agLi\_210519/test0.i} & \PASS & --- \\
 \code{asrEffect/agPore.i} & \PASS & --- \\
 \code{asrEffect/pureAg.i} & \PASS & --- \\
 \code{asrEffect/purePore.i} & \PASS & --- \\
+\code{full\_cell\_210522/full\_cell.i} & \FAIL & Other \\
+\code{full\_cell\_210522/full\_cell\_bk.i} & \PASS & --- \\
+\code{full\_cell\_210522/test0.i} & \FAIL & Other \\
+\code{full\_cell\_210522/test1.i} & \FAIL & Other \\
+\code{full\_cell\_210522/test2.i} & \PASS & --- \\
 \code{mVmatters/dep.i} & \PASS & --- \\
 \code{mVmatters/depAg.i} & \PASS & --- \\
+\code{mVmatters/iRun.i} & \FAIL & Missing file: \code{mdl\_3defects.msh-mesh.cpa.gz} \\
 \code{mVmatters/iRunAg.i} & \PASS & --- \\
-\code{mVmatters/iRun.i} & \FAIL & Missing file \code{mdl\_3defects.msh-mesh.cpa.gz} \\
-\code{randomPores/mdl1.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{randomPores/mdl2.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{randomPores/mdl3.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{randomPores/pureConduction.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{randomPores/test.i} & \FAIL & Missing class \code{ParamDiffusion} \\
+\code{randomPores/mdl1.i} & \PASS & --- \\
+\code{randomPores/mdl2.i} & \FAIL & Other \\
+\code{randomPores/mdl3.i} & \FAIL & Other \\
+\code{randomPores/pureConduction.i} & \FAIL & Missing file: \code{mdl12.msh-mesh.cpa.gz} \\
+\code{randomPores/test.i} & \FAIL & Missing class: \code{CurrentDensityLi} \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{ecBeta/paper\_hongli\_Limetal\_graphite}\hfill (0/15 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{ecmTest/2023\_paper\_hongli\_Limetal\_graphite}\hfill (5/16 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
-\code{aa.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{ec.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{iR.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{iRun.i} & \FAIL & Missing class \code{paperHongli} \\
-\code{paper\_lftSide.i} & \FAIL & Missing class \code{paperHongli} \\
-\code{phase1.i} & \FAIL & Missing class \code{paperHongli} \\
-\code{phase2.i} & \FAIL & Missing class \code{paperHongli} \\
-\code{phase3.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{phase\_miec.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{videoBK.i} & \FAIL & Missing class \code{paperHongli} \\
-\code{video\_step0.i} & \FAIL & Missing class \code{paperHongli} \\
-\code{video\_step1.i} & \FAIL & Missing class \code{paperHongli} \\
-\code{video\_step2.i} & \FAIL & Missing class \code{paperHongli} \\
-\code{video\_step3.i} & \FAIL & Missing class \code{paperHongli} \\
-\code{video\_step4.i} & \FAIL & Missing class \code{ParamDiffusion} \\
+\code{01\_gapContact\_d02w01T05.i} & \FAIL & Other \\
+\code{aa.i} & \FAIL & Other: \code{cannot convert field 'Mesh/createNewSidesetOne/top\_right' value 'li...} \\
+\code{ec.i} & \FAIL & Missing file: \code{lLi24.e} \\
+\code{iR.i} & \FAIL & Other \\
+\code{iRun.i} & \PASS & --- \\
+\code{paper\_lftSide.i} & \PASS & --- \\
+\code{phase1.i} & \PASS & --- \\
+\code{phase2.i} & \FAIL & Missing file: \code{vid\_l45.e} \\
+\code{phase3.i} & \FAIL & Missing file: \code{t24\_ec.e} \\
+\code{phase\_miec.i} & \FAIL & Missing file: \code{t24.e} \\
+\code{videoBK.i} & \PASS & --- \\
+\code{video\_step0.i} & \PASS & --- \\
+\code{video\_step1.i} & \FAIL & Other: \code{cannot convert field 'Mesh/createNewSidesetOne/top\_right' value 'li...} \\
+\code{video\_step2.i} & \FAIL & Other \\
+\code{video\_step3.i} & \FAIL & Other \\
+\code{video\_step4.i} & \FAIL & Other: \code{cannot convert field 'Mesh/createNewSidesetOne/top\_right' value 'li...} \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{ecBeta/paper\_mouhamad\_AgLPS\_mixedSE}\hfill (0/1 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{ecmTest/2023\_paper\_mouhamad\_dendrite\_SEdensity}\hfill (2/2 pass)}
+All 2 input(s) pass. Files: \code{iRun.i}, \code{microRZ.i}.
+
+\subsubsection{\code{ecmTest/2024\_paper\_mouhamad\_AgLPS\_mixedSE}\hfill (0/1 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
-\code{agSE.i} & \FAIL & App error \\
+\code{agSE.i} & \FAIL & Other \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{ecBeta/paper\_mouhamad\_dendrite\_SEdensity}\hfill (0/2 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{ecmTest/2024\_paper\_shafee\_cathode}\hfill (1/4 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
-\code{iRun.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{microRZ.i} & \FAIL & Missing class \code{ParamDiffusion} \\
+\code{CZM/AG\_Contact\_CZM.i} & \FAIL & Missing file: \code{input\_mesh\_Shafee.msh-mesh.cpa.gz} \\
+\code{original/AG\_Contact\_Loss.i} & \FAIL & Other: \code{/Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest...} \\
+\code{original/RVE\_NoCoating\_constant\_expansion\_stress\_free\_temp.i} & \FAIL & Missing file: \code{RVE\_NoCoating.msh-mesh.cpa.gz} \\
+\code{original/noCoating.i} & \PASS & --- \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{ecBeta/paper\_nuhu\_anodeDesign}\hfill (1/1 pass)}
-All 1 inputs pass. Files: \code{mdl.i}.
-
-\subsubsection{\code{ecBeta/paper\_xingxing\_liExpulsion}\hfill (1/3 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{matdiffusion.i} & \PASS & --- \\
-\code{li\_ele.i} & \FAIL & Missing class \code{sourceTerm} \\
-\code{test.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecBeta/paper\_xingxin \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecBeta/paper\_yaoyan\_agPercolation}\hfill (1/3 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{ecmTest/2024\_paper\_yaoYan\_agPercolation}\hfill (1/7 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
 \code{hetero.i} & \PASS & --- \\
-\code{homo.i} & \FAIL & App error \\
-\code{iRunAg.i} & \FAIL & App error \\
+\code{homo.i} & \FAIL & Other \\
+\code{iRunAg.i} & \FAIL & Other \\
+\code{test/3DmulPore.i} & \FAIL & Missing class: \code{CurrentDensityLi} \\
+\code{test/pureAg.i} & \FAIL & Missing file: \code{purePore.msh-mesh.cpa.gz} \\
+\code{test/pureAg\_CH.i} & \FAIL & Missing class: \code{CahnHilliardBL} \\
+\code{test/purePore.i} & \FAIL & Missing file: \code{purePore.msh-mesh.cpa.gz} \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{ecBeta/test\_growDirection}\hfill (0/8 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{ecmTest/2025\_paper\_nuhu\_anodeDesign}\hfill (1/1 pass)}
+All 1 input(s) pass. Files: \code{mdl.i}.
+
+\subsubsection{\code{ecmTest/2026\_paper\_keXu\_ecram}\hfill (1/2 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
-\code{realSize/full.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{roundCorner/cal.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{roundCorner/test.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecBeta/test\_growDire \\
-\code{sharpCorner/dep.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{sharpCorner/depL1.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{sharpCorner/depL2.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{sharpCorner/depW1.i} & \FAIL & Missing class \code{ParamDiffusion} \\
-\code{talk/dep.i} & \FAIL & Missing class \code{ParamDiffusion} \\
+\code{TwoBlockCase\_OneD.i} & \FAIL & Missing class: \code{ChargeTransferReaction} \\
+\code{transientNp\_SingleBlock.i} & \PASS & --- \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{ecBeta/test\_phaseField}\hfill (2/2 pass)}
-All 2 inputs pass. Files: \code{bk.i}, \code{ch.i}.
-
-\subsection{App: \code{ecmTest}}
-
-\subsubsection{\code{ecmTest/Si\_test}\hfill (6/9 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{ecmTest/benchmarks}\hfill (90/135 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
-\code{Li\_test\_full\_aniso\_2d.i} & \PASS & --- \\
-\code{Si\_test\_electric\_diffusion.i} & \PASS & --- \\
-\code{Si\_test\_full.i} & \PASS & --- \\
-\code{Si\_test\_full\_aniso.i} & \PASS & --- \\
-\code{Si\_test\_full\_aniso\_2d.i} & \PASS & --- \\
-\code{Si\_test\_full\_w\_elec.i} & \PASS & --- \\
-\code{Li\_test\_full\_aniso\_1d.i} & \FAIL & Unused param \code{Kernels/Diffusion/R} \\
-\code{Si\_test.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/Si\_test/Si\_t \\
-\code{Si\_test\_electric.i} & \FAIL & The following occurred in the Problem 'MOOSE Problem' of type FEProblem. \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/Silicon\_test}\hfill (2/2 pass)}
-All 2 inputs pass. Files: \code{Si\_test\_electric\_diffusion.i}, \code{Si\_test\_full.i}.
-
-\subsubsection{\code{ecmTest/agLi}\hfill (1/8 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{agLi\_210519/test0.i} & \PASS & --- \\
-\code{agLi\_210519/ag.i} & \FAIL & Missing file \code{eqmV\_AgLi.csv} \\
-\code{agLi\_210519/si.i} & \FAIL & Missing file \code{Si.csv} \\
-\code{full\_cell\_210522/full\_cell.i} & \FAIL & Missing file \code{nmc\_equilibrium\_potential.csv} \\
-\code{full\_cell\_210522/full\_cell\_bk.i} & \FAIL & Missing file \code{nmc\_equilibrium\_potential.csv} \\
-\code{full\_cell\_210522/test0.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/agLi/full\_ce \\
-\code{full\_cell\_210522/test1.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/agLi/full\_ce \\
-\code{full\_cell\_210522/test2.i} & \FAIL & Missing file \code{nmc\_equilibrium\_potential.csv} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/benchmark1\_metalCreep}\hfill (0/4 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{R\_Run.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{compression\_constTrueStrainRate.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{tension\_constTrueStrainRate.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{tension\_microns.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/benchmark2\_freeGrowth}\hfill (1/6 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{02\_flat\_diffusionSwell.i} & \PASS & --- \\
-\code{01\_flat\_uniformSwell.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/benchmark2\_f \\
-\code{cosine.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\code{inclined.i} & \FAIL & Unused param \code{Outputs/out/csv} \\
-\code{swell.i} & \FAIL & Missing file \code{cosine\_conformal.msh-mesh.cpa.gz} \\
-\code{swelling\_linear\_conc\_cosine.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/benchmark2\_uniformGrowth}\hfill (0/2 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{elastic\_swelling\_linear\_conc.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\code{swelling\_linear\_conc\_cosine.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/benchmark3\_confinedGrowth}\hfill (0/5 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{01\_conformalContact\_mech.i} & \FAIL & Missing file \code{conformalContact.msh-mesh.cpa.gz} \\
-\code{02\_conformalContact\_swell.i} & \FAIL & Missing file \code{conformalContact.msh-mesh.cpa.gz} \\
-\code{test\_circle.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/benchmark3\_c \\
-\code{test\_cosine.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/action/use\_displaced\_mesh} \\
-\code{test\_incline.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/action/use\_displaced\_mesh} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/benchmark4\_fullCoupled}\hfill (0/2 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{full\_model.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/benchmark4\_f \\
-\code{full\_model\_flat.i} & \FAIL & Unused param \code{elem} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/cathode\_trial}\hfill (6/56 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{Si\_test\_full.i} & \PASS & --- \\
-\code{anode\_test.i} & \PASS & --- \\
-\code{anode\_test\_w\_mechanics.i} & \PASS & --- \\
-\code{electric\_diffusion.i} & \PASS & --- \\
-\code{electric\_diffusion2.i} & \PASS & --- \\
-\code{electric\_diffusion\_w\_se\_mesh2.i} & \PASS & --- \\
-\code{electric\_diffusion\_full\_cell.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/cathode\_tria \\
-\code{electric\_diffusion\_full\_cell\_mesh.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{electric\_diffusion\_full\_cell\_mesh\_init.i} & \FAIL & Block subset error \\
-\code{electric\_diffusion\_w\_se.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/cathode\_tria \\
-\code{electric\_diffusion\_w\_se\_mesh.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{electric\_diffusion\_w\_se\_mesh\_init.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric.i} & \FAIL & Invalid value at \code{Constraints/anode\_constraint/k} \\
-\code{full\_cell\_parametric\_rct\_1000\_i\_10.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_1000\_i\_15.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_1000\_i\_20.0.i} & \FAIL & Missing file \code{test3.e} \\
-\code{full\_cell\_parametric\_rct\_1000\_i\_3.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_1000\_i\_5.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_100\_i\_10.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_100\_i\_15.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_100\_i\_20.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_100\_i\_3.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_100\_i\_5.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_10\_i\_10.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_10\_i\_15.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_10\_i\_20.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_10\_i\_3.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_10\_i\_5.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_1\_i\_10.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_1\_i\_15.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_1\_i\_20.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_1\_i\_3.0.i} & \FAIL & App error \\
-\code{full\_cell\_parametric\_rct\_1\_i\_5.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_200\_i\_10.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_200\_i\_15.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_200\_i\_20.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_200\_i\_3.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_200\_i\_5.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_500\_i\_10.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_500\_i\_15.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_500\_i\_20.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_500\_i\_3.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_500\_i\_5.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_750\_i\_10.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_750\_i\_15.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_750\_i\_20.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_750\_i\_3.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_rct\_750\_i\_5.0.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{full\_cell\_parametric\_w\_diffusion.i} & \FAIL & Unused param \code{current\_density} \\
-\code{full\_cell\_parametric\_w\_diffusion\_mech.i} & \FAIL & Missing var \code{ux} \\
-\code{full\_cell\_parametric\_w\_diffusion\_mechanics1.i} & \FAIL & Unused param \code{current\_density} \\
-\code{full\_cell\_parametric\_w\_diffusion\_mechanics1\_delam.i} & \FAIL & Unused param \code{current\_density} \\
-\code{full\_cell\_parametric\_w\_li\_mechanics.i} & \FAIL & Unused param \code{current\_density} \\
-\code{full\_cell\_parametric\_w\_mechanics1.i} & \FAIL & Missing file \code{test5.e} \\
-\code{full\_cell\_parametric\_w\_mechanics\_action.i} & \FAIL & Missing file \code{test5.e} \\
-\code{test\_mechanics.i} & \FAIL & Missing file \code{test.e} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/contact\_swelling}\hfill (0/1 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{test.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/action/use\_displaced\_mesh} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/czm}\hfill (2/7 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{czm\_multiple\_action\_and\_materials.i} & \PASS & --- \\
-\code{stretch\_rotate\_large\_deformation.i} & \PASS & --- \\
-\code{bilinear\_mixed.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/czm/bilinear \\
-\code{bilinear\_mixed\_scale\_strength.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/czm/bilinear \\
-\code{czm\_multiple\_dimension\_base.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/czm/czm\_mult \\
-\code{czm\_patch\_test\_base.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/czm/czm\_patc \\
-\code{czm\_traction\_separation\_base.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/czm/czm\_trac \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/diffusion\_along\_principal}\hfill (0/2 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{flat.i} & \FAIL & Missing file \code{inclined.msh-mesh.cpa.gz} \\
-\code{swelling\_linear\_conc\_incline.i} & \FAIL & Missing file \code{inclined.msh-mesh.cpa.gz} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/example1\_LiCreepInSE}\hfill (0/1 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{01\_gapContact\_d02w01T05.i} & \FAIL & App error \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/full\_cell}\hfill (0/2 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{electric\_diffusion\_full\_cell.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/full\_cell/el \\
-\code{electric\_diffusion\_w\_se\_mesh.i} & \FAIL & Missing file \code{nmc\_equilibrium\_potential.csv} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/full\_model}\hfill (0/3 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{full\_model.i} & \FAIL & Missing class \code{NormalNodalLMMechanicalContact} \\
-\code{full\_model\_mech\_only.i} & \FAIL & Missing file \code{pressure\_time1.csv} \\
-\code{gap\_disp\_test.i} & \FAIL & Missing file \code{gap\_cond.csv} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/glued\_contact}\hfill (0/5 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{curved.i} & \FAIL & Missing file \code{initialDefect2.msh-mesh.cpa.gz} \\
-\code{curved\_restart.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/glued\_contac \\
-\code{curved\_restart2.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/glued\_contac \\
-\code{curved\_restart4.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/glued\_contac \\
-\code{test.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/glued\_contac \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/kim-kim-suzuki}\hfill (3/3 pass)}
-All 3 inputs pass. Files: \code{kks\_example\_dirichlet.i}, \code{kks\_example\_noflux.i}, \code{kks\_example\_ternary.i}.
-
-\subsubsection{\code{ecmTest/mcmeeking\_paper\_results}\hfill (1/13 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{interface\_grad.i} & \PASS & --- \\
-\code{test.i} & \FAIL & Missing file \code{test\_pore.e} \\
-\code{test\_equilibriate.i} & \FAIL & Missing file \code{2\_blocks\_2.e} \\
-\code{test\_equilibriate2.i} & \FAIL & Missing file \code{test\_2\_blocks3.e} \\
-\code{test\_normal\_flux\_constraint.i} & \FAIL & Missing file \code{2blocks\_50.e} \\
-\code{test\_w\_Ag.i} & \FAIL & Missing file \code{test\_w\_Ag.e} \\
-\code{test\_w\_Ag\_only.i} & \FAIL & Missing file \code{test\_w\_Ag\_interlayer\_only1.e} \\
-\code{test\_w\_cathode.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/mcmeeking\_pa \\
-\code{test\_w\_cathode\_mech\_only.i} & \FAIL & Missing file \code{test\_w\_cathode2.e} \\
-\code{test\_w\_equil.i} & \FAIL & Missing file \code{test\_pore4.e} \\
-\code{test\_w\_equil\_metal.i} & \FAIL & Missing file \code{test\_w\_pore\_interlayer\_metal\_w\_block.e} \\
-\code{test\_w\_equil\_test.i} & \FAIL & Missing file \code{test\_w\_pore\_interlayer\_w\_block.e} \\
-\code{test\_w\_equil\_w\_c\_potential.i} & \FAIL & Missing file \code{test\_pore4.e} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/mechanics}\hfill (3/8 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
+\code{benchmark1\_metalCreep/R\_Run.i} & \PASS & --- \\
+\code{benchmark1\_metalCreep/compression\_constTrueStrainRate.i} & \PASS & --- \\
+\code{benchmark1\_metalCreep/tension\_constTrueStrainRate.i} & \PASS & --- \\
+\code{benchmark1\_metalCreep/tension\_microns.i} & \PASS & --- \\
+\code{benchmark2\_freeGrowth/01\_flat\_uniformSwell.i} & \PASS & --- \\
+\code{benchmark2\_freeGrowth/02\_flat\_diffusionSwell.i} & \PASS & --- \\
+\code{benchmark2\_freeGrowth/02\_flat\_diffusionSwell\_Ash.i} & \PASS & --- \\
+\code{benchmark2\_freeGrowth/cosine.i} & \PASS & --- \\
+\code{benchmark2\_freeGrowth/diffusion.i} & \PASS & --- \\
+\code{benchmark2\_freeGrowth/inclined.i} & \PASS & --- \\
+\code{benchmark2\_freeGrowth/swell.i} & \PASS & --- \\
+\code{benchmark2\_freeGrowth/swelling\_linear\_conc\_cosine.i} & \PASS & --- \\
+\code{benchmark2\_freeGrowth/test.i} & \PASS & --- \\
+\code{benchmark2\_freeGrowth/test\_uniformSwell.i} & \PASS & --- \\
+\code{benchmark2\_freeGrowth/test\_unifromSwell.i} & \PASS & --- \\
+\code{benchmark2\_uniformGrowth/elastic\_swelling\_linear\_conc.i} & \PASS & --- \\
+\code{benchmark2\_uniformGrowth/elastic\_swelling\_linear\_conc\_Ash.i} & \PASS & --- \\
+\code{benchmark2\_uniformGrowth/swelling\_linear\_conc\_Ash.i} & \PASS & --- \\
+\code{benchmark2\_uniformGrowth/swelling\_linear\_conc\_cosine.i} & \PASS & --- \\
+\code{benchmark3\_confinedGrowth/01\_conformalContact\_mech.i} & \PASS & --- \\
+\code{benchmark3\_confinedGrowth/02\_conformalContact\_swell.i} & \PASS & --- \\
+\code{benchmark3\_confinedGrowth/test\_circle.i} & \PASS & --- \\
+\code{benchmark3\_confinedGrowth/test\_cosine.i} & \PASS & --- \\
+\code{benchmark3\_confinedGrowth/test\_incline.i} & \PASS & --- \\
+\code{benchmark3\_growthDiffusion/benchmark3\_growthDiffusion.i} & \PASS & --- \\
+\code{benchmark4\_fullCoupled/full\_model.i} & \PASS & --- \\
+\code{benchmark4\_fullCoupled/full\_model\_flat.i} & \PASS & --- \\
+\code{benchmark4\_fullCoupled/unv\_test/full\_model.i} & \PASS & --- \\
+\code{cathode\_trial/Si\_test\_full.i} & \PASS & --- \\
+\code{cathode\_trial/anode\_test.i} & \PASS & --- \\
+\code{cathode\_trial/anode\_test\_w\_mechanics.i} & \PASS & --- \\
+\code{cathode\_trial/electric\_diffusion.i} & \PASS & --- \\
+\code{cathode\_trial/electric\_diffusion2.i} & \PASS & --- \\
+\code{cathode\_trial/electric\_diffusion\_full\_cell.i} & \FAIL & Other \\
+\code{cathode\_trial/electric\_diffusion\_full\_cell\_mesh.i} & \PASS & --- \\
+\code{cathode\_trial/electric\_diffusion\_full\_cell\_mesh\_init.i} & \FAIL & Other: \code{The 'block' parameter of the object 'Voltage\_electrolyte' must be a...} \\
+\code{cathode\_trial/electric\_diffusion\_w\_se.i} & \FAIL & Other \\
+\code{cathode\_trial/electric\_diffusion\_w\_se\_mesh.i} & \PASS & --- \\
+\code{cathode\_trial/electric\_diffusion\_w\_se\_mesh2.i} & \PASS & --- \\
+\code{cathode\_trial/electric\_diffusion\_w\_se\_mesh\_init.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric.i} & \FAIL & Other: \code{invalid float syntax for parameter: Constraints/anode\_constraint/k=...} \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_1000\_i\_10.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_1000\_i\_15.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_1000\_i\_20.0.i} & \FAIL & Missing file: \code{test3.e} \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_1000\_i\_3.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_1000\_i\_5.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_100\_i\_10.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_100\_i\_15.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_100\_i\_20.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_100\_i\_3.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_100\_i\_5.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_10\_i\_10.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_10\_i\_15.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_10\_i\_20.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_10\_i\_3.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_10\_i\_5.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_1\_i\_10.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_1\_i\_15.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_1\_i\_20.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_1\_i\_3.0.i} & \FAIL & Other \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_1\_i\_5.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_200\_i\_10.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_200\_i\_15.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_200\_i\_20.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_200\_i\_3.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_200\_i\_5.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_500\_i\_10.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_500\_i\_15.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_500\_i\_20.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_500\_i\_3.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_500\_i\_5.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_750\_i\_10.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_750\_i\_15.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_750\_i\_20.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_750\_i\_3.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_rct\_750\_i\_5.0.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_w\_diffusion.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_w\_diffusion\_mech.i} & \FAIL & Missing variable \\
+\code{cathode\_trial/full\_cell\_parametric\_w\_diffusion\_mechanics1.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_w\_diffusion\_mechanics1\_delam.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_w\_li\_mechanics.i} & \PASS & --- \\
+\code{cathode\_trial/full\_cell\_parametric\_w\_mechanics1.i} & \FAIL & Missing file: \code{test5.e} \\
+\code{cathode\_trial/full\_cell\_parametric\_w\_mechanics\_action.i} & \FAIL & Missing file: \code{test5.e} \\
+\code{cathode\_trial/test\_mechanics.i} & \FAIL & Missing file: \code{test.e} \\
+\code{contact\_swelling/test.i} & \PASS & --- \\
+\code{dendrite\_growth/DendriteGrowth.i} & \PASS & --- \\
+\code{dendrite\_growth/ECSpaper.i} & \PASS & --- \\
+\code{dendrite\_growth/phaseField.i} & \PASS & --- \\
+\code{dendrite\_growth/phaseField\_coupling\_pot.i} & \PASS & --- \\
+\code{dendrite\_growth/working/phaseField.i} & \PASS & --- \\
+\code{dendrite\_growth/working/phaseField\_coupling\_pot.i} & \PASS & --- \\
+\code{example1\_LiCreepInSE/01\_gapContact\_d02w01T05.i} & \FAIL & Other \\
+\code{full\_cell/electric\_diffusion\_full\_cell.i} & \FAIL & Other \\
+\code{full\_cell/electric\_diffusion\_w\_se\_mesh.i} & \PASS & --- \\
+\code{full\_model/full\_model.i} & \FAIL & Missing class: \code{NormalNodalLMMechanicalContact} \\
+\code{full\_model/full\_model\_mech\_only.i} & \FAIL & Missing file: \code{pressure\_time1.csv} \\
+\code{full\_model/gap\_disp\_test.i} & \FAIL & Missing file: \code{gap\_cond.csv} \\
+\code{full\_model/pr\_3.2/full\_model.i} & \FAIL & Missing class: \code{NormalNodalLMMechanicalContact} \\
+\code{full\_model/pr\_3.2/full\_model\_elastic.i} & \FAIL & Missing class: \code{NormalNodalLMMechanicalContact} \\
+\code{full\_model/pr\_3.2/full\_model\_mech\_only.i} & \FAIL & Missing file: \code{pressure\_time1.csv} \\
+\code{full\_model/pr\_3.2/full\_model\_symm\_5x5.i} & \FAIL & Missing class: \code{NormalNodalLMMechanicalContact} \\
+\code{full\_model/pr\_3.2/full\_model\_vel.i} & \FAIL & Missing file: \code{pressure\_time1.csv} \\
+\code{full\_model/pr\_3.2/full\_model\_vel\_restart.i} & \FAIL & Missing class: \code{NormalNodalLMMechanicalContact} \\
+\code{full\_model/pr\_3.2/gap\_disp\_test.i} & \FAIL & Other \\
+\code{full\_model/pr\_3.2/test.i} & \FAIL & Other \\
+\code{glued\_contact/curved.i} & \FAIL & Missing file: \code{initialDefect2.msh-mesh.cpa.gz} \\
+\code{glued\_contact/curved\_restart.i} & \FAIL & Other \\
+\code{glued\_contact/curved\_restart2.i} & \FAIL & Other \\
+\code{glued\_contact/curved\_restart4.i} & \FAIL & Other \\
+\code{glued\_contact/test.i} & \FAIL & Other \\
+\code{kim-kim-suzuki/kks\_example\_dirichlet.i} & \PASS & --- \\
+\code{kim-kim-suzuki/kks\_example\_noflux.i} & \PASS & --- \\
+\code{kim-kim-suzuki/kks\_example\_ternary.i} & \PASS & --- \\
+\code{mcmeeking\_paper\_results/interface\_grad.i} & \PASS & --- \\
+\code{mcmeeking\_paper\_results/test.i} & \FAIL & Missing file: \code{test\_pore.e} \\
+\code{mcmeeking\_paper\_results/test\_equilibriate.i} & \FAIL & Missing file: \code{2\_blocks\_2.e} \\
+\code{mcmeeking\_paper\_results/test\_equilibriate2.i} & \FAIL & Missing file: \code{test\_2\_blocks3.e} \\
+\code{mcmeeking\_paper\_results/test\_normal\_flux\_constraint.i} & \FAIL & Missing file: \code{2blocks\_50.e} \\
+\code{mcmeeking\_paper\_results/test\_w\_Ag.i} & \FAIL & Missing file: \code{test\_w\_Ag.e} \\
+\code{mcmeeking\_paper\_results/test\_w\_Ag\_only.i} & \FAIL & Missing file: \code{test\_w\_Ag\_interlayer\_only1.e} \\
+\code{mcmeeking\_paper\_results/test\_w\_cathode.i} & \FAIL & Other: \code{syntax error, unexpected end of file, expecting block terminator} \\
+\code{mcmeeking\_paper\_results/test\_w\_cathode\_mech\_only.i} & \FAIL & Missing file: \code{test\_w\_cathode2.e} \\
+\code{mcmeeking\_paper\_results/test\_w\_equil.i} & \FAIL & Missing file: \code{test\_pore4.e} \\
+\code{mcmeeking\_paper\_results/test\_w\_equil\_metal.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_metal\_w\_block.e} \\
+\code{mcmeeking\_paper\_results/test\_w\_equil\_test.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_w\_block.e} \\
+\code{mcmeeking\_paper\_results/test\_w\_equil\_w\_c\_potential.i} & \FAIL & Missing file: \code{test\_pore4.e} \\
+\code{module\_LiElastoViscoPlasticity/R\_Run.i} & \PASS & --- \\
+\code{module\_LiElastoViscoPlasticity/compression\_constTrueStrainRate.i} & \PASS & --- \\
 \code{module\_LiElastoViscoPlasticity/oneElement.i} & \PASS & --- \\
+\code{module\_LiElastoViscoPlasticity/standard\_creepPlastic.i} & \FAIL & Other \\
 \code{module\_LiElastoViscoPlasticity/tension\_constTrueStrainRate.i} & \PASS & --- \\
-\code{project\_catholyte/noCoating.i} & \PASS & --- \\
-\code{module\_LiElastoViscoPlasticity/R\_Run.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{module\_LiElastoViscoPlasticity/compression\_constTrueStrainRate.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{module\_LiElastoViscoPlasticity/standard\_creepPlastic.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/mechanics/mo \\
-\code{paper\_Hongli/01\_gapContact\_d02w01T05.i} & \FAIL & App error \\
-\code{project\_catholyte/RVE\_NoCoating\_constant\_expansion\_stress\_free\_temp.i} & \FAIL & Missing file \code{RVE\_NoCoating.msh-mesh.cpa.gz} \\
+\code{plating\_and\_stripping/interlayer\_left\_bond\_pore\_left\_bond.i} & \FAIL & Other \\
+\code{plating\_and\_stripping/interlayer\_left\_bond\_pore\_left\_bond\_mech.i} & \FAIL & Missing file: \code{interlayer\_left\_pore\_right\_fine.e} \\
+\code{plating\_and\_stripping/interlayer\_left\_bond\_pore\_left\_bond\_strip.i} & \FAIL & Other \\
+\code{plating\_and\_stripping/interlayer\_left\_bond\_pore\_left\_bond\_w\_equilibriation.i} & \FAIL & Other \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{ecmTest/moose\_tests\_shared/creep\_compression}\hfill (0/1 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{ecmTest/test}\hfill (89/209 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
-\code{tension.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
+\code{Si\_test/Li\_test\_full\_aniso\_1d.i} & \PASS & --- \\
+\code{Si\_test/Li\_test\_full\_aniso\_2d.i} & \PASS & --- \\
+\code{Si\_test/Si\_test.i} & \FAIL & Other \\
+\code{Si\_test/Si\_test\_electric.i} & \FAIL & Other \\
+\code{Si\_test/Si\_test\_electric\_diffusion.i} & \PASS & --- \\
+\code{Si\_test/Si\_test\_full.i} & \PASS & --- \\
+\code{Si\_test/Si\_test\_full\_aniso.i} & \PASS & --- \\
+\code{Si\_test/Si\_test\_full\_aniso\_2d.i} & \PASS & --- \\
+\code{Si\_test/Si\_test\_full\_w\_elec.i} & \PASS & --- \\
+\code{Si\_test/coarse\_50/Si\_test.i} & \FAIL & Other \\
+\code{Si\_test/coarse\_50/Si\_test\_electric.i} & \FAIL & Other \\
+\code{Si\_test/coarse\_50/Si\_test\_electric\_diffusion.i} & \PASS & --- \\
+\code{Si\_test/coarse\_50/Si\_test\_full.i} & \FAIL & Other \\
+\code{Silicon\_test/Si\_test\_electric\_diffusion.i} & \PASS & --- \\
+\code{Silicon\_test/Si\_test\_full.i} & \PASS & --- \\
+\code{creep\_compression/tension.i} & \PASS & --- \\
+\code{creep\_contact/01\_conformalContact\_freeLi.i} & \PASS & --- \\
+\code{creep\_contact/02\_conformalContact\_fixLi.i} & \PASS & --- \\
+\code{creep\_contact/03\_gapContact\_freeLi.i} & \PASS & --- \\
+\code{creep\_contact/04\_gapContact\_fixLi.i} & \PASS & --- \\
+\code{creep\_contact/combined\_contact.i} & \FAIL & Other \\
+\code{creep\_contact/combined\_contact\_mech\_constraint.i} & \FAIL & Other \\
+\code{creep\_contact/combined\_contact\_pressure.i} & \FAIL & Other \\
+\code{creep\_contact/combined\_contact\_pressure\_constraint.i} & \FAIL & Other \\
+\code{creep\_contact/combined\_contact\_thermal\_constraint.i} & \FAIL & Other \\
+\code{creep\_contact/flat\_contact\_mech\_w\_swelling.i} & \FAIL & Other \\
+\code{creep\_contact/flat\_contact\_thermal\_constraint.i} & \FAIL & Other \\
+\code{creep\_contact/flat\_contact\_thermal\_constraint\_elastic.i} & \FAIL & Missing class: \code{NormalNodalLMMechanicalContact} \\
+\code{creep\_contact/flat\_contact\_thermal\_constraint\_elastic\_no\_mech.i} & \FAIL & Other \\
+\code{creep\_contact/flat\_contact\_thermal\_constraint\_viscoplastic.i} & \FAIL & Missing class: \code{NormalNodalLMMechanicalContact} \\
+\code{creep\_contact/test/00\_generateFlatContact\_freeRight.i} & \FAIL & Other \\
+\code{creep\_contact/test/01\_generateFlatContact\_fixRight.i} & \FAIL & Other \\
+\code{creep\_contact/test/02\_fileFlatContact\_freeRight.i} & \PASS & --- \\
+\code{creep\_contact/test/03\_fileFlatContact\_fixRight.i} & \PASS & --- \\
+\code{creep\_contact/test/04\_fileConformalContact\_freeRight.i} & \PASS & --- \\
+\code{creep\_contact/test/06\_fileGapContact\_freeRight.i} & \FAIL & Other \\
+\code{creep\_contact/test/old/02\_inputMesh\_freeLiright.i} & \FAIL & Missing file: \code{blockLi.msh-mesh.cpa.gz} \\
+\code{creep\_contact/test/old/03\_inputMesh\_fixLiright.i} & \FAIL & Missing file: \code{blockLi.msh-mesh.cpa.gz} \\
+\code{creep\_contact/test/test\_fileConformalContact\_linearMaterial.i} & \PASS & --- \\
+\code{creep\_contact/test/test\_fileConformalContact\_viscoMaterial.i} & \PASS & --- \\
+\code{creep\_tension/adaptivity/tension.i} & \FAIL & Other \\
+\code{creep\_tension/gold/tension.i} & \FAIL & Other \\
+\code{creep\_tension/st\_rate\_1e-5/tension.i} & \FAIL & Other \\
+\code{creep\_tension/tension.i} & \PASS & --- \\
+\code{czm/bilinear\_mixed.i} & \FAIL & Other \\
+\code{czm/bilinear\_mixed\_scale\_strength.i} & \FAIL & Other \\
+\code{czm/czm\_multiple\_action\_and\_materials.i} & \PASS & --- \\
+\code{czm/czm\_multiple\_dimension\_base.i} & \FAIL & Other \\
+\code{czm/czm\_patch\_test\_base.i} & \FAIL & Other \\
+\code{czm/czm\_traction\_separation\_base.i} & \FAIL & Other \\
+\code{czm/stretch\_rotate\_large\_deformation.i} & \PASS & --- \\
+\code{diffusion\_along\_principal/cosine.i} & \PASS & --- \\
+\code{diffusion\_along\_principal/flat.i} & \FAIL & Other \\
+\code{diffusion\_along\_principal/inclined.i} & \FAIL & Invalid value \\
+\code{diffusion\_along\_principal/swelling\_linear\_conc\_incline.i} & \PASS & --- \\
+\code{one\_element\_creep/198/Li\_one\_elem\_t\_2e-2.i} & \PASS & --- \\
+\code{one\_element\_creep/198/Li\_one\_elem\_t\_3e-3.i} & \PASS & --- \\
+\code{one\_element\_creep/198/Li\_one\_elem\_t\_3e-4.i} & \PASS & --- \\
+\code{one\_element\_creep/198/Li\_one\_elem\_t\_4e-5.i} & \PASS & --- \\
+\code{one\_element\_creep/198/temp/Li\_one\_elem\_t\_2e-2.i} & \FAIL & Other \\
+\code{one\_element\_creep/298/Li\_one\_elem\_t\_1.0.i} & \PASS & --- \\
+\code{one\_element\_creep/298/Li\_one\_elem\_t\_2e-2.i} & \PASS & --- \\
+\code{one\_element\_creep/298/Li\_one\_elem\_t\_3e-3.i} & \PASS & --- \\
+\code{one\_element\_creep/298/Li\_one\_elem\_t\_3e-4.i} & \PASS & --- \\
+\code{one\_element\_creep/298/Li\_one\_elem\_t\_4e-5.i} & \PASS & --- \\
+\code{one\_element\_creep/398/Li\_one\_elem\_t\_2e-2.i} & \FAIL & Other \\
+\code{one\_element\_creep/398/Li\_one\_elem\_t\_3e-3.i} & \FAIL & Other \\
+\code{one\_element\_creep/398/Li\_one\_elem\_t\_3e-4.i} & \FAIL & Other \\
+\code{one\_element\_creep/398/Li\_one\_elem\_t\_4e-5.i} & \FAIL & Other \\
+\code{one\_element\_creep/TR\_Run.i} & \PASS & --- \\
+\code{one\_element\_creep/tension\_constTrueStrainRate.i} & \PASS & --- \\
+\code{one\_element\_no\_creep/Li\_one\_elem.i} & \FAIL & Other \\
+\code{one\_element\_no\_creep/Li\_one\_elem\_t\_0.05.i} & \PASS & --- \\
+\code{one\_element\_no\_creep/Li\_one\_elem\_t\_0.1.i} & \PASS & --- \\
+\code{one\_element\_no\_creep/Li\_one\_elem\_t\_1.0.i} & \PASS & --- \\
+\code{one\_element\_no\_creep/R\_Run.i} & \PASS & --- \\
+\code{one\_element\_no\_creep/compression\_constTrueStrainRate.i} & \PASS & --- \\
+\code{one\_element\_no\_creep/compression\_constTrueStress.i} & \PASS & --- \\
+\code{one\_element\_no\_creep/tension\_constTrueStrainRate.i} & \PASS & --- \\
+\code{one\_element\_no\_creep/tension\_constTrueStress.i} & \PASS & --- \\
+\code{porous\_flow/00.i} & \PASS & --- \\
+\code{porous\_flow/00\_2D.i} & \PASS & --- \\
+\code{porous\_flow/01.i} & \PASS & --- \\
+\code{porous\_flow/03.i} & \PASS & --- \\
+\code{porous\_flow/04.i} & \PASS & --- \\
+\code{porous\_flow/04\_2d\_simple.i} & \PASS & --- \\
+\code{porous\_flow/04\_2d\_simple2.i} & \PASS & --- \\
+\code{porous\_flow/04\_2d\_simple2\_units.i} & \PASS & --- \\
+\code{porous\_flow/04\_2d\_simple\_unsaturated.i} & \PASS & --- \\
+\code{porous\_flow/04\_2d\_simple\_unsaturated\_noconc.i} & \PASS & --- \\
+\code{porous\_flow/05.i} & \PASS & --- \\
+\code{porous\_flow/05\_tabulated.i} & \FAIL & Other \\
+\code{porous\_flow/06.i} & \PASS & --- \\
+\code{porous\_flow/06\_KT.i} & \PASS & --- \\
+\code{porous\_flow/07.i} & \PASS & --- \\
+\code{porous\_flow/07mm.i} & \PASS & --- \\
+\code{porous\_flow/08.i} & \PASS & --- \\
+\code{porous\_flow/08\_KT.i} & \PASS & --- \\
+\code{porous\_flow/08mm.i} & \FAIL & Other: \code{syntax error, unexpected end of line, expecting = or :=} \\
+\code{porous\_flow/10.i} & \PASS & --- \\
+\code{porous\_flow/11.i} & \FAIL & Other \\
+\code{porous\_flow/11\_2D.i} & \FAIL & Other \\
+\code{porous\_flow/11\_2D2.i} & \FAIL & Other \\
+\code{porous\_flow/13.i} & \PASS & --- \\
+\code{porous\_flow/contact/porous\_flow\_czm.i} & \FAIL & Other: \code{syntax error, unexpected end of line} \\
+\code{porous\_flow/contact/test4\_contact\_only.i} & \FAIL & Missing file: \code{test3.e} \\
+\code{porous\_flow/contact/test4\_contact\_only\_block\_restricted.i} & \FAIL & Missing class: \code{NormalNodalLMMechanicalContact} \\
+\code{porous\_flow/contact/test4\_interface.i} & \PASS & --- \\
+\code{porous\_flow/effect\_of\_porosity/porous\_flow\_w\_electrolyte.i} & \FAIL & Other \\
+\code{porous\_flow/effect\_of\_porosity/porous\_flow\_w\_electrolyte\_no\_action\_no\_mech.i} & \PASS & --- \\
+\code{porous\_flow/effect\_of\_porosity/test2.i} & \PASS & --- \\
+\code{porous\_flow/effect\_of\_porosity/test3.i} & \PASS & --- \\
+\code{porous\_flow/effect\_of\_porosity/test4.i} & \FAIL & Missing class: \code{NormalNodalLMMechanicalContact} \\
+\code{porous\_flow/effect\_of\_porosity/test4\_contact\_all\_actions.i} & \FAIL & Missing class: \code{NormalNodalLMMechanicalContact} \\
+\code{porous\_flow/effect\_of\_porosity/test4\_contact\_equal\_value\_constraint.i} & \FAIL & Missing file: \code{test.e} \\
+\code{porous\_flow/effect\_of\_porosity/test4\_contact\_only.i} & \PASS & --- \\
+\code{porous\_flow/effect\_of\_porosity/test4\_contact\_only\_dbg.i} & \FAIL & Missing class: \code{NormalNodalLMMechanicalContact} \\
+\code{porous\_flow/effect\_of\_porosity/test4\_contact\_only\_original\_check.i} & \PASS & --- \\
+\code{porous\_flow/effect\_of\_porosity/test4\_contact\_only\_original\_check\_units.i} & \FAIL & Missing class: \code{NormalNodalLMMechanicalContact} \\
+\code{porous\_flow/effect\_of\_porosity/test4\_interface.i} & \PASS & --- \\
+\code{porous\_flow/effect\_of\_porosity/test\_interface.i} & \PASS & --- \\
+\code{porous\_flow/effect\_of\_porosity/test\_mesh.i} & \FAIL & Integrity action \\
+\code{porous\_flow/effect\_of\_porosity/test\_unsaturated\_real\_units.i} & \PASS & --- \\
+\code{porous\_flow/effect\_of\_porosity/test\_unsaturated\_real\_units\_no\_action.i} & \PASS & --- \\
+\code{porous\_flow/effect\_of\_porosity/test\_unsaturated\_real\_units\_no\_mechanics\_temp\_no\_action.i} & \FAIL & Other \\
+\code{porous\_flow/effect\_of\_porosity/test\_unsaturated\_real\_units\_w\_mechanics\_temp\_no\_action.i} & \FAIL & Other: \code{Task add\_kernel is not registered to build MaterialBase derived obj...} \\
+\code{porous\_flow/effect\_of\_porosity/testxx.i} & \FAIL & Missing file: \code{coarse.e} \\
+\code{porous\_flow/multiapp/simple\_bv\_master.i} & \PASS & --- \\
+\code{porous\_flow/multiapp/simple\_bv\_sub.i} & \PASS & --- \\
+\code{porous\_flow/multiapp/testxx.i} & \FAIL & Other: \code{syntax error, unexpected end of line, expecting = or :=} \\
+\code{porous\_flow/single\_phase\_precip.i} & \FAIL & Other \\
+\code{porous\_flow/single\_phase\_trial.i} & \FAIL & Other \\
+\code{porous\_flow/test.i} & \PASS & --- \\
+\code{porous\_flow/test2.i} & \FAIL & Other: \code{/Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest...} \\
+\code{porous\_flow/test\_2phase.i} & \PASS & --- \\
+\code{porous\_flow/test\_mesh.i} & \FAIL & Integrity action \\
+\code{porous\_flow/test\_unsat.i} & \PASS & --- \\
+\code{porous\_flow/test\_unsaturated\_real\_units.i} & \PASS & --- \\
+\code{porous\_interlayer/curved.i} & \PASS & --- \\
+\code{porous\_interlayer/curved2.i} & \PASS & --- \\
+\code{porous\_interlayer/curved\_cubit.i} & \FAIL & Missing file: \code{test2.e} \\
+\code{porous\_interlayer/curved\_orig.i} & \PASS & --- \\
+\code{porous\_interlayer/curved\_quarz.i} & \PASS & --- \\
+\code{porous\_interlayer/data/curved.i} & \FAIL & Missing file: \code{cosine\_conformal.msh-mesh.cpa.gz} \\
+\code{porous\_interlayer\_testing/data/interlayer\_ceramic\_only.i} & \FAIL & Other: \code{/Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest...} \\
+\code{porous\_interlayer\_testing/interlayer\_bond\_ceramic\_metal\_pore\_bond.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_metal3.e} \\
+\code{porous\_interlayer\_testing/interlayer\_ceramic.i} & \FAIL & Missing file: \code{interlayer\_ceramic.e} \\
+\code{porous\_interlayer\_testing/interlayer\_ceramic2.i} & \FAIL & Missing file: \code{interlayer\_ceramic\_only.e} \\
+\code{porous\_interlayer\_testing/interlayer\_ceramic3.i} & \FAIL & Missing file: \code{interlayer\_ceramic2.e} \\
+\code{porous\_interlayer\_testing/interlayer\_ceramic\_metal\_only.i} & \FAIL & Missing file: \code{interlayer\_ceramic\_metal\_only1.e} \\
+\code{porous\_interlayer\_testing/interlayer\_ceramic\_metal\_only\_mech.i} & \FAIL & Missing file: \code{interlayer\_ceramic\_metal\_only1.e} \\
+\code{porous\_interlayer\_testing/interlayer\_ceramic\_metal\_pore.i} & \FAIL & Missing file: \code{interlayer\_ceramic\_metal\_pore.e} \\
+\code{porous\_interlayer\_testing/interlayer\_ceramic\_metal\_pore\_bond.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.5\_shallow.e} \\
+\code{porous\_interlayer\_testing/interlayer\_ceramic\_metal\_pore\_bond\_mech\_only.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.5\_shallow.e} \\
+\code{porous\_interlayer\_testing/interlayer\_ceramic\_only.i} & \FAIL & Missing file: \code{interlayer\_ceramic\_only.e} \\
+\code{porous\_interlayer\_testing/interlayer\_ceramic\_only1.i} & \FAIL & Missing file: \code{interlayer\_ceramic\_only.e} \\
+\code{porous\_interlayer\_testing/new/interlayer\_bond\_ceramic\_metal\_pore\_bond3.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.1\_shallow3.e} \\
+\code{porous\_interlayer\_testing/new/interlayer\_bond\_ceramic\_metal\_pore\_bond\_mech\_only.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.5\_shallow.e} \\
+\code{porous\_interlayer\_testing/new/interlayer\_ceramic\_metal\_pore\_bond.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.1\_shallow.e} \\
+\code{porous\_interlayer\_testing/new/interlayer\_ceramic\_metal\_pore\_bond2.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.1\_shallow2.e} \\
+\code{porous\_interlayer\_testing/new/interlayer\_ceramic\_metal\_pore\_bond3.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.1\_shallow4.e} \\
+\code{porous\_interlayer\_testing/new/interlayer\_ceramic\_metal\_pore\_bond\_mech\_only.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.5\_shallow.e} \\
+\code{porous\_interlayer\_testing/new/interlayer\_expand.i} & \FAIL & Missing file: \code{interlayer\_expand2.e} \\
+\code{porous\_interlayer\_testing/new/interlayer\_expand\_V.i} & \FAIL & Missing file: \code{interlayer\_expand2.e} \\
+\code{porous\_interlayer\_testing/new/interlayer\_w\_top.i} & \FAIL & Missing file: \code{interlayer\_w\_top.e} \\
+\code{porous\_interlayer\_testing/new/interlayer\_w\_top2.i} & \FAIL & Missing file: \code{interlayer\_w\_top2.e} \\
+\code{porous\_interlayer\_testing/plating/interlayer\_plating.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.5\_shallow.e} \\
+\code{porous\_interlayer\_testing/plating/interlayer\_plating\_mech.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.5\_shallow.e} \\
+\code{porous\_interlayer\_testing/plating/interlayer\_plating\_old.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.5\_shallow.e} \\
+\code{porous\_interlayer\_testing/pure\_expansion/interlayer\_expand.i} & \FAIL & Missing file: \code{interlayer\_expand2.e} \\
+\code{porous\_interlayer\_testing/stripping/interlayer\_ceramic\_metal\_pore\_bond.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.5\_shallow.e} \\
+\code{porous\_interlayer\_testing/stripping/interlayer\_expand.i} & \FAIL & Missing file: \code{interlayer\_expand2.e} \\
+\code{porous\_interlayer\_testing/stripping/interlayer\_expand\_V.i} & \FAIL & Missing file: \code{interlayer\_expand2.e} \\
+\code{porous\_interlayer\_testing/stripping/interlayer\_w\_top.i} & \FAIL & Missing file: \code{interlayer\_w\_top.e} \\
+\code{porous\_interlayer\_testing/stripping/interlayer\_w\_top2.i} & \FAIL & Missing file: \code{interlayer\_w\_top2.e} \\
+\code{porous\_interlayer\_testing/stripping/stripping.i} & \FAIL & Missing file: \code{stripping.e} \\
+\code{porous\_interlayer\_testing/stripping/stripping\_just\_interlayer\_bond.i} & \FAIL & Missing file: \code{stripping\_just\_interlayer.e} \\
+\code{porous\_interlayer\_testing/stripping/stripping\_just\_pore.i} & \FAIL & Missing file: \code{stripping\_just\_pore.e} \\
+\code{porous\_interlayer\_testing/stripping/stripping\_just\_pore\_li.i} & \FAIL & Other \\
+\code{porous\_interlayer\_testing/stripping/stripping\_just\_pore\_li\_bond.i} & \FAIL & Other \\
+\code{porous\_interlayer\_testing/stripping/stripping\_just\_pore\_li\_nov.i} & \FAIL & Missing file: \code{stripping.e} \\
+\code{porous\_interlayer\_testing/stripping/stripping\_mech.i} & \FAIL & Other \\
+\code{porous\_interlayer\_testing/test\_w\_equil.i} & \FAIL & Missing file: \code{test\_pore4.e} \\
+\code{porous\_interlayer\_testing/test\_w\_equil\_metal.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.5.e} \\
+\code{porous\_interlayer\_testing/test\_w\_equil\_test.i} & \FAIL & Missing file: \code{test\_w\_pore\_interlayer\_w\_block\_h0.52.e} \\
+\code{swelling\_templates/interlayer\_full\_non\_bonded.i} & \FAIL & Missing file: \code{interlayer\_full.e} \\
+\code{swelling\_templates/interlayer\_left\_bond\_pore\_left\_bond.i} & \FAIL & Other \\
+\code{swelling\_templates/interlayer\_left\_bond\_pore\_left\_bond\_mech.i} & \FAIL & Missing file: \code{interlayer\_left\_pore\_right.e} \\
+\code{swelling\_templates/interlayer\_left\_bond\_pore\_left\_bond\_strip.i} & \FAIL & Other \\
+\code{swelling\_templates/interlayer\_left\_no\_bond\_pore\_left\_bond.i} & \FAIL & Missing file: \code{interlayer\_left\_pore\_right.e} \\
+\code{swelling\_templates/interlayer\_left\_pore\_left.i} & \FAIL & Missing file: \code{interlayer\_full.e} \\
+\code{swelling\_templates/interlayer\_right\_bonded.i} & \FAIL & Missing file: \code{interlayer\_right\_not\_bonded.e} \\
+\code{swelling\_templates/interlayer\_right\_non\_bonded.i} & \FAIL & Missing file: \code{interlayer\_right\_not\_bonded.e} \\
+\code{swelling\_templates/test\_w\_equil\_w\_c\_potential.i} & \FAIL & Missing file: \code{interlayer\_left\_pore\_right.e} \\
+\code{temp\_testing/interlayer\_left\_bond\_pore\_left\_bond.i} & \FAIL & Other \\
+\code{temp\_testing/interlayer\_left\_bond\_pore\_left\_bond\_mech.i} & \FAIL & Missing file: \code{interlayer\_left\_pore\_right.e} \\
+\code{temp\_testing/interlayer\_left\_bond\_pore\_left\_bond\_strip.i} & \FAIL & Other \\
+\code{temp\_testing/interlayer\_left\_bond\_pore\_left\_bond\_w\_equilibriation.i} & \FAIL & Other \\
+\code{test\_gapconductance/test\_2\_blocks.i} & \FAIL & Missing file: \code{2blocks.e} \\
+\code{test\_phaseField/bk.i} & \PASS & --- \\
+\code{test\_phaseField/ch.i} & \PASS & --- \\
+\code{unidirectional\_swelling/fully\_coupled\_bias\_0.4mA.i} & \FAIL & Unset CLI variable: \code{name} \\
+\code{unidirectional\_swelling/mech\_only.i} & \FAIL & Other \\
+\code{unidirectional\_swelling/swelling\_conc\_flux\_incline.i} & \PASS & --- \\
+\code{unidirectional\_swelling/swelling\_linear\_conc.i} & \PASS & --- \\
+\code{unidirectional\_swelling/swelling\_linear\_conc\_cosine.i} & \PASS & --- \\
+\code{unidirectional\_swelling/swelling\_linear\_conc\_incline.i} & \PASS & --- \\
+\code{unidirectional\_swelling/swelling\_linear\_conc\_mts.i} & \FAIL & Other \\
+\code{unidirectional\_swelling/test/01\_mech.i} & \FAIL & Other \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{ecmTest/moose\_tests\_shared/creep\_contact}\hfill (0/10 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsection{App: \code{tecmTest}}
+\subsubsection{\code{tecmTest/ECM\_Class}\hfill (1/1 pass)}
+All 1 input(s) pass. Files: \code{MechClass\_ECM.i}.
+
+\subsubsection{\code{tecmTest/LiB}\hfill (8/11 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
-\code{combined\_contact.i} & \FAIL & Missing class \code{ADPresetBC} \\
-\code{combined\_contact\_mech\_constraint.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/moose\_tests\_ \\
-\code{combined\_contact\_pressure.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/moose\_tests\_ \\
-\code{combined\_contact\_pressure\_constraint.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/moose\_tests\_ \\
-\code{combined\_contact\_thermal\_constraint.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/moose\_tests\_ \\
-\code{flat\_contact\_mech\_w\_swelling.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/moose\_tests\_ \\
-\code{flat\_contact\_thermal\_constraint.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/moose\_tests\_ \\
-\code{flat\_contact\_thermal\_constraint\_elastic.i} & \FAIL & Missing class \code{NormalNodalLMMechanicalContact} \\
-\code{flat\_contact\_thermal\_constraint\_elastic\_no\_mech.i} & \FAIL & Missing class \code{ADPresetBC} \\
-\code{flat\_contact\_thermal\_constraint\_viscoplastic.i} & \FAIL & Missing class \code{NormalNodalLMMechanicalContact} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/moose\_tests\_shared/creep\_tension}\hfill (0/1 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{tension.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/moose\_tests\_shared/one\_element\_no\_creep}\hfill (0/4 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{Li\_one\_elem.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/moose\_tests\_ \\
-\code{Li\_one\_elem\_t\_0.05.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\code{Li\_one\_elem\_t\_0.1.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\code{Li\_one\_elem\_t\_1.0.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/moose\_tests\_shared/unidirectional\_swelling}\hfill (0/3 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{fully\_coupled\_bias\_0.4mA.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/moose\_tests\_ \\
-\code{mech\_only.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/moose\_tests\_ \\
-\code{swelling\_linear\_conc.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/moose\_tests\_ \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/plating\_and\_stripping}\hfill (0/4 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{interlayer\_left\_bond\_pore\_left\_bond.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/plating\_and\_ \\
-\code{interlayer\_left\_bond\_pore\_left\_bond\_mech.i} & \FAIL & Missing file \code{interlayer\_left\_pore\_right\_fine.e} \\
-\code{interlayer\_left\_bond\_pore\_left\_bond\_strip.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/plating\_and\_ \\
-\code{interlayer\_left\_bond\_pore\_left\_bond\_w\_equilibriation.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/plating\_and\_ \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/porous\_flow}\hfill (2/32 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{13.i} & \PASS & --- \\
-\code{test\_unsat.i} & \PASS & --- \\
-\code{00.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{00\_2D.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{01.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{03.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{04.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{04\_2d\_simple.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{04\_2d\_simple2.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{04\_2d\_simple2\_units.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{04\_2d\_simple\_unsaturated.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{04\_2d\_simple\_unsaturated\_noconc.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{05.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{05\_tabulated.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/porous\_flow/ \\
-\code{06.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{06\_KT.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{07.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{07mm.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{08.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{08\_KT.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{08mm.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/porous\_flow/ \\
-\code{10.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{11.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/porous\_flow/ \\
-\code{11\_2D.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/porous\_flow/ \\
-\code{11\_2D2.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/porous\_flow/ \\
-\code{single\_phase\_precip.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/porous\_flow/ \\
-\code{single\_phase\_trial.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/porous\_flow/ \\
-\code{test.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{test2.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/porous\_flow/ \\
-\code{test\_2phase.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
-\code{test\_mesh.i} & \FAIL & Integrity action \\
-\code{test\_unsaturated\_real\_units.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/porous\_flow\_test}\hfill (1/3 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{s11\_act.i} & \PASS & --- \\
-\code{06.i} & \FAIL & Unused param \code{Mesh/injection\_area/included\_subdomain\_ids} \\
-\code{06\_mod.i} & \FAIL & Unused param \code{PorousFlowFullySaturated/flux\_limiter\_time} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/porous\_interlayer}\hfill (2/5 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{curved.i} & \PASS & --- \\
-\code{curved2.i} & \PASS & --- \\
-\code{curved\_cubit.i} & \FAIL & Missing file \code{test2.e} \\
-\code{curved\_orig.i} & \FAIL & Unused param \code{elem} \\
-\code{curved\_quarz.i} & \FAIL & Unused param \code{elem} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/porous\_interlayer\_testing}\hfill (0/14 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{interlayer\_bond\_ceramic\_metal\_pore\_bond.i} & \FAIL & Missing file \code{test\_w\_pore\_interlayer\_metal3.e} \\
-\code{interlayer\_ceramic.i} & \FAIL & Missing file \code{interlayer\_ceramic.e} \\
-\code{interlayer\_ceramic2.i} & \FAIL & Missing file \code{interlayer\_ceramic\_only.e} \\
-\code{interlayer\_ceramic3.i} & \FAIL & Missing file \code{interlayer\_ceramic2.e} \\
-\code{interlayer\_ceramic\_metal\_only.i} & \FAIL & Missing file \code{interlayer\_ceramic\_metal\_only1.e} \\
-\code{interlayer\_ceramic\_metal\_only\_mech.i} & \FAIL & Missing file \code{interlayer\_ceramic\_metal\_only1.e} \\
-\code{interlayer\_ceramic\_metal\_pore.i} & \FAIL & Missing file \code{interlayer\_ceramic\_metal\_pore.e} \\
-\code{interlayer\_ceramic\_metal\_pore\_bond.i} & \FAIL & Missing file \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.5\_shallow.e} \\
-\code{interlayer\_ceramic\_metal\_pore\_bond\_mech\_only.i} & \FAIL & Missing file \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.5\_shallow.e} \\
-\code{interlayer\_ceramic\_only.i} & \FAIL & Missing file \code{interlayer\_ceramic\_only.e} \\
-\code{interlayer\_ceramic\_only1.i} & \FAIL & Missing file \code{interlayer\_ceramic\_only.e} \\
-\code{test\_w\_equil.i} & \FAIL & Missing file \code{test\_pore4.e} \\
-\code{test\_w\_equil\_metal.i} & \FAIL & Missing file \code{test\_w\_pore\_interlayer\_w\_block\_metal\_h0.5.e} \\
-\code{test\_w\_equil\_test.i} & \FAIL & Missing file \code{test\_w\_pore\_interlayer\_w\_block\_h0.52.e} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/swelling\_templates}\hfill (0/9 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{interlayer\_full\_non\_bonded.i} & \FAIL & Missing file \code{interlayer\_full.e} \\
-\code{interlayer\_left\_bond\_pore\_left\_bond.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/swelling\_tem \\
-\code{interlayer\_left\_bond\_pore\_left\_bond\_mech.i} & \FAIL & Missing file \code{interlayer\_left\_pore\_right.e} \\
-\code{interlayer\_left\_bond\_pore\_left\_bond\_strip.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/swelling\_tem \\
-\code{interlayer\_left\_no\_bond\_pore\_left\_bond.i} & \FAIL & Missing file \code{interlayer\_left\_pore\_right.e} \\
-\code{interlayer\_left\_pore\_left.i} & \FAIL & Missing file \code{interlayer\_full.e} \\
-\code{interlayer\_right\_bonded.i} & \FAIL & Missing file \code{interlayer\_right\_not\_bonded.e} \\
-\code{interlayer\_right\_non\_bonded.i} & \FAIL & Missing file \code{interlayer\_right\_not\_bonded.e} \\
-\code{test\_w\_equil\_w\_c\_potential.i} & \FAIL & Missing file \code{interlayer\_left\_pore\_right.e} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/temp\_testing}\hfill (0/4 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{interlayer\_left\_bond\_pore\_left\_bond.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/temp\_testing \\
-\code{interlayer\_left\_bond\_pore\_left\_bond\_mech.i} & \FAIL & Missing file \code{interlayer\_left\_pore\_right.e} \\
-\code{interlayer\_left\_bond\_pore\_left\_bond\_strip.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/temp\_testing \\
-\code{interlayer\_left\_bond\_pore\_left\_bond\_w\_equilibriation.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/ecmTest/temp\_testing \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/test}\hfill (0/16 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{creep\_contact/01\_conformalContact\_freeLi.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/action/use\_displaced\_mesh} \\
-\code{creep\_contact/02\_conformalContact\_fixLi.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/action/use\_displaced\_mesh} \\
-\code{creep\_contact/03\_gapContact\_freeLi.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/action/use\_displaced\_mesh} \\
-\code{creep\_contact/04\_gapContact\_fixLi.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/action/use\_displaced\_mesh} \\
-\code{diffusion\_along\_principal/cosine.i} & \FAIL & Unused param \code{Materials/diffusivity\_Li1/diffusivity\_name} \\
-\code{diffusion\_along\_principal/inclined.i} & \FAIL & Invalid option "0" in MooseEnum.  Valid options (not case-sensitive) are "x y z" \\
-\code{one\_element\_creep/TR\_Run.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\code{one\_element\_creep/tension\_constTrueStrainRate.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\code{one\_element\_no\_creep/R\_Run.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\code{one\_element\_no\_creep/compression\_constTrueStrainRate.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\code{one\_element\_no\_creep/compression\_constTrueStress.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\code{one\_element\_no\_creep/tension\_constTrueStrainRate.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\code{one\_element\_no\_creep/tension\_constTrueStress.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\code{unidirectional\_swelling/swelling\_linear\_conc.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\code{unidirectional\_swelling/swelling\_linear\_conc\_cosine.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\code{unidirectional\_swelling/swelling\_linear\_conc\_incline.i} & \FAIL & Unused param \code{Modules/TensorMechanics/Master/all/use\_displaced\_mesh} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/test\_gapconductance}\hfill (0/1 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{test\_2\_blocks.i} & \FAIL & Missing file \code{2blocks.e} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{ecmTest/unidirectional\_swelling}\hfill (0/1 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{swelling\_conc\_flux\_incline.i} & \FAIL & Missing file \code{inclined.msh-mesh.cpa.gz} \\
-\bottomrule
-\end{longtable}
-
-\subsection{App: \code{eel}}
-
-\subsubsection{\code{eel/ECM\_Class}\hfill (1/1 pass)}
-All 1 inputs pass. Files: \code{MechClass\_ECM.i}.
-
-\subsubsection{\code{eel/LiB}\hfill (2/7 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
+\code{CC\_charging.i} & \PASS & --- \\
 \code{CC\_charging\_ashok.i} & \PASS & --- \\
+\code{CC\_discharging.i} & \FAIL & Other: \code{No checkpoint file found!} \\
+\code{CV\_charging.i} & \PASS & --- \\
 \code{dbgCC\_charging.i} & \PASS & --- \\
-\code{CC\_charging.i} & \FAIL & Unused param \code{Materials/charge\_transfer\_anode\_elyte/electrode} \\
-\code{CC\_discharging.i} & \FAIL & Missing checkpoint \\
-\code{CV\_charging.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/eel/LiB/CV\_charging. \\
-\code{refCC\_charging.i} & \FAIL & Unused param \code{Materials/charge\_transfer\_anode\_elyte/electrode} \\
-\code{symCell.i} & \FAIL & Unused param \code{Materials/charge\_transfer\_anode\_elyte/electrode} \\
+\code{newExample/ecm\_flatA\_flatC.i} & \PASS & --- \\
+\code{refCC\_charging.i} & \PASS & --- \\
+\code{symCell.i} & \PASS & --- \\
+\code{working/CC\_charging\_Final.i} & \PASS & --- \\
+\code{working/CV\_charging\_ashok\_ver2.i} & \FAIL & Missing file: \code{CC\_charging\_I\_3e-3.e} \\
+\code{working/CV\_charging\_ashok\_ver3.i} & \FAIL & Other: \code{No checkpoint file found!} \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{eel/PCM-GF}\hfill (2/3 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{tecmTest/PCM-GF}\hfill (2/3 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
 \code{charging\_idling.i} & \PASS & --- \\
+\code{discharging.i} & \FAIL & Missing file: \code{equilibriate\_out.e} \\
 \code{equilibriate.i} & \PASS & --- \\
-\code{discharging.i} & \FAIL & Missing file \code{equilibriate\_out.e} \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{eel/SSB}\hfill (0/4 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{tecmTest/SSB}\hfill (1/6 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
-\code{CC\_charging.i} & \FAIL & Unused param \code{Materials/charge\_transfer\_anode\_elyte/electrode} \\
-\code{CC\_discharging.i} & \FAIL & Missing checkpoint \\
-\code{CV\_charging.i} & \FAIL & Missing checkpoint \\
-\code{charging.i} & \FAIL & Missing class \code{CondensedMassDiffusion} \\
+\code{CC\_charging.i} & \PASS & --- \\
+\code{CC\_discharging.i} & \FAIL & Other: \code{No checkpoint file found!} \\
+\code{CV\_charging.i} & \FAIL & Other: \code{No checkpoint file found!} \\
+\code{charging.i} & \FAIL & Missing class: \code{CondensedMassDiffusion} \\
+\code{newExample/ecm\_nmcC\_flatA.i} & \FAIL & Missing file: \code{nmcC\_flatA.msh-mesh.cpa.gz} \\
+\code{newExample/tecm\_nmcC\_flatA.i} & \FAIL & Missing file: \code{ssb\_flat.msh-mesh.cpa.gz} \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{eel/SSB\_3D}\hfill (0/4 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{tecmTest/SSB\_3D}\hfill (0/4 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
-\code{CC\_charging.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/eel/SSB\_3D/CC\_chargi \\
-\code{CC\_discharging.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/eel/SSB\_3D/CC\_discha \\
-\code{CV\_charging.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/eel/SSB\_3D/CV\_chargi \\
-\code{charging.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/eel/SSB\_3D/charging. \\
+\code{CC\_charging.i} & \FAIL & Unset CLI variable: \code{outname} \\
+\code{CC\_discharging.i} & \FAIL & Unset CLI variable: \code{outname} \\
+\code{CV\_charging.i} & \FAIL & Unset CLI variable: \code{outname} \\
+\code{charging.i} & \FAIL & Unset CLI variable: \code{outname} \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{eel/arc-welding}\hfill (1/1 pass)}
-All 1 inputs pass. Files: \code{welding.i}.
+\subsubsection{\code{tecmTest/arc-welding}\hfill (1/1 pass)}
+All 1 input(s) pass. Files: \code{welding.i}.
 
-\subsubsection{\code{eel/cable}\hfill (0/1 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{tecmTest/cable}\hfill (1/1 pass)}
+All 1 input(s) pass. Files: \code{cable.i}.
+
+\subsubsection{\code{tecmTest/creep-diffusion}\hfill (1/1 pass)}
+All 1 input(s) pass. Files: \code{bulk/creep-diffusion.i}.
+
+\subsubsection{\code{tecmTest/degradation}\hfill (0/6 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
-\code{cable.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/eel/cable/cable.i:21 \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{eel/creep-diffusion}\hfill (1/1 pass)}
-All 1 inputs pass. Files: \code{bulk/creep-diffusion.i}.
-
-\subsubsection{\code{eel/degradation}\hfill (0/6 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{CC\_charging.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/eel/degradation/CC\_c \\
-\code{CC\_discharging.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/eel/degradation/CC\_d \\
-\code{CV\_charging.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/eel/degradation/CV\_c \\
-\code{CV\_discharging.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/eel/degradation/CV\_d \\
+\code{CC\_charging.i} & \FAIL & Unset CLI variable: \code{T0} \\
+\code{CC\_discharging.i} & \FAIL & Unset CLI variable: \code{T0} \\
+\code{CV\_charging.i} & \FAIL & Unset CLI variable: \code{T0} \\
+\code{CV\_discharging.i} & \FAIL & Unset CLI variable: \code{T0} \\
 \code{base.i} & \FAIL & Integrity action \\
-\code{ramp.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/eel/degradation/ramp \\
+\code{ramp.i} & \FAIL & Unset CLI variable: \code{cmin} \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{eel/paper\_radwa\_cathodeMechanics}\hfill (0/1 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{tecmTest/paper\_ecram}\hfill (3/4 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
-\code{contact\_loss.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/eel/paper\_radwa\_cath \\
+\code{ecram\_ec.i} & \PASS & --- \\
+\code{ecram\_ec\_bk.i} & \PASS & --- \\
+\code{ecram\_full.i} & \PASS & --- \\
+\code{phase1/ecram\_capacitive.i} & \FAIL & Missing class: \code{PoissonEquation} \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{eel/paper\_yangZhao\_NaAlS}\hfill (5/7 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{tecmTest/paper\_radwa\_cathodeMechanics}\hfill (0/1 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
+\toprule
+Input & Status & Issue \\
+\midrule
+\endhead
+\code{contact\_loss.i} & \FAIL & Other: \code{section '[Contact]' does not have an associated Action; you likely ...} \\
+\bottomrule
+\end{longtable}
+
+\subsubsection{\code{tecmTest/paper\_yangZhao\_NaAlS}\hfill (6/7 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
@@ -910,54 +683,37 @@ Input & Status & Issue \\
 \code{defectDepth.i} & \PASS & --- \\
 \code{defectNumber.i} & \PASS & --- \\
 \code{defectNumber\_bk.i} & \PASS & --- \\
+\code{dualSE.i} & \PASS & --- \\
 \code{large\_seE.i} & \PASS & --- \\
+\code{nals.i} & \FAIL & Missing file: \code{roughA\_flatC.msh-mesh.cpa.gz} \\
 \code{seSgm.i} & \PASS & --- \\
-\code{dualSE.i} & \FAIL & Unused param \code{rmpT} \\
-\code{nals.i} & \FAIL & Missing file \code{roughA\_flatC.msh-mesh.cpa.gz} \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{eel/proposal\_promethean}\hfill (1/1 pass)}
-All 1 inputs pass. Files: \code{pressure\_free\_stack.i}.
-
-\subsubsection{\code{eel/resin-printing}\hfill (0/1 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{print.i} & \FAIL & Unused param \code{UserObjects/esm/apply\_initial\_conditions} \\
-\bottomrule
-\end{longtable}
-
-\subsection{App: \code{tecmTest}}
-
-\subsubsection{\code{tecmTest/paper\_ecram}\hfill (2/3 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
-\toprule
-Input & Status & Issue \\
-\midrule
-\endhead
-\code{ecram\_ec.i} & \PASS & --- \\
-\code{ecram\_ec\_bk.i} & \PASS & --- \\
-\code{ecram\_full.i} & \FAIL & Unused param \code{c\_max} \\
-\bottomrule
-\end{longtable}
-
-\subsubsection{\code{tecmTest/phase2\_edl}\hfill (2/3 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{tecmTest/phase2\_edl}\hfill (3/7 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
 \endhead
 \code{comsol\_diffuse\_double\_layer\_corrected.i} & \PASS & --- \\
 \code{comsol\_diffuse\_double\_layer\_simplified.i} & \PASS & --- \\
-\code{single.i} & \FAIL & /Users/howardtu/Documents/modeling/continuum/feecm/projects/tecmTest/phase2\_edl/ \\
+\code{ref/moose\_EDL\_solid/test/tests/kernels/simple\_diffusion/simple\_diffusion.i} & \PASS & --- \\
+\code{ref/moose\_EDL\_solid/test/tests/paper-case-fn-int.i} & \FAIL & Missing class: \code{MaskedBodyForce} \\
+\code{ref/moose\_EDL\_solid/test/tests/simple.i} & \FAIL & Missing class: \code{MaskedBodyForce} \\
+\code{ref/moose\_EDL\_solid/test/tests/simple\_pbf-1eV.i} & \FAIL & Missing class: \code{MaskedBodyForce} \\
+\code{single.i} & \FAIL & Other \\
 \bottomrule
 \end{longtable}
 
-\subsubsection{\code{tecmTest/tests}\hfill (10/12 pass)}
-\begin{longtable}{p{0.45\textwidth} l p{0.4\textwidth}}
+\subsubsection{\code{tecmTest/proposal\_promethean}\hfill (1/1 pass)}
+All 1 input(s) pass. Files: \code{pressure\_free\_stack.i}.
+
+\subsubsection{\code{tecmTest/resin-printing}\hfill (1/1 pass)}
+All 1 input(s) pass. Files: \code{print.i}.
+
+\subsubsection{\code{tecmTest/tests}\hfill (11/12 pass)}
+\begin{longtable}{p{0.46\textwidth} l p{0.36\textwidth}}
 \toprule
 Input & Status & Issue \\
 \midrule
@@ -968,53 +724,13 @@ Input & Status & Issue \\
 \code{ex2\_thermomech.i} & \PASS & --- \\
 \code{ex3\_stress\_assisted\_diffusion.i} & \PASS & --- \\
 \code{ex4\_electro\_chemo\_mechanics.i} & \PASS & --- \\
+\code{final\_project.i} & \FAIL & Missing class: \code{DarcyPressure} \\
 \code{nondimensional\_demo.i} & \PASS & --- \\
 \code{nondimensional\_diffusion\_demo.i} & \PASS & --- \\
+\code{pure\_liquid\_mechanics.i} & \PASS & --- \\
 \code{simple\_nondim\_test.i} & \PASS & --- \\
 \code{test\_thermalmechanics.i} & \PASS & --- \\
-\code{final\_project.i} & \FAIL & Missing class \code{DarcyPressure} \\
-\code{pure\_liquid\_mechanics.i} & \FAIL & Unused param \code{Problem/coord\_type} \\
 \bottomrule
 \end{longtable}
 
-\section{Recommended actions}
-\begin{itemize}
-\item \textbf{Missing custom classes (\code{ParamDiffusion}, \code{paperHongli}):}
-      29 inputs blocked. Source code never committed to any app; would need
-      to be retrieved from older branches or backups.
-\item \textbf{MOOSE framework drift (\code{NormalNodalLMMechanicalContact},
-      \code{ContactDOFSetSize}, \code{ADPresetBC}):} 12 inputs reference classes
-      renamed/removed in newer MOOSE. A version-aware sed pass mapping old
-      names to current MOOSE equivalents would unblock most.
-\item \textbf{Missing \code{.e} / \code{.msh-mesh.cpa.gz} files:} approximately
-      30+ inputs need data files that are gitignored (\code{*.e}, \code{*.cpa.gz}
-      patterns in repo \code{.gitignore}). Either regenerate from \code{.geo}
-      sources via gmsh, or copy from a machine that has them.
-\item \textbf{Missing checkpoint files:} 3 inputs depend on restart files from
-      a prerequisite simulation. Run the prerequisite first, or remove the
-      restart logic to make these standalone.
-\end{itemize}
-
-\section*{Notes}
-\begin{itemize}
-\item The two \code{integrate-ashok} fixes applied during this audit are
-      reflected in these numbers:
-\begin{itemize}
-  \item Renamed all 21 input occurrences of
-        \code{ADDiffusionAlongPrincipalDirections} to
-        \code{ADDiffusionAlongPrincipalDirectionsMaterial} (eliminated 9
-        registration failures from the v3 run).
-  \item Created a placeholder
-        \code{ecmTest/cathode\_trial/nmc\_equilibrium\_potential.csv} so
-        the inputs in that project can locate the OCV table during
-        \code{-{}-check-input}. The placeholder values are not physically
-        meaningful; replace before running solves.
-\end{itemize}
-\item No failures in this audit are attributable to the Ashok-source
-      integration itself. The four apps build cleanly; the registration
-      and parameter changes Ashok contributed do not break any existing
-      input.
-\end{itemize}
-
 \end{document}
-

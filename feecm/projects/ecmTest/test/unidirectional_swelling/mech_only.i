@@ -336,21 +336,21 @@ order = FIRST
 
 [BCs]
   [./Li_top_y]
-    type = ADPresetBC
+    type = ADDirichletBC
     boundary = '18'
     variable = uy
     value = 0.0
   [../]
 
   [./Li_top_x]
-    type = ADPresetBC
+    type = ADDirichletBC
     boundary = '18'
     variable = ux
     value = 0.0
   [../]
 
   [./left_right]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = ux
     boundary = '14 17 12 19'
     value = 0

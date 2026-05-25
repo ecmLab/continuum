@@ -1,4 +1,5 @@
 [Mesh]
+  coord_type = RZ
   [mesh]
     # type = FileMeshGenerator
     # file = test_mesh.e
@@ -23,14 +24,14 @@
     type = ParsedGenerateSideset
     # combinatorial_geometry = 'x*x+y*y<1.01'
     combinatorial_geometry = 'y<0.0001e-6'
-    included_subdomain_ids = 1
+    included_subdomains = 1
     new_sideset_name = 'injection_area'
     input = 'AgC'
   []
   [outflow_area]
     type = ParsedGenerateSideset
     combinatorial_geometry = 'y>29.99e-6'
-    included_subdomain_ids = 1
+    included_subdomains = 1
     new_sideset_name = 'outflow_area'
     input = injection_area
   []
@@ -57,7 +58,6 @@
 []
 
 [Problem]
-  coord_type = RZ
   type = ReferenceResidualProblem
   extra_tag_vectors = 'ref'
   reference_vector = 'ref'
@@ -101,7 +101,6 @@
   # mass_fraction_vars = ag_c
   use_displaced_mesh = false
   # number_aqueous_kinetic = 1
-  multiply_by_density = true
   # stabilization = KT
   # flux_limiter_type = superbee
   relative_permeability_exponent = 3
@@ -219,7 +218,6 @@
   [porosity_Agc]
     type = PorousFlowPorosityConst
     porosity = 0.5
-    chemical = false
     block = AgC
     # initial_mineral_concentrations = initial_and_reference_conc
     # reference_chemistry = initial_and_reference_conc
@@ -228,7 +226,6 @@
   [porosity_LiLayer]
     type = PorousFlowPorosityConst
     porosity = 0.95
-    chemical = false
     block = LiLayer
     # initial_mineral_concentrations = initial_and_reference_conc
     # reference_chemistry = initial_and_reference_conc
@@ -345,6 +342,5 @@
   exodus = true
   csv = true
   sync_times = '500'
-  sync_only = false
   file_base = xxx2
 []

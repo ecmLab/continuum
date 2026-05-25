@@ -168,19 +168,19 @@
 
 [BCs]
   [./symmy]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = uy
     boundary = 'bottom'
     value = 0
   [../]
   [./symmx]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = ux
     boundary = 'left'
     value = 0
   [../]
   [./symmz]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = uz
     boundary = back
     value = 0

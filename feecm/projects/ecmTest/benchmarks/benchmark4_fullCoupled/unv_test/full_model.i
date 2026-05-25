@@ -1,5 +1,3 @@
-elem = QUAD4
-order = FIRST
 [Mesh]
   patch_size = 80
   patch_update_strategy = auto
@@ -218,8 +216,6 @@ order = FIRST
 
 [Contact]
   [./mech_contact]
-    disp_x = ux
-    disp_y = uy
     mesh = mesh
     secondary = 'blockCeramic_top'
     primary = 'blockMetal_bottom'
