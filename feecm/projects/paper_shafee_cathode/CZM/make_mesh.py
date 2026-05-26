@@ -98,13 +98,13 @@ import gmsh
 # Geometry / discretization parameters  (all lengths in mm)
 # ---------------------------------------------------------------------------
 L           = 5.0          # square domain side length
-R           = 3.8818230    # NMC quarter-circle radius
-H_IFACE     = 0.03        # element edge ON the arc (== CZM interface_thickness)
+R           = 3.98942280   # NMC quarter-circle radius
+H_IFACE     = 0.02         # element edge ON the arc (== CZM interface_thickness)
 H_FAR       = 0.20         # target element edge in the bulk far field
 REFINE_DIST = 0.10         # halo width around the arc kept fully refined [mm]
 
-OUT_FILE_CZM     = "mesh_czm.msh"   # contact_CZM_3.i
-OUT_FILE_CONTACT = "mesh.msh"               # contact.i
+OUT_FILE_CZM     = "mesh_czm_5050.msh"   # contact_CZM_3.i
+OUT_FILE_CONTACT = "mesh_5050.msh"       # contact.i
 
 PG = {
     "block_NMC_right": 1,

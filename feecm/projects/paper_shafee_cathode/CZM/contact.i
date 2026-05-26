@@ -1,16 +1,22 @@
 ## --- Bulk Material Properties ---
-ymod=50000.00           # Young Modulus of SE [MPa]
-pr_se=0.26              # Poissons Ratio of SE
-ystr=20                 # Yield Strength of SE [MPa]
-ustr=24                 # Ultimate Strength of SE [MPa]
-plstr=0.004             # Plastic Strain of SE
+ymod_se=100             # Young Modulus of SE [MPa] (Sweeping from 100 to 1000 MPa)
+Hv_se=3.00              # Vickers Hardness of SE [MPa] (Sweeping from 3 to 30 MPa)
+pr_se=0.30              # Poissons Ratio of SE
 
-ustr_am=12600.0             # Ultimate Strength of AM [MPa]
-ymod_am=177500          # Young Modulus of AM [MPa]
-pr_am=0.26              # Poissons Ratio of A
+ustr_am=10000           # Ultimate Strength of AM [MPa] (Some High Value to Ignore AM Plasticity)
+ymod_am=90000           # Young Modulus of AM [MPa]
+pr_am=0.26              # Poissons Ratio of AM
 
-sptop=5                 # Stack Pressure [MPa]
-alpha_nmc = 0.0002922   # Thermal expansion coefficient of NMC
+
+## --- Calculated Material Properties ---
+ustr_se=${fparse Hv_se / 3}                             # Ultimate Strength of SE [MPa] (Coe. = 3)
+ystr_se=${fparse ustr_se / 1.2}                         # Yield Strength of SE [MPa]
+plstr=${fparse (ustr_se - ystr_se) / (ymod_se / 10)}    # Plastic Strain of SE
+
+
+## --- Boundary Conditions Properties ---
+sptop=10                      # Stack Pressure [MPa]
+alpha_nmc=2.9927418e-4        # Thermal expansion coefficient of NMC (8.3% expansion)
 
 
 [Problem]
@@ -20,8 +26,8 @@ alpha_nmc = 0.0002922   # Thermal expansion coefficient of NMC
 [Mesh]
         [./fmg]
                 type = FileMeshGenerator
-                ## Mesh file with NMC:LPS=70/30 ratio
-                file = mesh.msh
+                ## Mesh file with AM:SE=50/50 volume ratio
+                file = mesh_5050.msh
         []
 []
 [GlobalParams]
@@ -67,7 +73,7 @@ alpha_nmc = 0.0002922   # Thermal expansion coefficient of NMC
                 type = PiecewiseLinear
                 x = '0 ${plstr}'
                 # Hardening Function LPS
-                y = '${ystr} ${ustr}'
+                y = '${ystr_se} ${ustr_se}'
         [../]
 []
 [Modules]
@@ -139,7 +145,7 @@ alpha_nmc = 0.0002922   # Thermal expansion coefficient of NMC
                 # This penalty control the convergence issue
                 # Higher Young modulus will have higher penalty parameter or vice versa
                 # Tentative  number should be in the range of the young modulus
-                penalty = ${ymod}
+                penalty = ${ymod_se}
                 formulation = penalty
                 tangential_tolerance = 0.0001
         []
@@ -193,7 +199,6 @@ alpha_nmc = 0.0002922   # Thermal expansion coefficient of NMC
                 type = ComputeThermalExpansionEigenstrain
                 block = 'block_NMC'
                 stress_free_temperature = 0
-                ## use 1/3 of 8.1 volumetric expansion which would give the following thermal expansion coeff
                 thermal_expansion_coeff = ${alpha_nmc}
                 temperature = temp
                 eigenstrain_name = eigenstrain
@@ -201,13 +206,13 @@ alpha_nmc = 0.0002922   # Thermal expansion coefficient of NMC
         [./elasticity_tensor_LPS]
                 type = ComputeIsotropicElasticityTensor
                 block = 'block_LPS'
-                youngs_modulus = ${ymod}
+                youngs_modulus = ${ymod_se}
                 poissons_ratio = ${pr_se}
         [../]
         [./isotropic_plasticity_LPS]
                 type = IsotropicPlasticityStressUpdate
                 block = 'block_LPS'
-                yield_stress = ${ystr}
+                yield_stress = ${ystr_se}
                 hardening_function = hf_LPS
         [../]
         [./radial_return_stress_LPS]
@@ -243,7 +248,7 @@ alpha_nmc = 0.0002922   # Thermal expansion coefficient of NMC
 []
 [Outputs]
   exodus = true
-  file_base = rst/ystr${ystr}_E${ymod}_spTop${sptop}_2
+  file_base = rst/ystr${ystr_se}_E${ymod_se}_spTop${sptop}
   [./csv]
     type = CSV
     execute_on = 'final'
@@ -252,7 +257,7 @@ alpha_nmc = 0.0002922   # Thermal expansion coefficient of NMC
 [Postprocessors]
   [./Gap]
     type = PointValue
-    point = '0.0 0.00250001 0.0'
+    point = '0.0 3.98 0.0'
     variable = disp_y
   [../]
   [./Temp]
