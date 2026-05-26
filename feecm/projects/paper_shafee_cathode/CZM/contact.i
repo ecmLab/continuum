@@ -21,7 +21,7 @@ alpha_nmc = 0.0002922   # Thermal expansion coefficient of NMC
         [./fmg]
                 type = FileMeshGenerator
                 ## Mesh file with NMC:LPS=70/30 ratio
-                file = input_mesh.msh
+                file = mesh.msh
         []
 []
 [GlobalParams]
@@ -233,7 +233,7 @@ alpha_nmc = 0.0002922   # Thermal expansion coefficient of NMC
         end_time = 1
         [TimeStepper]
             type = IterationAdaptiveDT
-            dt = 2e-2
+            dt = 0.01
             optimal_iterations = 10
             growth_factor = 1.5
             cutback_factor = 0.5

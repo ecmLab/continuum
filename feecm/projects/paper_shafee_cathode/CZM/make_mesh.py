@@ -47,15 +47,14 @@ interface is where gradients are sharp and fidelity matters most.
 
 So instead of a uniform mesh (was ~24k elems) we use:
 
-  1. A TRANSFINITE INTERFACE ARC. The arc gets a fixed, uniform node count
-     (~H_IFACE spacing), so the interface discretization is even -- good for
-     the CZM `sort_by = x` sampler and for matched contact surfaces.
+  1. A GRADED SIZE FIELD anchored on the arc. Elements are H_IFACE within a
+     REFINE_DIST halo of the interface and coarsen to H_FAR in the bulk. The
+     arc lies at zero distance from itself, so it is meshed uniformly at
+     H_IFACE -- an even interface discretization for the CZM `sort_by = x`
+     sampler and for matched contact surfaces -- without needing a transfinite
+     constraint (which is incompatible with full-quad recombination).
 
-  2. A GRADED SIZE FIELD anchored on the arc. Elements are H_IFACE within a
-     REFINE_DIST halo of the interface and coarsen to H_FAR in the bulk, so
-     the element budget is spent where it counts.
-
-  3. H_IFACE is tied to the CZM `interface_thickness` (0.032 mm) so one
+  2. H_IFACE is tied to the CZM `interface_thickness` (0.032 mm) so one
      element edge ~ the effective cohesive layer thickness.
 
 Conformal vs contact (the only topological difference is the arc)
@@ -74,9 +73,13 @@ Conformal vs contact (the only topological difference is the arc)
   independent arcs -> valid primary/secondary contact surfaces.
 
 Sidesets / blocks produced (names match both inputs):
-    block_NMC_right, block_LPS_left            (arc; one curve, or two)
+    block_NMC_right, block_LPS_left            (CONTACT mode only; two arcs)
     block_bottom, block_right, block_top, block_left
     block_NMC, block_LPS                       (element blocks)
+
+In CONFORMAL mode the shared arc is left untagged: libMesh's Gmsh reader
+forbids one entity from carrying two boundary IDs, and the CZM input gets its
+interface sidesets from BreakMeshByBlockGenerator anyway.
 
 Usage
 -----
@@ -96,12 +99,12 @@ import gmsh
 # ---------------------------------------------------------------------------
 L           = 5.0          # square domain side length
 R           = 3.8818230    # NMC quarter-circle radius
-H_IFACE     = 0.01        # element edge ON the arc (== CZM interface_thickness)
-H_FAR       = 0.10         # target element edge in the bulk far field
-REFINE_DIST = 0.05         # halo width around the arc kept fully refined [mm]
+H_IFACE     = 0.03        # element edge ON the arc (== CZM interface_thickness)
+H_FAR       = 0.20         # target element edge in the bulk far field
+REFINE_DIST = 0.10         # halo width around the arc kept fully refined [mm]
 
-OUT_FILE_CZM     = "input_mesh_czm.msh"   # contact_CZM_3.i
-OUT_FILE_CONTACT = "input_mesh.msh"               # contact.i
+OUT_FILE_CZM     = "mesh_czm.msh"   # contact_CZM_3.i
+OUT_FILE_CONTACT = "mesh.msh"               # contact.i
 
 PG = {
     "block_NMC_right": 1,
@@ -183,10 +186,8 @@ def build_mesh(filename: str | None = None,
     cl_lps = geo.addCurveLoop([l_lps_bot, l_right, l_top, l_lps_lft, -arc_mid_lps])
     s_lps  = geo.addPlaneSurface([cl_lps])
 
-    # Uniform interface discretization (no structured band -- just an even arc)
-    geo.mesh.setTransfiniteCurve(arc_mid_nmc, n_arc)
-    if not conformal:
-        geo.mesh.setTransfiniteCurve(arc_mid_lps, n_arc)
+    # Recombine both surfaces to quads (full-quad recombination below
+    # guarantees an all-QUAD4 mesh, which Exodus requires per subdomain).
     geo.mesh.setRecombine(2, s_nmc)
     geo.mesh.setRecombine(2, s_lps)
 
@@ -195,10 +196,16 @@ def build_mesh(filename: str | None = None,
     # -----------------------------------------------------------------
     # Physical groups  (names consumed by the MOOSE inputs)
     # -----------------------------------------------------------------
-    # In conformal mode arc_mid_nmc == arc_mid_lps (one curve);
-    # in contact mode they are two coincident, independent curves.
-    gmsh.model.addPhysicalGroup(1, [arc_mid_nmc], PG["block_NMC_right"], "block_NMC_right")
-    gmsh.model.addPhysicalGroup(1, [arc_mid_lps], PG["block_LPS_left"],  "block_LPS_left")
+    # Interface sidesets:
+    #   contact   : two independent arcs -> two valid, separate contact
+    #               surfaces (primary block_NMC_right / secondary block_LPS_left).
+    #   conformal : the arc is a SINGLE shared curve. libMesh's Gmsh reader
+    #               forbids one entity from carrying two boundary IDs, so we do
+    #               NOT tag it. The CZM input gets its interface sidesets from
+    #               BreakMeshByBlockGenerator (block_NMC_block_LPS etc.) anyway.
+    if not conformal:
+        gmsh.model.addPhysicalGroup(1, [arc_mid_nmc], PG["block_NMC_right"], "block_NMC_right")
+        gmsh.model.addPhysicalGroup(1, [arc_mid_lps], PG["block_LPS_left"],  "block_LPS_left")
 
     gmsh.model.addPhysicalGroup(1, [l_nmc_bot, l_lps_bot], PG["block_bottom"], "block_bottom")
     gmsh.model.addPhysicalGroup(1, [l_right],              PG["block_right"],  "block_right")
@@ -231,7 +238,7 @@ def build_mesh(filename: str | None = None,
     # Quad meshing
     gmsh.option.setNumber("Mesh.Algorithm",              8)   # Frontal-Delaunay (quads)
     gmsh.option.setNumber("Mesh.RecombineAll",           1)
-    gmsh.option.setNumber("Mesh.RecombinationAlgorithm", 1)   # Blossom (transfinite-safe)
+    gmsh.option.setNumber("Mesh.RecombinationAlgorithm", 3)   # Blossom full-quad (all-QUAD4)
     gmsh.option.setNumber("Mesh.ElementOrder",           1)
     gmsh.option.setNumber("Mesh.MshFileVersion",         4.1)
 

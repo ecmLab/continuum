@@ -5,7 +5,7 @@ ystr=20                 # Yield Strength of SE [MPa]
 ustr=24                 # Ultimate Strength of SE [MPa]
 plstr=0.004             # Plastic Strain of SE
 
-ustr_am=170             # Ultimate Strength of AM [MPa]
+ustr_am=12600.0             # Ultimate Strength of AM [MPa]
 ymod_am=177500          # Young Modulus of AM [MPa]
 pr_am=0.26              # Poissons Ratio of A
 
@@ -37,7 +37,7 @@ czm_GIIc            = ${fparse czm_GIc * (czm_shear_strength / czm_normal_streng
   [./fmg]
     type = FileMeshGenerator
     # Mesh file in mm
-    file = input_mesh_czm_mm_shafee_fig6.msh
+    file = mesh_czm.msh
   [../]
   [./split]
     type = BreakMeshByBlockGenerator
@@ -259,7 +259,7 @@ czm_GIIc            = ${fparse czm_GIc * (czm_shear_strength / czm_normal_streng
   petsc_options_value = 'lu       NONZERO               1e-10'
 
   line_search = none
-  nl_max_its  = 25
+  nl_max_its  = 99
   nl_rel_tol  = 1e-6
   nl_abs_tol  = 1e-8
   l_tol       = 1e-8
@@ -270,8 +270,8 @@ czm_GIIc            = ${fparse czm_GIc * (czm_shear_strength / czm_normal_streng
 
   [TimeStepper]
     type             = IterationAdaptiveDT
-    dt               = 0.005
-    optimal_iterations = 10
+    dt               = 0.02
+    optimal_iterations = 50
     iteration_window   = 2
     growth_factor    = 1.2
     cutback_factor   = 0.5

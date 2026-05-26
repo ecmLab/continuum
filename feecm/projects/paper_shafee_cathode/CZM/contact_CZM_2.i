@@ -277,7 +277,7 @@ czm_GIIc            = ${fparse czm_GIc * (czm_shear_strength / czm_normal_streng
 
 [Outputs]
   exodus = true
-  file_base = rst2/ystr${ystr}_E${ymod}_spTop${sptop}_CZM_fig6
+  file_base = rstczm/ystr${ystr}_E${ymod}_spTop${sptop}
   [./csv]
     type = CSV
     execute_on = 'final'
