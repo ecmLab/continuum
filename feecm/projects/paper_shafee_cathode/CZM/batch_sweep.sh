@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -N 1
 #SBATCH -p RM-shared
-#SBATCH -t 01:00:00
-#SBATCH --ntasks-per-node=12
+#SBATCH -t 02:00:00
+#SBATCH --ntasks-per-node=48
 #SBATCH --array=1-100
 #SBATCH --job-name=MOOSE_ParamSweep
 #SBATCH --mail-type=END,FAIL
@@ -27,7 +27,7 @@
 #   SLURM_ARRAY_TASK_ID=100→ TASK_ID=99 → ymod=1000,Hv=30
 # How to run:
 #   sbatch batch_sweep.sh
-#   sbatch --array=1,100 submit_sweep.sh (For just the first and last tasks)
+#   sbatch --array=1,100 1_sweep.sh (For just the first and last tasks)
 #   sbatch --array=1-100:2 submit_sweep.sh (For every other task)
 #   sbatch --array=1-10 submit_sweep.sh (For range of tasks)
 # ---------------------------------------------------------------
@@ -35,7 +35,7 @@
 set -x
 
 # ---- Working directory ----------------------------------------
-cd /ocean/projects/mat250014p/shared/projects/paper_Zhao_NACSCathode
+cd /ocean/projects/mat250014p/shared/projects/paper_Zhao_NACSCathode/contact_loss
 
 # ---- Modules -------------------------------------------------
 module purge

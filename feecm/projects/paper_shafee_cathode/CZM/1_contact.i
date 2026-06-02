@@ -7,7 +7,6 @@ ustr_am=10000           # Ultimate Strength of AM [MPa] (Some High Value to Igno
 ymod_am=90000           # Young Modulus of AM [MPa]
 pr_am=0.26              # Poissons Ratio of AM
 
-
 ## --- Calculated Material Properties ---
 ustr_se=${fparse Hv_se / 3}                             # Ultimate Strength of SE [MPa] (Coe. = 3)
 ystr_se=${fparse ustr_se / 1.2}                         # Yield Strength of SE [MPa]
@@ -17,7 +16,6 @@ plstr=${fparse (ustr_se - ystr_se) / (ymod_se / 10)}    # Plastic Strain of SE
 ## --- Boundary Conditions Properties ---
 sptop=10                      # Stack Pressure [MPa]
 alpha_nmc=2.9927418e-4        # Thermal expansion coefficient of NMC (8.3% expansion)
-
 
 [Problem]
   type = FEProblem
