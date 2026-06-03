@@ -1,14 +1,14 @@
 #!/bin/bash
 #SBATCH -N 1
 #SBATCH -p RM-shared
-#SBATCH -t 02:00:00
+#SBATCH -t 01:00:00
 #SBATCH --ntasks-per-node=48
-#SBATCH --array=1-100
+#SBATCH --array=1-100%10
 #SBATCH --job-name=MOOSE_ParamSweep
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=vazquezm
 #SBATCH -A mat250014p
-#SBATCH --output=logs/job_%A_%a.out   # %A = job ID, %a = array task ID
+#SBATCH --output=logs/job_%A_%a.out
 #SBATCH --error=logs/job_%A_%a.err
 
 # ---------------------------------------------------------------
@@ -26,16 +26,18 @@
 #   SLURM_ARRAY_TASK_ID=11 → TASK_ID=10 → ymod=200, Hv=3
 #   SLURM_ARRAY_TASK_ID=100→ TASK_ID=99 → ymod=1000,Hv=30
 # How to run:
-#   sbatch batch_sweep.sh
+#   Make sure to run "mkdir -p logs rst runs"
+#   sbatch 1_sweep.sh
 #   sbatch --array=1,100 1_sweep.sh (For just the first and last tasks)
-#   sbatch --array=1-100:2 submit_sweep.sh (For every other task)
-#   sbatch --array=1-10 submit_sweep.sh (For range of tasks)
+#   sbatch --array=1-100:2 1_sweep.sh (For every other task)
+#   sbatch --array=1-10 1_sweep.sh (For range of tasks)
 # ---------------------------------------------------------------
 
 set -x
 
 # ---- Working directory ----------------------------------------
-cd /ocean/projects/mat250014p/shared/projects/paper_Zhao_NACSCathode/contact_loss
+BASE=/ocean/projects/mat250014p/shared/projects/paper_Zhao_NACSCathode/contact_loss
+cd "$BASE"
 
 # ---- Modules -------------------------------------------------
 module purge
@@ -50,39 +52,40 @@ export FC=mpif90
 export F90=mpif90
 export F77=mpif77
 
-# ---- Parameter arrays (0-indexed, 10 values each) ------------
+# ---- Parameter arrays ---------------------------------------
 ymod_se=(100 200 300 400 500 600 700 800 900 1000)  # MPa
 Hv_se=(3 6 9 12 15 18 21 24 27 30)                  # MPa
 
-# ---- Map SLURM_ARRAY_TASK_ID (1–100) to array indices --------
-TASK_ID=$(( SLURM_ARRAY_TASK_ID - 1 ))   # shift to 0-based
+TASK_ID=$(( SLURM_ARRAY_TASK_ID - 1 ))
 i_ymod=$(( TASK_ID / 10 ))
 i_hv=$(( TASK_ID % 10 ))
-
 YMOD=${ymod_se[$i_ymod]}
 HV=${Hv_se[$i_hv]}
 
+TAG="E${YMOD}_H${HV}"
+
 echo "=============================================="
-echo "SLURM Array Task ID : $SLURM_ARRAY_TASK_ID"
-echo "Parameter indices   : i_ymod=$i_ymod, i_hv=$i_hv"
-echo "ymod_se             : $YMOD MPa"
-echo "Hv_se               : $HV MPa"
+echo "Task $SLURM_ARRAY_TASK_ID -> ymod_se=$YMOD MPa, Hv_se=$HV MPa  (tag=$TAG)"
 echo "=============================================="
 
-# ---- Ensure output directories exist ------------------------
-mkdir -p rst
-mkdir -p logs
+# ---- KEY FIX: give every task its own working directory ------
+# so no two concurrent runs write to the same Exodus / restart files.
+RUNDIR="$BASE/runs/$TAG"
+mkdir -p "$RUNDIR" logs
+cd "$RUNDIR"
 
-# ---- Run MOOSE (override top-level variables via CLI) --------
-# MOOSE resolves top-level key=value pairs before any block,
-# so passing them on the CLI replaces the values in contact.i
-# without editing the input file.
-mpirun -np $SLURM_NTASKS_PER_NODE ./contact_loss-opt \
-    -i 1_contact.i \
+# Use SLURM's actual core count rather than assuming the var is set.
+NP=${SLURM_NTASKS:-$SLURM_NTASKS_PER_NODE}
+
+# Run from RUNDIR; point MOOSE at the input by absolute path.
+# Outputs/file_base is overridden too so the output name is unique
+# even if your Outputs block hardcodes a base name.
+mpirun -np "$NP" "$BASE/contact_loss-opt" \
+    -i "$BASE/1_contact.i" \
     "ymod_se=$YMOD" \
-    "Hv_se=$HV"
+    "Hv_se=$HV" \
+    "Outputs/file_base=${TAG}_out"
 
 EXIT_CODE=$?
-
 echo "MOOSE exit code: $EXIT_CODE"
 exit $EXIT_CODE
