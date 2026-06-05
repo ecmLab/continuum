@@ -68,7 +68,6 @@ echo "=============================================="
 echo "Task $SLURM_ARRAY_TASK_ID -> ymod_se=$YMOD MPa, Hv_se=$HV MPa  (tag=$TAG)"
 echo "=============================================="
 
-# ---- KEY FIX: give every task its own working directory ------
 # so no two concurrent runs write to the same Exodus / restart files.
 RUNDIR="$BASE/runs/$TAG"
 mkdir -p "$RUNDIR" logs
