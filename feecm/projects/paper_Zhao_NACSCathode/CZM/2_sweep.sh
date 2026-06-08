@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -N 1
 #SBATCH -p RM-shared
-#SBATCH -t 03:00:00
+#SBATCH -t 10:00:00
 #SBATCH --ntasks-per-node=64
 #SBATCH --array=1-1000%10
 #SBATCH --job-name=MOOSE_CZMSweep
