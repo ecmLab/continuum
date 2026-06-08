@@ -54,7 +54,6 @@ name = 'test_viscoMaterial'
   [./action]
     add_variables = true
     strain = FINITE
-    use_displaced_mesh = true
     volumetric_locking_correction = true
     generate_output = 'stress_xx stress_yy vonmises_stress strain_xx strain_yy'
     block = 'blockCeramic blockMetal'

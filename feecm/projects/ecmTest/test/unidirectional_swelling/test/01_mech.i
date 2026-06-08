@@ -199,14 +199,14 @@ name = 'mech'
 
 [BCs]
   [./SE_top_y]
-    type = ADPresetBC
+    type = ADDirichletBC
     boundary = '18'
     variable = disp_y
     value = 0.0
   [../]
 
   [./left_right]
-    type = ADPresetBC
+    type = ADDirichletBC
     variable = disp_x
     boundary = '12 14 17 18 19'
     value = 0

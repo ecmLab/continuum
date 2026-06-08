@@ -39,7 +39,7 @@ strn_rt = 4e-5
   [./all]
     add_variables = true
     strain = FINITE
-    use_displaced_mesh = true
+    # use_displaced_mesh removed (deprecated in TensorMechanics action)
     # volumetric_locking_correction = true
     generate_output = 'stress_zz strain_zz vonmises_stress'
     use_automatic_differentiation = true

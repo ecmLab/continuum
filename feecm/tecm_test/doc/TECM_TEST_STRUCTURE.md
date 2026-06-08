@@ -171,7 +171,7 @@ Various validation and demonstration cases:
 
 Based on CLAUDE.md context:
 - **Status**: Test version (not yet passed testing phase)
-- **Relationship**: Part of FEECM suite alongside `ec_beta` and `eel`
+- **Relationship**: One of the two FEECM apps (alongside `ecm_test`); absorbed the former standalone `eel` app
 - **Focus**: Electro-chemo-mechanics coupling with advanced features
 - **Applications**: Research-grade simulations for battery and memory devices
 

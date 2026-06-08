@@ -1,0 +1,1317 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  columns=fullflexible,
+  frame=single,
+  framerule=0.3pt,
+  rulecolor=\color{gray!50},
+  xleftmargin=1em,xrightmargin=1em,
+  aboveskip=4pt,belowskip=4pt
+}
+
+\newcommand{\F}{F_{\!a}}            % Faraday
+\newcommand{\Rg}{R_{\!g}}           % gas constant
+\newcommand{\eps}{\varepsilon}
+\newcommand{\dV}{\,\mathrm{d}V}
+\newcommand{\dS}{\,\mathrm{d}S}
+\newcommand{\nvec}{\mathbf{n}}
+\newcommand{\Eu}{\mathbf{E}}
+\newcommand{\sgn}{\mathrm{sgn}}
+
+% Layout helpers: each entry = three labelled blocks (Inputs / PDE / Code / Notes)
+\newenvironment{ecmEntry}[1]{%
+  \subsection{#1}%
+}{}
+\newcommand{\inputsRow}[1]{\par\noindent\textbf{Inputs.} #1\par}
+\newcommand{\pdeRow}[1]{\par\noindent\textbf{PDE / weak form.}\par #1\par}
+\newcommand{\codeRow}{\par\noindent\textbf{Residual (verbatim).}\par}
+\newcommand{\notesRow}[1]{\par\noindent\textbf{Notes.} #1\par}
+
+\title{ECM\_test: Physics and PDE Catalog\\
+       \large Per-class documentation of every MOOSE object in \texttt{ecm\_test/src/}}
+\author{}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\section*{Conventions}
+\addcontentsline{toc}{section}{Conventions}
+\begin{description}
+  \item[Variables.] $u$ is the unknown solved by a given residual; $c,\,\phi,\,T$ denote
+    concentration, electric/chemical potential, and temperature when those couplings are explicit.
+  \item[Constants.] $\F\!=\!96485\,\mathrm{C\,mol^{-1}}$ Faraday, $\Rg\!=\!8.3145\,\mathrm{J\,mol^{-1}K^{-1}}$ gas constant,
+    $T$ temperature, $z$ charge number. Several classes use the shorthand
+    $F_{RT}\!\equiv\!F/(RT)$ (so $F_{RT}\!\approx\!38.68\,\mathrm{V^{-1}}$ at 300\,K).
+  \item[Discrete weak form.] Each MOOSE residual is the integral
+    $\int_\Omega r(u,\nabla u)\,\psi\,\dV$ for kernels, or $\int_{\partial\Omega} r\,\psi\dS$
+    for IntegratedBCs/InterfaceKernels, where $\psi$ is the test function. We write the
+    equation in strong form and quote the precise C++ residual.
+  \item[Hard-coded scaling.] Several classes apply unit-conversion prefactors of $10$, $100$,
+    $10\,000$, etc. These are reproduced verbatim and flagged in \emph{Notes}.
+  \item[Coupling kernels.] When a class advertises a Butler--Volmer (BV) flux, the
+    overpotential argument depends on which boundary it sits on; we write the activation
+    argument as $\Delta\Phi$ and define it in each entry.
+\end{description}
+
+\section*{Reading guide}
+\addcontentsline{toc}{section}{Reading guide}
+For each class we give: the inputs (coupled variables, material properties, scalar parameters),
+the strong-form PDE term it discretises, the verbatim C++ residual returned by
+\texttt{computeQpResidual}/\texttt{computeQpProperties}/etc., and brief notes on quirks,
+non-obvious choices, or potential issues. Quirks include duplicated implementations,
+hard-coded magic factors, missing test-function multipliers, latent bugs we spotted while
+reading, and AD-vs-non-AD legacy duplicates.
+
+%==========================================================================
+\section{Bulk Kernels (\texttt{src/kernels/})}
+%==========================================================================
+
+\subsection*{1. Butler--Volmer source family}
+
+\begin{ecmEntry}{ADButlerVolmerForce}
+\inputsRow{material property \texttt{mat\_prop\_name} (typically
+\texttt{butler\_volmer\_current\_force} or \texttt{\dots\_flux\_force} from
+\hyperref[bv-mat]{\textsc{ADButlerVolmerMaterial}}); \texttt{scale}; \texttt{base\_name}.}
+\pdeRow{Volumetric reaction source
+$r(\mathbf{x}) = \texttt{scale}\cdot p_{\text{mat}}(\mathbf{x})$, applied
+to whichever equation $u$ this kernel decorates (typically the Li or electron equation):
+\[
+  \int_\Omega \texttt{scale}\,p_{\text{mat}}\,\psi \dV.
+\]}
+\codeRow\begin{lstlisting}
+return _scale * _mat_property[_qp] * _test[_i][_qp];
+\end{lstlisting}
+\notesRow{Lifts a precomputed BV scalar onto the residual; the actual BV physics lives
+in \textsc{ADButlerVolmerMaterial}.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADCoupledButlerVolmerForce}
+\inputsRow{coupled $\phi_{\text{electrolyte}},\,\phi_{\text{electrode}}$;
+\texttt{exchange\_current\_density} $i_0$; equilibrium potential $U_{eq}$ (material);
+$\F,T,\Rg$.}
+\pdeRow{Symmetric ($\alpha\!=\!\tfrac{1}{2}$) Butler--Volmer reaction term:
+\[
+  r = 2\,i_0\,\sinh\!\bigl(\tfrac{1}{2}\eta/(\Rg T/\F)\bigr),
+  \qquad \eta = \phi_{\text{electrode}} - \phi_{\text{electrolyte}} - U_{eq}.
+\]}
+\codeRow\begin{lstlisting}
+RTF = R*T/F;
+eta = phi_e - phi_l - Ueq;
+return 2*i0*std::sinh(0.5*eta/RTF);
+\end{lstlisting}
+\notesRow{The residual omits the explicit $\psi$ multiplier present in
+\textsc{ADButlerVolmerForce}; in MOOSE this means the value is treated as a strong-form
+source. Verify against intended kernel base if accuracy is critical.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADMultipleButlerVolmerForce}
+\inputsRow{vector \texttt{materials} of \textsc{ADButlerVolmerMaterial} instances;
+\texttt{mat\_prop\_name}; \texttt{scale}.}
+\pdeRow{Sums BV contributions from a list of materials (e.g.\ multi-particle electrodes):
+\[
+  r = \texttt{scale}\sum_{m=1}^{M} p^{(m)}_{\text{mat}}(\mathbf{x}),\qquad
+  \int_\Omega r\,\psi\,\dV.
+\]}
+\codeRow\begin{lstlisting}
+res = 0;
+for (auto m : _bv_materials)
+  res += _scale * m->_mat_prop[_qp];
+return res * _test[_i][_qp];
+\end{lstlisting}
+\notesRow{Use when one finite element overlaps multiple active material phases;
+prefactors are summed before integration.}
+\end{ecmEntry}
+
+\subsection*{2. Diffusion of charged / chemo-mechanically coupled species}
+
+\begin{ecmEntry}{ADChemoMechanoDiffusionBase (templated)}
+\label{kernel-cmm-diff}
+\inputsRow{coupled \texttt{stress\_based\_chemical\_potential} $\mu_\sigma$;
+$\Rg=8.314426,\,T=298$; diffusivity $D$ (scalar or tensor) inherited from
+\texttt{ADMatDiffusionBase}.}
+\pdeRow{Adds a chemo-mechanical drift to the Fickian flux:
+\[
+  -\nabla\cdot\mathbf{J} = -\nabla\cdot\!\Bigl(D\,\nabla u + \frac{D u}{\Rg T}\nabla\mu_\sigma\Bigr).
+\]
+The residual returned is $\mathbf{J}_{\text{precomp}}$ to be dotted with $\nabla\psi$.}
+\codeRow\begin{lstlisting}
+auto residual = ADMatDiffusionBase<T>::precomputeQpResidual();
+if (_mu_coupled)
+    residual += _diffusivity[_qp] * _u[_qp] * (*_grad_mu)[_qp]
+              / (_gas_constant * _temperature);
+return residual;
+\end{lstlisting}
+\notesRow{Sets \texttt{use\_displaced\_mesh = false} (kinematics handled by the swelling
+material). Two thin wrappers \textsc{ADChemoMechanoDiffusion} (scalar $D$) and
+\textsc{ADChemoMechanoAnsioDiffusion} (tensor $D$) instantiate the templated base.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADStressBasedChemicalPotential}
+\inputsRow{$\mu_{\text{swell}},\,\mu_{\text{elastic}}$ (AD material properties produced by
+the swelling base \S\ref{mat-swelling-base}).}
+\pdeRow{Algebraic constraint defining a stress-based chemical-potential auxiliary variable:
+\[
+  u - \mu_{\text{swell}} - \mu_{\text{elastic}} = 0.
+\]}
+\codeRow\begin{lstlisting}
+return (_u[_qp] - _swelling_chem_pot[_qp] - _elastic_chem_pot[_qp]) * _test[_i][_qp];
+\end{lstlisting}
+\notesRow{Pairs with \hyperref[kernel-cmm-diff]{\textsc{ADChemoMechanoDiffusion}}: the
+diffusion kernel reads $\nabla u$ as $\nabla\mu_\sigma$. \texttt{use\_displaced\_mesh=false}.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADChargedTransportAnisotropy / ChargedTransport}
+\inputsRow{tensor (resp.\ scalar) diffusivity $D$ as AD material; hard-coded factor $10$.}
+\pdeRow{Pure Laplacian with anisotropic conductivity and a unit-conversion factor:
+\[
+  -\nabla\cdot(10\,\bm{D}\,\nabla u),\qquad
+  -\nabla\cdot(10\,D\nabla u).
+\]}
+\codeRow\begin{lstlisting}
+return 10.0 * raw_value(_diffusivity_coef[_qp]) * _grad_test[_i][_qp] * _grad_u[_qp];
+\end{lstlisting}
+\notesRow{Both classes call \texttt{raw\_value} on the diffusivity, which strips AD
+sensitivities; the Jacobian therefore ignores derivatives through $D$.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADMigrationDiffusion}
+\inputsRow{coupled $c$; conductivity $\sigma$ (material); $c_0,\,z=1,\,F_{RT}=36.41,\,$\texttt{scale}.}
+\pdeRow{Combined diffusion + migration current using log-concentration linearisation,
+applied as a current-equation source:
+\[
+  -\nabla\cdot\!\Bigl(\frac{\sigma}{F_{RT}}\bigl(\tfrac{c_0}{c}\nabla c + z\,F_{RT}\nabla u\bigr)\Bigr).
+\]}
+\codeRow\begin{lstlisting}
+term1 = c0/c * _grad_c;
+term2 = F_RT * _grad_u;
+return scale * sigma/F_RT * _grad_test * (term1 + zIons*term2);
+\end{lstlisting}
+\notesRow{AD analogue of the legacy \textsc{Migration} kernel; conventions and constants
+differ from \textsc{NernstPlanckConvection}.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADNernstPlanckConvection}
+\inputsRow{coupled potential $V$; diffusivity $D$ (material); $z=1,\,F_{RT}=38.68,\,$\texttt{scale}.}
+\pdeRow{Fick + drift Nernst--Planck flux, in mixed convective/diffusive form:
+\[
+  -\nabla\cdot(D\nabla u) - z F_{RT}\,D\,\nabla V\!\cdot\!\nabla u.
+\]}
+\codeRow\begin{lstlisting}
+return D*_grad_test*_grad_u + D*zIons*F_RT*_grad_V*_test*_grad_u;
+\end{lstlisting}
+\notesRow{Migration term uses $\psi\,\nabla V\!\cdot\!\nabla u$ (gradient-of-$u$ contracted
+with $\nabla V$) instead of $\nabla\psi\cdot c\nabla V$; this is a convective rather
+than divergence form.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{NernstPlanckConvection (legacy)}
+\inputsRow{coupled $V$; $D$ (material); $z=1,\,F_{RT}=38.68$.}
+\pdeRow{$\;-\,z\,(F_{RT} D\,\nabla V)\cdot\nabla u\;$ (convective form, no diffusion piece).}
+\codeRow\begin{lstlisting}
+ion_velocity = F_RT * D * _grad_V;
+return -_test * zIons * ion_velocity * _grad_u;
+\end{lstlisting}
+\notesRow{Provides hand-coded Jacobians wrt $u$ and $V$. Uses
+\texttt{Kernel} (non-AD) base.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{NernstPlanckConvectionScaled}
+\inputsRow{coupled $V$; $D$; $z=1,\,F_{RT}=38.68,\,$\texttt{scale}.}
+\pdeRow{Scaled twin of the previous entry: $\;-\,$\texttt{scale}$\,z\,F_{RT}D\,\nabla V\cdot\nabla u$.}
+\codeRow\begin{lstlisting}
+ion_velocity = F_RT * D * _grad_V;
+return -_test * scale * zIons * ion_velocity * _grad_u;
+\end{lstlisting}
+\notesRow{Identical residual modulo the explicit \texttt{scale}.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{NernstPlanckConvectionEtime}
+\inputsRow{coupled scalar electric field magnitude \texttt{Efield}; $D$; $z=1,\,F_{RT}=38.68,\,$\texttt{scale}.}
+\pdeRow{Drift-only term using the field directly (not $\nabla V$):
+$\;-\,$\texttt{scale}$\,z\,F_{RT}\,D\,u\,E$.}
+\codeRow\begin{lstlisting}
+return -scale * _test * zIons * F_RT * D * _u * _Efield;
+\end{lstlisting}
+\notesRow{For time-domain electromagnetic coupling where $E$ is a primary variable.}
+\end{ecmEntry}
+
+\subsection*{3. Poisson and current-flux kernels}
+
+\begin{ecmEntry}{ADPoissonEquation}
+\inputsRow{coupled concentration $c$; $\F=96485.34$, $\sigma$, $z$, \texttt{scale}.}
+\pdeRow{$\;-\nabla\cdot\!\bigl((\sigma/\F)\,\nabla u\bigr) = z\,c\;$ (Poisson with charge source).}
+\codeRow\begin{lstlisting}
+return (sigma/F) * scale * _grad_test * _grad_u
+       - _test * z * c;
+\end{lstlisting}
+\notesRow{Filename has typo (\texttt{ADPoissionEquation.C}); class name is correct.
+$\sigma$ and $z$ are scalar \texttt{Real}, not material properties.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ChargeDensity}
+\inputsRow{coupled $c_{\text{ions}}$; $z=1,\,$\texttt{scale}=1.}
+\pdeRow{Source for the Poisson equation: $\;r=-\,$\texttt{scale}$\,z\,c$.}
+\codeRow\begin{lstlisting}
+return -scale * _test * zIons * _conIons;
+\end{lstlisting}
+\notesRow{Pairs naturally with \textsc{ADPoissonEquation}.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADCurrentFluxEEL}
+\inputsRow{coupled $c$; $\sigma$ (material); $\F=964523,\,\Rg=8.845,\,T=298,\,c_0,\,$\texttt{scale}.}
+\pdeRow{Dilute-solution current density from the EEL formulation:
+\[
+  \mathbf{i} = \sigma\Bigl(\nabla u + \frac{1}{\F}\nabla\mu\Bigr),\quad
+  \nabla\mu = \frac{\Rg T c_0}{c}\nabla c.
+\]}
+\codeRow\begin{lstlisting}
+gradMu  = R*T*c0/c * _grad_c;
+gradPhi = _grad_u;
+return _scale * sigma * _grad_test * (gradPhi + gradMu/F);
+\end{lstlisting}
+\notesRow{Default \texttt{faraday=964523} differs from the standard $96485$; verify before
+trusting. Imported from the \texttt{eel} parent app.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADMassFluxEEL}
+\inputsRow{coupled $V$; mobility $b$, conductivity $\sigma$ (materials);
+$\F=96485,\,\Rg=8.854,\,T=298,\,c_0,\,$\texttt{scale}.}
+\pdeRow{Nernst--Planck mass flux for Li$^+$:
+$\;\mathbf{J}_c = b\,\Rg T c_0\,\nabla u - (\sigma/\F)\nabla V.$}
+\codeRow\begin{lstlisting}
+flux_c   = mobility * R*T*c0 * _grad_u / _test;
+flux_phi = -conductivity/F * _grad_V;
+return _scale * (flux_c + flux_phi) * _grad_test;
+\end{lstlisting}
+\notesRow{The division by \texttt{\_test} followed by multiplication by \texttt{\_grad\_test}
+is unusual; should be reviewed against the original eel formulation.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADThermalFlux}
+\inputsRow{conductivity $k$ (material), \texttt{scale}.}
+\pdeRow{Fourier conduction $-\nabla\cdot(k\,\nabla u)$.}
+\codeRow\begin{lstlisting}
+return k * scale * _grad_test * _grad_u;
+\end{lstlisting}
+\notesRow{Uses non-AD \texttt{getMaterialProperty} so AD sensitivities through $k$ are lost.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ParamDiffusion}
+\inputsRow{conductivity $\sigma$ (AD material).}
+\pdeRow{$\;-\nabla\cdot(10\,000\,\sigma\,\nabla u)\;$ (Laplacian with hard-coded
+unit-conversion factor).}
+\codeRow\begin{lstlisting}
+return 10000 * conductivity * _grad_test * _grad_u;
+\end{lstlisting}
+\notesRow{Likely a development precursor to \textsc{ChargedTransport}; magic factor
+$10\,000$ is suspicious.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{Test}
+\inputsRow{$A=1$.}
+\pdeRow{$\;-\nabla\cdot(A\,\nabla u)\;$ (sanity-check Laplacian).}
+\codeRow\begin{lstlisting}
+return A * _grad_test * _grad_u;
+\end{lstlisting}
+\notesRow{Development stub. Not used in any production input.}
+\end{ecmEntry}
+
+\subsection*{4. Legacy non-AD electrochemistry trio}
+
+These three kernels share a \texttt{DerivativeMaterialInterface} contract: they read
+parsed-derivative materials and assemble manual Jacobians.
+
+\begin{ecmEntry}{Conduction}
+\inputsRow{coupled $c_p,c_v$; \texttt{Q\_name}, \texttt{QM\_name} as materials with
+parsed derivatives wrt $c_p,c_v$.}
+\pdeRow{$\;\nabla\psi\cdot(Q\,\nabla u + Q_M\,\nabla c_p)\;$.}
+\codeRow\begin{lstlisting}
+return Q * _grad_u * _grad_test + QM * _grad_cp * _grad_test;
+\end{lstlisting}
+\notesRow{Hand-coded \texttt{computeQpJacobian}/\texttt{computeQpOffDiagJacobian} use the
+parsed derivatives.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{Migration (legacy)}
+\inputsRow{coupled $c_p,c_v$; \texttt{Q\_name}, \texttt{QM\_name}.}
+\pdeRow{$\;\nabla\psi\cdot(Q\,\nabla c_v + Q_M\,\nabla c_p)\;$.}
+\codeRow\begin{lstlisting}
+return Q * _grad_cv * _grad_test + QM * _grad_cp * _grad_test;
+\end{lstlisting}
+\notesRow{Identical structure to \textsc{Conduction} but uses $\nabla c_v$ instead of
+$\nabla u$; intended for the dual variable in coupled chemo-electric models.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{Kinetics}
+\inputsRow{coupled $c_p,c_v$; parsed material $F$.}
+\pdeRow{Source $r=F$ (parsed free-energy or reaction-rate expression).}
+\codeRow\begin{lstlisting}
+return _F * _test;
+\end{lstlisting}
+\notesRow{Off-diagonal Jacobian uses derivatives of $F$ wrt $u,\,c_p,\,c_v$.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{SourceTerm (legacy)}
+\inputsRow{material $a$ (\texttt{srcCoef}); user \texttt{Function} $f$; $F_{RT}=38.68$.}
+\pdeRow{Nonlinear quadratic source: $\;r=F_{RT}\,a\,u^2 - f(t,\mathbf{x})$.}
+\codeRow\begin{lstlisting}
+return _test * (F_RT * srcCoef * u*u - f(t,x));
+\end{lstlisting}
+\notesRow{Used in \texttt{CHEMICAL\_REACTIONS}-style problems.}
+\end{ecmEntry}
+
+\subsection*{5. Phase-field family}
+
+\begin{ecmEntry}{FreeEnergyDouble}
+\inputsRow{$A$ (AD material); \texttt{scale}=1.}
+\pdeRow{Derivative of the standard double-well bulk energy
+$f(u)=A u^2(1-u)^2$:
+\[
+  r = \frac{\partial f}{\partial u} = 2A(1-u)^2 u - 2A(1-u)u^2 = 2Au(1-u)(1-2u).
+\]}
+\codeRow\begin{lstlisting}
+return scale * _test * (2*A*pow(1-u,2)*u - 2*A*(1-u)*pow(u,2));
+\end{lstlisting}
+\notesRow{Standard Cahn--Hilliard / Allen--Cahn bulk term.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ChemicalEnergy}
+\inputsRow{$w$ (AD material); \texttt{scale}=1.}
+\pdeRow{Derivative of $f(u)=w\,(u-1)^2 u^2$ scaled by $30$:
+$r=30\,w(u-1)^2 u^2 \,\psi$ \emph{(per the source — note this is the integrand,
+not the derivative; see Notes)}.}
+\codeRow\begin{lstlisting}
+return _test * scale * w * 30 * (u-1)*(u-1) * u*u;
+\end{lstlisting}
+\notesRow{The form returned is $f$ itself, not $\partial f/\partial u$. If used as a
+phase-field bulk-energy gradient kernel this is mathematically inconsistent; verify
+intent against input files.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{NucleationEnergy}
+\inputsRow{$\Delta G,\,\gamma$ (AD materials); \texttt{scale}=1.}
+\pdeRow{Linear penalty driving $u\to 1$:
+$\;r = 2\,$\texttt{scale}$\,\Delta G\,\gamma\,(u-1)$.}
+\codeRow\begin{lstlisting}
+return 2 * _test * scale * dG * gamma * (u - 1);
+\end{lstlisting}
+\notesRow{Models the energy barrier to nucleation; positive $\Delta G\,\gamma$ stabilises
+$u=1$ (nucleated phase).}
+\end{ecmEntry}
+
+\begin{ecmEntry}{CouplingFreeEnergy}
+\inputsRow{coupled order parameter $v$; $c$ (AD material); \texttt{scale}=1.}
+\pdeRow{Derivative wrt $u$ of the cross-energy $f(u,v)=c\,u^2 v^2$:
+$\;\partial f/\partial u = 2 c\,u\,v^2$.}
+\codeRow\begin{lstlisting}
+return 2 * scale * _test * c * _u * coupledVar*coupledVar;
+\end{lstlisting}
+\notesRow{Used in multi-phase free-energy decompositions.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{CoupledTimeDerivativePhase}
+\inputsRow{coupled order parameter $\phi$; $n=1,\,F=1,\,$\texttt{scale}=1; $C$ (AD material).}
+\pdeRow{Time derivative $r = n\F\,$\texttt{scale}$\,C\,\dot{\phi}$ (couples a Poisson-type
+equation to phase-field reaction kinetics).}
+\codeRow\begin{lstlisting}
+return n * F * scale * C * _phi_var_dot * _test;
+\end{lstlisting}
+\notesRow{Often paired with \textsc{ElectrodeDrivingForce} below.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ElectrodeDrivingForce}
+\inputsRow{coupled $\phi,\,\phi_{\text{ref}},\,c$; $h$ (AD material, interpolation function);
+$\alpha=\beta=1,\,n=1,\,\Rg=8.84,\,T=298,\,\F=96485,\,$\texttt{scale}=1.}
+\pdeRow{Phase-field BV-style driving force:
+\[
+  r = \texttt{scale}\,h\bigl[\exp(\alpha\,\Delta G) - \exp(-\beta\,\Delta G)\bigr],\quad
+  \Delta G = \frac{n\F(\phi-\phi_{\text{ref}})}{\Rg T}.
+\]}
+\codeRow\begin{lstlisting}
+dG = n*F*(pot - ref_pot) / (R*T);
+return _test * scale * h * (exp(alpha*dG) - exp(-beta*dG));
+\end{lstlisting}
+\notesRow{No exchange-current $i_0$ prefactor (set externally via $h$). The coupled
+\texttt{conc} parameter is declared but unused in the residual.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{PhaseFieldLaplace}
+\inputsRow{$k_0,\,$\texttt{scale} (AD materials).}
+\pdeRow{Laplacian with two material prefactors: $\;-\nabla\cdot(k_0\,$\texttt{scale}$\,\nabla u)$.}
+\codeRow\begin{lstlisting}
+return k0 * scale * _grad_test * _grad_u;
+\end{lstlisting}
+\notesRow{Both prefactors fetched as \texttt{ADMaterialProperty<Real>}.}
+\end{ecmEntry}
+
+\subsection*{6. Sub-particle approximation}
+
+\begin{ecmEntry}{SurfaceConcentration2ParameterAppox}
+\inputsRow{material flux $j$, $D$ (AD); coupled average concentration $\bar c$;
+particle radius $R$; \texttt{scale}.}
+\pdeRow{Bernardi--Newman 2-term polynomial approximation (\texttt{ADKernelValue},
+adds the value not its divergence):
+\[
+  r = \bar c - u - \frac{R}{5\,\mathrm{scale}\,D}\,j.
+\]
+The kernel pins $u = c_{\text{surf}} \approx \bar c + R\,j/(5D)$.}
+\codeRow\begin{lstlisting}
+return -flux/5/D * particle_size * scale + avg_c - u;
+\end{lstlisting}
+\notesRow{Used to avoid resolving radial sub-particle diffusion; valid in the
+diffusion-limited regime.}
+\end{ecmEntry}
+
+%==========================================================================
+\section{Boundary Conditions (\texttt{src/bcs/})}
+%==========================================================================
+
+The BV BCs share a common skeleton: an exchange current $i_{\text{ex}}$ (an AD material
+property) modulated by the symmetric/asymmetric activation
+$k_1 = \exp(\alpha\,F_{RT}\,\Delta\Phi)$, $k_2=\exp(-(1-\alpha)\,F_{RT}\,\Delta\Phi)$, with
+$\Delta\Phi$ depending on which interface and which equation. We give $\Delta\Phi$ explicitly
+for each entry. Several BCs add an ohmic flux $-\sigma\nabla\phi\cdot\nvec$ alongside.
+
+\subsection*{1. Generic flux and Dirichlet}
+
+\begin{ecmEntry}{MaterialDiffusionFluxBC}
+\inputsRow{$D$ (AD material).}
+\pdeRow{$\;-D\,\nabla u\cdot\nvec\;$ on $\partial\Omega$.}
+\codeRow\begin{lstlisting}
+return -D * _grad_u * _normals[_qp] * _test[_i][_qp];
+\end{lstlisting}
+\notesRow{Standard outward-normal Fickian-flux BC.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ScaledCoupledVarNeumannBC}
+\inputsRow{coupled $v$; \texttt{scale}.}
+\pdeRow{Imposes $\;\partial u/\partial n = $\,\texttt{scale}$\,v\;$ via residual
+$-$\,\texttt{scale}$\,v\,\psi$.}
+\codeRow\begin{lstlisting}
+return -_test[_i][_qp] * v * scale;
+\end{lstlisting}
+\end{ecmEntry}
+
+\begin{ecmEntry}{PorousFlowSinkScaledCoupledVar}
+\inputsRow{coupled $v$; \texttt{scale}; inherits MOOSE \texttt{PorousFlowSink}.}
+\pdeRow{Multiplies an existing porous-flow sink residual by $v\,$\texttt{scale}.}
+\codeRow\begin{lstlisting}
+return PorousFlowSink::computeQpResidual() * v * scale;
+\end{lstlisting}
+\end{ecmEntry}
+
+\begin{ecmEntry}{DirichletEn / DirichletLi}
+\inputsRow{coupled scalar (\texttt{potLi} or \texttt{potEn}, indexed at element 0).}
+\pdeRow{Nodal BC pinning $u$ to a global scalar:\\
+\textsc{DirichletEn}: $u - \texttt{potLi}[0]=0$;\quad
+\textsc{DirichletLi}: $u - \texttt{potEn}[0]=0$.}
+\codeRow\begin{lstlisting}
+return _u[_qp] - coupled_scalar[0];
+\end{lstlisting}
+\notesRow{Treats the coupled variable as a single global scalar (e.g.\ a battery cell
+voltage).}
+\end{ecmEntry}
+
+\begin{ecmEntry}{SingleSEElectrodeNeumann}
+\inputsRow{\texttt{applied\_current} (AD material).}
+\pdeRow{$\;-i_{\text{applied}}\;$ on $\partial\Omega$.}
+\codeRow\begin{lstlisting}
+return -_test[_i][_qp] * _applied_current[_qp];
+\end{lstlisting}
+\end{ecmEntry}
+
+\subsection*{2. Butler--Volmer boundary kinetics}
+
+\begin{ecmEntry}{ADButlerVolmerBC}
+\inputsRow{$i_0,\,\F=96485.33,\,\Rg=8.3145,\,T=298$; constant or function applied current
+$i$; $U_{eq}$ (AD material).}
+\pdeRow{Symmetric BV plus applied current at the boundary:
+\[
+  r = (i - i_0\,(e^{\Delta\Phi} - e^{-\Delta\Phi}))\psi,\quad
+  \Delta\Phi = \tfrac{1}{2}\F(u-U_{eq})/(\Rg T).
+\]}
+\codeRow\begin{lstlisting}
+prefac = 0.5*F/(R*T);
+dPhi   = prefac*u; if (Ueq) dPhi -= prefac*Ueq;
+fac    = exp(dPhi) - exp(-dPhi);
+i      = (current_param ? current_param : current_function);
+return (i - i0 * fac) * _test;
+\end{lstlisting}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ButlerVolmerIonics}
+\inputsRow{$F_{RT}=0.03868\;\mathrm{mV^{-1}}$; $\alpha=0.5$; $V_{\text{Li,ref}}$;
+$i_{\text{ex}}$.}
+\pdeRow{BV across an ionic SE \,\textbar\, Li-metal interface:
+\[
+  r = -i_{\text{ex}}(k_1-k_2)\,\psi,\quad
+  \Delta\Phi = V_{\text{Li,ref}}-u.
+\]}
+\codeRow\begin{lstlisting}
+k1 = exp( alpha*F_RT*(LiPotRef - u) );
+k2 = exp(-(1-alpha)*F_RT*(LiPotRef - u) );
+return -_test * i_ex * (k1 - k2);
+\end{lstlisting}
+\notesRow{$F_{RT}$ in mV$^{-1}$ — confirm potentials are in mV when wired up.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ButlerVolmerMiec}
+\inputsRow{coupled $\phi_e$; $F_{RT},\,\alpha$, $V_{\text{Li,ref}},\,i_{\text{Li,ref}},\,i_{\text{ex}}$.}
+\pdeRow{MIEC variant including the electron potential in the activation argument; rectifies
+to disable cathodic branch:
+\[
+  \Delta\Phi = V_{\text{Li,ref}}-u-\phi_e,\quad
+  r = \begin{cases} -\bigl(i_{\text{Li,ref}}-i_{\text{ex}}(k_1-k_2)\bigr)\psi, & k_1<k_2,\\
+                     -i_{\text{Li,ref}}\psi, & k_1\ge k_2.\end{cases}
+\]}
+\codeRow\begin{lstlisting}
+k1 = exp( alpha*F_RT*(LiPotRef - u - potEn) );
+k2 = exp(-(1-alpha)*F_RT*(LiPotRef - u - potEn) );
+if (k1 < k2)
+  return _test * (LiCrtRef - i_ex*(k1 - k2));
+else
+  return _test * LiCrtRef;
+\end{lstlisting}
+\notesRow{The conditional discards stripping current, modelling a one-way reaction.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{CouplingMiec}
+\inputsRow{coupled $\phi_{\text{Li}}$ (with gradient); $\sigma_{\text{ion}}$ (material);
+$i_{\text{Li,ref}}$.}
+\pdeRow{Imposes total flux $=$ applied + ionic ohmic contribution:
+\[
+  r = -\bigl(i_{\text{Li,ref}} + 10\,\sigma_{\text{ion}}\,\nabla\phi_{\text{Li}}\!\cdot\!\nvec\bigr)\psi.
+\]}
+\codeRow\begin{lstlisting}
+return -_test * (LiCrtRef + 10 * sigma_ion * _grad_potLi * _normals);
+\end{lstlisting}
+\notesRow{Hard-coded $\times 10$ unit factor.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{MixSEIntBV}
+\inputsRow{$\phi_{\text{Li,electrode}}$ (material); coupled $\phi_e$;
+$i_{\text{ex}},\,\alpha,\,F_{RT}=38.68$.}
+\pdeRow{$\;\Delta\Phi = u + \phi_e - \phi_{\text{Li,electrode}};\;\; r = i_{\text{ex}}(k_1-k_2)\,\psi$.}
+\codeRow\begin{lstlisting}
+k1 = exp( alpha*F_RT*(u + potEn - LiPotEle) );
+k2 = exp(-(1-alpha)*F_RT*(u + potEn - LiPotEle) );
+return _test * i_ex * (k1 - k2);
+\end{lstlisting}
+\notesRow{$u$ is interpreted as the Li$^+$ potential.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{MixSEMetalBV}
+\inputsRow{coupled $\phi_{\text{ref}}$; $i_{\text{ex}},\alpha$;
+$c_e$ (electron concentration material); $F_{RT}=38.68$.}
+\pdeRow{$\;\Delta\Phi = \phi_{\text{ref}} + u;\;\; r = c_e\,i_{\text{ex}}(k_1-k_2)\,\psi$.}
+\codeRow\begin{lstlisting}
+k1 = exp( alpha*F_RT*(potRef + u) );
+k2 = exp(-(1-alpha)*F_RT*(potRef + u) );
+return _test * c_e * i_ex * (k1 - k2);
+\end{lstlisting}
+\notesRow{Pre-multiplies BV current by local electron concentration (mixed conductor).}
+\end{ecmEntry}
+
+\begin{ecmEntry}{MixSEVoidBV}
+\inputsRow{Same as \textsc{MixSEMetalBV}.}
+\pdeRow{Identical to \textsc{MixSEMetalBV} but rectified to $k_1>k_2$:
+$\;r = c_e\,i_{\text{ex}}(k_1-k_2)\,\psi\,\text{ if }k_1>k_2,\,0\text{ otherwise.}$}
+\codeRow\begin{lstlisting}
+if (k1 > k2)
+  return _test * c_e * i_ex * (k1 - k2);
+else
+  return 0;
+\end{lstlisting}
+\notesRow{Models deposition (forward only) into a void; no stripping.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{MixSEMetalEn}
+\inputsRow{coupled $\phi_{\text{metal}}$ (with gradient), $\phi_{\text{Li}}$;
+$\sigma_m,c_e,i_{\text{ex}},\alpha,F_{RT}$.}
+\pdeRow{$\;\Delta\Phi = \phi_{\text{Li}}+u;\;\;
+r = \bigl(-10^4\sigma_m\nabla\phi_{\text{metal}}\!\cdot\!\nvec + c_e i_{\text{ex}}(k_1-k_2)\bigr)\psi$.}
+\codeRow\begin{lstlisting}
+return _test * (-10000*sigma_m * _grad_potMt * _normals
+                + c_e * i_ex * (k1 - k2));
+\end{lstlisting}
+\notesRow{Combines BV with metal-side ohmic flux on the electron equation; $\times 10^4$
+unit factor.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{NeumannEn}
+\inputsRow{$\phi_{\text{Li,electrode}}$ (material); coupled $\phi_{\text{Li}}$;
+$i_{\text{inlet}},\,i_{\text{ex}},\,\alpha,\,F_{RT}$.}
+\pdeRow{Cathode-side Neumann: applied current + BV at boundary.
+$\;\Delta\Phi = \phi_{\text{Li}}+u-\phi_{\text{Li,electrode}};\;\;
+r = (i_{\text{inlet}} + i_{\text{ex}}(k_1-k_2))\psi$.}
+\codeRow\begin{lstlisting}
+return _test * (i_inlet + i_ex * (k1 - k2));
+\end{lstlisting}
+\end{ecmEntry}
+
+\begin{ecmEntry}{NeumannLi}
+\inputsRow{coupled $\phi_e$ (with gradient); $\sigma_e$, $i_{\text{inlet}}$ (AD materials).}
+\pdeRow{$\;r = (10^4\,\sigma_e\,\nabla u\!\cdot\!\nvec - i_{\text{inlet}})\psi$.}
+\codeRow\begin{lstlisting}
+return _test * (10000 * sigma_e * _grad_u * _normals - i_inlet);
+\end{lstlisting}
+\notesRow{Pairs with \textsc{NeumannEn}; subtracts the imposed inlet current and adds
+electron ohmic flux. $\times 10^4$ unit factor.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{SingleSEElectrodeBV}
+\inputsRow{$\phi_{\text{Li,electrode}}$ (material); $i_{\text{ex}},\alpha,F_{RT}$.}
+\pdeRow{$\;\Delta\Phi = u-\phi_{\text{Li,electrode}};\;\; r = i_{\text{ex}}(k_1-k_2)\psi$.}
+\codeRow\begin{lstlisting}
+return _test * i_ex * (k1 - k2);
+\end{lstlisting}
+\notesRow{Single-conductor SE/electrode interface; $u$ is the full overpotential variable.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{SingleSEIntLiBV}
+\inputsRow{coupled $\phi_{\text{Li}}$; $i_{\text{ex}},\alpha,F_{RT}$.}
+\pdeRow{$\;\Delta\Phi = \phi_{\text{Li}}-u;\;\; r = i_{\text{ex}}(k_1-k_2)\psi$.}
+\codeRow\begin{lstlisting}
+return _test * i_ex * (k1 - k2);
+\end{lstlisting}
+\end{ecmEntry}
+
+\begin{ecmEntry}{SingleSEIntSEBV}
+\inputsRow{coupled $\phi_e$; $i_{\text{ex}},\alpha,F_{RT}$.}
+\pdeRow{Mirror of the previous entry with sign flipped:
+$\Delta\Phi = u-\phi_e;\;\;r=i_{\text{ex}}(k_1-k_2)\psi$.}
+\codeRow\begin{lstlisting}
+return _test * i_ex * (k1 - k2);
+\end{lstlisting}
+\end{ecmEntry}
+
+%==========================================================================
+\section{Interface Kernels (\texttt{src/interfacekernels/})}
+%==========================================================================
+
+Interface kernels return one residual on the \emph{element} side and one on the
+\emph{neighbor} side; we list both.
+
+\begin{ecmEntry}{ADInterfaceDiffusion}
+\inputsRow{$D,\,D_{\text{neighbor}}$ (AD materials).}
+\pdeRow{Enforces Fickian-flux continuity across the interface:
+\[
+  r_{\text{elem}} = -D_{\text{neighbor}}\nabla u_{\text{neighbor}}\cdot\nvec\,\psi,\quad
+  r_{\text{nbr}}  = +D\,\nabla u\cdot\nvec\,\psi_{\text{nbr}}.
+\]}
+\codeRow\begin{lstlisting}
+ELEMENT: -_test * D_neighbor * _grad_neighbor_value * _normals;
+NEIGHBOR: +_test_neighbor * D * _grad_u * _normals;
+\end{lstlisting}
+\notesRow{Choice of signs makes the two halves cancel when $D\nabla u = D_{\text{n}}\nabla u_{\text{n}}$.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{PenaltyIntDiffusion}
+\inputsRow{\texttt{penalty} $\lambda_p$.}
+\pdeRow{Nitsche-style penalty: $\;r_{\text{elem}} = +\lambda_p(u-u_n)\psi,\;\;
+r_{\text{nbr}} = -\lambda_p(u-u_n)\psi_{\text{nbr}}$.}
+\codeRow\begin{lstlisting}
+ELEMENT:  _test * penalty * (u - u_neighbor);
+NEIGHBOR: -_test_neighbor * penalty * (u - u_neighbor);
+\end{lstlisting}
+\notesRow{Used to glue two scalar variables across an interface.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{IonicSEInterface}
+\inputsRow{$\sigma_{\text{ion}},\sigma_{\text{metal}},i_{\text{ex}},\alpha$ (AD materials);
+$F_{RT}=38.68$.}
+\pdeRow{Asymmetric BV/ohmic split:
+$\Delta\Phi = u + u_n;$
+\[
+ r_{\text{elem}} = +10^4\,\sigma_{\text{metal}}\nabla u_n\!\cdot\!\nvec\,\psi,\quad
+ r_{\text{nbr}}  = +i_{\text{ex}}(k_1-k_2)\,\psi_{\text{nbr}}.
+\]}
+\codeRow\begin{lstlisting}
+ELEMENT:  _test*10000*sigma_metal*_grad_neighbor_value*_normals;
+NEIGHBOR: _test_neighbor * i_ex * (k1 - k2);
+\end{lstlisting}
+\notesRow{$\sigma_{\text{ion}}$ is declared but unused in the residual.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{MiecSEInterfaceEn}
+\inputsRow{coupled $\phi_{\text{Li}}$; $c_e,\sigma_{\text{ion}},\sigma_e,\sigma_m,
+i_{\text{ex}},\alpha,F_{RT}$.}
+\pdeRow{Full MIEC interface for the electron equation (BV on both sides + ohmic flux on each):
+$\Delta\Phi = \phi_{\text{Li}} + u$,
+\[
+\begin{aligned}
+ r_{\text{elem}} &= \bigl(c_e i_{\text{ex}}(k_1-k_2) - 10^4\sigma_m \nabla u_n\!\cdot\!\nvec\bigr)\psi,\\
+ r_{\text{nbr}}  &= \bigl(c_e i_{\text{ex}}(k_1-k_2) + 10^4\sigma_e \nabla u\!\cdot\!\nvec\bigr)\psi_{\text{nbr}}.
+\end{aligned}
+\]}
+\codeRow\begin{lstlisting}
+ELEMENT: _test*(c_e*i_ex*(k1-k2)
+               - 10000*sigma_metal*_grad_neighbor_value*_normals);
+NEIGHBOR: _test_neighbor*(c_e*i_ex*(k1-k2)
+               + 10000*sigma_e*_grad_u*_normals);
+\end{lstlisting}
+\end{ecmEntry}
+
+\begin{ecmEntry}{MiecSEInterfacePrs}
+\inputsRow{Same as \textsc{MiecSEInterfaceEn} plus mechanical pressure $P$ (Real) and
+$V_m/RT = 0.0052$.}
+\pdeRow{Adds a mechanical contribution to $\Delta\Phi$:
+$\Delta\Phi = F_{RT}(\phi_{\text{Li}}+u) - (V_m/\Rg T)\,P$.
+Otherwise identical residuals to \textsc{MiecSEInterfaceEn}.}
+\codeRow\begin{lstlisting}
+k1 = exp( alpha*( F_RT*(potLi+u) - Vm_RT*P ) );
+k2 = exp(-(1-alpha)*( F_RT*(potLi+u) - Vm_RT*P ) );
+\end{lstlisting}
+\notesRow{Couples electrochemistry to mechanical pressure (electrochemo-mechanical
+interface). The factor $V_m/\Rg T$ in mV$^{-1}\!\cdot$\,Pa$^{-1}$ requires consistent units.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{CZMDiffusiveVariableKernelBase / SmallStrain}
+\inputsRow{component, displacements (vector coupled), \texttt{base\_name}, \texttt{flux\_global}
+material, \texttt{include\_gap}; reads materials \texttt{flux\_global},
+\texttt{dflux\_dvariablejump\_global}, \texttt{dflux\_djump\_global}.}
+\pdeRow{Imposes a generic interface flux:
+\[
+  r_{\text{elem}} = -j_{\text{global}}\,\psi,\quad r_{\text{nbr}}=+j_{\text{global}}\,\psi_{\text{nbr}}.
+\]}
+\codeRow\begin{lstlisting}
+ELEMENT: -_test * flux_global;
+NEIGHBOR: +_test_neighbor * flux_global;
+\end{lstlisting}
+\notesRow{The base provides hand-coded \texttt{computeDResidualDVariable} and
+\texttt{computeDResidualDDisplacement} hooks; the small-strain subclass implements them.
+Used together with the cohesive-zone material stack.}
+\end{ecmEntry}
+
+%==========================================================================
+\section{Mortar Constraints (\texttt{src/constraints/})}
+%==========================================================================
+
+All five are \texttt{ADMortarConstraint}s with three residual rows: \emph{primary},
+\emph{secondary}, and \emph{lower-dimensional} (the Lagrange multiplier $\lambda$).
+
+\begin{ecmEntry}{EqualNormalFluxConstraint}
+\inputsRow{primary/secondary diffusivity material name (default \texttt{diffusivity});
+\texttt{primary\_tensor}, \texttt{secondary\_tensor} bool flags.}
+\pdeRow{Enforces $\bigl[\!\!\bigl[D\nabla u\bigr]\!\!\bigr]\!\cdot\!\nvec = 0$ via Lagrange
+multiplier $\lambda$:
+\[
+  r_p = \lambda\psi_p,\;\; r_s = \lambda\psi_s,\;\;
+  r_\lambda = \bigl((D_p\nabla u_p - D_s\nabla u_s)\!\cdot\!\nvec + \lambda\bigr)\psi.
+\]}
+\notesRow{Supports scalar or tensor $D$ on each side independently.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{GapDisplacementConductanceConstraint}
+\inputsRow{$k$ or $k(\text{gap})$; \texttt{conductanceType}\,$\in$\,
+\{CONDUCTANCE, RCT, EXCHANGE\_CURRENT\_DENSITY\};
+$\F=96485.33,\Rg=8.3145,T=298$;
+displacements; concentration $c$; flags
+\texttt{include\_equilibrium\_potential}, \texttt{include\_gap}, \texttt{include\_concentration};
+\texttt{surfaceType}\,$\in$\,\{PRIMARY, SECONDARY\};
+\texttt{computeType}\,$\in$\,\{LINEAR\_BUTLER\_VOLMER, BUTLER\_VOLMER\}.}
+\pdeRow{The heart of the displaced-gap electrochemical contact. Defining
+$\Delta\Phi = \sgn(\,\cdot\,)(u_s - u_p) - U_{eq}$ and $\mathrm{RTF}=\Rg T/\F$:
+\[
+\begin{aligned}
+\text{linear:}\quad& r_\lambda = \bigl(\lambda + \tfrac{i_0}{\mathrm{RTF}}\,\Delta\Phi\bigr)\psi,\\
+\text{full BV:}\quad& r_\lambda = \bigl(\lambda + 2 i_0\,\sinh(\Delta\Phi/(2\,\mathrm{RTF}))\bigr)\psi.
+\end{aligned}
+\]
+$r_p = \lambda\psi_p,\; r_s = -\lambda\psi_s$. If $c<0$ the constraint clamps to $\lambda$
+only (no reaction).}
+\notesRow{Supports gap-modulated current via $k(\text{gap})$ using dual derivatives at
+phys-points. Three different input conventions converge on a single $i_0$.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{GapEquilibriateConstraint}
+\inputsRow{$k$ or $k(\text{gap})$; \texttt{primary\_mat\_prop}, \texttt{secondary\_mat\_prop}
+(default \texttt{equilibrium\_potential}); \texttt{one\_sided}\,$\in$\,
+\{\textsc{none}, \textsc{primary$\to$secondary}, \textsc{secondary$\to$primary}\};
+\texttt{prefactor}\,$\in$\,\{\textsc{rt/f}, \textsc{rt}, \textsc{none}\}.}
+\pdeRow{Equilibrates a chosen material property across the gap:
+\[
+  r_\lambda = \bigl(\lambda + \tfrac{k}{\text{prefactor}}\,(p_p - p_s)\bigr)\psi,
+\]
+with optional one-sided ratchet (only acts in one direction).}
+\end{ecmEntry}
+
+\begin{ecmEntry}{PressureLMConductanceConstraint}
+\inputsRow{$k$, threshold pressure $p_{\text{th}}=10^{-15}$, contact pressure (lower-dim
+nonlinear var, the contact LM).}
+\pdeRow{Gates a linear conductance by the contact LM:
+\[
+  r_\lambda = \begin{cases}\bigl(k(u_p-u_s)-\lambda\bigr)\psi, & p_{\text{contact}}>p_{\text{th}},\\
+   -\lambda\psi, & \text{otherwise.}\end{cases}
+\]}
+\notesRow{No contact $\Rightarrow$ no electrical/thermal conductance.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ScaledBCConstraint}
+\inputsRow{\texttt{scale}, \texttt{primary} (bool).}
+\pdeRow{Scales an existing mortar $\lambda$ to a different equation:
+$r_p = -\lambda\,$\texttt{scale}$\,\psi_p$ (if \texttt{primary}) or
+$r_s = -\lambda\,$\texttt{scale}$\,\psi_s$ (otherwise). Sets
+\texttt{compute\_lm\_residuals=false}.}
+\notesRow{Used to couple, e.g., a stress LM into the chemistry equation.}
+\end{ecmEntry}
+
+%==========================================================================
+\section{Materials (\texttt{src/materials/})}
+%==========================================================================
+
+\subsection*{1. Butler--Volmer kinetics and equilibrium potential}
+
+\begin{ecmEntry}{ADButlerVolmerMaterial}
+\label{bv-mat}
+\inputsRow{coupled $\phi_{\text{electrolyte}},\phi_{\text{electrode}}$;
+$\F=96.485\;\mathrm{C/mmol},\Rg=8.3145,T=298$; \texttt{include\_equilibrium} bool;
+$i_0$ (material); surface-to-volume ratio $a_v$; volume fraction $\eps_v$; \texttt{specific\_area}.}
+\pdeRow{Produces the BV kinetic quantities consumed by \textsc{ADButlerVolmerForce}:
+\[
+\begin{aligned}
+\eta &= \phi_{\text{electrode}} - \phi_{\text{electrolyte}} - U_{eq},\\
+i_{\text{BV}} &= 2\,i_0\,\sinh(\eta\F/(2\Rg T)),\\
+J_{\text{BV}} &= i_{\text{BV}}/\F,\\
+J_{\text{BV}}^{\text{vol}} &= a_v\,J_{\text{BV}},\\
+i_{\text{BV}}^{\text{vol}} &= a_v\,\eps_v\,i_{\text{BV}}.
+\end{aligned}
+\]}
+\notesRow{Faraday default in C/mmol (instead of C/mol); intended for input files using mmol/cm$^3$.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADComputeEquilibriumPotential}
+\inputsRow{coupled $c$; \texttt{reaction\_rate} (Real or Function $f(\bar c)$);
+\texttt{is\_ocv} bool; \texttt{potential}\,$\in$\,\{\textsc{dehoff}, \textsc{bower}\};
+flags \texttt{include\_reaction\_rate}, \texttt{include\_conc},
+\texttt{include\_mechanical\_effects},
+\texttt{exclude\_elastic\_contribution}; \texttt{nucleation\_overpotential}.}
+\pdeRow{Outputs three properties: state of charge $\bar c$ (clipped to $[10^{-3},1-10^{-3}]$),
+chemical potential, and equilibrium potential. Defining $\bar c = c/c_0$:
+\[
+\begin{aligned}
+\mu_{\text{chem}} &= \begin{cases}
+   \Rg T \ln(c_0/(c_0-c)), & \text{DEHOFF},\\
+   \Rg T \ln \bar c,        & \text{BOWER},
+ \end{cases}\\[4pt]
+\mu_{\text{chem}} &\mathrel{+}= \mu_{\text{swell}} + \mu_{\text{elastic}}\;
+    [\text{if mech. effects on}],\\[2pt]
+U_{eq} &= \begin{cases}f(\bar c),& \text{is\_ocv},\\ f(\bar c)\,\Rg T/\F,& \text{else,}\end{cases}\\
+U_{eq} &\mathrel{-}= \mu_{\text{chem}}/\F.
+\end{aligned}
+\]}
+\notesRow{Covers OCV-table and Nernstian forms with optional mechanical coupling. Two
+chemical-potential conventions (DEHOFF vs BOWER) differ in their treatment of the
+configurational entropy.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADExchangeCurrentDensityMaterial}
+\inputsRow{coupled $c$; type\,$\in$\,\{CONSTANT, LI\_INSERTION\}; $i_{\text{ref}},\,c_{\max}$.}
+\pdeRow{Standard intercalation form:
+\[
+  i_0 = \begin{cases} i_{\text{ref}}, & \text{CONSTANT},\\
+   2\,i_{\text{ref}}\sqrt{\bar c\,(1-\bar c)}, & \text{LI\_INSERTION,}\end{cases}
+\]
+with $\bar c=c/c_{\max}$ clipped to $[10^{-3},1-10^{-3}]$.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADParticleSize}
+\inputsRow{$R$ (Real or function); particleType\,$\in$\,\{\textsc{spherical},\textsc{cylindrical}\};
+$\eps_v$.}
+\pdeRow{$\;a_v = \frac{3}{R}\;\text{(sphere)}\quad\text{or}\quad \frac{2}{R}\;\text{(cylinder)};\quad
+   \texttt{volume\_fraction}=\eps_v.$}
+\notesRow{Provides $a_v$ for the BV-volume source.}
+\end{ecmEntry}
+
+\subsection*{2. Hyperelastic / visco-plastic / swelling stack}
+
+\begin{ecmEntry}{ADIsoTropicHyperViscoSwellingBase (base)}
+\label{mat-swelling-base}
+\inputsRow{\texttt{isotropic\_swelling} bool; \texttt{rate\_form} bool;
+coupled $c$, reference $c_{\text{ref}}=0$;
+$\bm{\alpha}\!\in\!\mathbb{R}^3$ (sums to 1); molar volume $\Omega$;
+boundary names; \texttt{use\_deformed\_directions} bool.}
+\pdeRow{Multiplicative split of the deformation gradient:
+$\mathbf{F} = \mathbf{F}^e\mathbf{F}^p\mathbf{F}^g$. Growth Jacobian
+$J_g = 1 + \Omega(c-c_{\text{ref}})$, with anisotropic $\mathbf{F}^g$
+\[
+  \mathbf{F}^g = \alpha_n J_g\,\nvec\!\otimes\!\nvec + \alpha_t J_g\,\bm{t}\!\otimes\!\bm{t} +
+                \alpha_z J_g\,\hat{\bm z}\!\otimes\!\hat{\bm z}\quad\text{or}\quad
+  J_g^{1/3}\mathbf{I}\;[\text{isotropic}].
+\]
+Logarithmic elastic kinematics: $\bm{F}_i=\bm{F}^p\bm{F}^g$, trial Mandel stress
+$\bm{M}_e^{\text{tr}} = 2\mu\,\mathrm{dev}\,\bm{E}^e + \kappa\,\ln(\det\bm{F}/J_g)\bm{I}$.
+The base produces:
+\[
+\begin{aligned}
+\mu_{\text{swell}} &= -\Omega\,\bm{\sigma}_g:\bm{F}^g,\\
+\mu_{\text{elastic}} &= \tfrac{1}{2}\Omega\,\bm{E}^e:\mathbb{C}:\bm{E}^e.
+\end{aligned}
+\]
+These chemical potentials are consumed by \textsc{ADComputeEquilibriumPotential} and
+\textsc{ADStressBasedChemicalPotential}.}
+\notesRow{Anisotropic split uses a swell normal computed by closest-edge construction at
+specified boundaries.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADIstropicElasticSwelling}
+\inputsRow{Inherits base.}
+\pdeRow{Pure elastic + swelling kinematics: returns
+$\bm{\sigma} = \bm{R}\,\bm{M}_e^{\tau}\,\bm{R}^{\!\top}\,J_g/\det\bm{F}$ with
+$\bm{M}_e^\tau = \mathbb{C}:\bm{E}^e$. Same $\mu_{\text{swell}}$, $\mu_{\text{elastic}}$
+as base.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADIsoTropicHyperVisco}
+\inputsRow{rate exponent $m$, reference rate $\dot\gamma_{\text{ref}}$,
+$Y_0,\,H_0,\,Y_{\text{sat}}$, hardening exponent $a$.}
+\pdeRow{Weber--Anand 1990 rate-dependent isotropic visco-plastic model. Saturation
+hardening $\dot Y = H_0(1-Y/Y_{\text{sat}})^a\,\dot\gamma$. Return-mapping residual:
+\[
+  r_{\text{rm}} = \frac{\sigma_{e,\text{tr}} - \mathrm{d}t\,\dot\gamma\cdot 3\mu - Y(\dot\gamma)
+    \,(\dot\gamma/\dot\gamma_{\text{ref}})^m}{3\mu/3}.
+\]
+Updates: $\bm{F}^p = \exp(\Delta\bm{p})\bm{F}^p_{\text{old}}$,
+$\bm{\sigma} = \bm{R}\,\bm{M}_e^\tau\,\bm{R}^{\!\top}/\det\bm{F}$.}
+\notesRow{Produces \texttt{plastic\_strain}, \texttt{Fp}, mandel stress, log-elastic strain.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADIsoTropicHyperViscoCreep}
+\pdeRow{Same skeleton as the previous entry, with Arrhenius-activated reference rate
+$\dot\gamma_0 = A\,\exp(-Q/\Rg T)$ and saturation strength dependent on rate
+$Y_{\text{sat},\dot\gamma} = Y_{\text{sat}}(\dot\gamma/\dot\gamma_{\text{ref}})^n$.}
+\notesRow{Thermally-activated viscoplasticity.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADIsoTropicHyperViscoSwelling}
+\pdeRow{Combines \textsc{ADIsoTropicHyperVisco} return-mapping with the swelling
+kinematics base ($\bm{F}=\bm{F}^e\bm{F}^p\bm{F}^g$). Room-temperature swelling +
+viscoplasticity.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADIsoTropicHyperViscoCreepSwelling}
+\pdeRow{Combines Arrhenius-activated visco-plasticity with the swelling base.}
+\notesRow{Most general member of the stack.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADIsoTropicHyperViscoBase}
+\pdeRow{Internal base: polar decomposition $\bm{F}^e = \bm{F}\bm{F}^{p\,-1}$, log strain
+$\bm{E}^e=\sum\ln(\lambda_i)\bm{N}_i\bm{N}_i^{\!\top}$, trial Mandel stress
+$\bm{M}_e^{\text{tr}} = \mathbb{C}\bm{E}^e$, return mapping, and exp-update of $\bm{F}^p$.}
+\notesRow{Core kinematic engine reused by all four visco-plastic variants.}
+\end{ecmEntry}
+
+\subsection*{3. Diffusivity and conductivity providers}
+
+\begin{ecmEntry}{IsotropicDiffusionMaterial / PorousIsoTropicDiffusionMaterial}
+\inputsRow{\texttt{diffusion\_coef} $D_0$; subclass adds $\eps_v,\,\beta_{\text{Brug}}=1.5,\,\tau$;
+\texttt{diffusion\_model}\,$\in$\,\{\textsc{bruggeman}, \textsc{tortuosity}, \textsc{user\_defined}\}.}
+\pdeRow{$D_{\text{eff}} = D_0\cdot c(\eps_v)$, with
+\[
+  c(\eps_v) = \begin{cases}
+    \eps_v^{\beta_{\text{Brug}}}, & \text{Bruggeman},\\
+    \eps_v/\tau, & \text{tortuosity},\\
+    c_{\text{user}}, & \text{user-defined.}
+  \end{cases}
+\]}
+\end{ecmEntry}
+
+\begin{ecmEntry}{AnisotropicDiffusivity}
+\inputsRow{$k_0,\,w,\,\lambda$; coupled gradient variable $v$.}
+\pdeRow{Kobayashi-style angle-dependent diffusivity:
+$\;\theta = \arctan(\partial_y v / \partial_x v),\;\;
+D = k_0(1 + w\cos(\lambda\theta))^2$.}
+\notesRow{Returns scalar $D$, not a tensor.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{DiffusionAlongPrincipalDirectionsMaterial}
+\inputsRow{$D_1,D_2,D_3$ (vector components); reads \texttt{swell\_normal} from base.}
+\pdeRow{Builds an anisotropic diffusivity tensor from three eigen-directions tied to the
+swelling normal:
+\[
+  \mathbf{D} = D_1\,\bm{m}_1\bm{m}_1^{\!\top} + D_2\,\bm{m}_2\bm{m}_2^{\!\top} + D_3\,\bm{m}_3\bm{m}_3^{\!\top},
+\]
+with $\bm{m}_1 = \texttt{swell\_normal}$, $\bm{m}_3 = (0,0,1)$, $\bm{m}_2 = \bm{m}_1\!\times\!\bm{m}_3$.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{AnisotropyMaterialConst}
+\inputsRow{Nine components $\sigma_{ij}$.}
+\pdeRow{Assembles a constant rank-2 tensor as an AD material property.}
+\notesRow{Declared AD but populated from non-AD constants; sensitivities are trivial.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{RotatedConductivityTensor}
+\inputsRow{Nine components $\sigma_{ij}$, three Euler angles.}
+\pdeRow{Builds $\bm{\sigma}$, then computes $\bm{\sigma}_{\text{rot}} = \bm{R}^{\!\top}\bm{\sigma}\bm{R}$
+and exports the 9 scalar components as separate AD properties.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{Ionics}
+\inputsRow{$\sigma_{\text{ion}},\sigma_{gb}$.}
+\pdeRow{Constant SE material: writes $\sigma_{\text{ion}},\sigma_{gb}$.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{Miec}
+\inputsRow{$\sigma_{\text{ion}},\sigma_e,\sigma_{gb}$.}
+\pdeRow{Constant MIEC material.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{MiecSEAgC / MixAgC}
+\inputsRow{Ten Reals: $\sigma_{\text{ion,SE}},\sigma_{\text{ion,AgC}},\sigma_{e,\text{SE}},\sigma_{e,\text{AgC}},
+i_{\text{inlet}},i_{\text{ex}},\alpha,c_e,\phi_{\text{Li,anode}},\phi_{\text{Li,cathode}}$.}
+\pdeRow{Bulk-property bag for SE/Ag-C composite domain: writes all ten as AD properties.}
+\notesRow{\textsc{MixAgC} is byte-for-byte equivalent to \textsc{MiecSEAgC} (only the
+class registration name differs); pick one and remove the duplicate.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{MixSE}
+\inputsRow{Nine Reals: $\sigma_{\text{ion}},\sigma_m,\sigma_e,i_{\text{inlet}},i_{\text{ex}},\alpha,c_e,
+\phi_{\text{Li,anode}},\phi_{\text{Li,cathode}}$.}
+\pdeRow{Bulk material for SE/metal/void multi-conductor problem.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{SingleSE}
+\inputsRow{$\sigma_{\text{ion}},\sigma_{gb},\sigma_m,i_{\text{applied}},i_{\text{ex}},\alpha,
+\phi_{\text{Li,anode}},\phi_{\text{Li,cathode}}$.}
+\pdeRow{Single-conductor SE variant.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{PaperHongli}
+\inputsRow{coupled $c_{\text{Li}}$; constants $c_1,c_2$.}
+\pdeRow{Empirical concentration-dependent diffusivity from a literature source:
+\[
+  D = c_1\cdot 10^{6 c_2 c_{\text{Li}}},\qquad \sigma_{\text{ion}} = 0.11\,D.
+\]}
+\notesRow{Magic factors $6$ and $0.11$ inherited from the cited paper; verify before reuse.}
+\end{ecmEntry}
+
+\subsection*{4. Cohesive zone model}
+
+\begin{ecmEntry}{CZMcomputeLocalFluxBase / CZMComputeVariableJumpBase (bases)}
+\pdeRow{Define the contract for cohesive-zone diffusive variables: \emph{LocalFluxBase}
+declares \texttt{interface\_flux}, $\partial$flux/$\partial$jump, $\partial$flux/$\partial$displacement;
+\emph{VariableJumpBase} declares total rotation, global variable jump, and the local
+interface variable jump. Derived classes provide
+\texttt{computeInterfaceFluxAndDerivatives} / \texttt{computeLocalVariableJump}.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{CZMComputeVariableJumpSmallStrain}
+\pdeRow{Trivial small-strain implementation:
+\[
+  [\![u]\!]^{\text{local}} = [\![u]\!]^{\text{global}} = u_{\text{neighbor}} - u_{\text{master}}.
+\]}
+\notesRow{Registered to \texttt{TensorMechanicsApp} (not \texttt{ecmApp}).}
+\end{ecmEntry}
+
+\begin{ecmEntry}{CZMcomputeGlobalFluxBase / CZMComputeGlobalFluxSmallStrain}
+\pdeRow{Rotates the local-frame flux to the global frame:
+\[
+  j_{\text{global}} = j_{\text{interface}}, \quad
+  \frac{\partial j_{\text{global}}}{\partial[\![u]\!]} = \frac{\partial j_{\text{interface}}}{\partial[\![u]\!]},\quad
+  \frac{\partial j_{\text{global}}}{\partial[\![\bm{u}]\!]} = \bm{R}_{\text{tot}}\,\frac{\partial j_{\text{interface}}}{\partial[\![\bm{u}]\!]}.
+\]}
+\notesRow{Small-strain version is a near-identity pass-through.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{CZMButlerVolmer}
+\inputsRow{$d$ (max separation), $k(\text{jump})$ function, conductanceType,
+\texttt{computeType}\,$\in$\,\{LBV, BV, LITHIUM\_INSERTION\}, $\F,\Rg,T$, $c_{\text{ref}}=1$,
+$U_{eq}$ from \texttt{reaction\_rate\_function}, surfaceType.}
+\pdeRow{Cohesive-zone Butler--Volmer with gap-modulated current. Defining
+$\mathrm{RTF}=\Rg T/\F$, $\bar c = c_{\text{coupled}}/c_{\text{ref}}$,
+$\sgn = +1$ on secondary, $-1$ on primary, $\Delta\Phi=\sgn\cdot[\![u]\!]_v - U_{eq}$:
+\[
+\begin{aligned}
+\text{linear:} && j &= i_0\,\Delta\Phi/\mathrm{RTF},\\
+\text{full BV:} && j &= 2\,i_0\,\sinh(\Delta\Phi/(2\,\mathrm{RTF})).
+\end{aligned}
+\]
+If \texttt{include\_gap} and the normal jump $[\![u]\!]_n < d$:
+$j \leftarrow j\cdot(d - [\![u]\!]_n)$ (linear taper to zero at $d$).}
+\notesRow{The \emph{conductanceType} switch maps three input conventions
+(conductance, $R_{ct}$, $i_0$) onto one $i_0$ used in the formula above.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{SalehaniIrani3DCTractionViscosity}
+\pdeRow{Salehani--Irani 3DC cohesive traction with viscous regularisation. Augments the
+base law $T_i$ by a rate term $T_i \mathrel{*\!=}\bigl(1 + \tfrac{\mu_i}{T_{\max,i}}\,\dot{[\![u]\!]_i}\bigr)$.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{GaoBower3DCTraction}
+\inputsRow{normal/tangential viscosity, $r=0,\,q=1$.}
+\pdeRow{Gao--Bower 3D cohesive law (Xu--Needleman style) with
+$\bar n_i = [\![u]\!]_i/[\![u]\!]_{0,i}$:
+\[
+\begin{aligned}
+T_0 &= T_{\max}\,e^{1-\bar n_0}\Bigl[\bar n_0 e^{-\sum_{i>0}\bar n_i^2} +
+       \tfrac{1-q}{r-1}\bigl(1 - e^{-\sum_{i>0}\bar n_i^2}\bigr)(r - \bar n_0)\Bigr],\\
+T_i &= T_{\max}\cdot 2\,([\![u]\!]_{0,0}/[\![u]\!]_{0,1})\,\bar n_i\Bigl(q + \tfrac{r-q}{r-1}\bar n_0\Bigr)
+       e^{-\sum_{j>0}\bar n_j^2}\,e^{1-\bar n_0}.
+\end{aligned}
+\]
+Then a viscous rate factor $T_i\mathrel{*\!=}(1 + \mu_i\,\dot{[\![u]\!]_i}/T_{\max})$ is applied.}
+\end{ecmEntry}
+
+%==========================================================================
+\section{Aux Kernels (\texttt{src/auxkernels/})}
+%==========================================================================
+
+\begin{ecmEntry}{ADDiffusionFluxAux}
+\inputsRow{component $i$, coupled $u$, $D$ (AD).}
+\pdeRow{$\;j_i = -D\,\partial_i u$ (scalar diffusivity component).}
+\notesRow{\texttt{raw\_value(D)} drops AD sensitivity.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{AnisoTropicDiffusionFlux}
+\inputsRow{component, coupled $u$, $\bm{D}$ (AD tensor).}
+\pdeRow{$\;j_i = -(\bm{D}\nabla u)_i$.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{DiffusionFluxNormalToBoundaryAux}
+\inputsRow{coupled $u$, $D$ (AD).}
+\pdeRow{$\;j_n = -D\,\nabla u\!\cdot\!\nvec$ on a boundary auxiliary.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{AnisoDiffusionFluxNoramltoBoundary}
+\inputsRow{coupled $u$, $\bm{D}$ (AD tensor).}
+\pdeRow{$\;j_n = -(\bm{D}\nabla u)\!\cdot\!\nvec$.}
+\notesRow{Filename retains the original misspelling (``Noraml'').}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ADRankTwoTensorNormalToBoundary}
+\inputsRow{tensor $\bm{T}$ (AD); reads boundary normals.}
+\pdeRow{Intent: compute $\nvec^{\!\top}\bm{T}\nvec$.}
+\codeRow\begin{lstlisting}
+temp_i = n . T.column(i);
+p1 = (raw(temp1), raw(temp2), raw(temp3));   // <-- comma operator
+p2 = (raw n);
+return p1 * p2;
+\end{lstlisting}
+\notesRow{\textbf{Likely bug}: \texttt{p1} is constructed using the comma operator, which
+produces only the last value, not a 3-vector. The dot product is therefore not the intended
+$\nvec^{\!\top}\bm{T}\nvec$. Should be replaced by \texttt{Point(raw(temp1), raw(temp2), raw(temp3))}.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{ComputeSurfaceConcentrationAux}
+\inputsRow{coupled $\bar c$; flux $j$ (AD); $D,\,R,\,$\texttt{scale}.}
+\pdeRow{$\;c_{\text{surf}} = \bar c + R\,j/(\text{scale}\,D)$
+(2-term polynomial recovery from average + flux).}
+\end{ecmEntry}
+
+\begin{ecmEntry}{CurrentDensity}
+\inputsRow{component, conductivity $\sigma$ (AD scalar), coupled $\phi$.}
+\pdeRow{$\;i_i = -\sigma\,\partial_i\phi\cdot 10^4$;\, sign flipped if material name is
+\texttt{ionic\_conductivity}.}
+\notesRow{Hard-coded $10^4$ unit conversion + name-based sign convention is fragile but
+intentional.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{CurrentDensityAnisotropy}
+\inputsRow{component, $\bm{\sigma}$ (AD tensor), coupled $\phi$.}
+\pdeRow{$\;\bm{i} = -10\,\bm{\sigma}\nabla\phi$; sign flipped if material name is
+\texttt{ionic\_conductivity}.}
+\notesRow{Different prefactor ($\times 10$) than \textsc{CurrentDensity} ($\times 10^4$);
+verify unit consistency.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{LiPotInSE / LiPotMiec}
+\inputsRow{coupled $\phi_{\text{Li}},\phi_e$.}
+\pdeRow{$\;u_{\text{aux}} = \phi_{\text{Li}} + \phi_e$ (total Li chemical potential).}
+\notesRow{The two are byte-identical; the only practical difference is intended block
+restriction.}
+\end{ecmEntry}
+
+%==========================================================================
+\section{Postprocessors (\texttt{src/postprocessors/})}
+%==========================================================================
+
+\begin{ecmEntry}{EnergyRatePostprocessor}
+\inputsRow{another postprocessor $p$, time-step $\Delta t$.}
+\pdeRow{Returns $\bigl|(|p| - |p_{\text{old}}|)/|p|\bigr|/\Delta t$, an order-of-magnitude
+rate-of-change diagnostic.}
+\notesRow{Often used as a transient stopping criterion.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{FBulk}
+\inputsRow{coupled order parameter $u$; $A$ (material); \texttt{len\_scale}=1.}
+\pdeRow{$\;\int_\Omega -A\,u^2(1-u)^2\,\dV$ (negated double-well bulk energy).}
+\notesRow{Sign convention is unusual; verify against the energy-balance setup.}
+\end{ecmEntry}
+
+\begin{ecmEntry}{SideTotCrnt}
+\inputsRow{conductivity $\sigma$ (AD).}
+\pdeRow{$\;\int_{\partial\Omega} 100\,\sigma\,\nabla u\!\cdot\!\nvec\,\dS$;
+sign flipped if material name is \texttt{ionic\_conductivity}.}
+\notesRow{$\times 100$ unit factor (yet another convention vs.\ $\times 10$ and $\times 10^4$
+in the related aux kernels).}
+\end{ecmEntry}
+
+%==========================================================================
+\section{MultiApps (\texttt{src/multiapps/})}
+%==========================================================================
+
+\begin{ecmEntry}{QuadratureMultiApp}
+\inputsRow{block restriction (suppresses manual \texttt{positions} / \texttt{positions\_file}).}
+\pdeRow{Auto-generates one sub-app per quadrature point of the master mesh on the selected
+blocks: iterates over local active elements, builds the default quadrature, pushes each
+$\bm{x}_q$ into the position list, then \texttt{allgather}+sort.}
+\notesRow{Used for sub-grid (e.g.\ particle-scale) coupling.}
+\end{ecmEntry}
+
+%==========================================================================
+\section*{Cross-cutting observations}
+\addcontentsline{toc}{section}{Cross-cutting observations}
+%==========================================================================
+
+\begin{enumerate}
+  \item \textbf{Hard-coded unit prefactors.} Different magic factors appear across closely
+    related classes: $\times 10$ in \textsc{ChargedTransport(Anisotropy)} and the
+    \textsc{CurrentDensityAnisotropy} aux; $\times 100$ in \textsc{SideTotCrnt};
+    $\times 10\,000$ in \textsc{ParamDiffusion}, \textsc{NeumannLi/En}, \textsc{MiecSE*},
+    and the \textsc{CurrentDensity} aux. These are not interchangeable and downstream input
+    files must be aware of which class they paired with.
+  \item \textbf{Latent / suspected bugs spotted.}
+    \begin{itemize}
+      \item \textsc{ADRankTwoTensorNormalToBoundary} constructs \texttt{p1} via the comma
+        operator (returns only the last component), so the auxiliary value is not the
+        intended $\nvec^{\!\top}\bm{T}\nvec$.
+      \item \textsc{ADCoupledButlerVolmerForce} returns the BV expression \emph{without}
+        an explicit $\psi$ multiplier; verify against intent.
+      \item \textsc{ChemicalEnergy} returns the bulk energy density $w(u-1)^2 u^2$ rather
+        than its derivative; if used as a phase-field driving term this is
+        mathematically inconsistent.
+      \item \textsc{ADCurrentFluxEEL} default $\F=964523$ (vs.\ $96485$).
+    \end{itemize}
+  \item \textbf{Duplicated implementations.}
+    \begin{itemize}
+      \item \textsc{MiecSEAgC} and \textsc{MixAgC} are identical except for the registered
+        class name.
+      \item \textsc{LiPotInSE} and \textsc{LiPotMiec} are identical.
+      \item \textsc{NernstPlanckConvection} (legacy) and \textsc{NernstPlanckConvectionScaled}
+        differ only by an explicit \texttt{scale}.
+    \end{itemize}
+  \item \textbf{AD vs.\ legacy duplicates.} The legacy \textsc{Conduction}/\textsc{Migration}
+    /\textsc{Kinetics}/\textsc{NernstPlanckConvection*} kernels predate their AD analogues
+    \textsc{ADMigrationDiffusion}, \textsc{ADNernstPlanckConvection}, and the
+    \textsc{ADCoupledButlerVolmerForce}; both families are still registered.
+  \item \textbf{Non-standard registration.} \textsc{CZMComputeVariableJumpSmallStrain} is
+    registered to \texttt{TensorMechanicsApp}, not \texttt{ecmApp}; consumers must include
+    the upstream module.
+  \item \textbf{AD sensitivity loss.} A handful of classes call \texttt{raw\_value} on AD
+    properties (\textsc{ChargedTransport(Anisotropy)}, the flux aux kernels, \textsc{SideTotCrnt})
+    or use non-AD \texttt{getMaterialProperty} (\textsc{ADThermalFlux}); the Jacobian therefore
+    misses derivatives through those properties.
+\end{enumerate}
+
+\end{document}

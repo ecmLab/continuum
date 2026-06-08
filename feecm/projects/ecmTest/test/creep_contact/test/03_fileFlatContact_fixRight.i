@@ -54,7 +54,6 @@ name = '03_fileFlatContact_fixRight'
   [./action]
     add_variables = true
     strain = FINITE
-    use_displaced_mesh = true
     volumetric_locking_correction = true
     generate_output = 'stress_xx stress_yy vonmises_stress strain_xx strain_yy'
     block = 'blockSE blockLi'

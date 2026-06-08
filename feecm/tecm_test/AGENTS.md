@@ -15,16 +15,16 @@ Scope: entire repo.
 - For each phase N, add:
   - A phase technical file `doc/codex/phaseN_<name>.tex` (e.g., `phase2_edl.tex`) and build its `phaseN_<name>.pdf` in the same folder (apply Rule 6 for build artifacts).
   - Phase‑scoped code folders inside the app: `src/phaseN_<name>/`, `include/phaseN_<name>/`.
-  - Inputs/examples live **outside the app**, under the repo-wide projects tree: `../projects/problems-tecmTest/phaseN_<name>/` (relative to `tecm_test/`), i.e. `feecm/projects/problems-tecmTest/phaseN_<name>/`.
+  - Inputs/examples live **outside the app**, under the repo-wide projects tree: `../projects/tecmTest/phaseN_<name>/` (relative to `tecm_test/`), i.e. `feecm/projects/tecmTest/phaseN_<name>/`.
   - Within each phase code folder, place files into appropriate subfolders by type: `kernels/` for Kernels, `bcs/` for boundary conditions, `materials/` for materials, `interfacekernels/` for interface kernels, etc. Example: `src/phase2_edl/bcs/SternRobinBC.C`, `include/phase2_edl/bcs/SternRobinBC.h`.
-- Use consistent lowercase names (e.g., `phase2_edl`), and mirror this naming across `doc/`, `src/`, `include/`, and the `projects/problems-tecmTest/` tree.
+- Use consistent lowercase names (e.g., `phase2_edl`), and mirror this naming across `doc/`, `src/`, `include/`, and the `projects/tecmTest/` tree.
 - When starting a new phase, copy the prior phase structure and update: governing equations, MOOSE weak forms, coding plan, and references to acceptance criteria in the project plan.
 
 ## Notes & Conventions for coding environment
 3) Verify What You Create (No untested hand‑offs)
 - Any input or source file you add or modify must be checked with the appropriate executable command(s) before presenting it to the user.
 - Minimum checks (examples):
-  - MOOSE input files (`.i`) — run from inside the input file's own directory under `feecm/projects/problems-tecmTest/<name>/`:
+  - MOOSE input files (`.i`) — run from inside the input file's own directory under `feecm/projects/tecmTest/<name>/`:
     - `../../../tecm_test/tecm_test-opt -i <file>.i --check-input`
     - `../../../tecm_test/tecm_test-opt -i <file>.i`
   - LaTeX (`.tex`):
@@ -40,14 +40,12 @@ Scope: entire repo.
 - Example activation: `source "$(conda info --base)/etc/profile.d/conda.sh" && conda activate moose` or run commands via `conda run -n moose ...`.
 
 5) Run Executables From the Input Directory
-- When running the executable with an input file, first `cd` to the directory containing the `.i` file. Input files live under `feecm/projects/problems-<app>/<name>/`, separate from the app source tree.
-- Invoke the executable by its correct location relative to that directory. From a project at `feecm/projects/problems-tecmTest/<name>/`, the path is three `..` up to `feecm/`, then into the app: `../../../tecm_test/tecm_test-opt -i <file>.i --check-input` followed by `../../../tecm_test/tecm_test-opt -i <file>.i`.
-- Per-app executable invocations from `projects/problems-<app>/<name>/`:
-  - `../../../ec_beta/ec_beta-opt`
-  - `../../../ecm_test/ecm-opt` (note: the binary is `ecm-opt`, not `ecm_test-opt`)
-  - `../../../eel/eel-opt`
-  - `../../../tecm_test/tecm_test-opt`
-- Add one extra `..` per additional nesting level (e.g., `projects/problems-tecmTest/paper_X/case1/` → four `..`).
+- When running the executable with an input file, first `cd` to the directory containing the `.i` file. Input files live under `feecm/projects/<app>/<name>/`, separate from the app source tree.
+- Invoke the executable by its correct location relative to that directory. From a project at `feecm/projects/tecmTest/<name>/`, the path is three `..` up to `feecm/`, then into the app: `../../../tecm_test/tecm_test-opt -i <file>.i --check-input` followed by `../../../tecm_test/tecm_test-opt -i <file>.i`.
+- Per-app executable invocations from `projects/<app>/<name>/`:
+  - `../../../ecm_test/ecm-opt` (note: the binary is `ecm-opt`, not `ecm_test-opt`. ecm_test absorbed the former ec_beta capabilities — ec_beta no longer exists.)
+  - `../../../tecm_test/tecm_test-opt` (tecm_test absorbed the former eel capabilities — the standalone eel app no longer exists; its projects moved under `projects/tecmTest/`.)
+- Add one extra `..` per additional nesting level (e.g., `projects/tecmTest/paper_X/case1/` → four `..`).
 - Adjust the relative path as needed, but always run from the input file's directory and point to the correct executable path.
 
 6) LaTeX Build Hygiene

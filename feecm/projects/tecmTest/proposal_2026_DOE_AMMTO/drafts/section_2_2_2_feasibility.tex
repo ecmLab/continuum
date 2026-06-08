@@ -1,0 +1,319 @@
+\documentclass[11pt]{article}
+
+\usepackage[letterpaper,margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+
+\graphicspath{{figs/}}
+
+\setlength{\parindent}{1.5em}
+\setlength{\parskip}{2pt}
+
+\begin{document}
+
+% =========================================================================
+%  Section 2.2.2 -- rewritten as feasibility (preliminary results).
+%  Style mirrors 2.2.1 and 2.2.3: narrative prose, embedded numbers,
+%  short figure captions, no equations, no sub-headers, no (i)(ii)(iii)
+%  bulleted demonstration claims.  Placeholder citations use the
+%  [cite: TBD:xxx] convention to be resolved in the bibliography pass.
+% =========================================================================
+
+\noindent\textbf{2.2.2 Preliminary Process-Level Digital Twin (RIT)}\par
+
+To complement WPI's experimental demonstration, the RIT team built a
+preliminary process-level digital twin of the alkaline-leaching and
+HCl-precipitation Si recycling sequence and exercised it against the WPI
+endpoint reported in ref.~5. The twin couples a surface-reaction
+shrinking-core kinetics model for Si dissolution in NaOH with an
+aqueous-equilibrium speciation model for pH-controlled selective
+precipitation, and runs in under one second on a workstation, fast
+enough to serve as the inner loop of the AI-guided optimization
+pipeline proposed in Subtasks~1.3, 2.4, 3.3, and 4.3.
+
+The Si dissolution kinetics model uses a literature activation energy of
+60~kJ/mol and a first-order NaOH dependence
+[cite: TBD:Si-alkaline-kinetics]. The pre-exponential factor was fixed
+by a single calibration to WPI's measured endpoint of 98\,\% Si
+conversion at 5~M NaOH, $80\,^\circ$C, 60~min reported in ref.~5. With
+no further tuning, the model then predicts conversion trajectories at
+other operating points, as shown in Figure~\ref{fig:leach}: 98\,\%
+conversion is reached in 99~min at 3~M NaOH and in 42~min at 7~M NaOH,
+providing a direct estimate of the trade-off between leach time and
+reagent consumption for WPI's upcoming scale-up trials.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.58\textwidth]{leaching_kinetics.pdf}
+  \caption{Predicted Si conversion vs leaching time at $80\,^\circ$C for
+    three NaOH concentrations. Open marker: WPI calibration point (5~M,
+    60~min, ref.~5).\label{fig:leach}}
+\end{figure}
+
+The selective-precipitation model computes equilibrium solubilities of
+Si(IV) and Al(III) above amorphous SiO$_{2}$ and Al(OH)$_{3}$ using
+textbook $\log K$ values from the MINTEQ database
+[cite: TBD:MINTEQ]. As shown in Figure~\ref{fig:select}, the model
+identifies a sharp selectivity window at $\mathrm{pH} < 2$ in which Si
+is forced to the SiO$_{2}$ saturation limit of $\sim$2~mM
+(near-quantitative precipitation) while Al remains many orders of
+magnitude undersaturated. Operating below $\mathrm{pH}=1$ widens the
+Si/Al saturation contrast by another five orders of magnitude,
+suppressing Al co-precipitation. This is consistent with WPI's
+empirically chosen acidification target of $\mathrm{pH} < 1$ and
+explains the observed 6N SiO$_{2}$ purity with Al, Pb, and Sn retained
+in the leachate (\S2.2.1).
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.58\textwidth]{selective_precipitation.pdf}
+  \caption{Predicted equilibrium solubilities of Si(IV) and Al(III) vs
+    pH. Shaded band: selective SiO$_2$ recovery window
+    ($\mathrm{pH} < 2$).\label{fig:select}}
+\end{figure}
+
+These preliminary results show that the WPI process chemistry is
+captured by tractable continuum-thermodynamic modules using literature
+parameters and a single calibration point, and that the same modular
+structure extends directly to the thin-film PV chemistries proposed in
+Subtask~2.2 (BU) by swapping the species library and $\log K$ values.
+The twin is implemented on top of the open-source MOOSE-based
+\textsc{FEECM} framework [cite: TBD:FEECM-repo] developed by Co-PI Tu's
+group for coupled electrochemical transport and reaction-kinetics
+modeling, and will serve as the foundation for the reactor-scale,
+AI-augmented digital twin proposed in BP2 and BP3, running on CewLab GPU
+compute, RIT's SPORC HPC platform, the New York State Empire AI
+allocation, and ACCESS/NSF cyberinfrastructure.
+
+% =========================================================================
+% Appended drafts for the remaining highlighted (XXX) parts.
+% Each block below carries a "[Insert at ...]" header so the user can drop
+% it into the matching location in the Word source.
+% =========================================================================
+
+\vspace{2em}\noindent\rule{\textwidth}{1pt}
+
+\begin{center}\textsc{Drafts for the remaining highlighted (XXX) sections}\end{center}
+
+\noindent The blocks below are drafts for each XXX placeholder
+identified in the source draft. Each carries a header indicating where
+it belongs in the Word source.
+
+\vspace{1em}\noindent\rule{0.4\textwidth}{0.4pt}\vspace{0.6em}
+
+% -------------------------------------------------------------------------
+% Subtask 1.3  (under Task 1.0, BP1)
+% -------------------------------------------------------------------------
+
+\noindent\textit{[Insert at \S3.5 Task 1.0 (BP1), Subtask 1.3]}\par
+
+\noindent\textbf{Subtask 1.3:} Development of a digital twin framework
+for Si-based photovoltaic recycling, including reaction kinetics, mass
+transfer, and process optimization under continuous processing
+conditions. (RIT)\par
+
+\noindent\textbf{Subtask Summary:} The RIT team will develop a
+calibrated reactor-scale digital twin of the Si-based PV recycling
+sequence (NaOH leaching $\rightarrow$ HCl precipitation), extending the
+preliminary process-level twin demonstrated in \S2.2.2 to include solids
+loading, mixing, residence-time distribution, temperature uniformity,
+and pH trajectory at scaled processing conditions. The twin couples a
+multi-species mass-balance and pH-speciation core with a reactor-scale
+transport model and a physics-constrained AI surrogate trained on
+simulation outputs to recommend operating windows that maximize Si
+recovery and 6N purity while minimizing NaOH and HCl consumption. The
+model will be calibrated against WPI's ICP, pH, conductivity, and
+yield/purity data collected in Subtasks~1.1 and~1.2 and is implemented
+on the open-source MOOSE-based \textsc{FEECM} framework developed by
+Co-PI Tu's group.\par
+
+\noindent\textbf{Milestone 1.3.1:} Deliver a calibrated reactor-scale
+digital twin for Si-based PV recycling that predicts Si conversion, 6N
+SiO$_2$ yield, and reagent consumption within $\pm$5\,\% of WPI's
+scaled-batch measurements across the operating range
+$[\mathrm{NaOH}] = 3$--$7$\,M, $T = 60$--$90\,^\circ$C, precipitation
+$\mathrm{pH} < 2$.\par
+
+\noindent\textbf{Milestone 1.3.2:} Deliver an AI-surrogate-driven
+operating-window recommendation that achieves the targeted $>$95\,\% Si
+recovery and 6N purity at WPI's scaled processing conditions in a
+single recommended setting, with the recommendation accompanied by
+quantified uncertainty bounds.
+
+\vspace{1em}\noindent\rule{0.4\textwidth}{0.4pt}\vspace{0.6em}
+
+% -------------------------------------------------------------------------
+% Subtask 2.4  (under Task 2.0, BP1)
+% -------------------------------------------------------------------------
+
+\noindent\textit{[Insert at \S3.5 Task 2.0 (BP1), Subtask 2.4]}\par
+
+\noindent\textbf{Subtask 2.4:} Development of a digital twin framework
+for thin-film photovoltaic recycling to model selective recovery
+behavior, impurity interactions, and process stability for critical
+material recovery. (RIT)\par
+
+\noindent\textbf{Subtask Summary:} The RIT team will extend the
+Si-based digital twin developed in Subtask~1.3 to the thin-film PV
+chemistries investigated by the BU team in Subtask~2.2, with the goal
+of predicting selective recovery of critical materials (Ga, In, Ge,
+Cu) from CIGS and related thin-film waste streams. The extension
+augments the species library with the new soluble and solid phases,
+incorporates the multi-ion interactions and competing co-precipitation
+pathways that arise in mixed thin-film leachates, and adds an off-gas
+equilibrium submodel that predicts H$_2$Se generation under acidic
+conditions (linked to Subtask~2.3). The model will be calibrated
+against BU's ICP, XRD, SEM-EDS, and XPS feedstock and product
+datasets collected in Subtask~2.1.\par
+
+\noindent\textbf{Milestone 2.4.1:} Deliver a calibrated digital twin
+for thin-film PV recycling that predicts $>$98\,\% recovery efficiency
+and $>$4N purity for Ga, In, Ge, and Cu across representative CIGS
+feedstock compositions, validated against BU scaled-batch
+measurements within $\pm$5\,\%.\par
+
+\noindent\textbf{Milestone 2.4.2:} Deliver a model-based safe-operating
+window that predicts H$_2$Se generation rates as a function of pH, acid
+addition rate, temperature, and feedstock Se content, with confirmed
+agreement against BU's off-gas measurements (Subtask~2.3).
+
+\vspace{1em}\noindent\rule{0.4\textwidth}{0.4pt}\vspace{0.6em}
+
+% -------------------------------------------------------------------------
+% Subtask 3.3  (under Task 3.0, BP2)
+% -------------------------------------------------------------------------
+
+\noindent\textit{[Insert at \S3.5 Task 3.0 (BP2), Subtask 3.3]}\par
+
+\noindent\textbf{Subtask 3.3:} Development of a digital twin platform
+incorporating continuum modeling, reaction kinetics, and AI-assisted
+optimization. (RIT)\par
+
+\noindent\textbf{Subtask Summary:} The RIT team will integrate the
+Si-based (Subtask~1.3) and thin-film (Subtask~2.4) digital twins into a
+unified, chemistry-adaptable PV recycling platform capable of handling
+mixed Si-based and thin-film feedstocks. The platform exposes the
+elemental mass-balance, reaction-kinetics, reactor-transport, and
+AI-surrogate optimization layers as composable modules, so that a
+single user input--feedstock composition, operating conditions, target
+purity--drives the full simulation-to-recommendation workflow. The
+physics-constrained AI surrogate will recommend mixed-feedstock
+operating conditions that maximize recovery and purity while minimizing
+chemical consumption, embodied energy, and waste generation, and will
+be calibrated against the 1\,kg mixed-feedstock validation data from
+Subtask~3.4. The platform will be made available as a shared
+computational resource accessible to all project teams.\par
+
+\noindent\textbf{Milestone 3.3.1:} Deliver a validated digital twin
+platform integrating the Si-based and thin-film recycling models that
+predicts mixed-feedstock recovery efficiency and product purity within
+$\pm$5\,\% of the 1\,kg measurement endpoints from Subtask~3.4.\par
+
+\noindent\textbf{Milestone 3.3.2:} Deliver an AI-assisted optimization
+interface that reduces the number of experimental iterations required
+to identify scalable operating conditions for a new feedstock blend by
+at least 50\,\% relative to a Latin-hypercube sweep of equivalent
+coverage.
+
+\vspace{1em}\noindent\rule{0.4\textwidth}{0.4pt}\vspace{0.6em}
+
+% -------------------------------------------------------------------------
+% Subtask 4.3  (under Task 4.0, BP3)
+% -------------------------------------------------------------------------
+
+\noindent\textit{[Insert at \S3.5 Task 4.0 (BP3), Subtask 4.3]}\par
+
+\noindent\textbf{Subtask 4.3:} Computational modeling of the pilot-scale
+PV recycling. (RIT)\par
+
+\noindent\textbf{Subtask Summary:} The RIT team will apply the
+validated digital twin platform from Subtask~3.3 to model the 5\,kg and
+pilot-scale PV recycling reactors developed in Subtasks~4.1, 4.2,
+and~4.4. Modeling at this scale captures the scale-up--sensitive
+phenomena that are absent at beaker scale: reactor geometry effects on
+mixing, heat-transfer--limited temperature uniformity, residence-time
+distributions in continuous operation, and impurity carryover under
+increased solids loading. The model will be used to guide reactor
+design and operating-parameter selection prior to the BU/WPI/industry
+5\,kg validation runs, to predict throughput, energy demand, and reagent
+consumption as inputs to the TEA/LCA (Task~5.0), and to identify safe
+operating envelopes for H$_2$Se emission control under scaled
+conditions.\par
+
+\noindent\textbf{Milestone 4.3.1:} Deliver scale-up predictions for the
+5\,kg and pilot-scale PV recycling processes--recovery efficiency,
+product purity, throughput, energy demand, reagent consumption, and
+H$_2$Se emission risk--validated against industry-partner pilot-scale
+measurements within $\pm$10\,\%.\par
+
+\noindent\textbf{Milestone 4.3.2:} Deliver model-based operating
+recommendations and uncertainty bounds for safe and economically viable
+continuous operation at pilot scale, used as direct input to the TEA/LCA
+in Task~5.0.
+
+\vspace{1em}\noindent\rule{0.4\textwidth}{0.4pt}\vspace{0.6em}
+
+% -------------------------------------------------------------------------
+% Section 4.1 -- Dr. Tu bio
+% -------------------------------------------------------------------------
+
+\noindent\textit{[Insert at \S4.1 Team's Unique Qualifications and Expertise, after Prof.\ Yan Wang's bio]}\par
+
+\noindent Dr.\ Qingsong (Howard) Tu (Co-PI) is Assistant Professor of
+Mechanical Engineering at Rochester Institute of Technology (RIT). His
+research focuses on physics-informed digital twins, continuum-scale
+transport modeling, and machine-learning--assisted process optimization
+for electrochemical and materials-manufacturing systems, with
+applications spanning battery and electrolyte recycling, lithium-ion
+and solid-state batteries, electrochemical ion insertion, and
+sustainable manufacturing of advanced materials. He has published more
+than 40 peer-reviewed papers and applied for 5 patents, with over
+3,500 citations. Dr.\ Tu directs the Clean Energy and Water Lab
+(CewLab) at RIT, which combines experimental and computational
+facilities for the coupled study of electro-chemo-mechanics,
+electrochemical ion transport, and process scale-up. In the proposed
+project, Dr.\ Tu leads the digital twin development, AI-assisted
+process optimization, and computational scale-up tasks
+(Subtasks~1.3, 2.4, 3.3, and~4.3).
+
+\vspace{1em}\noindent\rule{0.4\textwidth}{0.4pt}\vspace{0.6em}
+
+% -------------------------------------------------------------------------
+% Section 4.2 -- CewLab compute completion
+% -------------------------------------------------------------------------
+
+\noindent\textit{[Insert at \S4.2 Team's existing Equipment and Facilities, completing the trailing sentence ``The following are computational resources\ldots'']}\par
+
+\noindent Local GPU workstations and a small CPU cluster in CewLab
+support model development, parameter sweeps, and small-batch surrogate
+training. RIT's SPORC (Sustainable Power Operations and Research
+Center) high-performance computing platform provides multi-node CPU
+and GPU resources for production-scale multiphysics simulations and
+reactor-scale digital twin runs. Co-PI Tu's group holds an allocation
+on the New York State Empire AI consortium, which provides access to
+large-scale GPU compute for training the physics-constrained AI
+surrogates that drive the operating-window recommendations in this
+project. National cyberinfrastructure allocations through the NSF
+ACCESS program provide additional capacity for parallel runs that
+exceed local capacity. Together these resources form a tiered compute
+stack--development on CewLab GPUs, production on SPORC, and large-scale
+AI training on Empire AI/ACCESS--that scales with the simulation and
+surrogate-training workload of the proposed project.
+
+\vspace{1em}\noindent\rule{0.4\textwidth}{0.4pt}\vspace{0.6em}
+
+% -------------------------------------------------------------------------
+% Section 4.4 -- Tu time commitment
+% -------------------------------------------------------------------------
+
+\noindent\textit{[Insert at \S4.4 Time Commitment of the Key Team Members, completing the trailing ``Dr.\ Tu\ldots'']}\par
+
+\noindent Dr.\ Tu is the Co-PI for the project and will spend
+\textbf{1~month} per year on the project.\footnote{Placeholder value
+matching the typical Co-PI commitment on DOE awards; please confirm
+against the negotiated effort.} In addition, Dr.\ Tu will advise
+\textbf{1~Ph.D.\ student} working on this project, who will work 50\,\%
+time during semesters and 100\,\% effort during summer.
+
+\end{document}

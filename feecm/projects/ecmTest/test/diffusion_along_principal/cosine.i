@@ -68,8 +68,7 @@
 
 [Materials]
   [./diffusivity_Li1]
-    type = ADDiffusionAlongPrincipalDirections
-    diffusivity_name =  'diffusivity'
+    type = ADDiffusionAlongPrincipalDirectionsMaterial
     diffusivity_vector = '1e8 0 0'
     block = 'interLayer'
     # output_properties = diffusion_tensor

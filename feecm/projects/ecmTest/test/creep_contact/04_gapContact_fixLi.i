@@ -56,7 +56,7 @@ name = '04_gapContact_fixLi'
   [./action]
     add_variables = true
     strain = FINITE
-    use_displaced_mesh = true
+    # use_displaced_mesh removed (deprecated in TensorMechanics action)
     volumetric_locking_correction = true
     generate_output = 'stress_xx stress_yy strain_xx strain_yy vonmises_stress'
     block = 'blockCeramic blockMetal'
