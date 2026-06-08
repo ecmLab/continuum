@@ -9,6 +9,7 @@ strn_rt = 30e-5     # Strain rate
 [GlobalParams]
   displacements = 'disp_r disp_z'
 []
+
 [Mesh]
   coord_type = RZ
   type = GeneratedMesh
@@ -32,115 +33,12 @@ strn_rt = 30e-5     # Strain rate
   [./all]
     add_variables = true
     strain = FINITE
-#    use_displaced_mesh = true
+    #use_displaced_mesh = true
     volumetric_locking_correction = true
     generate_output = 'stress_yy strain_yy vonmises_stress'
     use_automatic_differentiation = true
     # use_finite_deform_jacobian = true
   [../]
-[]
-
-[AuxVariables]
-  [./Fp_yy]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./effPlastic_strain]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./yldStrength]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./effstrain]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./strain_rate]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./hard]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./mandel_yy]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./logStrain_yy]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-  [./defGrad_yy]
-    order = CONSTANT
-    family = MONOMIAL
-  [../]
-
-[]
-
-[AuxKernels]
-  [./fp_yy]
-    type = ADRankTwoAux
-    variable = Fp_yy
-    rank_two_tensor = plastic_distortion
-    index_i = 1
-    index_j = 1
-    execute_on = timestep_end
-  [../]
-  [./log_strain_yy]
-    type = ADRankTwoAux
-    variable = logStrain_yy
-    rank_two_tensor = logarithmic_elastic_strain
-    index_i = 1
-    index_j = 1
-    execute_on = timestep_end
-  [../]
-  [./def_grad_yy]
-    type = ADRankTwoAux
-    variable = defGrad_yy
-    rank_two_tensor = deformation_gradient
-    index_i = 1
-    index_j = 1
-    execute_on = timestep_end
-  [../]
-  [./effective_plastic_strain]
-    type = ADMaterialRealAux
-    variable = effPlastic_strain
-    property = effective_plastic_strain
-    execute_on = timestep_end
-  [../]
-  [./yield_strength]
-    type = ADMaterialRealAux
-    variable = yldStrength
-    property = yield_strength
-    execute_on = 'TIMESTEP_END'
-  [../]
-#  [./effective_strain]
-#    type = ADRankTwoScalarAux
-#    rank_two_tensor = total_strain
-#    variable = effstrain
-#    scalar_type = EffectiveStrain
-#  [../]
-  [./strain_rate]
-    type = ADMaterialRealAux
-    variable = strain_rate
-    property = plastic_strain_rate
-  [../]
-  [./hard]
-    type = ADMaterialRealAux
-    variable = hard
-    property = hardening_variable
-  [../]
-  [./mandel_yy]
-    type = ADRankTwoAux
-    variable = mandel_yy
-    rank_two_tensor = mandel_stress
-    index_i = 1
-    index_j = 1
-  [../]
-
 []
 
 [BCs]
@@ -190,11 +88,11 @@ strn_rt = 30e-5     # Strain rate
     gas_constant = 8.314462681e-3 # kJ/K/mol
     saturation_exponent = 0.05
     pre_factor = 4.25e4
-    temperature = 298
+    temperature = 320
 
     effective_inelastic_strain_name = effective_plastic_strain
     max_inelastic_increment = 10
-    internal_solve_full_iteration_history = true
+    internal_solve_full_iteration_history = false
     internal_solve_output_on = on_error
   [../]
 []
@@ -212,49 +110,6 @@ strn_rt = 30e-5     # Strain rate
     type = AverageNodalVariableValue
     variable = disp_z
     boundary = top
-  [../]
-  [./effPlastic_strain]
-    type = ElementAverageValue
-    variable = effPlastic_strain
-  [../]
-  [./fp_yy]
-    type = ElementAverageValue
-    variable = Fp_yy
-  [../]
-  [./yield_stregnth]
-    type = ElementAverageValue
-    variable = yldStrength
-  [../]
-  [./matl_ts_min]
-    type = MaterialTimeStepPostprocessor
-  [../]
-#  [./eff_strain]
-#    type=ElementAverageValue
-#    variable = effstrain
-#  [../]
-
-  [./strain_rate]
-    type = ElementAverageValue
-    variable = strain_rate
-  [../]
-
-  [./hard]
-    type = ElementAverageValue
-    variable = hard
-  [../]
-
-  [./mandel_yy]
-    type = ElementAverageValue
-    variable = mandel_yy
-  [../]
-  [./logStrain_yy]
-    type = ElementAverageValue
-    variable = logStrain_yy
-  [../]
-
-  [./defGrad_yy]
-    type = ElementAverageValue
-    variable = defGrad_yy
   [../]
   [./von_mises]
     type = ElementAverageValue
@@ -278,22 +133,22 @@ strn_rt = 30e-5     # Strain rate
   dtmin = 1.0e-5
   dtmax = 10.00000000000000000000
 # Solver setting
-  solve_type = 'PJFNK'
-  petsc_options_iname = '-pc_type -sub_pc_type -pc_asm_overlap -ksp_gmres_restart'
-  petsc_options_value = 'asm lu 1 101'
-#  solve_type = 'NEWTON'
-#  petsc_options_iname = -pc_type
-#  petsc_options_value = lu
+#  solve_type = 'PJFNK'
+#  petsc_options_iname = '-pc_type -sub_pc_type -pc_asm_overlap -ksp_gmres_restart'
+#  petsc_options_value = 'asm lu 1 101'
+  solve_type = 'NEWTON'
+  petsc_options_iname = -pc_type
+  petsc_options_value = lu
 
   nl_rel_tol = 1e-8
-  nl_abs_tol = 1e-10
-  nl_max_its = 100
+  nl_abs_tol = 1e-8
+  nl_max_its = 25
   [./TimeStepper]
     type = IterationAdaptiveDT
     dt = 0.05
     growth_factor = 1.5
-    cutback_factor = 0.85
-    optimal_iterations = 100
+    cutback_factor = 0.5
+    optimal_iterations = 8
 #    timestep_limiting_postprocessor = matl_ts_min
   [../]
   end_time = 1666.66666666666666666666
@@ -302,9 +157,5 @@ strn_rt = 30e-5     # Strain rate
 [Outputs]
   exodus = true
   csv    = true
-  file_base = rst/tension_constTrueStrainRateR30
+  file_base = rst/tension_constTrueStrainRate${strn_rt}_T320
 []
-
-#[Debug]
-#  show_material_props = true
-#[]
