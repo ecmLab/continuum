@@ -1,0 +1,385 @@
+\documentclass[11pt]{article}
+
+% --- Preamble: restricted to packages confirmed present in this TeX Live 2025
+%     basic install (siunitx and enumitem are NOT available here). ------------
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{listings}
+\usepackage[hidelinks]{hyperref}
+
+% Robust verbatim-in-text for names with underscores (avoids manual escaping).
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\lstset{basicstyle=\ttfamily\footnotesize,breaklines=true,frame=single,
+        columns=fullflexible,xleftmargin=1.5em}
+
+\title{\textbf{Continuum Mechanics of Catholyte Contact in Solid-State\\
+Sodium-Ion Batteries: A Predictive Design Framework}\\[4pt]
+\large Modeling support for the plastic-glassy NACS catholyte manuscript}
+\author{Continuum modeling, ecmLab}
+\date{9 June 2026 \quad(\emph{working report --- status summary})}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+This report summarizes the continuum finite-element modeling built to support
+the manuscript \emph{``Plastic Glassy Catholyte Unlocking Stable Solid-State
+Sodium-Ion Batteries''} (Gan \textit{et al.}). The manuscript is wholly
+experimental; the modeling described here is a \emph{new, theory-first
+predictive framework} intended to open the paper. Its purpose is not to
+reproduce a measurement but to answer a design question: \emph{what mechanical
+properties must a catholyte possess to maintain particle-to-particle contact in
+a composite cathode while minimizing the required stack pressure?} The model
+treats the cathode-active-material (CAM) / solid-electrolyte (SE) interface with
+two complementary descriptions --- node-to-segment contact and a cohesive-zone
+model (CZM) --- and sweeps the catholyte's mechanical properties to produce a
+\emph{design map}. The conclusions then feed a downstream DFT screening step
+that places candidate materials on that map. The current production model uses
+rate-independent $J_2$ plasticity for the catholyte and isotropic linear
+elasticity for the NVP cathode; a temperature-dependent elasto-viscoplastic
+catholyte law was also developed and is parked pending experimental confirmation
+of the flow behavior. We report the modeling rationale, both constitutive
+options, the basis borrowed from a closely related published study, and the
+implementation status (Phases~0--1 complete).
+\end{abstract}
+
+\section{Objective and scientific context}
+
+The central mechanical thesis of the manuscript is that a \emph{rigid} catholyte
+cannot follow the CAM's volume change during cycling, so it delaminates and
+loses contact, forcing the use of high stack pressure ($>150$\,MPa). The
+proposed NACS (Na$_2$Al$_{1.35}$Cl$_{4.05}$S) glass instead undergoes a low-endothermic
+\emph{plastic phase transition} on in-situ heating and flows as a viscous,
+binder-like catholyte, maintaining intimate contact at $\sim$10\,MPa or even
+pressure-free assembly. The experimental evidence (nanoindentation, DSC, SEM,
+long-term cycling) is strong but qualitative on the mechanics.
+
+The modeling goal is therefore to provide the \textbf{predictive trend}:
+quantify interface contact loss and the minimum stack pressure required to
+preserve contact, as a function of the catholyte's stiffness, hardness and
+viscous (rate-dependent) character. Because the intent is a transferable design
+map rather than a microstructure reconstruction, an idealized single-particle
+representative-interface geometry and a property sweep are the appropriate level
+of fidelity.
+
+\section{Physical problem and modeling strategy}
+
+\paragraph{Geometry and unit system.} A 2-D $5\times5$\,$\mu$m representative
+cell (unit system $\mu$m--MPa--$\mu$N; $1$\,MPa${=}1\,\mu$N$/\mu$m$^2$): an NVP
+cathode quarter disc (radius $R\approx3.99$\,$\mu$m, $\approx$50\% area fraction)
+embedded in an L-shaped NACS catholyte domain --- i.e.\ a $\mu$m-scale NVP
+active particle. The shared quarter-circle arc is the interface where all reported
+quantities live. The bulk mechanics is scale-invariant under uniform geometric
+scaling, so the $\mu$m setting matters chiefly by fixing the physical
+cohesive-zone length that governs CZM delamination. The mesh is graded ---
+element edge $0.02$\,$\mu$m on the arc, coarsening to $0.20$\,$\mu$m in the bulk
+--- and fully
+recombined to QUAD4 ($\sim$10{,}050 elements, 313 elements along the arc).
+
+\paragraph{Two complementary interface models.} Both share the geometry,
+loading, and bulk materials; they differ only in how the arc is treated
+(Table~\ref{tab:models}).
+
+\begin{table}[h]
+\centering
+\caption{The two complementary interface descriptions.}
+\label{tab:models}
+\begin{tabular}{lll}
+\toprule
+ & \code{1_contact.i} & \code{2_czm.i} \\
+\midrule
+Interface & non-conformal (two arcs) & conformal + \code{BreakMeshByBlockGenerator} \\
+Physics   & penalty node-to-segment contact & bilinear mixed-mode CZM \\
+Mesh      & \code{mesh_5050.msh} & \code{mesh_czm_5050.msh} \\
+Reports   & gap / contact loss & traction, jump, damage (delamination) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Loading.} The CAM volume change is imposed as a thermal-expansion
+eigenstrain proxy (a charge/discharge ramp, $\sim$8\% volumetric swelling at
+peak), superposed on a stack-pressure boundary condition ramped on the top face.
+The NVP cathode is treated as isotropic linear elastic (no plasticity); the
+catholyte carries the inelastic (plastic) response.
+
+\section{Catholyte constitutive model}
+
+\subsection{Catholyte: $J_2$ plasticity (current) and a parked viscoplastic extension}
+
+The \textbf{current production model} is rate-independent $J_2$ plasticity:
+linear elasticity plus an isotropic (von Mises) yield whose strength is tied to
+the measured Vickers hardness through the Tabor relation,
+\begin{equation}
+  \sigma_y \;\approx\; \frac{H_v}{3}.
+  \label{eq:tabor}
+\end{equation}
+This captures the onset of plastic flow but \emph{not} the time/rate-dependent
+viscous flow that is the essence of the plasticized NACS ``binder.'' A
+\textbf{rate-dependent viscoplastic extension} was therefore also developed ---
+linear elasticity $+$ static $J_2$ yield (Eq.~\ref{eq:tabor}) $+$ Norton
+(power-law) creep,
+\begin{equation}
+  \dot{\varepsilon}^{\,\mathrm{cr}} \;=\; A\,\sigma_{\mathrm{eq}}^{\,n},
+  \label{eq:norton}
+\end{equation}
+implemented as \code{PowerLawCreepStressUpdate} alongside
+\code{IsotropicPlasticityStressUpdate} in \code{ComputeMultipleInelasticStress}.
+Equation~\ref{eq:norton} is the MOOSE-native analog of the rate-dependent yield
+surface used in the reference study (Sec.~\ref{sec:ref}),
+\begin{equation}
+  \frac{\bar{\sigma}}{Y} \;=\;
+  \left(1+\frac{\dot{\varepsilon}^{\,p}}{\dot{\varepsilon}_0}\right)^{1/n},
+  \label{eq:cowper}
+\end{equation}
+recovering stiff behavior at low temperature and viscous flow as the glass
+softens. \textbf{This viscoplastic version is parked in \code{viscoplastic/}}
+pending experimental confirmation of the flow behavior; the production inputs
+currently use $J_2$ only.
+
+\subsection{Assumed parameters (placeholders)}
+
+Pending the redone hold-segment nanoindentation, we adopt the
+\textbf{placeholder} temperature presets in Table~\ref{tab:presets}. $E$ and
+$H_v$ are the $J_2$ (and DFT-screening) properties; the creep coefficient $A$
+(with $n=4$, mirroring the Li$_6$PS$_5$Cl reference) belongs to the \emph{parked}
+viscoplastic version, where it increases by roughly two orders per step so the
+response evolves from rigid (25\,$^\circ$C) through softening (60\,$^\circ$C) to
+fluid-like (90\,$^\circ$C). Values are overridden on the command line to sweep
+and build the design map.
+
+\begin{table}[h]
+\centering
+\caption{Assumed (placeholder) catholyte properties --- \emph{to be recalibrated
+to the redone nanoindentation}. $\nu=0.30$ throughout.}
+\label{tab:presets}
+\begin{tabular}{lcccc}
+\toprule
+State & $T$ ($^\circ$C) & $E$ (MPa) & $H_v$ (MPa) & $A$ (Norton, $n{=}4$) \\
+\midrule
+rigid glass     & 25 & 1000 & 30 & $1\times10^{-7}$ \\
+softening       & 60 &  500 & 12 & $1\times10^{-5}$ \\
+plastic/slurry  & 90 &  100 &  3 & $1\times10^{-3}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Important caveat.} The absolute value of $A$ is tied to the
+(currently proxy) loading timescale; it must be rescaled once the real
+charge/discharge rate is set so that creep accumulates an $O(1\%)$ strain over a
+cycle. The temperature dependence is presently baked into the preset (no
+coupling to the swelling-proxy temperature field), which cleanly avoids
+overloading that field with two physical meanings.
+
+\section{Basis in the literature and our extension}
+\label{sec:ref}
+
+The modeling approach closely follows Shi \textit{et al.}, \emph{``Stack
+pressure effects and viscoplastic deformation in argyrodite solid-state
+electrolyte,''} \emph{Matter} \textbf{9}, 102767 (2026), which provides a
+near-turnkey blueprint. We borrow:
+
+\begin{itemize}
+  \item \textbf{Constitutive form} --- the rate-dependent yield surface,
+  Eq.~\ref{eq:cowper}. Their Li$_6$PS$_5$Cl parameters
+  ($E=22.1$\,GPa, $\nu=0.30$, $Y=0.35$\,GPa, $\dot{\varepsilon}_0=10^{-5}$\,s$^{-1}$,
+  $n=4$) anchor the \emph{rigid} end of our sweep.
+  \item \textbf{Calibration workflow} --- inverse-FEM fitting of $(E,Y,\dot{\varepsilon}_0,n)$
+  to hold-segment nanoindentation, using a \emph{relative}-depth-change scheme
+  robust to porous/rough surfaces.
+  \item \textbf{Design-map template} --- their contact-ratio versus
+  \emph{normalized} stack pressure $p/Y_0$, which validates $p/Y$ as the
+  governing dimensionless group and is the direct template for our opening
+  figure.
+\end{itemize}
+
+\noindent\textbf{Our novelty.} Their model is isothermal. The plastic phase
+transition of NACS is precisely a \emph{temperature-activated} change in the
+viscoplastic parameters $E(T)$, $Y(T)$, $A(T)$ across the glass transition ---
+so the temperature-dependent constitutive law (Table~\ref{tab:presets}) and the
+resulting temperature axis on the design map are a genuine extension, not a
+re-run.
+
+\section{Design-map property axes and the DFT handoff}
+
+The screening axes are chosen to be both physically governing \emph{and}
+computable by DFT, since DFT is the downstream filter that ranks candidate
+catholytes (Table~\ref{tab:axes}).
+
+\begin{table}[h]
+\centering
+\caption{Design-map / screening axes and their DFT route.}
+\label{tab:axes}
+\begin{tabular}{lll}
+\toprule
+Property & Role & DFT route \\
+\midrule
+$E$ (or $E/\sigma_y$) & elastic conformability & elastic tensor \\
+$H_v \to \sigma_y$ & plastic gap-filling & $H_v(G,B)$ models, then Eq.~\ref{eq:tabor} \\
+adhesion $G_{Ic}$ & resistance to delamination & interface/surface energy \\
+Pugh ratio $G/B$ & ductility (optional) & elastic tensor \\
+viscosity $A$ & viscous flow rate & \emph{not} DFT-screenable; a model knob \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Hardness from DFT.} DFT does not yield $H_v$ directly, but
+well-established models map the computed elastic moduli to it. With shear modulus
+$G$, bulk modulus $B$, and Pugh's ratio $k=G/B$:
+\begin{align}
+  H_v &= 2\,(k^2 G)^{0.585} - 3 && \text{(Chen--Niu)}, \\
+  H_v &= 0.92\,k^{1.137} G^{0.708} && \text{(Tian)}, \\
+  H_v &\approx 0.151\,G && \text{(Teter)}.
+\end{align}
+Thus $H_v \approx f(G,\,G/B)$: hardness scales with the magnitude of $G$, while
+Pugh's ratio supplies the ductility correction --- the two are intimately
+related but not identical. A single DFT elastic calculation per candidate yields
+$\{E,\nu,G,B\}$ and hence \emph{both} primary map axes ($E$ directly, and
+$\sigma_y=H_v/3$). These models are calibrated on hard crystalline solids, so
+they should be used for \emph{relative} ranking; a porosity knock-down is needed
+to compare dense-cell DFT moduli with the cold-pressed porous pellet, and an
+amorphous NACS requires a melt-quench supercell with Voigt--Reuss--Hill
+averaging. Because for a real material $E$ and $H_v$ both derive from the same
+$\{G,B\}$, candidates populate only a physically allowed band of the $(E,H_v)$
+plane --- itself useful information about which corner of the map is reachable.
+
+\paragraph{Pipeline.}
+\begin{center}
+continuum design map $\;\longrightarrow\;$ DFT computes $\{E,H_v,G_{Ic}\}$ per
+candidate $\;\longrightarrow\;$ overlay on the map $\;\longrightarrow\;$ select the
+material deepest in the low-loss / low-pressure region.
+\end{center}
+The DFT work proceeds in a parallel repository
+(\code{abInit/dftecm/paper_yangzhao_catholyteMechanics}); elastic results are
+pending.
+
+\section{Implementation status}
+
+\subsection{Phase 0 --- housekeeping (complete)}
+\begin{itemize}
+  \item Both meshes regenerated via \code{make_mesh.py} (pure QUAD4; interface
+  sidesets verified: \code{block_NVP_right}/\code{block_NACS_left} for contact,
+  \code{block_NVP_block_NACS} for the CZM split).
+  \item Sweep scripts de-staled: executable \code{contact_loss-opt} $\to$
+  \code{ecm-opt} (app name \code{ecm}) via an \code{EXE} variable; HPC
+  \code{BASE} path parameterized.
+  \item Both inputs smoke-tested locally with \code{ecm-opt}.
+\end{itemize}
+
+\subsection{Phase 1 --- catholyte model and elastic cathode (complete)}
+Both inputs run with the $J_2$ catholyte and an isotropic-elastic NVP cathode
+(\code{ComputeFiniteStrainElasticStress}), and converge. The parked viscoplastic
+catholyte (in \code{viscoplastic/}) adds a Norton-creep material block:
+\begin{lstlisting}
+[./power_law_creep_NACS]
+  type = PowerLawCreepStressUpdate
+  block = 'block_NACS'
+  coefficient = ${creep_coef}   # Norton A (ASSUMED; recalibrate)
+  n_exponent  = ${creep_exp}    # Norton n (ASSUMED)
+  activation_energy = 0         # T-dependence baked into A (no temp coupling)
+  max_inelastic_increment = 1e-3
+[../]
+[./radial_return_stress_NACS]
+  type = ComputeMultipleInelasticStress
+  tangent_operator = nonlinear
+  inelastic_models = 'isotropic_plasticity_NACS power_law_creep_NACS'
+  block = 'block_NACS'
+[../]
+\end{lstlisting}
+
+\paragraph{Verification (parked viscoplastic version).} It was confirmed active
+by three independent checks (CZM case, default mesh):
+\begin{itemize}
+  \item \emph{Residual signature.} Switching on creep raises the Newton-iteration
+  count of a representative step from 3 (rate-independent) to 18 --- the creep
+  term genuinely enters the residual.
+  \item \emph{Stress relaxation} (the binder mechanism). At $t=0.16$ the peak von
+  Mises stress in the catholyte drops from $4.000$\,MPa (creep off) to
+  $3.899$\,MPa at $A=10^{-3}$ --- a $\sim$2.5\% relaxation, the textbook signature
+  of viscous flow relieving stress.
+  \item \emph{Gap-controlled kinematics (so far).} The arc-apex gap is nearly
+  unchanged ($4.3215\times10^{-2}$ off vs.\ $4.3220\times10^{-2}$ at $A=10^{-3}$):
+  early in a single load the response is gap-controlled and the low yield
+  ($\sigma_y\!\approx\!3.3$\,MPa) caps the driving stress, so the
+  contact-retention payoff of viscous flow becomes first order only under cyclic
+  loading and after the rate is recalibrated (Phases~2--3).
+\end{itemize}
+
+\subsection{Convergence and performance}
+Profiling identified the cost driver and the fixes (all verified locally):
+\begin{itemize}
+  \item \textbf{Diagnosis.} The hand-coded CZM / creep / penalty-contact tangents
+  are inexact, so Newton converges only linearly --- the residual reaches
+  $\sim$$10^{-7}$ in 2--3 iterations then \emph{crawls} to the former
+  \code{nl_abs_tol} of $10^{-8}$. Near peak swelling the CZM cohesive-softening
+  (indefinite) tangent additionally makes Newton oscillate and diverge.
+  \item \textbf{Tolerance (baked in).} Loosening \code{nl_abs_tol}
+  $10^{-8}\!\to\!10^{-7}$ drops the wasted crawl: \textbf{2.4$\times$} fewer
+  iterations for the CZM input and \textbf{3.8$\times$} for the contact input,
+  with gap/traction unchanged to $\sim$$10^{-5}$ relative. A backtracking line
+  search does not help and \emph{worsens} the CZM peak-load case.
+  \item \textbf{Exact Jacobian via AD.} The full bulk chain (elasticity,
+  plasticity, Norton creep, eigenstrain) has AD versions; converting it makes the
+  bulk tangent exact and Newton truly quadratic --- \textbf{max 3 iterations per
+  step}, and the contact model runs \emph{through peak swelling with zero
+  cutbacks} (vs.\ 9 cutbacks / 99-iteration stalls without it). Two caveats:
+  \code{ADBiLinearMixedModeTraction} does not exist, so the CZM interface tangent
+  stays hand-coded; and each AD assembly is $\sim$$10\times$ costlier, so AD is
+  $\sim$$6\times$ slower in \emph{wall-clock} despite fewer iterations. AD is thus
+  kept as a robustness tool, not the production default.
+  \item \textbf{Adaptive timestep.} \code{IterationAdaptiveDT} was clamped to
+  $\Delta t\le0.02$ by 50 dense output sync times; output is now decoupled from
+  stepping (sync only at the critical times 0.05, 0.5, 1.0; \code{optimal_iterations}
+  $50\!\to\!8$) so $\Delta t$ grows freely when convergence is stable --- verified:
+  $\Delta t$ ramps $0.01\!\to\!0.08$ and auto-reduces approaching peak swelling.
+\end{itemize}
+
+\section{Roadmap}
+
+\begin{itemize}
+  \item \textbf{Phase 2 --- outputs/metrics (ready to start).} Postprocessors for
+  contact-area (or delaminated-arc) fraction and the minimum stack pressure to
+  maintain contact; multi-cycle loading. No experimental data required.
+  \item \textbf{Phase 3 --- design map.} Sweep $\{E\ (\text{or }E/\sigma_y),\,H_v,\,
+  G_{Ic}\}$ and produce contour maps of contact loss and required stack
+  pressure (the manuscript's opening figure), with a temperature axis via the
+  presets.
+  \item \textbf{Phase 4 --- DFT integration.} Place DFT-screened candidates on
+  the map and recommend the best catholyte.
+\end{itemize}
+
+\paragraph{Open calibration items.}
+(i)~Recalibrate $E(T),\sigma_y(T),A(T),n$ to the redone hold-segment
+nanoindentation at 25/60/90\,$^\circ$C (load--hold--unload--hold protocol;
+fused-quartz control; vary hold time and loading rate).
+(ii)~Rescale $A$ to the physical loading rate.
+(iii)~Decide whether to keep the swelling eigenstrain proxy or move to an
+explicit cyclic CAM-state driver.
+
+\appendix
+\section{File inventory}
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+File & Role \\
+\midrule
+\code{calculation/make_mesh.py}   & gmsh generator (conformal / \code{--contact}) \\
+\code{calculation/1_contact.i}    & penalty-contact model (J2 catholyte, elastic NVP) \\
+\code{calculation/2_czm.i}        & cohesive-zone model (J2 catholyte, elastic NVP) \\
+\code{calculation/viscoplastic/}  & parked viscoplastic-catholyte variants (4 inputs) \\
+\code{calculation/1_sweep.sh}     & SLURM sweep: $E\times H_v$ \\
+\code{calculation/2_sweep.sh}     & SLURM sweep: $E\times H_v\times$ cohesion \\
+\code{reference/}                 & NACS manuscript + SI; Shi \textit{et al.} (Matter 2026) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Executable (from \code{calculation/}):
+\code{../../../../ecm_test/ecm-opt}.
+
+\end{document}

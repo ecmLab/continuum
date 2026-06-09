@@ -1,29 +1,41 @@
-## --- Bulk Material Properties ---
-ymod_se=100             # Young Modulus of SE [MPa] (Sweeping from 100 to 1000 MPa)
-Hv_se=3.00              # Vickers Hardness of SE [MPa] (Sweeping from 3 to 30 MPa)
-pr_se=0.30              # Poissons Ratio of SE
+## ============================================================================
+## UNIT SYSTEM: um (length) - MPa (stress) - uN (force).  1 MPa = 1 uN/um^2.
+##   Representative cell = 5 x 5 um; NVP particle radius ~4 um.  The mesh is
+##   unit-agnostic (coords read 5.0); these material params set the um scale.
+##   Energy release rate G_Ic in MPa*um (= uN/um).
+## Catholyte / solid electrolyte = NACS (Na2Al1.35Cl4.05S).
+## ============================================================================
+## --- Catholyte (NACS solid electrolyte) properties ---
+## Rate-independent J2 plasticity: linear elastic + isotropic (von Mises) yield,
+## yield strength tied to the measured Vickers hardness (Tabor sigma_y ~ H_v/3).
+## (The rate-dependent viscoplastic/creep version is parked in viscoplastic/
+## pending experimental confirmation of the catholyte's flow behavior.)
+##
+## ASSUMED placeholder properties -- recalibrate to the redone nanoindentation:
+##         | rigid | soft | plastic
+##   E MPa |  1000 |  500 |   100
+##   H_v   |   30  |   12 |    3
+## Active set (override on the command line to sweep / build the design map):
+ymod_nacs=500              # Young Modulus of NACS [MPa]
+Hv_nacs=25.00              # Vickers Hardness of NACS [MPa]
+pr_nacs=0.30              # Poissons Ratio of NACS
 
-ustr_am=10000           # Ultimate Strength of AM [MPa] (Some High Value to Ignore AM Plasticity)
-ymod_am=90000           # Young Modulus of AM [MPa]
-pr_am=0.26              # Poissons Ratio of AM
+ymod_nvp=90000           # Young Modulus of NVP [MPa] (isotropic elastic cathode)
+pr_nvp=0.26              # Poissons Ratio of NVP
 
 ## --- Calculated Material Properties ---
-ustr_se=${fparse Hv_se / 3}                             # Ultimate Strength of SE [MPa] (Coe. = 3)
-ystr_se=${fparse ustr_se / 1.2}                         # Yield Strength of SE [MPa]
-plstr=${fparse (ustr_se - ystr_se) / (ymod_se / 10)}    # Plastic Strain of SE
+ustr_nacs=${fparse Hv_nacs / 3}               # Ultimate Strength of SE [MPa] (Coe. = 3)
+ystr_nacs=${fparse ustr_nacs / 1.2}                         # Yield Strength of SE [MPa]
+plstr=${fparse (ustr_nacs - ystr_nacs) / (ymod_nacs / 10)}    # Plastic Strain of SE
 
 
 ## --- Boundary Conditions Properties ---
 sptop=10                      # Stack Pressure [MPa]
-alpha_nmc=2.9927418e-4        # Thermal expansion coefficient of NMC (8.3% expansion)
+alpha_nvp=2.9927418e-4        # Thermal expansion coefficient of NVP (8.3% expansion)
 
 
 ## --- Output Control ---
-output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
-                0.22 0.24 0.26 0.28 0.30 0.32 0.34 0.36 0.38 0.40
-                0.42 0.44 0.46 0.48 0.50 0.52 0.54 0.56 0.58 0.60
-                0.62 0.64 0.66 0.68 0.70 0.72 0.74 0.76 0.78 0.80
-                0.82 0.84 0.86 0.88 0.90 0.92 0.94 0.96 0.98 1.00'
+output_times = '0.05 0.5 1.0'
 
 
 [Problem]
@@ -33,7 +45,7 @@ output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
 [Mesh]
         [./fmg]
                 type = FileMeshGenerator
-                ## Mesh file with AM:SE=50/50 volume ratio
+                ## Mesh (AM:NACS = 50/50 area ratio)
                 file = mesh_5050.msh
         []
 []
@@ -47,28 +59,28 @@ output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
         [./eigenstrain_xx]
                 order = FIRST
                 family = MONOMIAL
-                block = 'block_NMC'
+                block = 'block_NVP'
         [../]
         [./eigenstrain_yy]
                 order = FIRST
                 family = MONOMIAL
-                block = 'block_NMC'
+                block = 'block_NVP'
         [../]
         [./total_strain_xx]
                 order = FIRST
                 family = MONOMIAL
-                block = 'block_NMC'
+                block = 'block_NVP'
         [../]
         [./total_strain_yy]
                 order = FIRST
                 family = MONOMIAL
-                block = 'block_NMC'
+                block = 'block_NVP'
         [../]
 []
 [Functions]
         [./temperature_load]
                 type = ParsedFunction
-                # NMC loading and unloading step
+                # NVP loading and unloading step
                 expression = 'if(t<=0.5, 180*t, (-1)*(t-0.5)*180 + 90.0)'
         [../]
         [./press_ramp]
@@ -76,33 +88,28 @@ output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
                 x = '0    0.05  1.0'
                 y = '0.0  1.0   1.0'
         [../]
-        [./hf_NMC]
-                type = PiecewiseLinear
-                x = '0'
-                y = '${ustr_am}'
-        [../]
-        [./hf_LPS]
+        [./hf_NACS]
                 type = PiecewiseLinear
                 x = '0 ${plstr}'
-                # Hardening Function LPS
-                y = '${ystr_se} ${ustr_se}'
+                # Hardening Function NACS
+                y = '${ystr_nacs} ${ustr_nacs}'
         [../]
 []
 [Modules]
         [./TensorMechanics]
          [./Master]
-           [./NMC]
+           [./NVP]
              strain = FINITE
                  add_variables = true
                  eigenstrain_names = eigenstrain
                  generate_output = 'stress_xx stress_yy vonmises_stress strain_xx strain_yy'
-                 block = 'block_NMC'
+                 block = 'block_NVP'
            [../]
-           [./LPS]
+           [./NACS]
                  strain = FINITE
                  add_variables = true
                  generate_output = 'stress_yy stress_xx vonmises_stress plastic_strain_xx plastic_strain_yy'
-                 block = 'block_LPS'
+                 block = 'block_NACS'
            [../]
          [../]
         [../]
@@ -115,7 +122,7 @@ output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
         [../]
         [./eigenstrain_yy]
                 type = RankTwoAux
-                block = 'block_NMC'
+                block = 'block_NVP'
                 rank_two_tensor = eigenstrain
                 variable = eigenstrain_yy
                 index_i = 1
@@ -124,7 +131,7 @@ output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
         [../]
         [./eigenstrain_xx]
                 type = RankTwoAux
-                block = 'block_NMC'
+                block = 'block_NVP'
                 rank_two_tensor = eigenstrain
                 variable = eigenstrain_xx
                 index_i = 0
@@ -133,7 +140,7 @@ output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
         [../]
         [./total_strain_yy]
                 type = RankTwoAux
-                block = 'block_NMC'
+                block = 'block_NVP'
                 rank_two_tensor = total_strain
                 variable = total_strain_yy
                 index_i = 1
@@ -142,7 +149,7 @@ output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
         [../]
         [./total_strain_xx]
                 type = RankTwoAux
-                block = 'block_NMC'
+                block = 'block_NVP'
                 rank_two_tensor = total_strain
                 variable = total_strain_xx
                 index_i = 0
@@ -151,13 +158,13 @@ output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
         [../]
 []
 [Contact]
-        [nmc_lps]
-                primary = 'block_NMC_right'
-                secondary = 'block_LPS_left'
+        [nvp_nacs]
+                primary = 'block_NVP_right'
+                secondary = 'block_NACS_left'
                 # This penalty control the convergence issue
                 # Higher Young modulus will have higher penalty parameter or vice versa
                 # Tentative  number should be in the range of the young modulus
-                penalty = ${ymod_se}
+                penalty = ${ymod_nacs}
                 formulation = penalty
                 tangential_tolerance = 0.0001
         []
@@ -190,50 +197,49 @@ output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
         #[../]
 []
 [Materials]
-        [./elasticity_tensor_NMC]
+        [./elasticity_tensor_NVP]
                 type = ComputeIsotropicElasticityTensor
-                block = 'block_NMC'
-                youngs_modulus = ${ymod_am}
-                poissons_ratio = ${pr_am}
+                block = 'block_NVP'
+                youngs_modulus = ${ymod_nvp}
+                poissons_ratio = ${pr_nvp}
         [../]
-        [./isotropic_plasticity_NMC]
-                type = IsotropicPlasticityStressUpdate
-                block = 'block_NMC'
-                yield_stress = ${ustr_am}
-                hardening_function = hf_NMC
+        [./elastic_stress_NVP]
+                # NVP cathode is modeled as isotropic linear elastic (no plasticity).
+                type = ComputeFiniteStrainElasticStress
+                block = 'block_NVP'
         [../]
-        [./radial_return_stress_NMC]
-                type = ComputeMultipleInelasticStress
-                tangent_operator = elastic
-                inelastic_models = 'isotropic_plasticity_NMC'
-                block = 'block_NMC'
-        [../]
-        [./thermal_expansion_strain_NMC]
+        [./thermal_expansion_strain_NVP]
                 type = ComputeThermalExpansionEigenstrain
-                block = 'block_NMC'
+                block = 'block_NVP'
                 stress_free_temperature = 0
-                thermal_expansion_coeff = ${alpha_nmc}
+                thermal_expansion_coeff = ${alpha_nvp}
                 temperature = temp
                 eigenstrain_name = eigenstrain
         [../]
-        [./elasticity_tensor_LPS]
+        [./elasticity_tensor_NACS]
                 type = ComputeIsotropicElasticityTensor
-                block = 'block_LPS'
-                youngs_modulus = ${ymod_se}
-                poissons_ratio = ${pr_se}
+                block = 'block_NACS'
+                youngs_modulus = ${ymod_nacs}
+                poissons_ratio = ${pr_nacs}
         [../]
-        [./isotropic_plasticity_LPS]
+        [./isotropic_plasticity_NACS]
                 type = IsotropicPlasticityStressUpdate
-                block = 'block_LPS'
-                yield_stress = ${ystr_se}
-                hardening_function = hf_LPS
+                block = 'block_NACS'
+                yield_stress = ${ystr_nacs}
+                hardening_function = hf_NACS
         [../]
-        [./radial_return_stress_LPS]
+        [./radial_return_stress_NACS]
                 type = ComputeMultipleInelasticStress
-                tangent_operator = elastic
-                inelastic_models = 'isotropic_plasticity_LPS'
-                block = 'block_LPS'
+                tangent_operator = nonlinear
+                inelastic_models = 'isotropic_plasticity_NACS'
+                block = 'block_NACS'
         [../]
+[]
+[Preconditioning]
+  [smp]
+    type = SMP
+    full = true
+  []
 []
 [Executioner]
   type = Transient
@@ -245,7 +251,12 @@ output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
   line_search = none
   nl_max_its = 99
   nl_rel_tol = 1e-6
-  nl_abs_tol = 1e-8
+  # abs_tol loosened 1e-8 -> 1e-7: the force-balance residual is well converged
+  # by ~1e-7 (Newton then crawls linearly because the contact tangent is
+  # inexact), so 1e-8 only buys wasted iterations. ~2-3x fewer NL iters; gap is
+  # unchanged to ~1e-5 relative. Use 1e-6 for more speed if a sweep tolerates
+  # slightly looser convergence.
+  nl_abs_tol = 1e-7
   l_tol = 1e-8
   start_time = 0.0
   n_startup_steps = 1
@@ -253,8 +264,8 @@ output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
   [TimeStepper]
     type = IterationAdaptiveDT
     dt = 0.01
-    optimal_iterations = 50
-    iteration_window  = 10
+    optimal_iterations = 8
+    iteration_window  = 2
     growth_factor = 2.0
     cutback_factor = 0.7
     cutback_factor_at_failure = 0.5
@@ -262,16 +273,14 @@ output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
   []
 []
 [Outputs]
-  file_base = rst/E${ymod_se}_H${Hv_se}_spTop${sptop}
+  file_base = rst/E${ymod_nacs}_H${Hv_nacs}_spTop${sptop}
   [exodus]
     type = Exodus
     sync_times = '${output_times}'
-    sync_only = true
   []
   [csv]
     type = CSV
     sync_times = '${output_times}'
-    sync_only = true
   []
 []
 [Postprocessors]
@@ -289,7 +298,7 @@ output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
   [disp_xy_along_arc]
     type = NodalValueSampler
     variable = 'disp_x disp_y'
-    boundary = 'block_LPS_left'
+    boundary = 'block_NACS_left'
     sort_by = x
     execute_on = 'TIMESTEP_END'
     outputs = csv

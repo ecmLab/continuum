@@ -3,7 +3,7 @@ r"""
 make_mesh.py
 ============
 
-Generate the 2-D NMC / LPS half-cell mesh used by both MOOSE inputs:
+Generate the 2-D NVP / LPS half-cell mesh used by both MOOSE inputs:
 
   * contact_CZM_3.i  -> cohesive-zone model across the arc.
                         Needs a CONFORMAL interface (shared nodes) so
@@ -21,7 +21,7 @@ Geometry:
       (0,L) +------------------------------+ (L,L)
             |                              |
             |                              |
-            |          block_LPS           |
+            |          block_NACS           |
             |          (L-shape)           |
             |                              |
        (0,R)*\                             |
@@ -29,19 +29,19 @@ Geometry:
             |   \.                         |
             |     \.                       |
             |  block \.                    |
-            |  _NMC    \.                  |
+            |  _NVP    \.                  |
             |           \.                 |
             +-------------*----------------+
         (0,0)            (R,0)           (L,0)
 
-    L = 5.0 mm                       (full domain side length)
-    R = 3.8818230 mm                 (NMC quarter-circle radius)
+    L = 5.0 um                       (full domain side length)
+    R = 3.8818230 um                 (NVP quarter-circle radius)
 
 Why the mesh looks the way it does
 ----------------------------------
 ALL of the physics both inputs report lives on the arc (contact pressure,
 or cohesive traction / jump / damage, plus the NodalValueSampler that walks
-the interface). The NMC disc swells ~2.6% via the thermal/chemical eigenstrain
+the interface). The NVP disc swells ~2.6% via the thermal/chemical eigenstrain
 and is pressed into the soft, yielding LPS under 5 MPa stack pressure, so the
 interface is where gradients are sharp and fidelity matters most.
 
@@ -54,12 +54,12 @@ So instead of a uniform mesh (was ~24k elems) we use:
      sampler and for matched contact surfaces -- without needing a transfinite
      constraint (which is incompatible with full-quad recombination).
 
-  2. H_IFACE is tied to the CZM `interface_thickness` (0.032 mm) so one
+  2. H_IFACE is tied to the CZM `interface_thickness` (0.02 um) so one
      element edge ~ the effective cohesive layer thickness.
 
 Conformal vs contact (the only topological difference is the arc)
 -----------------------------------------------------------------
-  CONFORMAL (default, for CZM): NMC and LPS SHARE the interface arc (one
+  CONFORMAL (default, for CZM): NVP and LPS SHARE the interface arc (one
   curve, opposite orientation), so they share nodes. removeDuplicateNodes()
   welds everything. BreakMeshByBlockGenerator then duplicates the interface
   nodes itself and inserts the cohesive elements.
@@ -69,13 +69,13 @@ Conformal vs contact (the only topological difference is the arc)
   two independent bodies that merely touch along the arc and both rest on the
   fixed bottom -- free to separate and slide. removeDuplicateNodes() is NOT
   called, so the coincident interface (and the (R,0)/(0,R) junction) nodes
-  stay distinct. block_NMC_right and block_LPS_left land on the two
+  stay distinct. block_NVP_right and block_NACS_left land on the two
   independent arcs -> valid primary/secondary contact surfaces.
 
 Sidesets / blocks produced (names match both inputs):
-    block_NMC_right, block_LPS_left            (CONTACT mode only; two arcs)
+    block_NVP_right, block_NACS_left            (CONTACT mode only; two arcs)
     block_bottom, block_right, block_top, block_left
-    block_NMC, block_LPS                       (element blocks)
+    block_NVP, block_NACS                       (element blocks)
 
 In CONFORMAL mode the shared arc is left untagged: libMesh's Gmsh reader
 forbids one entity from carrying two boundary IDs, and the CZM input gets its
@@ -95,26 +95,26 @@ import gmsh
 
 
 # ---------------------------------------------------------------------------
-# Geometry / discretization parameters  (all lengths in mm)
+# Geometry / discretization parameters  (all lengths in um (unit system: um-MPa-uN))
 # ---------------------------------------------------------------------------
 L           = 5.0          # square domain side length
-R           = 3.98942280   # NMC quarter-circle radius
+R           = 3.98942280   # NVP quarter-circle radius
 H_IFACE     = 0.02         # element edge ON the arc (== CZM interface_thickness)
 H_FAR       = 0.20         # target element edge in the bulk far field
-REFINE_DIST = 0.10         # halo width around the arc kept fully refined [mm]
+REFINE_DIST = 0.10         # halo width around the arc kept fully refined [um]
 
 OUT_FILE_CZM     = "mesh_czm_5050.msh"   # contact_CZM_3.i
 OUT_FILE_CONTACT = "mesh_5050.msh"       # contact.i
 
 PG = {
-    "block_NMC_right": 1,
-    "block_LPS_left":  2,
+    "block_NVP_right": 1,
+    "block_NACS_left":  2,
     "block_bottom":    3,
     "block_right":     4,
     "block_top":       5,
     "block_left":      6,
-    "block_NMC":       7,
-    "block_LPS":       8,
+    "block_NVP":       7,
+    "block_NACS":       8,
 }
 
 
@@ -158,9 +158,9 @@ def build_mesh(filename: str | None = None,
         arc_mid_nmc = geo.addCircleArc(p_xm_n, p_o, p_ym_n)
         arc_mid_lps = arc_mid_nmc                       # SAME curve -> conformal
     else:
-        p_xm_n = geo.addPoint(R,   0.0, 0.0)            # (R,0) NMC body
+        p_xm_n = geo.addPoint(R,   0.0, 0.0)            # (R,0) NVP body
         p_xm_l = geo.addPoint(R,   0.0, 0.0)            # (R,0) LPS body (distinct)
-        p_ym_n = geo.addPoint(0.0, R,   0.0)            # (0,R) NMC body
+        p_ym_n = geo.addPoint(0.0, R,   0.0)            # (0,R) NVP body
         p_ym_l = geo.addPoint(0.0, R,   0.0)            # (0,R) LPS body (distinct)
         arc_mid_nmc = geo.addCircleArc(p_xm_n, p_o, p_ym_n)
         arc_mid_lps = geo.addCircleArc(p_xm_l, p_o, p_ym_l)
@@ -168,17 +168,17 @@ def build_mesh(filename: str | None = None,
     # -----------------------------------------------------------------
     # Curves
     # -----------------------------------------------------------------
-    l_nmc_bot = geo.addLine(p_o,    p_xm_n)            # NMC bottom  (origin -> R,0)
+    l_nmc_bot = geo.addLine(p_o,    p_xm_n)            # NVP bottom  (origin -> R,0)
     l_lps_bot = geo.addLine(p_xm_l, p_BR)              # LPS bottom  (R,0  -> L,0)
     l_right   = geo.addLine(p_BR,   p_TR)              # right side
     l_top     = geo.addLine(p_TR,   p_TL)             # top side
     l_lps_lft = geo.addLine(p_TL,   p_ym_l)            # LPS left    (0,L -> 0,R)
-    l_nmc_lft = geo.addLine(p_ym_n, p_o)               # NMC left    (0,R -> origin)
+    l_nmc_lft = geo.addLine(p_ym_n, p_o)               # NVP left    (0,R -> origin)
 
     # -----------------------------------------------------------------
     # Surfaces
     # -----------------------------------------------------------------
-    # NMC quarter disc (pie): bottom, arc, left
+    # NVP quarter disc (pie): bottom, arc, left
     cl_nmc = geo.addCurveLoop([l_nmc_bot, arc_mid_nmc, l_nmc_lft])
     s_nmc  = geo.addPlaneSurface([cl_nmc])
 
@@ -198,22 +198,22 @@ def build_mesh(filename: str | None = None,
     # -----------------------------------------------------------------
     # Interface sidesets:
     #   contact   : two independent arcs -> two valid, separate contact
-    #               surfaces (primary block_NMC_right / secondary block_LPS_left).
+    #               surfaces (primary block_NVP_right / secondary block_NACS_left).
     #   conformal : the arc is a SINGLE shared curve. libMesh's Gmsh reader
     #               forbids one entity from carrying two boundary IDs, so we do
     #               NOT tag it. The CZM input gets its interface sidesets from
-    #               BreakMeshByBlockGenerator (block_NMC_block_LPS etc.) anyway.
+    #               BreakMeshByBlockGenerator (block_NVP_block_NACS etc.) anyway.
     if not conformal:
-        gmsh.model.addPhysicalGroup(1, [arc_mid_nmc], PG["block_NMC_right"], "block_NMC_right")
-        gmsh.model.addPhysicalGroup(1, [arc_mid_lps], PG["block_LPS_left"],  "block_LPS_left")
+        gmsh.model.addPhysicalGroup(1, [arc_mid_nmc], PG["block_NVP_right"], "block_NVP_right")
+        gmsh.model.addPhysicalGroup(1, [arc_mid_lps], PG["block_NACS_left"],  "block_NACS_left")
 
     gmsh.model.addPhysicalGroup(1, [l_nmc_bot, l_lps_bot], PG["block_bottom"], "block_bottom")
     gmsh.model.addPhysicalGroup(1, [l_right],              PG["block_right"],  "block_right")
     gmsh.model.addPhysicalGroup(1, [l_top],                PG["block_top"],    "block_top")
     gmsh.model.addPhysicalGroup(1, [l_nmc_lft, l_lps_lft], PG["block_left"],   "block_left")
 
-    gmsh.model.addPhysicalGroup(2, [s_nmc], PG["block_NMC"], "block_NMC")
-    gmsh.model.addPhysicalGroup(2, [s_lps], PG["block_LPS"], "block_LPS")
+    gmsh.model.addPhysicalGroup(2, [s_nmc], PG["block_NVP"], "block_NVP")
+    gmsh.model.addPhysicalGroup(2, [s_lps], PG["block_NACS"], "block_NACS")
 
     # -----------------------------------------------------------------
     # Size field: refine on the arc, coarsen into the bulk.
@@ -263,7 +263,7 @@ def build_mesh(filename: str | None = None,
     print(f"[make_mesh] wrote '{filename}'")
     print(f"[make_mesh]   mode          : {mode}")
     print(f"[make_mesh]   domain        : {L:.2f} mm square")
-    print(f"[make_mesh]   NMC arc R     : {R:.6f} mm  (area fraction {frac_nmc:5.1%})")
+    print(f"[make_mesh]   NVP arc R     : {R:.6f} mm  (area fraction {frac_nmc:5.1%})")
     print(f"[make_mesh]   interface h   : {h_iface:.3e} mm  ({n_arc-1} elems on arc)")
     print(f"[make_mesh]   refine halo   : {refine_dist:.3f} mm")
     print(f"[make_mesh]   far-field h   : {h_far:.3e} mm")
