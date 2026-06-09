@@ -3,7 +3,7 @@
 #SBATCH -p RM-shared
 #SBATCH -t 01:00:00
 #SBATCH --ntasks-per-node=48
-#SBATCH --array=1-100%10
+#SBATCH --array=1-400%20
 #SBATCH --job-name=MOOSE_ParamSweep
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=vazquezm
@@ -12,25 +12,25 @@
 #SBATCH --error=logs/job_%A_%a.err
 
 # ---------------------------------------------------------------
-# Parameter Sweep: 10 Young's Moduli x 10 Hardness = 100 tasks
-# Array task IDs 1-100 are mapped to (i_ymod, i_hv) index pairs
+# Parameter Sweep: 20 Young's Moduli x 20 Hardness = 400 tasks
+# Array task IDs 1-400 are mapped to (i_ymod, i_hv) index pairs
 # using row-major order:
 #
-#   TASK_ID (0-indexed) = i_ymod * 10 + i_hv
+#   TASK_ID (0-indexed) = i_ymod * 20 + i_hv
 #
-#   i_ymod = (TASK_ID) / 10   → selects Young's Modulus row
-#   i_hv   = (TASK_ID) % 10   → selects Hardness column
+#   i_ymod = (TASK_ID) / 20   → selects Young's Modulus row
+#   i_hv   = (TASK_ID) % 20   → selects Hardness column
 #
 # Example:
-#   SLURM_ARRAY_TASK_ID=1  → TASK_ID=0  → ymod=100, Hv=3
-#   SLURM_ARRAY_TASK_ID=11 → TASK_ID=10 → ymod=200, Hv=3
-#   SLURM_ARRAY_TASK_ID=100→ TASK_ID=99 → ymod=1000,Hv=30
+#   SLURM_ARRAY_TASK_ID=1   → TASK_ID=0   → ymod=100,   Hv=10
+#   SLURM_ARRAY_TASK_ID=21  → TASK_ID=20  → ymod=147.4, Hv=10
+#   SLURM_ARRAY_TASK_ID=400 → TASK_ID=399 → ymod=1000,  Hv=50
 # How to run:
 #   Make sure to run "mkdir -p logs rst runs"
 #   sbatch 1_sweep.sh
-#   sbatch --array=1,100 1_sweep.sh (For just the first and last tasks)
-#   sbatch --array=1-100:2 1_sweep.sh (For every other task)
-#   sbatch --array=1-10 1_sweep.sh (For range of tasks)
+#   sbatch --array=1,400 1_sweep.sh (For just the first and last tasks)
+#   sbatch --array=1-400:2 1_sweep.sh (For every other task)
+#   sbatch --array=1-20 1_sweep.sh (For one ymod row = 20 Hv points)
 # ---------------------------------------------------------------
 
 set -x
@@ -53,8 +53,11 @@ export F90=mpif90
 export F77=mpif77
 
 # ---- Parameter arrays ---------------------------------------
-ymod_se=(100 200 300 400 500 600 700 800 900 1000)  # MPa
-Hv_se=(3 6 9 12 15 18 21 24 27 30)                  # MPa
+# ymod_se=(100 200 300 400 500 600 700 800 900 1000)  # MPa (10 Values)
+# Hv_se=(3 6 9 12 15 18 21 24 27 30)                  # MPa (10 Values)
+
+ymod_se=(100 147 195 242 289 337 384 432 479 526 574 621 668 716 763 811 858 905 953 1000)  # MPa (20 Values)
+Hv_se=(20 22 23 25 26 28 29 31 33 34 36 37 39 41 42 44 45 47 48 50)  # MPa (20 Values)
 
 TASK_ID=$(( SLURM_ARRAY_TASK_ID - 1 ))
 i_ymod=$(( TASK_ID / 10 ))
