@@ -35,8 +35,14 @@
 
 set -x
 
-# ---- Working directory ----------------------------------------
-BASE=/ocean/projects/mat250014p/shared/projects/paper_Zhao_NACSCathode/contact_loss
+# ---- Paths (SET THESE for your HPC staging location) ----------
+# BASE: cluster directory holding this project's inputs, meshes and the
+#   built executable. Update to wherever you stage
+#   projects/ecmTest/2026_paper_yangzhao_catholyteMechanics/calculation.
+BASE=/ocean/projects/mat250014p/shared/projects/2026_paper_yangzhao_catholyteMechanics
+# EXE: the ecm_test optimized executable (app name 'ecm' -> ecm-opt).
+#   Copy ecm-opt into $BASE, or set the full path to feecm/ecm_test/ecm-opt.
+EXE="$BASE/ecm-opt"
 cd "$BASE"
 
 # ---- Modules -------------------------------------------------
@@ -53,22 +59,21 @@ export F90=mpif90
 export F77=mpif77
 
 # ---- Parameter arrays ---------------------------------------
-# ymod_se=(100 200 300 400 500 600 700 800 900 1000)  # MPa (10 Values)
-# Hv_se=(3 6 9 12 15 18 21 24 27 30)                  # MPa (10 Values)
-
-ymod_se=(100 147 195 242 289 337 384 432 479 526 574 621 668 716 763 811 858 905 953 1000)  # MPa (20 Values)
-Hv_se=(20 22 23 25 26 28 29 31 33 34 36 37 39 41 42 44 45 47 48 50)  # MPa (20 Values)
+# 20 evenly spaced points each: E in [100,1000] MPa, Hv in [10,50] MPa
+N=20
+ymod_nacs=($(awk -v n=$N 'BEGIN{for(i=0;i<n;i++) printf "%.4g ", 100+i*(1000-100)/(n-1)}'))  # MPa
+Hv_nacs=($(awk -v n=$N 'BEGIN{for(i=0;i<n;i++) printf "%.4g ", 10+i*(50-10)/(n-1)}'))         # MPa
 
 TASK_ID=$(( SLURM_ARRAY_TASK_ID - 1 ))
 i_ymod=$(( TASK_ID / 20 ))
 i_hv=$(( TASK_ID % 20 ))
-YMOD=${ymod_se[$i_ymod]}
-HV=${Hv_se[$i_hv]}
+YMOD=${ymod_nacs[$i_ymod]}
+HV=${Hv_nacs[$i_hv]}
 
 TAG="E${YMOD}_H${HV}"
 
 echo "=============================================="
-echo "Task $SLURM_ARRAY_TASK_ID -> ymod_se=$YMOD MPa, Hv_se=$HV MPa  (tag=$TAG)"
+echo "Task $SLURM_ARRAY_TASK_ID -> ymod_nacs=$YMOD MPa, Hv_nacs=$HV MPa  (tag=$TAG)"
 echo "=============================================="
 
 # so no two concurrent runs write to the same Exodus / restart files.
@@ -82,10 +87,10 @@ NP=${SLURM_NTASKS:-$SLURM_NTASKS_PER_NODE}
 # Run from RUNDIR; point MOOSE at the input by absolute path.
 # Outputs/file_base is overridden too so the output name is unique
 # even if your Outputs block hardcodes a base name.
-mpirun -np "$NP" "$BASE/contact_loss-opt" \
+mpirun -np "$NP" "$EXE" \
     -i "$BASE/1_contact.i" \
-    "ymod_se=$YMOD" \
-    "Hv_se=$HV" \
+    "ymod_nacs=$YMOD" \
+    "Hv_nacs=$HV" \
     "Outputs/file_base=${TAG}_out"
 
 EXIT_CODE=$?
