@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH -N 1
 #SBATCH -p RM-shared
-#SBATCH -t 10:00:00
+#SBATCH -t 1:30:00
 #SBATCH --ntasks-per-node=64
-#SBATCH --array=1-1000%10
+#SBATCH --array=1-400%20
 #SBATCH --job-name=MOOSE_CZMSweep
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=vazquezm
@@ -12,36 +12,37 @@
 #SBATCH --error=logs_czm/job_%A_%a.err
 
 # ---------------------------------------------------------------
-# Parameter Sweep: 10 Young's Moduli x 10 Hardness x 10 czm_B
-#                  = 1000 tasks
+# Parameter Sweep: 20 Young's Moduli x 20 Hardness x 1 czm_B
+#                  = 400 tasks
 #
-# Array task IDs 1-1000 are mapped to (i_ymod, i_hv, i_czm) index
-# triplets using row-major (lexicographic) order:
+# Array task IDs 1-400 are mapped to (i_ymod, i_hv) index
+# pairs using row-major (lexicographic) order. czm_B is fixed
+# at a single value, so i_czm is always 0:
 #
-#   TASK_ID (0-indexed) = i_ymod * 100 + i_hv * 10 + i_czm
+#   TASK_ID (0-indexed) = i_ymod * 20 + i_hv
 #
-#   i_ymod = (TASK_ID) / 100        → Young's Modulus  (outermost)
-#   i_hv   = (TASK_ID / 10) % 10    → Hardness         (middle)
-#   i_czm  = (TASK_ID) % 10         → czm_B            (innermost)
+#   i_ymod = (TASK_ID) / 20         → Young's Modulus  (outermost)
+#   i_hv   = (TASK_ID) % 20         → Hardness         (innermost)
+#   i_czm  = 0                      → czm_B            (fixed)
 #
 # Example:
-#   SLURM_ARRAY_TASK_ID=1    → TASK_ID=0   → ymod=100,  Hv=3,  C=1
-#   SLURM_ARRAY_TASK_ID=2    → TASK_ID=1   → ymod=100,  Hv=3,  C=2
-#   SLURM_ARRAY_TASK_ID=10   → TASK_ID=9   → ymod=100,  Hv=3,  C=10
-#   SLURM_ARRAY_TASK_ID=11   → TASK_ID=10  → ymod=100,  Hv=6,  C=1
-#   SLURM_ARRAY_TASK_ID=101  → TASK_ID=100 → ymod=200,  Hv=3,  C=1
-#   SLURM_ARRAY_TASK_ID=1000 → TASK_ID=999 → ymod=1000, Hv=30, C=10
+#   SLURM_ARRAY_TASK_ID=1    → TASK_ID=0   → ymod=100,  Hv=20, C=1
+#   SLURM_ARRAY_TASK_ID=2    → TASK_ID=1   → ymod=100,  Hv=22, C=1
+#   SLURM_ARRAY_TASK_ID=20   → TASK_ID=19  → ymod=100,  Hv=50, C=1
+#   SLURM_ARRAY_TASK_ID=21   → TASK_ID=20  → ymod=147,  Hv=20, C=1
+#   SLURM_ARRAY_TASK_ID=400  → TASK_ID=399 → ymod=1000, Hv=50, C=1
 #
 # How to run:
 #   Make sure to run "mkdir -p logs_czm rst_czm runs_czm"
 #   sbatch 2_sweep.sh
-#   sbatch --array=1,1000 2_sweep.sh   (just the first and last tasks)
-#   sbatch --array=1-1000:2 2_sweep.sh (every other task)
-#   sbatch --array=1-10 2_sweep.sh     (czm_B sweep at ymod=100, Hv=3)
-#   sbatch --array=991-1000 2_sweep.sh (czm_B sweep at ymod=1000, Hv=30)
-#   sbatch --array=91-991:100 2_sweep.sh (czm_B=1, Hv=30, ymod=100-1000)
+#   sbatch --array=1,400 2_sweep.sh      (just the first and last tasks)
+#   sbatch --array=1-400:2 2_sweep.sh    (every other task)
+#   sbatch --array=1-20 2_sweep.sh       (Hv sweep at ymod=100)
+#   sbatch --array=381-400 2_sweep.sh    (Hv sweep at ymod=1000)
+#   sbatch --array=1-381:20 2_sweep.sh   (ymod sweep at Hv=20)
+#   sbatch --array=20-400:20 2_sweep.sh  (ymod sweep at Hv=50)
 #
-# Note: 1000 tasks throttled to 10 concurrent (%10). At ~1 hr/task
+# Note: 400 tasks throttled to 10 concurrent (%10). At ~1 hr/task
 # this serializes to a long wall clock; raise the %N throttle (e.g.
 # %20, %50) and/or bump -t if CZM convergence is slower than the
 # non-CZM runs.
@@ -73,14 +74,14 @@ export F90=mpif90
 export F77=mpif77
 
 # ---- Parameter arrays ---------------------------------------
-ymod_nacs=(100 200 300 400 500 600 700 800 900 1000)  # MPa
-Hv_nacs=(3 6 9 12 15 18 21 24 27 30)                  # MPa
-czm_B=(1 2 3 4 5 6 7 8 9 10)                         # 1=Baseline ... 10
+ymod_nacs=(100 147 195 242 289 337 384 432 479 526 574 621 668 716 763 811 858 905 953 1000)  # MPa
+Hv_nacs=(20 22 23 25 26 28 29 31 33 34 36 37 39 41 42 44 45 47 48 50)                  # MPa
+czm_B=(1)                         # Single value applied to all 20x20 Ymod-Hv pairs (validate at the Hv/Ymod extremes)
 
 TASK_ID=$(( SLURM_ARRAY_TASK_ID - 1 ))
-i_ymod=$(( TASK_ID / 100 ))
-i_hv=$(( (TASK_ID / 10) % 10 ))
-i_czm=$(( TASK_ID % 10 ))
+i_ymod=$(( TASK_ID / 20 ))
+i_hv=$(( TASK_ID % 20 ))
+i_czm=0
 YMOD=${ymod_nacs[$i_ymod]}
 HV=${Hv_nacs[$i_hv]}
 CZM=${czm_B[$i_czm]}

@@ -16,8 +16,8 @@
 ##   E MPa |  1000 |  500 |   100
 ##   H_v   |   30  |   12 |    3
 ## Active set (override on the command line to sweep / build the design map):
-ymod_nacs=500              # Young Modulus of NACS [MPa]
-Hv_nacs=12.00              # Vickers Hardness of NACS [MPa]
+ymod_nacs=100              # Young Modulus of NACS [MPa] (100 - 1000 MPa)
+Hv_nacs=20.00              # Vickers Hardness of NACS [MPa] (20 - 50 MPa)
 pr_nacs=0.30              # Poissons Ratio of NACS
 
 ymod_nvp=90000           # Young Modulus of NVP [MPa] (isotropic elastic cathode)
@@ -37,7 +37,7 @@ czm_B = 1       # 1.0 = Baseline, 0.0 = No Cohesion (Sweeping from 1 to 10)
 
 interface_thickness = 0.02      # Effective interface layer thickness [um] tied to target element edge length (H_IFACE)
 
-czm_CED = 10.0           # Cohesion Energy Density [MPa]
+czm_CED = 20.0          # Cohesion Energy Density [MPa]
 czm_GIc_base = 10       # Base Mode I fracture energy [MPa*um] (10 MPa*um = 10 J/m^2)
 
 czm_penalty = ${fparse ymod_nacs / interface_thickness}
@@ -49,8 +49,11 @@ czm_shear_strength  = ${fparse czm_normal_strength / sqrt(3)}
 czm_GIIc            = ${fparse czm_GIc * (czm_shear_strength / czm_normal_strength)^2}
 
 ## --- Output Control ---
-output_times = '0.05 0.5 1.0'
-
+output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
+                0.22 0.24 0.26 0.28 0.30 0.32 0.34 0.36 0.38 0.40
+                0.42 0.44 0.46 0.48 0.50 0.52 0.54 0.56 0.58 0.60
+                0.62 0.64 0.66 0.68 0.70 0.72 0.74 0.76 0.78 0.80
+                0.82 0.84 0.86 0.88 0.90 0.92 0.94 0.96 0.98 1.00'
 
 [Problem]
   type = FEProblem
@@ -123,6 +126,7 @@ output_times = '0.05 0.5 1.0'
     [QuasiStatic]
       [./NVP]
         strain = FINITE
+        decomposition_method = EigenSolution
         add_variables = true
         eigenstrain_names = eigenstrain
         generate_output = 'stress_xx stress_yy vonmises_stress strain_xx strain_yy'
@@ -130,6 +134,7 @@ output_times = '0.05 0.5 1.0'
       [../]
       [./NACS]
         strain = FINITE
+        decomposition_method = EigenSolution
         add_variables = true
         generate_output = 'stress_yy stress_xx vonmises_stress plastic_strain_xx plastic_strain_yy'
         block = 'block_NACS'
@@ -275,7 +280,7 @@ output_times = '0.05 0.5 1.0'
   dtmin = 1e-6
   petsc_options_iname = '-pc_type -pc_factor_mat_solver_type -mat_mumps_icntl_24'
   petsc_options_value = 'lu       mumps                       1'
-  line_search = none
+  line_search = bt
   nl_max_its = 99
   nl_rel_tol = 1e-6
   # abs_tol loosened 1e-8 -> 1e-7: the force-balance residual is well converged

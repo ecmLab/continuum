@@ -66,9 +66,9 @@ export F90=mpif90
 export F77=mpif77
 
 # ---- Parameter arrays ---------------------------------------
-ymod_se=(100 200 300 400 500 600 700 800 900 1000)  # MPa
-Hv_se=(3 6 9 12 15 18 21 24 27 30)                  # MPa
-czm_B=(1 2 3 4 5 6 7 8 9 10)                         # 1=Baseline ... 10
+ymod_se=(100 147 195 242 289 337 384 432 479 526 574 621 668 716 763 811 858 905 953 1000)  # MPa
+Hv_se=(20 22 23 25 26 28 29 31 33 34 36 37 39 41 42 44 45 47 48 50)                  # MPa
+czm_B=(1 2 3 4 5 6 7 8 9 10)                         # Need to Find a Value that Works for All 20x20 Ymod-Hv Pairs (Could Just Test the Extremes of Hv and Ymod)
 
 TASK_ID=$(( SLURM_ARRAY_TASK_ID - 1 ))
 i_ymod=$(( TASK_ID / 100 ))

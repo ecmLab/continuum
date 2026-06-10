@@ -76,11 +76,6 @@ output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
                 x = '0    0.05  1.0'
                 y = '0.0  1.0   1.0'
         [../]
-        [./hf_NMC]
-                type = PiecewiseLinear
-                x = '0'
-                y = '${ustr_am}'
-        [../]
         [./hf_LPS]
                 type = PiecewiseLinear
                 x = '0 ${plstr}'
@@ -196,16 +191,9 @@ output_times = '0.02 0.04 0.06 0.08 0.10 0.12 0.14 0.16 0.18 0.20
                 youngs_modulus = ${ymod_am}
                 poissons_ratio = ${pr_am}
         [../]
-        [./isotropic_plasticity_NMC]
-                type = IsotropicPlasticityStressUpdate
-                block = 'block_NMC'
-                yield_stress = ${ustr_am}
-                hardening_function = hf_NMC
-        [../]
-        [./radial_return_stress_NMC]
-                type = ComputeMultipleInelasticStress
-                tangent_operator = elastic
-                inelastic_models = 'isotropic_plasticity_NMC'
+        [./elastic_stress_NMC]
+                # NMC cathode is modeled as isotropic linear elastic (no plasticity).
+                type = ComputeFiniteStrainElasticStress
                 block = 'block_NMC'
         [../]
         [./thermal_expansion_strain_NMC]
