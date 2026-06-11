@@ -16,8 +16,8 @@
 ##   E MPa |  1000 |  500 |   100
 ##   H_v   |   30  |   12 |    3
 ## Active set (override on the command line to sweep / build the design map):
-ymod_nacs=100              # Young Modulus of NACS [MPa] (100 - 1000 MPa)
-Hv_nacs=20.00              # Vickers Hardness of NACS [MPa] (20 - 50 MPa)
+ymod_nacs=1000              # Young Modulus of NACS [MPa] (100 - 1000 MPa)
+Hv_nacs=44.00              # Vickers Hardness of NACS [MPa] (20 - 50 MPa)
 pr_nacs=0.30              # Poissons Ratio of NACS
 
 ymod_nvp=90000           # Young Modulus of NVP [MPa] (isotropic elastic cathode)

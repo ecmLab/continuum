@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -N 1
 #SBATCH -p RM-shared
-#SBATCH -t 1:30:00
+#SBATCH -t 4:00:00
 #SBATCH --ntasks-per-node=64
 #SBATCH --array=1-400%20
 #SBATCH --job-name=MOOSE_CZMSweep
@@ -94,6 +94,7 @@ echo "=============================================="
 
 # so no two concurrent runs write to the same Exodus / restart files.
 RUNDIR="$BASE/runs_czm/$TAG"
+rm -rf "$RUNDIR"  # <--- ADD THIS LINE TO AUTO-CLEAN BEFORE RUNNING
 mkdir -p "$RUNDIR" logs_czm
 cd "$RUNDIR"
 
