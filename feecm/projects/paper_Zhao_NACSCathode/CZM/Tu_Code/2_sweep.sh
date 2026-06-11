@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -N 1
 #SBATCH -p RM-shared
-#SBATCH -t 4:00:00
-#SBATCH --ntasks-per-node=64
+#SBATCH -t 2:00:00
+#SBATCH --ntasks-per-node=48
 #SBATCH --array=1-400%20
 #SBATCH --job-name=MOOSE_CZMSweep
 #SBATCH --mail-type=END,FAIL
