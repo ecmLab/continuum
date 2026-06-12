@@ -9,15 +9,15 @@
 ## Rate-independent J2 plasticity: linear elastic + isotropic (von Mises) yield,
 ## yield strength tied to the measured Vickers hardness (Tabor sigma_y ~ H_v/3).
 ## (The rate-dependent viscoplastic/creep version is parked in viscoplastic/
-## pending experimental confirmation of the catholyte's flow behavior.)
+## pending experimental confirmation of the catholytes flow behavior.)
 ##
 ## ASSUMED placeholder properties -- recalibrate to the redone nanoindentation:
 ##         | rigid | soft | plastic
 ##   E MPa |  1000 |  500 |   100
 ##   H_v   |   30  |   12 |    3
 ## Active set (override on the command line to sweep / build the design map):
-ymod_nacs=500              # Young Modulus of NACS [MPa]
-Hv_nacs=25.00              # Vickers Hardness of NACS [MPa]
+ymod_nacs=100              # Young Modulus of NACS [MPa] (100 - 1000 MPa)
+Hv_nacs=20.00              # Vickers Hardness of NACS [MPa] (20 - 50 MPa)
 pr_nacs=0.30              # Poissons Ratio of NACS
 
 ymod_nvp=90000           # Young Modulus of NVP [MPa] (isotropic elastic cathode)
@@ -30,12 +30,11 @@ plstr=${fparse (ustr_nacs - ystr_nacs) / (ymod_nacs / 10)}    # Plastic Strain o
 
 
 ## --- Boundary Conditions Properties ---
-sptop=10                      # Stack Pressure [MPa]
+sptop=5                      # Stack Pressure [MPa]
 alpha_nvp=2.9927418e-4        # Thermal expansion coefficient of NVP (8.3% expansion)
 
-
 ## --- Output Control ---
-output_times = '0.05 0.5 1.0'
+output_times = '0.01 0.49 0.50 0.51 0.99 1.00'
 
 
 [Problem]
@@ -95,25 +94,29 @@ output_times = '0.05 0.5 1.0'
                 y = '${ystr_nacs} ${ustr_nacs}'
         [../]
 []
-[Modules]
-        [./TensorMechanics]
-         [./Master]
-           [./NVP]
-             strain = FINITE
-                 add_variables = true
-                 eigenstrain_names = eigenstrain
-                 generate_output = 'stress_xx stress_yy vonmises_stress strain_xx strain_yy'
-                 block = 'block_NVP'
-           [../]
-           [./NACS]
-                 strain = FINITE
-                 add_variables = true
-                 generate_output = 'stress_yy stress_xx vonmises_stress plastic_strain_xx plastic_strain_yy'
-                 block = 'block_NACS'
-           [../]
-         [../]
-        [../]
+
+[Physics]
+  [SolidMechanics]
+    [QuasiStatic]
+      [./NVP]
+        strain = FINITE
+        decomposition_method = EigenSolution
+        add_variables = true
+        eigenstrain_names = eigenstrain
+        generate_output = 'stress_xx stress_yy vonmises_stress strain_xx strain_yy'
+        block = 'block_NVP'
+      [../]
+      [./NACS]
+        strain = FINITE
+        decomposition_method = EigenSolution
+        add_variables = true
+        generate_output = 'stress_yy stress_xx vonmises_stress plastic_strain_xx plastic_strain_yy'
+        block = 'block_NACS'
+      [../]
+    [../]
+  [../]
 []
+
 [AuxKernels]
         [./tempfuncaux]
                 type = FunctionAux
@@ -157,18 +160,17 @@ output_times = '0.05 0.5 1.0'
                 execute_on = 'initial timestep_end'
         [../]
 []
+
 [Contact]
         [nvp_nacs]
                 primary = 'block_NVP_right'
                 secondary = 'block_NACS_left'
-                # This penalty control the convergence issue
-                # Higher Young modulus will have higher penalty parameter or vice versa
-                # Tentative  number should be in the range of the young modulus
                 penalty = ${ymod_nacs}
                 formulation = penalty
                 tangential_tolerance = 0.0001
         []
 []
+
 [BCs]
         [./x_disp]
                 type = DirichletBC
@@ -182,20 +184,15 @@ output_times = '0.05 0.5 1.0'
                 boundary = 'block_bottom'
                 value = 0.0
         [../]
-       [./top_press]
+        [./top_press]
                 type = Pressure
                 variable = disp_y
                 boundary = 'block_top'
                 factor   = ${sptop}
                 function = press_ramp
         [../]
-        #[./right_press]
-                #type = Pressure
-                #variable = disp_x
-                #boundary = 'block_right'
-                #factor   = 0.0
-        #[../]
 []
+
 [Materials]
         [./elasticity_tensor_NVP]
                 type = ComputeIsotropicElasticityTensor
@@ -235,19 +232,21 @@ output_times = '0.05 0.5 1.0'
                 block = 'block_NACS'
         [../]
 []
+
 [Preconditioning]
   [smp]
     type = SMP
     full = true
   []
 []
+
 [Executioner]
   type = Transient
   automatic_scaling = true
   solve_type = NEWTON
   dtmin = 1e-6
-  petsc_options_iname = '-pc_type -pc_factor_mat_solver_type -mat_mumps_icntl_24'
-  petsc_options_value = 'lu       mumps                       1'
+  petsc_options_iname = '-pc_type -pc_factor_mat_solver_type -mat_mumps_icntl_24 -mat_mumps_icntl_14'
+  petsc_options_value = 'lu       mumps                       1                           200'
   line_search = none
   nl_max_its = 99
   nl_rel_tol = 1e-6
@@ -272,6 +271,7 @@ output_times = '0.05 0.5 1.0'
     linear_iteration_ratio = 100
   []
 []
+
 [Outputs]
   file_base = rst/E${ymod_nacs}_H${Hv_nacs}_spTop${sptop}
   [exodus]

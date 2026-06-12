@@ -3,7 +3,7 @@
 #SBATCH -p RM-shared
 #SBATCH -t 01:00:00
 #SBATCH --ntasks-per-node=48
-#SBATCH --array=1-400%10
+#SBATCH --array=1-400%20
 #SBATCH --job-name=MOOSE_ParamSweep
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=vazquezm
@@ -39,10 +39,10 @@ set -x
 # BASE: cluster directory holding this project's inputs, meshes and the
 #   built executable. Update to wherever you stage
 #   projects/ecmTest/2026_paper_yangzhao_catholyteMechanics/calculation.
-BASE=/ocean/projects/mat250014p/shared/projects/2026_paper_yangzhao_catholyteMechanics
+BASE=/ocean/projects/mat250014p/shared/projects/paper_Zhao_NACSCathode/contact_loss
 # EXE: the ecm_test optimized executable (app name 'ecm' -> ecm-opt).
 #   Copy ecm-opt into $BASE, or set the full path to feecm/ecm_test/ecm-opt.
-EXE="$BASE/ecm-opt"
+EXE="$BASE/contact_loss-opt"
 cd "$BASE"
 
 # ---- Modules -------------------------------------------------
@@ -59,10 +59,8 @@ export F90=mpif90
 export F77=mpif77
 
 # ---- Parameter arrays ---------------------------------------
-# 20 evenly spaced points each: E in [100,1000] MPa, Hv in [10,50] MPa
-N=20
-ymod_nacs=($(awk -v n=$N 'BEGIN{for(i=0;i<n;i++) printf "%.4g ", 100+i*(1000-100)/(n-1)}'))  # MPa
-Hv_nacs=($(awk -v n=$N 'BEGIN{for(i=0;i<n;i++) printf "%.4g ", 10+i*(50-10)/(n-1)}'))         # MPa
+ymod_nacs=(100 147 195 242 289 337 384 432 479 526 574 621 668 716 763 811 858 905 953 1000)  # MPa
+Hv_nacs=(20 22 23 25 26 28 29 31 33 34 36 37 39 41 42 44 45 47 48 50)         # MPa
 
 TASK_ID=$(( SLURM_ARRAY_TASK_ID - 1 ))
 i_ymod=$(( TASK_ID / 20 ))
@@ -78,6 +76,7 @@ echo "=============================================="
 
 # so no two concurrent runs write to the same Exodus / restart files.
 RUNDIR="$BASE/runs/$TAG"
+rm -rf "$RUNDIR"  # <--- ADD THIS LINE TO AUTO-CLEAN BEFORE RUNNING
 mkdir -p "$RUNDIR" logs
 cd "$RUNDIR"
 
