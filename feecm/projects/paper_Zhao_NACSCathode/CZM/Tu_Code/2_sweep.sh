@@ -8,8 +8,8 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=vazquezm
 #SBATCH -A mat250014p
-#SBATCH --output=logs_czm2/job_%A_%a.out
-#SBATCH --error=logs_czm2/job_%A_%a.err
+#SBATCH --output=logs_czm5/job_%A_%a.out
+#SBATCH --error=logs_czm5/job_%A_%a.err
 
 # ---------------------------------------------------------------
 # Parameter Sweep: 20 Young's Moduli x 20 Hardness x 1 czm_B
@@ -33,7 +33,7 @@
 #   SLURM_ARRAY_TASK_ID=400  → TASK_ID=399 → ymod=1000, Hv=50, C=1
 #
 # How to run:
-#   Make sure to run "mkdir -p logs_czm2 runs_czm2"
+#   Make sure to run "mkdir -p logs_czm5 runs_czm5"
 #   sbatch 2_sweep.sh
 #   sbatch --array=1,400 2_sweep.sh      (just the first and last tasks)
 #   sbatch --array=1,10,20,181,190,200,381,390,400 2_sweep.sh   (3x3 of Low, Mid, High Ymod/Hv corners)
@@ -94,9 +94,9 @@ echo "Task $SLURM_ARRAY_TASK_ID -> ymod_nacs=$YMOD MPa, Hv_nacs=$HV MPa, czm_B=$
 echo "=============================================="
 
 # so no two concurrent runs write to the same Exodus / restart files.
-RUNDIR="$BASE/runs_czm2/$TAG"
+RUNDIR="$BASE/runs_czm5/$TAG"
 rm -rf "$RUNDIR"  # <--- ADD THIS LINE TO AUTO-CLEAN BEFORE RUNNING
-mkdir -p "$RUNDIR" logs_czm2
+mkdir -p "$RUNDIR" logs_czm5
 cd "$RUNDIR"
 
 # Use SLURM's actual core count rather than assuming the var is set.
