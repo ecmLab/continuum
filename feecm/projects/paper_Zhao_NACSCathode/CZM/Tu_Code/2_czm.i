@@ -35,10 +35,10 @@ alpha_nvp=2.9927418e-4        # Thermal expansion coefficient of NVP (8.3% expan
 ## --- CZM Parametric Variables ---
 czm_B = 1       # 1.0 = Baseline, 0.0 = No Cohesion (Sweeping from 1 to 10)
 
-interface_thickness = 0.02      # Effective interface layer thickness [um] tied to target element edge length (H_IFACE)
+interface_thickness = 2e-3      # Effective interface layer thickness [um] tied to target element edge length (H_IFACE)
 
-czm_CED = 10.0          # Cohesion Energy Density [MPa]
-czm_GIc_base = 10       # Base Mode I fracture energy [MPa*um] (10 MPa*um = 10 J/m^2)
+czm_CED = 2.0            # Cohesion Energy Density [MPa]
+czm_GIc_base = 2.0       # Base Mode I fracture energy [MPa*um] (10 MPa*um = 10 J/m^2)
 
 czm_penalty = ${fparse ymod_nacs / interface_thickness}
 
