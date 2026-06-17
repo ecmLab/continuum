@@ -35,12 +35,12 @@ alpha_nvp=2.9927418e-4        # Thermal expansion coefficient of NVP (8.3% expan
 ## --- CZM Parametric Variables ---
 czm_B = 1       # 1.0 = Baseline, 0.0 = No Cohesion (Sweeping from 1 to 10)
 
-interface_thickness = 5e-3      # Effective interface layer thickness [um] tied to target element edge length (H_IFACE)
+interface_thickness = 1e-3      # Effective interface layer thickness [um] tied to target element edge length (H_IFACE)
 
 czm_CED = 2.0            # Cohesion Energy Density [MPa]
 czm_GIc_base = 2.0       # Base Mode I fracture energy [MPa*um] (10 MPa*um = 10 J/m^2)
 
-czm_penalty = ${fparse ymod_nacs / interface_thickness}
+czm_penalty = ${fparse 100 / interface_thickness}     # czm_penalty = ${fparse ymod_nacs / interface_thickness}
 
 czm_normal_strength = ${fparse czm_CED * czm_B}
 czm_GIc             = ${fparse czm_GIc_base * czm_B}
@@ -96,6 +96,14 @@ output_times = '0.01 0.49 0.50 0.51 0.99 1.00'
     order = FIRST
     family = MONOMIAL
     block = 'block_NVP'
+  [../]
+  [./contact_lost]            # 1 = no compressive traction (lost), 0 = in contact
+    order = CONSTANT
+    family = MONOMIAL
+  [../]
+  [./czm_damage]
+    order = CONSTANT
+    family = MONOMIAL
   [../]
 []
 
@@ -189,6 +197,22 @@ output_times = '0.01 0.49 0.50 0.51 0.99 1.00'
     index_j = 0
     execute_on = 'initial timestep_end'
   [../]
+  [./contact_lost_ak]
+    type = ParsedAux
+    variable = contact_lost
+    coupled_variables = 'normal_traction'   # created by CohesiveZone generate_output
+    # small tension-side tolerance so penalty noise near zero counts as contact
+    expression = 'if(normal_traction >= 1e-3, 1, 0)'
+    boundary = 'block_NVP_block_NACS'
+    execute_on = 'TIMESTEP_END'
+  [../]
+  [./czm_damage_ak]
+    type = MaterialRealAux
+    variable = czm_damage
+    property = damage
+    boundary = 'block_NVP_block_NACS'
+    execute_on = 'TIMESTEP_END'
+  [../]
 []
 
 [BCs]
@@ -265,6 +289,9 @@ output_times = '0.01 0.49 0.50 0.51 0.99 1.00'
     mixed_mode_criterion = POWER_LAW
     eta = 2.0
     viscosity = 1e-4
+
+    output_properties = 'damage'
+    outputs = exodus
   [../]
 []
 
@@ -321,6 +348,23 @@ output_times = '0.01 0.49 0.50 0.51 0.99 1.00'
      type = ElementAverageValue
      variable = temp
    [../]
+   [./contact_loss_length]
+    type = SideIntegralVariablePostprocessor
+    variable = contact_lost
+    boundary = 'block_NVP_block_NACS'
+    execute_on = 'TIMESTEP_END'
+  [../]
+  [./interface_length]
+    type = AreaPostprocessor
+    boundary = 'block_NVP_block_NACS'
+    execute_on = 'INITIAL'
+  [../]
+  [./contact_loss_percent]
+    type = ParsedPostprocessor
+    pp_names = 'contact_loss_length interface_length'
+    expression = '100 * contact_loss_length / interface_length'
+    execute_on = 'TIMESTEP_END'
+  [../]
 []
 
 [Preconditioning]
