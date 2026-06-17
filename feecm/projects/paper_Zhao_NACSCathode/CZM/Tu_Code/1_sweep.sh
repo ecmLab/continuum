@@ -8,8 +8,8 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=vazquezm
 #SBATCH -A mat250014p
-#SBATCH --output=logs/job_%A_%a.out
-#SBATCH --error=logs/job_%A_%a.err
+#SBATCH --output=logs1/job_%A_%a.out
+#SBATCH --error=logs1/job_%A_%a.err
 
 # ---------------------------------------------------------------
 # Parameter Sweep: 20 Young's Moduli x 20 Hardness = 400 tasks
@@ -26,7 +26,7 @@
 #   SLURM_ARRAY_TASK_ID=21  → TASK_ID=20  → ymod=147.4, Hv=10
 #   SLURM_ARRAY_TASK_ID=400 → TASK_ID=399 → ymod=1000,  Hv=50
 # How to run:
-#   Make sure to run "mkdir -p logs rst runs"
+#   Make sure to run "mkdir -p logs1 rst runs1"
 #   sbatch 1_sweep.sh
 #   sbatch --array=1,400 1_sweep.sh (For just the first and last tasks)
 #   sbatch --array=1-400:2 1_sweep.sh (For every other task)
@@ -59,8 +59,11 @@ export F90=mpif90
 export F77=mpif77
 
 # ---- Parameter arrays ---------------------------------------
-ymod_nacs=(100 147 195 242 289 337 384 432 479 526 574 621 668 716 763 811 858 905 953 1000)  # MPa
-Hv_nacs=(20 22 23 25 26 28 29 31 33 34 36 37 39 41 42 44 45 47 48 50)         # MPa
+# ymod_nacs=(100 147 195 242 289 337 384 432 479 526 574 621 668 716 763 811 858 905 953 1000)  # MPa
+# Hv_nacs=(20 22 23 25 26 28 29 31 33 34 36 37 39 41 42 44 45 47 48 50)         # MPa
+
+ymod_nacs=(500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500 7000 7500 8000 8500 9000 9500 10000)  # MPa
+Hv_nacs=(24 49 74 99 124 149 174 199 224 249 274 299 324 349 374 399 424 449 474 500)         # MPa
 
 TASK_ID=$(( SLURM_ARRAY_TASK_ID - 1 ))
 i_ymod=$(( TASK_ID / 20 ))
@@ -74,10 +77,10 @@ echo "=============================================="
 echo "Task $SLURM_ARRAY_TASK_ID -> ymod_nacs=$YMOD MPa, Hv_nacs=$HV MPa  (tag=$TAG)"
 echo "=============================================="
 
-# so no two concurrent runs write to the same Exodus / restart files.
-RUNDIR="$BASE/runs/$TAG"
+# so no two concurrent runs1 write to the same Exodus / restart files.
+RUNDIR="$BASE/runs1/$TAG"
 rm -rf "$RUNDIR"  # <--- ADD THIS LINE TO AUTO-CLEAN BEFORE RUNNING
-mkdir -p "$RUNDIR" logs
+mkdir -p "$RUNDIR" logs1
 cd "$RUNDIR"
 
 # Use SLURM's actual core count rather than assuming the var is set.
