@@ -24,9 +24,10 @@ ymod_nvp=90000           # Young Modulus of NVP [MPa] (isotropic elastic cathode
 pr_nvp=0.26              # Poissons Ratio of NVP
 
 ## --- Calculated Material Properties ---
-ustr_nacs=${fparse Hv_nacs / 3}               # Ultimate Strength of SE [MPa] (Coe. = 3)
+ustr_nacs=${fparse Hv_nacs * 0.12}               # Ultimate Strength of SE [MPa] (Coe. = 3) or 8.333 for shafee match
 ystr_nacs=${fparse ustr_nacs / 1.2}                         # Yield Strength of SE [MPa]
-plstr=${fparse (ustr_nacs - ystr_nacs) / (ymod_nacs / 10)}    # Plastic Strain of SE
+# plstr=${fparse (ustr_nacs - ystr_nacs) / (ymod_nacs / 10)}    # Plastic Strain of SE
+plstr=0.004
 
 
 ## --- Boundary Conditions Properties ---

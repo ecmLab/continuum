@@ -8,8 +8,8 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=vazquezm
 #SBATCH -A mat250014p
-#SBATCH --output=logs1/job_%A_%a.out
-#SBATCH --error=logs1/job_%A_%a.err
+#SBATCH --output=logs2/job_%A_%a.out
+#SBATCH --error=logs2/job_%A_%a.err
 
 # ---------------------------------------------------------------
 # Parameter Sweep: 20 Young's Moduli x 20 Hardness = 400 tasks
@@ -26,7 +26,7 @@
 #   SLURM_ARRAY_TASK_ID=21  → TASK_ID=20  → ymod=147.4, Hv=10
 #   SLURM_ARRAY_TASK_ID=400 → TASK_ID=399 → ymod=1000,  Hv=50
 # How to run:
-#   Make sure to run "mkdir -p logs1 rst runs1"
+#   Make sure to run "mkdir -p logs2 rst runs2"
 #   sbatch 1_sweep.sh
 #   sbatch --array=1,400 1_sweep.sh (For just the first and last tasks)
 #   sbatch --array=1-400:2 1_sweep.sh (For every other task)
@@ -77,10 +77,10 @@ echo "=============================================="
 echo "Task $SLURM_ARRAY_TASK_ID -> ymod_nacs=$YMOD MPa, Hv_nacs=$HV MPa  (tag=$TAG)"
 echo "=============================================="
 
-# so no two concurrent runs1 write to the same Exodus / restart files.
-RUNDIR="$BASE/runs1/$TAG"
+# so no two concurrent runs2 write to the same Exodus / restart files.
+RUNDIR="$BASE/runs2/$TAG"
 rm -rf "$RUNDIR"  # <--- ADD THIS LINE TO AUTO-CLEAN BEFORE RUNNING
-mkdir -p "$RUNDIR" logs1
+mkdir -p "$RUNDIR" logs2
 cd "$RUNDIR"
 
 # Use SLURM's actual core count rather than assuming the var is set.
