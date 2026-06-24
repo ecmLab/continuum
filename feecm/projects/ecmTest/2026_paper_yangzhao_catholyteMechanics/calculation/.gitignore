@@ -1,0 +1,7 @@
+# SLURM array-sweep outputs (1_sweep.sh / 2_sweep.sh run in place here)
+runs/
+runs_czm/
+logs/
+logs_czm/
+rst/
+slurm-*.out

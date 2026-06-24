@@ -35,14 +35,13 @@
 
 set -x
 
-# ---- Paths (SET THESE for your HPC staging location) ----------
-# BASE: cluster directory holding this project's inputs, meshes and the
-#   built executable. Update to wherever you stage
-#   projects/ecmTest/2026_paper_yangzhao_catholyteMechanics/calculation.
-BASE=/ocean/projects/mat250014p/shared/projects/2026_paper_yangzhao_catholyteMechanics
-# EXE: the ecm_test optimized executable (app name 'ecm' -> ecm-opt).
-#   Copy ecm-opt into $BASE, or set the full path to feecm/ecm_test/ecm-opt.
-EXE="$BASE/ecm-opt"
+# ---- Paths ---------------------------------------------------
+# Run in place from this calculation/ folder: `sbatch` FROM here, so BASE is
+# this directory (inputs 1_contact.i, mesh_5050.msh, and all outputs live here).
+BASE="${SLURM_SUBMIT_DIR:-$(pwd)}"
+# EXE: the repo-built executable, four levels up from calculation/
+#   (calculation -> paper -> ecmTest -> projects -> feecm/ecm_test/ecm-opt).
+EXE="$BASE/../../../../ecm_test/ecm-opt"
 cd "$BASE"
 
 # ---- Toolchain: matched conda MOOSE env (mirrors the build environment) -----
