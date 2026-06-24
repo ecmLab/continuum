@@ -6,7 +6,7 @@
 #SBATCH --array=1-1000%10
 #SBATCH --job-name=MOOSE_CZMSweep
 #SBATCH --mail-type=END,FAIL
-#SBATCH --mail-user=vazquezm
+#SBATCH --mail-user=howardtu
 #SBATCH -A mat250014p
 #SBATCH --output=logs_czm/job_%A_%a.out
 #SBATCH --error=logs_czm/job_%A_%a.err
@@ -58,18 +58,15 @@ BASE=/ocean/projects/mat250014p/shared/projects/2026_paper_yangzhao_catholyteMec
 EXE="$BASE/ecm-opt"
 cd "$BASE"
 
-# ---- Modules -------------------------------------------------
+# ---- Toolchain: matched conda MOOSE env (mirrors the build environment) -----
+# ecm-opt is built & linked against the conda 'moose' env (mpich + libMesh/
+# PETSc), so its mpich mpirun must launch the binary -- the system openmpi
+# module would mismatch the conda-mpich-linked executable. The env lives in
+# $HOME and is visible on compute nodes; ecm-opt finds its libs via rpath.
 module purge
-module load gcc/10.2.0
-module load openmpi/4.0.5-gcc10.2.0
-module load anaconda3/2022.10
-
-# ---- MPI compiler wrappers -----------------------------------
-export CC=mpicc
-export CXX=mpicxx
-export FC=mpif90
-export F90=mpif90
-export F77=mpif77
+module load anaconda3/2024.10-1
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate moose
 
 # ---- Parameter arrays ---------------------------------------
 ymod_nacs=(100 200 300 400 500 600 700 800 900 1000)  # MPa

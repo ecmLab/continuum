@@ -14,7 +14,7 @@
 #   MOOSE_DIR        ?= $(shell dirname `pwd`)/moose
 # endif
 
-MOOSE_DIR := /Users/howardtu/Documents/modeling/localPackage/moose
+MOOSE_DIR := /jet/home/howardtu/app/moose
 
 #ifeq ($(wildcard $(MOOSE_DIR)/framework/Makefile),)
 # $(error MOOSE directory not found at $(MOOSE_DIR))
