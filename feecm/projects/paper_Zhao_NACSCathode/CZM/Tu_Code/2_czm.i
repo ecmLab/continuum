@@ -284,7 +284,7 @@ output_times = '0.01 0.49 0.50 0.51 0.99 1.00'
 
     mixed_mode_criterion = POWER_LAW
     eta = 2.0
-    viscosity = 1e-4
+    viscosity = 1e-6
 
     output_properties = 'damage'
     outputs = exodus
@@ -295,17 +295,12 @@ output_times = '0.01 0.49 0.50 0.51 0.99 1.00'
   type = Transient
   automatic_scaling = true
   solve_type = NEWTON
-  dtmin = 1e-6
+  dtmin = 1e-7
   petsc_options_iname = '-pc_type -pc_factor_mat_solver_type -mat_mumps_icntl_24 -mat_mumps_icntl_14'
   petsc_options_value = 'lu       mumps                       1                           200'
   line_search = bt
-  nl_max_its = 99
-  nl_rel_tol = 1e-6
-  # abs_tol loosened 1e-8 -> 1e-7: the force-balance residual is well converged
-  # by ~1e-7 (Newton then crawls linearly because the CZM tangent is
-  # inexact), so 1e-8 only buys wasted iterations. ~2.4x fewer NL iters; gap and
-  # traction unchanged to ~1e-5 relative. Use 1e-6 for ~4x if a sweep tolerates
-  # slightly looser convergence.
+  nl_max_its = 100
+  nl_rel_tol = 1e-7
   nl_abs_tol = 1e-7
   l_tol = 1e-8
   start_time = 0.0
@@ -313,11 +308,11 @@ output_times = '0.01 0.49 0.50 0.51 0.99 1.00'
   end_time = 1
   [TimeStepper]
     type = IterationAdaptiveDT
-    dt = 0.01
+    dt = 2e-3
     optimal_iterations = 8
     iteration_window  = 2
-    growth_factor = 2.0
-    cutback_factor = 0.7
+    growth_factor = 1.3
+    cutback_factor = 0.5
     cutback_factor_at_failure = 0.5
     linear_iteration_ratio = 100
   []
