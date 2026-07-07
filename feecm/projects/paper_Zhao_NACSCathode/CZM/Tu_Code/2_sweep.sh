@@ -12,18 +12,18 @@
 #SBATCH --error=logs_czm5/job_%A_%a.err
 
 # ---------------------------------------------------------------
-# Parameter Sweep: 20 Young's Moduli x 20 Hardness x 1 czm_B
+# Parameter Sweep: 20 Young's Moduli x 20 Hardness x 1 czm_CED
 #                  = 400 tasks
 #
 # Array task IDs 1-400 are mapped to (i_ymod, i_hv) index
-# pairs using row-major (lexicographic) order. czm_B is fixed
+# pairs using row-major (lexicographic) order. czm_CED is fixed
 # at a single value, so i_czm is always 0:
 #
 #   TASK_ID (0-indexed) = i_ymod * 20 + i_hv
 #
 #   i_ymod = (TASK_ID) / 20         → Young's Modulus  (outermost)
 #   i_hv   = (TASK_ID) % 20         → Hardness         (innermost)
-#   i_czm  = 0                      → czm_B            (fixed)
+#   i_czm  = 0                      → czm_CED            (fixed)
 #
 # Example:
 #   SLURM_ARRAY_TASK_ID=1    → TASK_ID=0   → ymod=100,  Hv=20, C=1
@@ -77,7 +77,7 @@ export F77=mpif77
 # ---- Parameter arrays ---------------------------------------
 ymod_nacs=(100 147 195 242 289 337 384 432 479 526 574 621 668 716 763 811 858 905 953 1000)  # MPa
 Hv_nacs=(20 22 23 25 26 28 29 31 33 34 36 37 39 41 42 44 45 47 48 50)                  # MPa
-czm_B=(1)                         # Single value applied to all 20x20 Ymod-Hv pairs (validate at the Hv/Ymod extremes)
+czm_CED=(5.0)                         # Single value applied to all 20x20 Ymod-Hv pairs (validate at the Hv/Ymod extremes)
 
 TASK_ID=$(( SLURM_ARRAY_TASK_ID - 1 ))
 i_ymod=$(( TASK_ID / 20 ))
@@ -85,12 +85,12 @@ i_hv=$(( TASK_ID % 20 ))
 i_czm=0
 YMOD=${ymod_nacs[$i_ymod]}
 HV=${Hv_nacs[$i_hv]}
-CZM=${czm_B[$i_czm]}
+CZM=${czm_CED[$i_czm]}
 
 TAG="E${YMOD}_H${HV}_C${CZM}"
 
 echo "=============================================="
-echo "Task $SLURM_ARRAY_TASK_ID -> ymod_nacs=$YMOD MPa, Hv_nacs=$HV MPa, czm_B=$CZM  (tag=$TAG)"
+echo "Task $SLURM_ARRAY_TASK_ID -> ymod_nacs=$YMOD MPa, Hv_nacs=$HV MPa, czm_CED=$CZM  (tag=$TAG)"
 echo "=============================================="
 
 # so no two concurrent runs write to the same Exodus / restart files.
@@ -109,7 +109,7 @@ mpirun -np "$NP" "$EXE" \
     -i "$BASE/2_czm.i" \
     "ymod_nacs=$YMOD" \
     "Hv_nacs=$HV" \
-    "czm_B=$CZM" \
+    "czm_CED=$CZM" \
     "Outputs/file_base=${TAG}_out"
 
 EXIT_CODE=$?

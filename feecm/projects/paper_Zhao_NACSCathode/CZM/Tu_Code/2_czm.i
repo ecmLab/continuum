@@ -33,17 +33,13 @@ sptop=5                      # Stack Pressure [MPa]
 alpha_nvp=2.9927418e-4        # Thermal expansion coefficient of NVP (8.3% expansion)
 
 ## --- CZM Parametric Variables ---
-czm_B = 1       # 1.0 = Baseline, 0.0 = No Cohesion (Sweeping from 1 to 10)
+czm_CED = 5.0            # Cohesion Energy Density [MPa]
+czm_GIc_base = 5.0       # Base Mode I fracture energy [MPa*um] (10 MPa*um = 10 J/m^2)
 
-interface_thickness = 1e-3      # Effective interface layer thickness [um] tied to target element edge length (H_IFACE)
+czm_penalty = ${fparse 100 / 1e-3}
 
-czm_CED = 2.0            # Cohesion Energy Density [MPa]
-czm_GIc_base = 2.0       # Base Mode I fracture energy [MPa*um] (10 MPa*um = 10 J/m^2)
-
-czm_penalty = ${fparse 100 / interface_thickness}     # czm_penalty = ${fparse ymod_nacs / interface_thickness}
-
-czm_normal_strength = ${fparse czm_CED * czm_B}
-czm_GIc             = ${fparse czm_GIc_base * czm_B}
+czm_normal_strength = ${fparse czm_CED}
+czm_GIc             = ${fparse czm_GIc_base}
 
 czm_shear_strength  = ${fparse czm_normal_strength / sqrt(3)}
 czm_GIIc            = ${fparse czm_GIc * (czm_shear_strength / czm_normal_strength)^2}
@@ -328,7 +324,7 @@ output_times = '0.01 0.49 0.50 0.51 0.99 1.00'
 []
 
 [Outputs]
-  file_base = rst_czm/E${ymod_nacs}_H${Hv_nacs}_C${czm_B}_spTop${sptop}
+  file_base = rst_czm/E${ymod_nacs}_H${Hv_nacs}_CED${czm_CED}_spTop${sptop}
   [exodus]
     type = Exodus
     sync_times = '${output_times}'
