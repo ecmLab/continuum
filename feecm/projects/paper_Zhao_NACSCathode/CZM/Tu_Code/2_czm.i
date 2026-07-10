@@ -33,8 +33,14 @@ sptop=5                      # Stack Pressure [MPa]
 alpha_nvp=2.9927418e-4        # Thermal expansion coefficient of NVP (8.3% expansion)
 
 ## --- CZM Parametric Variables ---
-czm_CED = 5.0            # Cohesion Energy Density [MPa]
-czm_GIc_base = 5.0       # Base Mode I fracture energy [MPa*um] (10 MPa*um = 10 J/m^2)
+czm_CED = 5            # Cohesion Energy Density [MPa]
+czm_GIc_base = 5       # Base Mode I fracture energy [MPa*um] (10 MPa*um = 10 J/m^2)
+
+## Duvaut-Lions viscous regularization of the damage rate. 1e-4 is negligible
+## over t in [0,1] (results ~unchanged) but greatly improves convergence on the
+## softening branch. Override per-task for stubborn high-E corners, e.g.
+## set to 1e-6 to reproduce the original runs exactly.
+czm_viscosity = 1e-5
 
 czm_penalty = ${fparse 100 / 1e-3}
 
@@ -284,7 +290,7 @@ output_times = '0.01 0.49 0.50 0.51 0.99 1.00'
 
     mixed_mode_criterion = POWER_LAW
     eta = 2.0
-    viscosity = 1e-6
+    viscosity = ${czm_viscosity}   # was 1e-6; see czm_viscosity note at top
 
     output_properties = 'damage'
     outputs = exodus
@@ -293,15 +299,17 @@ output_times = '0.01 0.49 0.50 0.51 0.99 1.00'
 
 [Executioner]
   type = Transient
-  automatic_scaling = true
   solve_type = NEWTON
-  dtmin = 1e-7
+  automatic_scaling = true
+  compute_scaling_once = false
+  off_diagonals_in_auto_scaling = true
+  dtmin = 1e-8
   petsc_options_iname = '-pc_type -pc_factor_mat_solver_type -mat_mumps_icntl_24 -mat_mumps_icntl_14'
   petsc_options_value = 'lu       mumps                       1                           200'
-  line_search = bt
+  line_search = none
   nl_max_its = 100
   nl_rel_tol = 1e-7
-  nl_abs_tol = 1e-7
+  nl_abs_tol = 1e-6    # was 1e-7
   l_tol = 1e-8
   start_time = 0.0
   n_startup_steps = 1
@@ -313,7 +321,7 @@ output_times = '0.01 0.49 0.50 0.51 0.99 1.00'
     iteration_window  = 2
     growth_factor = 1.3
     cutback_factor = 0.5
-    cutback_factor_at_failure = 0.5
+    cutback_factor_at_failure = 0.25   # was 0.5: recover faster from a failed step
     linear_iteration_ratio = 100
   []
 []

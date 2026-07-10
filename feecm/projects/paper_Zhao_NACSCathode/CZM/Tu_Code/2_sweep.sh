@@ -3,7 +3,7 @@
 #SBATCH -p RM
 #SBATCH -t 2:00:00
 #SBATCH --ntasks-per-node=116
-#SBATCH --array=1-400%20
+#SBATCH --array=1-400%50
 #SBATCH --job-name=MOOSE_CZMSweep
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=vazquezm
@@ -77,7 +77,7 @@ export F77=mpif77
 # ---- Parameter arrays ---------------------------------------
 ymod_nacs=(100 147 195 242 289 337 384 432 479 526 574 621 668 716 763 811 858 905 953 1000)  # MPa
 Hv_nacs=(20 22 23 25 26 28 29 31 33 34 36 37 39 41 42 44 45 47 48 50)                  # MPa
-czm_CED=(5.0)                         # Single value applied to all 20x20 Ymod-Hv pairs (validate at the Hv/Ymod extremes)
+czm_CED=(5)                         # Single value applied to all 20x20 Ymod-Hv pairs (validate at the Hv/Ymod extremes)
 
 TASK_ID=$(( SLURM_ARRAY_TASK_ID - 1 ))
 i_ymod=$(( TASK_ID / 20 ))
