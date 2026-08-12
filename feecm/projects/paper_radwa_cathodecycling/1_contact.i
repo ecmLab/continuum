@@ -1,3 +1,4 @@
+!include sync_times.i
 ## ============================================================================
 ## UNIT SYSTEM: um (length) - MPa (stress) - uN (force).  1 MPa = 1 uN/um^2.
 ##   Representative cell = 5 x 5 um; NMC particle radius ~3.9 um.  The mesh is
@@ -12,8 +13,10 @@
 ## Rate-independent J2 plasticity: linear elastic + isotropic (von Mises) yield,
 ## yield strength tied to the measured Vickers hardness (Tabor sigma_y ~ H_v/3).
 ##
+## Run: mpiexec -np 8 ./contact_loss-opt -i 1_contact.i
+##
 ## Material Properties:
-ymod_lpsc=22000            # Young Modulus of LPSC [MPa] (22 GPa)
+ymod_lpsc=550              # Young Modulus of LPSC [MPa] (22 GPa)
 Hv_lpsc=2000               # Vickers Hardness of LPSC [MPa] (2 GPa)
 pr_lpsc=0.37               # Poissons Ratio of LPSC
 
@@ -35,10 +38,6 @@ cycle_period=1.0                                # Duration of one full expand + 
 temp_peak=90.0                                  # Temperature at full lithiation (end of expansion)
 t_end=${fparse n_cycles * cycle_period}         # Total simulated time
 dt_cycle=${fparse cycle_period / 40}            # 40 steps per cycle resolves the load reversal
-
-## --- Output Control ---
-## Peak (mid-cycle) and end-of-cycle times of the cycles kept as full fields.
-output_times =
 
 
 [Problem]
@@ -279,31 +278,7 @@ output_times =
   checkpoint = true
   [exodus]
     type = Exodus
-    sync_times = '${output_times}'
+    sync_times = ${output_times_str}
     sync_only = true
-  []
-  [csv]
-    type = CSV
-  []
-[]
-[Postprocessors]
-  [./Gap]
-    type = PointValue
-    point = '0.0 3.881 0.0'
-    variable = disp_y
-  [../]
-  [./Temp]
-     type = ElementAverageValue
-     variable = temp
-   [../]
-[]
-[VectorPostprocessors]
-  [disp_xy_along_arc]
-    type = NodalValueSampler
-    variable = 'disp_x disp_y'
-    boundary = 'block_LPSC_left'
-    sort_by = x
-    execute_on = 'INITIAL FINAL'
-    outputs = csv
   []
 []

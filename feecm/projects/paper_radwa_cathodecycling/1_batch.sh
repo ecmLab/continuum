@@ -1,47 +1,32 @@
 #!/bin/bash
 #SBATCH -N 1
-#SBATCH -p RM-shared
-#SBATCH -t 01:00:00
-#SBATCH --ntasks-per-node=48
-#SBATCH --array=1-400%20
-#SBATCH --job-name=MOOSE_ParamSweep
+#SBATCH -p RM
+#SBATCH -t 08:00:00
+#SBATCH --ntasks-per-node=116
+#SBATCH --array=1-3
+#SBATCH --job-name=MOOSE_LPSC_Sweep
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=vazquezm
 #SBATCH -A mat250014p
-#SBATCH --output=logs2/job_%A_%a.out
-#SBATCH --error=logs2/job_%A_%a.err
+#SBATCH --output=logs/job_%A_%a.out
+#SBATCH --error=logs/job_%A_%a.err
 
 # ---------------------------------------------------------------
-# Parameter Sweep: 20 Young's Moduli x 20 Hardness = 400 tasks
-# Array task IDs 1-400 are mapped to (i_ymod, i_hv) index pairs
-# using row-major order:
+# Parameter Sweep: 3 Young's Moduli (ymod_lpsc) values = 3 tasks
+# Array task IDs 1-3 are mapped to the ymod_lpsc_vals array.
 #
-#   TASK_ID (0-indexed) = i_ymod * 20 + i_hv
+# For sync_times.i run the following:
+# python -c "print(\"output_times_str = '\" + ' '.join([str(round(i*0.1, 1)) for i in range(10001)]) + \"'\")" > sync_times.i
 #
-#   i_ymod = (TASK_ID) / 20   → selects Young's Modulus row
-#   i_hv   = (TASK_ID) % 20   → selects Hardness column
-#
-# Example:
-#   SLURM_ARRAY_TASK_ID=1   → TASK_ID=0   → ymod=100,   Hv=10
-#   SLURM_ARRAY_TASK_ID=21  → TASK_ID=20  → ymod=147.4, Hv=10
-#   SLURM_ARRAY_TASK_ID=400 → TASK_ID=399 → ymod=1000,  Hv=50
 # How to run:
-#   Make sure to run "mkdir -p logs2 rst runs2"
-#   sbatch 1_sweep.sh
-#   sbatch --array=1,400 1_sweep.sh (For just the first and last tasks)
-#   sbatch --array=1-400:2 1_sweep.sh (For every other task)
-#   sbatch --array=1-20 1_sweep.sh (For one ymod row = 20 Hv points)
+#   Make sure to run "mkdir -p logs rst runs"
+#   sbatch 1_batch.sh
 # ---------------------------------------------------------------
 
 set -x
 
 # ---- Paths (SET THESE for your HPC staging location) ----------
-# BASE: cluster directory holding this project's inputs, meshes and the
-#   built executable. Update to wherever you stage
-#   projects/ecmTest/2026_paper_yangzhao_catholyteMechanics/calculation.
-BASE=/ocean/projects/mat250014p/shared/projects/paper_Zhao_NACSCathode/contact_loss
-# EXE: the ecm_test optimized executable (app name 'ecm' -> ecm-opt).
-#   Copy ecm-opt into $BASE, or set the full path to feecm/ecm_test/ecm-opt.
+BASE=/ocean/projects/mat250014p/shared/projects/paper_Radwa_MOOSECathodeCycling/contact_loss
 EXE="$BASE/contact_loss-opt"
 cd "$BASE"
 
@@ -59,40 +44,32 @@ export F90=mpif90
 export F77=mpif77
 
 # ---- Parameter arrays ---------------------------------------
-# ymod_nacs=(100 147 195 242 289 337 384 432 479 526 574 621 668 716 763 811 858 905 953 1000)  # MPa
-# Hv_nacs=(20 22 23 25 26 28 29 31 33 34 36 37 39 41 42 44 45 47 48 50)         # MPa
+# Array of the 3 requested ymod_lpsc values
+ymod_lpsc_vals=(370 550 22000)
 
-ymod_nacs=(500 1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000 6500 7000 7500 8000 8500 9000 9500 10000)  # MPa
-Hv_nacs=(24 49 74 99 124 149 174 199 224 249 274 299 324 349 374 399 424 449 474 500)         # MPa
-
+# Map SLURM array ID (1-3) to bash array index (0-2)
 TASK_ID=$(( SLURM_ARRAY_TASK_ID - 1 ))
-i_ymod=$(( TASK_ID / 20 ))
-i_hv=$(( TASK_ID % 20 ))
-YMOD=${ymod_nacs[$i_ymod]}
-HV=${Hv_nacs[$i_hv]}
+YMOD=${ymod_lpsc_vals[$TASK_ID]}
 
-TAG="E${YMOD}_H${HV}"
+TAG="E${YMOD}_LPSC"
 
 echo "=============================================="
-echo "Task $SLURM_ARRAY_TASK_ID -> ymod_nacs=$YMOD MPa, Hv_nacs=$HV MPa  (tag=$TAG)"
+echo "Task $SLURM_ARRAY_TASK_ID -> ymod_lpsc=$YMOD MPa (tag=$TAG)"
 echo "=============================================="
 
-# so no two concurrent runs2 write to the same Exodus / restart files.
-RUNDIR="$BASE/runs2/$TAG"
-rm -rf "$RUNDIR"  # <--- ADD THIS LINE TO AUTO-CLEAN BEFORE RUNNING
-mkdir -p "$RUNDIR" logs2
+# Ensure concurrent runs do not write to the same files
+RUNDIR="$BASE/runs/$TAG"
+rm -rf "$RUNDIR" 
+mkdir -p "$RUNDIR" logs
 cd "$RUNDIR"
 
-# Use SLURM's actual core count rather than assuming the var is set.
+# Use SLURM's actual core count
 NP=${SLURM_NTASKS:-$SLURM_NTASKS_PER_NODE}
 
-# Run from RUNDIR; point MOOSE at the input by absolute path.
-# Outputs/file_base is overridden too so the output name is unique
-# even if your Outputs block hardcodes a base name.
+# Run MOOSE, overriding the ymod_lpsc variable from 1_contact.i
 mpirun -np "$NP" "$EXE" \
     -i "$BASE/1_contact.i" \
-    "ymod_nacs=$YMOD" \
-    "Hv_nacs=$HV" \
+    "ymod_lpsc=$YMOD" \
     "Outputs/file_base=${TAG}_out"
 
 EXIT_CODE=$?
